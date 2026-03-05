@@ -4,12 +4,14 @@ import type { NodeInstance } from "../contracts";
 class ClientModel implements NodeInstance {
   id: string;
   name: string;
-  request: number;
+  // request: number;
   type: string = "client";
 
-  constructor(id: string, name: string, request: number) {
+  constructor(id: string, name: string) {
     this.id = id;
     this.name = name;
-    this.request = request;
+    // this.request = request;
   }
 }
+
+export default ClientModel;

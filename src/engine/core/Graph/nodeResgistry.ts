@@ -29,6 +29,13 @@ class NodeRegistry {
   getInstance(nodeId: NodeId) {
     return this.registry.get(nodeId) || null;
   }
+
+  getDetails() {
+    return {
+      // it converts Map to json object
+      registry: Object.fromEntries(this.registry),
+    };
+  }
 }
 
 export { NodeRegistry };

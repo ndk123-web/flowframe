@@ -14,3 +14,4 @@ class RoundRobinStrategy implements LoadBalancingConfig {
     return selected;
   }
 }
+export default RoundRobinStrategy;

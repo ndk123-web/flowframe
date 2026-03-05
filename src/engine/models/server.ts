@@ -28,3 +28,5 @@ class ServerModel implements NodeInstance {
     this.load--;
   }
 }
+
+export default ServerModel;

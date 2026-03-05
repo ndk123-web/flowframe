@@ -18,3 +18,5 @@ class LoadBalancerModel implements NodeInstance {
     return this.strategy.selectServer(serverIds);
   }
 }
+
+export default LoadBalancerModel;

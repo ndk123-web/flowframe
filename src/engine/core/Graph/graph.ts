@@ -1,4 +1,4 @@
-import type { NodeId } from "../../types";
+import type { NodeId } from "@/engine/types";
 
 class GraphManager {
   id: string;
@@ -31,6 +31,15 @@ class GraphManager {
 
   getNextNodes(from: NodeId) {
     return this.Edges.get(from) || [];
+  }
+
+  // get all Map details
+  getDetails() {
+    return {
+      // it converts Map to json object
+      Nodes: Object.fromEntries(this.Nodes),
+      Edges: Object.fromEntries(this.Edges),
+    };
   }
 }
 
