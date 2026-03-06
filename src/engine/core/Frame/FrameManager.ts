@@ -1,6 +1,6 @@
 import { equal } from "assert";
 import type { NodeId } from "../../types";
-import { RequestManager } from "../Request";
+import { RequestManager } from "../../models/Request";
 
 class FrameTracking {
   id: string;

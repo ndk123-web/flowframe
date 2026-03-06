@@ -1,5 +1,5 @@
 import type { NodeInstance } from "../contracts";
-import { RequestManager } from "../core/Request";
+import { RequestManager } from "./Request";
 
 class ServerModel implements NodeInstance {
   id: string;

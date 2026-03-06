@@ -1,11 +1,13 @@
 import type { NodeId, RequestPath } from "../types";
+import { NodeInstance } from "../contracts";
 
-class RequestManager {
+class RequestManager implements NodeInstance {
   id: string;
   name: string;
   currentNodeId: NodeId;
   path: any[] = [];
   direction: "forward" | "backward" = "forward";
+  type: string = "REQUEST";
 
   constructor(id: string, name: string, startNodeId: NodeId) {
     this.id = id;

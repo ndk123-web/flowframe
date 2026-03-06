@@ -7,6 +7,8 @@ import ClientModel from "@/engine/models/Client";
 import ShortUniqueId from "short-unique-id";
 import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
 import type { LoadBalancingConfig } from "@/engine/core/Strategy/LoadBalancingConfig";
+import { SimulationManager } from "@/engine/core/Simulations/Simulation";
+import { RequestManager } from "@/engine/models/Request";
 
 // it simply means 1 LoadBalancer and 2 Servers
 class Test {
@@ -20,6 +22,9 @@ class Test {
     const uid = new ShortUniqueId();
     const graph = new GraphManager(uid.rnd(10));
     const registry = new NodeRegistry(uid.rnd(10));
+    const simulation = new SimulationManager(graph, registry);
+
+    const requestId = uid.rnd(10);
 
     // strategy default RoundRobin
     const strategy: LoadBalancingConfig = new RoundRobinStrategy();
@@ -62,6 +67,8 @@ class Test {
     registry.register(server_1_id, server_1_instance);
     registry.register(server_2_id, server_2_instance);
     registry.register(client_id, client_instance);
+
+    const request = new RequestManager(requestId, `Request_${requestId}`, client_id);
 
     return {
       graph: graph.getDetails(),

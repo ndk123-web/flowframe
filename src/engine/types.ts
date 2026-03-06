@@ -15,4 +15,11 @@ type FrameObject = {
   nodeId: NodeId;
 };
 
+type Frame = {
+  requestId: string;
+  from: string;
+  to: string;
+  timestamp: number;
+};
+
 export type { NodeId, RequestPath, FrameObject };
