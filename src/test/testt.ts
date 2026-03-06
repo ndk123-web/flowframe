@@ -18,7 +18,7 @@ class Test {
     this.count = count || 1;
   }
 
-  async Test1LB2S(): Promise<{ graph: any; registry: any }> {
+  async Test1LB2S(): Promise<{ graph: any; registry: any; frames: any[] }> {
     const uid = new ShortUniqueId();
     const graph = new GraphManager(uid.rnd(10));
     const registry = new NodeRegistry(uid.rnd(10));
@@ -68,11 +68,22 @@ class Test {
     registry.register(server_2_id, server_2_instance);
     registry.register(client_id, client_instance);
 
-    const request = new RequestManager(requestId, `Request_${requestId}`, client_id);
+    const request = new RequestManager(
+      requestId,
+      `Request_${requestId}`,
+      client_id,
+    );
+
+    // it will run entire and store inside frames
+    simulation.runTest(client_id);
+
+    // print frames
+    console.log(simulation.getFrames());
 
     return {
       graph: graph.getDetails(),
       registry: registry.getDetails(),
+      frames: simulation.getFrames(),
     };
   }
 }

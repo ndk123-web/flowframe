@@ -12,7 +12,9 @@ type RequestPath = {
 type FrameObject = {
   requestId: string;
   requestName: string;
-  nodeId: NodeId;
+  from: string;
+  to: string;
+  timestamp: number;
 };
 
 type Frame = {
