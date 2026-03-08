@@ -99,7 +99,7 @@ function InteractivePreview() {
   const [frameIndex, setFrameIndex] = useState(0);
 
   // Run simulation once — lazy initialiser avoids setState-in-effect lint rule
-  const [{ frames, meta }] = useState<ReturnType<typeof buildSimulation>>(buildSimulation);
+  const [{ frames }] = useState<ReturnType<typeof buildSimulation>>(buildSimulation);
 
   useEffect(() => {
     if (!isPlaying || frames.length === 0) return;
@@ -108,19 +108,6 @@ function InteractivePreview() {
     }, 900 / speed);
     return () => clearInterval(id);
   }, [isPlaying, speed, frames.length]);
-
-  const currentFrame = frames[frameIndex] ?? null;
-  // Map frame's "to" id → which server to highlight
-  const activeServer: "s1" | "s2" | "s3" | null =
-    meta && currentFrame
-      ? currentFrame.to === meta.s1Id
-        ? "s1"
-        : currentFrame.to === meta.s2Id
-          ? "s2"
-          : currentFrame.to === meta.s3Id
-            ? "s3"
-            : null
-      : null;
 
   return (
     <Reveal>
@@ -143,7 +130,7 @@ function InteractivePreview() {
               <ArchDiagram
                 active={isPlaying}
                 speed={speed}
-                activeServer={activeServer}
+                frameIndex={frameIndex}
                 className="h-full w-full"
               />
             </div>

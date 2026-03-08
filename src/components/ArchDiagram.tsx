@@ -13,7 +13,7 @@
  */
 
 import { motion } from "framer-motion";
-import { useId } from "react";
+import { useEffect, useId, useState } from "react";
 
 // ─── Layout constants (viewBox 700 × 320) ──────────────────────────
 const W = 700;
@@ -47,9 +47,17 @@ interface PacketProps {
   delay?: number;
   active?: boolean;
   uid: string;
+  emphasis?: number;
 }
 
-function Packet({ toServer, duration, delay = 0, active = true, uid }: PacketProps) {
+function Packet({
+  toServer,
+  duration,
+  delay = 0,
+  active = true,
+  uid,
+  emphasis = 1,
+}: PacketProps) {
   const target = toServer === "s1" ? S1 : toServer === "s2" ? S2 : S3;
 
   // cx: Client → LB → target
@@ -59,15 +67,15 @@ function Packet({ toServer, duration, delay = 0, active = true, uid }: PacketPro
 
   return (
     <motion.circle
-      r={6}
+      r={5.5}
       fill={`url(#packetGrad-${uid})`}
-      style={{ filter: "drop-shadow(0 0 8px rgba(139,92,246,0.9))" }}
+      style={{ filter: `drop-shadow(0 0 ${7 + emphasis * 2}px rgba(139,92,246,0.86))` }}
       animate={
         active
           ? {
               cx: cxFrames,
               cy: cyFrames,
-              opacity: [0, 1, 1, 0.1],
+              opacity: [0, 0.42 * emphasis, 0.78 * emphasis, 0.14],
             }
           : { opacity: 0 }
       }
@@ -154,10 +162,10 @@ function Connector({ x1, y1, x2, y2, delay = 0, uid }: ConnectorProps) {
       x2={x2}
       y2={y2}
       stroke={`url(#lineGrad-${uid})`}
-      strokeWidth={2}
+      strokeWidth={1.7}
       strokeLinecap="round"
-      animate={{ strokeOpacity: [0.45, 0.88, 0.45] }}
-      transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay }}
+      animate={{ strokeOpacity: [0.33, 0.72, 0.33] }}
+      transition={{ duration: 5.4, repeat: Infinity, ease: "easeInOut", delay }}
     />
   );
 }
@@ -168,17 +176,34 @@ interface ArchDiagramProps {
   active?: boolean;
   /** Multiplies packet speed */
   speed?: number;
-  /**
-   * Which server node is currently receiving a request (from engine frames).
-   * null = show both packet streams normally.
-   */
-  activeServer?: "s1" | "s2" | "s3" | null;
+  /** Optional external frame index to drive route emphasis */
+  frameIndex?: number;
   className?: string;
 }
 
-export default function ArchDiagram({ active = true, speed = 1, activeServer = null, className = "" }: ArchDiagramProps) {
+export default function ArchDiagram({
+  active = true,
+  speed = 1,
+  frameIndex,
+  className = "",
+}: ArchDiagramProps) {
   const uid = useId().replace(/:/g, "-");
-  const baseDuration = 2.6 / speed;
+  const baseDuration = 4.6 / speed;
+  const [internalFrame, setInternalFrame] = useState(0);
+
+  useEffect(() => {
+    if (typeof frameIndex === "number" || !active) {
+      return;
+    }
+    const id = setInterval(() => {
+      setInternalFrame((prev) => (prev + 1) % 3);
+    }, 2200 / speed);
+    return () => clearInterval(id);
+  }, [active, frameIndex, speed]);
+
+  const routeIndex = typeof frameIndex === "number" ? frameIndex % 3 : internalFrame;
+  const activeRoute: "s1" | "s2" | "s3" =
+    routeIndex === 0 ? "s1" : routeIndex === 1 ? "s2" : "s3";
 
   return (
     <svg
@@ -239,17 +264,40 @@ export default function ArchDiagram({ active = true, speed = 1, activeServer = n
         uid={uid}
       />
 
-      <Node cx={CLIENT.x} cy={CLIENT.y} label="Client"       floatDelay={0} />
-      <Node cx={LB.x}     cy={LB.y}     label="LoadBalancer" accent floatDelay={0.6} />
-      <Node cx={S1.x} cy={S1.y} label="Server 1" accent={activeServer === "s1"} floatDelay={1.1} />
-      <Node cx={S2.x} cy={S2.y} label="Server 2" accent={activeServer === "s2"} floatDelay={1.7} />
-      <Node cx={S3.x} cy={S3.y} label="Server 3" accent={activeServer === "s3"} floatDelay={2.2} />
+      <Node cx={CLIENT.x} cy={CLIENT.y} label="Client" floatDelay={0} />
+      <Node cx={LB.x} cy={LB.y} label="LoadBalancer" accent floatDelay={0.6} />
+      <Node cx={S1.x} cy={S1.y} label="Server 1" accent={activeRoute === "s1"} floatDelay={1.1} />
+      <Node cx={S2.x} cy={S2.y} label="Server 2" accent={activeRoute === "s2"} floatDelay={1.7} />
+      <Node cx={S3.x} cy={S3.y} label="Server 3" accent={activeRoute === "s3"} floatDelay={2.2} />
 
-      {/* ── Request packets — Round-robin: S1 → S2 → S3 → S1 … ── */}
-      <Packet toServer="s1" duration={baseDuration}         delay={0}                   active={active} uid={uid} />
-      <Packet toServer="s2" duration={baseDuration + 0.15}  delay={baseDuration * 0.38} active={active} uid={uid} />
-      <Packet toServer="s3" duration={baseDuration + 0.3}   delay={baseDuration * 0.76} active={active} uid={uid} />
-      <Packet toServer="s1" duration={baseDuration + 0.45}  delay={baseDuration * 1.14} active={active} uid={uid} />
+      {/* Continuous ambient streams with frame-driven emphasis */}
+      <Packet
+        toServer="s1"
+        duration={baseDuration}
+        delay={0}
+        active={active}
+        uid={uid}
+        emphasis={activeRoute === "s1" ? 1.25 : 0.7}
+      />
+      <Packet
+        toServer="s2"
+        duration={baseDuration + 0.28}
+        delay={1.1}
+        active={active}
+        uid={uid}
+        emphasis={activeRoute === "s2" ? 1.25 : 0.7}
+      />
+      <Packet
+        toServer="s3"
+        duration={baseDuration + 0.52}
+        delay={2.15}
+        active={active}
+        uid={uid}
+        emphasis={activeRoute === "s3" ? 1.25 : 0.7}
+      />
+      <Packet toServer="s1" duration={baseDuration + 0.8} delay={3.1} active={active} uid={uid} emphasis={0.65} />
+      <Packet toServer="s2" duration={baseDuration + 1.1} delay={3.9} active={active} uid={uid} emphasis={0.65} />
+      <Packet toServer="s3" duration={baseDuration + 1.35} delay={4.7} active={active} uid={uid} emphasis={0.65} />
     </svg>
   );
 }
