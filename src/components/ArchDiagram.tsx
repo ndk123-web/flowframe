@@ -13,16 +13,18 @@
  */
 
 import { motion } from "framer-motion";
+import { useId } from "react";
 
-// ─── Layout constants (viewBox 700 × 300) ──────────────────────────
+// ─── Layout constants (viewBox 700 × 320) ──────────────────────────
 const W = 700;
-const H = 300;
+const H = 320;
 
-// Node centre-points
-const CLIENT = { x: 80, y: H / 2 };
-const LB = { x: 290, y: H / 2 };
-const S1 = { x: 560, y: H / 2 - 75 };
-const S2 = { x: 560, y: H / 2 + 75 };
+// Node centre-points  (3 servers, evenly spaced vertically)
+const CLIENT = { x: 80,  y: H / 2 };
+const LB     = { x: 290, y: H / 2 };
+const S1     = { x: 560, y: 60  };   // top
+const S2     = { x: 560, y: H / 2 }; // middle
+const S3     = { x: 560, y: H - 60 }; // bottom
 
 // Card dimensions
 const NODE_W = 130;
@@ -40,14 +42,15 @@ const cardY = (cy: number) => cy - NODE_H / 2;
 // We animate cx/cy through those waypoints.
 
 interface PacketProps {
-  toServer: "s1" | "s2";
+  toServer: "s1" | "s2" | "s3";
   duration: number;
   delay?: number;
   active?: boolean;
+  uid: string;
 }
 
-function Packet({ toServer, duration, delay = 0, active = true }: PacketProps) {
-  const target = toServer === "s1" ? S1 : S2;
+function Packet({ toServer, duration, delay = 0, active = true, uid }: PacketProps) {
+  const target = toServer === "s1" ? S1 : toServer === "s2" ? S2 : S3;
 
   // cx: Client → LB → target
   const cxFrames = [CLIENT.x, LB.x, target.x];
@@ -57,7 +60,7 @@ function Packet({ toServer, duration, delay = 0, active = true }: PacketProps) {
   return (
     <motion.circle
       r={6}
-      fill="url(#packetGrad)"
+      fill={`url(#packetGrad-${uid})`}
       style={{ filter: "drop-shadow(0 0 8px rgba(139,92,246,0.9))" }}
       animate={
         active
@@ -140,16 +143,17 @@ interface ConnectorProps {
   x2: number;
   y2: number;
   delay?: number;
+  uid: string;
 }
 
-function Connector({ x1, y1, x2, y2, delay = 0 }: ConnectorProps) {
+function Connector({ x1, y1, x2, y2, delay = 0, uid }: ConnectorProps) {
   return (
     <motion.line
       x1={x1}
       y1={y1}
       x2={x2}
       y2={y2}
-      stroke="url(#lineGrad)"
+      stroke={`url(#lineGrad-${uid})`}
       strokeWidth={2}
       strokeLinecap="round"
       animate={{ strokeOpacity: [0.45, 0.88, 0.45] }}
@@ -168,11 +172,12 @@ interface ArchDiagramProps {
    * Which server node is currently receiving a request (from engine frames).
    * null = show both packet streams normally.
    */
-  activeServer?: "s1" | "s2" | null;
+  activeServer?: "s1" | "s2" | "s3" | null;
   className?: string;
 }
 
 export default function ArchDiagram({ active = true, speed = 1, activeServer = null, className = "" }: ArchDiagramProps) {
+  const uid = useId().replace(/:/g, "-");
   const baseDuration = 2.6 / speed;
 
   return (
@@ -180,17 +185,17 @@ export default function ArchDiagram({ active = true, speed = 1, activeServer = n
       viewBox={`0 0 ${W} ${H}`}
       xmlns="http://www.w3.org/2000/svg"
       className={`w-full h-full ${className}`}
-      aria-label="Client → LoadBalancer → Server1 / Server2 architecture diagram"
+      aria-label="Client → LoadBalancer → Server1 / Server2 / Server3 architecture diagram"
     >
       <defs>
         {/* gradient for connector lines — userSpaceOnUse so horizontal lines render correctly */}
-        <linearGradient id="lineGrad" x1="0" y1="0" x2={W} y2="0" gradientUnits="userSpaceOnUse">
+        <linearGradient id={`lineGrad-${uid}`} x1="0" y1="0" x2={W} y2="0" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.9" />
           <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.9" />
         </linearGradient>
 
         {/* gradient for packets */}
-        <radialGradient id="packetGrad" cx="50%" cy="50%" r="50%">
+        <radialGradient id={`packetGrad-${uid}`} cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#a78bfa" />
           <stop offset="100%" stopColor="#6366f1" />
         </radialGradient>
@@ -204,6 +209,7 @@ export default function ArchDiagram({ active = true, speed = 1, activeServer = n
         x2={LB.x - NODE_W / 2}
         y2={LB.y}
         delay={0}
+        uid={uid}
       />
       {/* LB right-edge → S1 left-edge */}
       <Connector
@@ -212,6 +218,7 @@ export default function ArchDiagram({ active = true, speed = 1, activeServer = n
         x2={S1.x - NODE_W / 2}
         y2={S1.y}
         delay={0.2}
+        uid={uid}
       />
       {/* LB right-edge → S2 left-edge */}
       <Connector
@@ -220,32 +227,29 @@ export default function ArchDiagram({ active = true, speed = 1, activeServer = n
         x2={S2.x - NODE_W / 2}
         y2={S2.y}
         delay={0.35}
+        uid={uid}
+      />
+      {/* LB right-edge → S3 left-edge */}
+      <Connector
+        x1={LB.x + NODE_W / 2}
+        y1={LB.y}
+        x2={S3.x - NODE_W / 2}
+        y2={S3.y}
+        delay={0.5}
+        uid={uid}
       />
 
-      {/* ── Nodes (drawn after connectors so they sit on top) ── */}
-      <Node cx={CLIENT.x} cy={CLIENT.y} label="Client" floatDelay={0} />
-      <Node cx={LB.x} cy={LB.y} label="LoadBalancer" accent floatDelay={0.6} />
-      <Node
-        cx={S1.x}
-        cy={S1.y}
-        label="Server 1"
-        accent={activeServer === "s1"}
-        floatDelay={1.1}
-      />
-      <Node
-        cx={S2.x}
-        cy={S2.y}
-        label="Server 2"
-        accent={activeServer === "s2"}
-        floatDelay={1.7}
-      />
+      <Node cx={CLIENT.x} cy={CLIENT.y} label="Client"       floatDelay={0} />
+      <Node cx={LB.x}     cy={LB.y}     label="LoadBalancer" accent floatDelay={0.6} />
+      <Node cx={S1.x} cy={S1.y} label="Server 1" accent={activeServer === "s1"} floatDelay={1.1} />
+      <Node cx={S2.x} cy={S2.y} label="Server 2" accent={activeServer === "s2"} floatDelay={1.7} />
+      <Node cx={S3.x} cy={S3.y} label="Server 3" accent={activeServer === "s3"} floatDelay={2.2} />
 
-      {/* ── Request packets ── */}
-      {/* Round-robin: alternates → Server1, Server2, Server1 … */}
-      <Packet toServer="s1" duration={baseDuration} delay={0}                    active={active} />
-      <Packet toServer="s2" duration={baseDuration + 0.2} delay={baseDuration * 0.48}   active={active} />
-      <Packet toServer="s1" duration={baseDuration + 0.4} delay={baseDuration * 0.96}   active={active} />
-      <Packet toServer="s2" duration={baseDuration + 0.6} delay={baseDuration * 1.44}   active={active} />
+      {/* ── Request packets — Round-robin: S1 → S2 → S3 → S1 … ── */}
+      <Packet toServer="s1" duration={baseDuration}         delay={0}                   active={active} uid={uid} />
+      <Packet toServer="s2" duration={baseDuration + 0.15}  delay={baseDuration * 0.38} active={active} uid={uid} />
+      <Packet toServer="s3" duration={baseDuration + 0.3}   delay={baseDuration * 0.76} active={active} uid={uid} />
+      <Packet toServer="s1" duration={baseDuration + 0.45}  delay={baseDuration * 1.14} active={active} uid={uid} />
     </svg>
   );
 }

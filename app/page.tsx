@@ -56,32 +56,40 @@ function buildSimulation() {
   const lbId = uid.rnd(10);
   const s1Id = uid.rnd(10);
   const s2Id = uid.rnd(10);
+  const s3Id = uid.rnd(10);
   const clientId = uid.rnd(10);
 
-  const lb = new LoadBalancerModel(lbId, "LoadBalancer", strategy);
-  const s1 = new ServerModel(s1Id, "Server 1");
-  const s2 = new ServerModel(s2Id, "Server 2");
+  const lb     = new LoadBalancerModel(lbId, "LoadBalancer", strategy);
+  const s1     = new ServerModel(s1Id, "Server 1");
+  const s2     = new ServerModel(s2Id, "Server 2");
+  const s3     = new ServerModel(s3Id, "Server 3");
   const client = new ClientModel(clientId, "Client");
 
   graph.addNode(lbId, "LoadBalancer");
   graph.addNode(s1Id, "Server 1");
   graph.addNode(s2Id, "Server 2");
+  graph.addNode(s3Id, "Server 3");
   graph.addNode(clientId, "Client");
 
   graph.addEdge(clientId, lbId);
   graph.addEdge(lbId, s1Id);
   graph.addEdge(lbId, s2Id);
+  graph.addEdge(lbId, s3Id);
 
   registry.register(lbId, lb);
   registry.register(s1Id, s1);
   registry.register(s2Id, s2);
+  registry.register(s3Id, s3);
   registry.register(clientId, client);
 
-  simulation.runTest(clientId);
+  // 6 requests × 2 frames each = 12 total, round-robin: S1→S2→S3→S1→S2→S3
+  for (let i = 0; i < 6; i++) {
+    simulation.runTest(clientId);
+  }
 
   return {
     frames: simulation.getFrames(),
-    meta: { lbId, s1Id, s2Id, clientId },
+    meta: { lbId, s1Id, s2Id, s3Id, clientId },
   };
 }
 
@@ -103,13 +111,15 @@ function InteractivePreview() {
 
   const currentFrame = frames[frameIndex] ?? null;
   // Map frame's "to" id → which server to highlight
-  const activeServer: "s1" | "s2" | null =
+  const activeServer: "s1" | "s2" | "s3" | null =
     meta && currentFrame
       ? currentFrame.to === meta.s1Id
         ? "s1"
         : currentFrame.to === meta.s2Id
           ? "s2"
-          : null
+          : currentFrame.to === meta.s3Id
+            ? "s3"
+            : null
       : null;
 
   return (
