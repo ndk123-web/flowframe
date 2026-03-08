@@ -5,7 +5,7 @@
 		src="public/logo/flow-frame-dark.png"
 		alt="FlowFrame Logo"
 		width="150"
-		style="border-radius: 60%; border: 1px solid #2a2a2a; padding: 8px;"
+		style="border-radius: 50%; border: 1px solid #2a2a2a; padding: 8px;"
 	/>
 </p>
 
