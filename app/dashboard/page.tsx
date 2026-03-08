@@ -21,7 +21,7 @@ import LoadBalancerModel from "@/engine/models/LoadBalancer";
 import ServerModel from "@/engine/models/server";
 import ClientModel from "@/engine/models/Client";
 import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
-import ShortUniqueId from "short-unique-id";
+
 
 type Frame = {
   requestId: string;
@@ -76,17 +76,16 @@ function PacketEdge(props: EdgeProps) {
 const edgeTypes = { packet: PacketEdge };
 
 function createSimulationBundle(): SimBundle {
-  const uid = new ShortUniqueId({ length: 10 });
-  const graph = new GraphManager(uid.rnd(10));
-  const registry = new NodeRegistry(uid.rnd(10));
+  const graph = new GraphManager("graph-1");
+  const registry = new NodeRegistry("registry-1");
   const simulation = new SimulationManager(graph, registry);
   const strategy = new RoundRobinStrategy();
 
-  const clientId = uid.rnd(10);
-  const lbId = uid.rnd(10);
-  const s1Id = uid.rnd(10);
-  const s2Id = uid.rnd(10);
-  const s3Id = uid.rnd(10);
+  const clientId = "client-1";
+  const lbId = "lb-1";
+  const s1Id = "server-1";
+  const s2Id = "server-2";
+  const s3Id = "server-3";
 
   const client = new ClientModel(clientId, "Client");
   const lb = new LoadBalancerModel(lbId, "LoadBalancer", strategy);
