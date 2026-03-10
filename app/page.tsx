@@ -357,6 +357,9 @@ export default function Home() {
               <button
                 type="button"
                 className="rounded-xl border border-white/45 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5"
+                onClick={() => {
+                  window.open("https://github.com/ndk123-web/flow-frame", "_blank")
+                }}
               >
                 View GitHub
               </button>
