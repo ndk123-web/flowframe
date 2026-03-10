@@ -50,11 +50,17 @@ function PacketEdge(props: EdgeProps) {
   });
 
   const isActive = Boolean(data?.active);
+
+  // Use the packetDuration from edge data or default to 2.4 seconds if not provided
   const packetDuration = Number(data?.packetDuration ?? 2.4);
+
+  // Adjust the edge opacity based on whether it's active or not
   const edgeOpacity = isActive ? 0.95 : 0.45;
 
   return (
     <>
+
+    {/*  Base Edge that React-flow gives for if any one want dynamic edge object */}
       <BaseEdge
         path={edgePath}
         markerEnd={markerEnd}
@@ -64,8 +70,10 @@ function PacketEdge(props: EdgeProps) {
           transition: "stroke-opacity 220ms ease",
         }}
       />
+
+      {/* It renders request for edges */}
       {isActive && (
-        <circle r="5" fill="#8b5cf6" style={{ filter: "drop-shadow(0 0 8px rgba(139,92,246,0.95))" }}>
+        <circle key={packetDuration} r="5" fill="#8b5cf6" style={{ filter: "drop-shadow(0 0 8px rgba(139,92,246,0.95))" }}>
           <animateMotion dur={`${packetDuration}s`} repeatCount="indefinite" path={edgePath} />
         </circle>
       )}
@@ -178,31 +186,63 @@ export default function DashboardPage() {
   const [frameIndex, setFrameIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
+  const [debug, setIsDebug] = useState(false);
 
+  console.log("Frames:", frames);
+  console.log("Nodes:", nodes);
+  console.log("Edges:", edges);
+
+  // Auto-play effect
   useEffect(() => {
     if (!isPlaying || frames.length === 0) {
       return;
     }
+
+    // Set up an interval to advance the frame index based on the speed
     const id = setInterval(() => {
       setFrameIndex((prev) => (prev + 1) % frames.length);
     }, 1000 / speed);
 
+    // Clean up the interval when the component unmounts or when dependencies change
     return () => clearInterval(id);
+
+    // Re-run this effect whenever isPlaying, speed, or frames.length changes
   }, [isPlaying, speed, frames.length]);
 
+
+  // Effect to reset frame index when debug mode is toggled on
+  useEffect(() => {
+
+    // we need to reset frame index to 0 when debug mode is turned on to avoid out of bound error and also to start from the beginning of the frames
+    if (debug) {
+      setFrameIndex(0);
+      setIsPlaying(false);
+    }
+  }, [debug])
+
+  // Get the current frame based on frameIndex
   const currentFrame = frames[frameIndex] ?? null;
 
+  // Memoize the edges with active state based on the current frame
   const animatedEdges = useMemo(() => {
     if (!currentFrame) {
       return edges;
     }
+
+    // Determine which edge should be active based on the current frame's from and to
     const activeEdgeId = `${currentFrame.from}->${currentFrame.to}`;
+    
+    // Map through edges and set the active state and packet duration for the edge that matches the current frame
     return edges.map((edge) => ({
       ...edge,
       data: {
         ...edge.data,
+
+        // Set active to true if this edge is the one currently being animated 
         active: edge.id === activeEdgeId,
-        packetDuration: edge.id === activeEdgeId ? 1.1 / speed : 2.2,
+
+        // Optionally, you can adjust the packet duration based on the speed or other factors
+        packetDuration: edge.id === activeEdgeId ? 1 / speed : 2.2,
       },
       style: {
         ...edge.style,
@@ -225,6 +265,13 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={() => setIsDebug(true)}
+            className="rounded-md border border-[var(--border)] px-3 py-1 text-sm"
+          >
+            Debug
+          </button>
+          <button
+            type="button"
             onClick={() => setIsPlaying(true)}
             className="rounded-md border border-[var(--border)] px-3 py-1 text-sm"
           >
@@ -244,6 +291,8 @@ export default function DashboardPage() {
           >
             Next
           </button>
+
+          <p className="">{speed}x</p>
           <input
             type="range"
             min={0.5}
@@ -260,20 +309,26 @@ export default function DashboardPage() {
         <ReactFlow
           nodes={nodes}
           edges={animatedEdges}
-          edgeTypes={edgeTypes}
+
+          // Pass the custom edge types to React Flow so it knows how to render edges of type "packet"
+          edgeTypes={edgeTypes} 
           fitView
           fitViewOptions={{ padding: 0.28 }}
-          nodesDraggable={false}
+          nodesDraggable={true}
           nodesConnectable={false}
           elementsSelectable={false}
-          panOnDrag={false}
+          panOnDrag={true} 
+          zoomOnScroll={true}
+          zoomOnPinch={true}
+          nodesFocusable={false}
         >
-          <MiniMap
+          {/* <MiniMap
             nodeColor="rgba(99,102,241,0.7)"
             maskColor="rgba(11,11,12,0.2)"
             position="bottom-right"
-          />
-          <Background variant={BackgroundVariant.Dots} gap={18} size={1.2} color="rgba(148,163,184,0.2)" />
+          /> */}
+          
+          <Background variant={BackgroundVariant.Cross} gap={18} size={1.2} color="rgba(136, 54, 204, 0.2)" />
         </ReactFlow>
       </div>
     </section>
