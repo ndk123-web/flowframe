@@ -49,7 +49,11 @@ class SimulationManager {
           const selectedServer = (
             currentNode as LoadBalancerModel
           ).runLoadBalancer(servers);
-          if (selectedServer === null || selectedServer === -1) {
+          if (
+            selectedServer === null ||
+            selectedServer === -1 ||
+            selectedServer === undefined
+          ) {
             // no server available, switch direction
             request.direction = "backward";
             return;
@@ -99,6 +103,7 @@ class SimulationManager {
     const request_id = this.uid.rnd(10);
     const request_name = `Request_${request_id}`;
     const request = new RequestManager(request_id, request_name, startNode);
+    const forwardStartIndex = this.frames.length;
 
     // register the request in the registry
     this.registry.register(request_id, request);
@@ -122,6 +127,27 @@ class SimulationManager {
         break;
       }
     }
+
+    const currentRequestForwardFrames = this.frames.slice(forwardStartIndex);
+    this.addBackwardFrames(currentRequestForwardFrames);
+  }
+
+  addBackwardFrames(forwardFrames: FrameObject[]) {
+    const backwardFrames: FrameObject[] = [];
+
+    for (let i = forwardFrames.length - 1; i >= 0; i--) {
+      const frame = forwardFrames[i];
+      backwardFrames.push({
+        requestId: frame.requestId,
+        requestName: frame.requestName,
+        from: frame.to,
+        to: frame.from,
+        timestamp: ++this.timestamp,
+        action: "request_backward",
+      });
+    }
+
+    this.frames.push(...backwardFrames);
   }
 
   getFrames() {

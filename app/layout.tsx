@@ -16,6 +16,14 @@ export const metadata: Metadata = {
   title: "FlowFrame | Distributed Systems Simulator",
   description:
     "Design architectures and simulate distributed request flow frame-by-frame.",
+  icons: {
+    icon: [
+      { url: "/logo/flow-frame-dark.png" },
+      { url: "/logo/flow-frame-dark.png", media: "(prefers-color-scheme: dark)" },
+    ],
+    shortcut: "/logo/flow-frame-light.png",
+    apple: "/logo/flow-frame-light.png",
+  },
 };
 
 export default function RootLayout({

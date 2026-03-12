@@ -1,4 +1,4 @@
-import { MarkerType, type Edge, type Node } from "@xyflow/react";
+import { MarkerType, Position, type Edge, type Node } from "@xyflow/react";
 import type { Frame, SimBundle } from "@/engine/types";
 import { GraphManager } from "@/engine/core/Graph/graph";
 import { NodeRegistry } from "@/engine/core/Graph/nodeResgistry";
@@ -43,7 +43,7 @@ export function createSimpleLoadBalancerSimulationBundle(): SimBundle {
   registry.register(s2Id, s2);
   registry.register(s3Id, s3);
 
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 3; i++) {
     simulation.runTest(clientId);
   }
 
@@ -53,6 +53,8 @@ export function createSimpleLoadBalancerSimulationBundle(): SimBundle {
       data: { label: "Client" },
       position: { x: 40, y: 210 },
       type: "default",
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
       style: {
         background: "var(--surface)",
         color: "var(--foreground)",
@@ -67,6 +69,8 @@ export function createSimpleLoadBalancerSimulationBundle(): SimBundle {
       data: { label: "Load Balancer" },
       position: { x: 320, y: 210 },
       type: "default",
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
       style: {
         background: "var(--surface)",
         color: "var(--foreground)",
@@ -81,6 +85,8 @@ export function createSimpleLoadBalancerSimulationBundle(): SimBundle {
       data: { label: "Server 1" },
       position: { x: 700, y: 60 },
       type: "default",
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
       style: {
         background: "var(--surface)",
         color: "var(--foreground)",
@@ -95,6 +101,8 @@ export function createSimpleLoadBalancerSimulationBundle(): SimBundle {
       data: { label: "Server 2" },
       position: { x: 700, y: 210 },
       type: "default",
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
       style: {
         background: "var(--surface)",
         color: "var(--foreground)",
@@ -109,6 +117,8 @@ export function createSimpleLoadBalancerSimulationBundle(): SimBundle {
       data: { label: "Server 3" },
       position: { x: 700, y: 360 },
       type: "default",
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
       style: {
         background: "var(--surface)",
         color: "var(--foreground)",

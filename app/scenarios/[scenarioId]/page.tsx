@@ -34,6 +34,7 @@ type Frame = {
   from: string;
   to: string;
   timestamp: number;
+  action?: string;
 };
 
 type SimBundle = {
@@ -67,6 +68,7 @@ function PacketEdge(props: EdgeProps) {
 
   const isActive = Boolean(data?.active);
   const packetDuration = Number(data?.packetDuration ?? 2.4);
+  const isReverseMotion = Boolean(data?.reverseMotion);
   const edgeOpacity = isActive ? 0.95 : 0.45;
 
   return (
@@ -82,12 +84,23 @@ function PacketEdge(props: EdgeProps) {
       />
       {isActive && (
         <circle
-          key={packetDuration}
+          key={`${packetDuration}-${isReverseMotion ? "rev" : "fwd"}`}
           r="5"
-          fill="#8b5cf6"
-          style={{ filter: "drop-shadow(0 0 8px rgba(139,92,246,0.95))" }}
+          fill={isReverseMotion ? "#f59e0b" : "#8b5cf6"}
+          style={{
+            filter: isReverseMotion
+              ? "drop-shadow(0 0 8px rgba(245,158,11,0.95))"
+              : "drop-shadow(0 0 8px rgba(139,92,246,0.95))",
+          }}
         >
-          <animateMotion dur={`${packetDuration}s`} repeatCount="indefinite" path={edgePath} />
+          <animateMotion
+            dur={`${packetDuration}s`}
+            repeatCount="indefinite"
+            path={edgePath}
+            keyPoints={isReverseMotion ? "1;0" : "0;1"}
+            keyTimes="0;1"
+            calcMode="linear"
+          />
         </circle>
       )}
     </>
@@ -315,7 +328,12 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
     }, 1000 / speed);
 
     return () => clearInterval(id);
-  }, [isPlaying, speed, frames.length]);
+  }, [isPlaying, frames.length, speed]);
+
+  // whenever speed changes always start from the first frame, this is because the frames are designed to be played at normal speed, if we change the speed in the middle of the playback, it might cause some frames to be skipped or played too fast, which can lead to a confusing visualization. By resetting to the first frame whenever the speed changes, we ensure that the simulation always starts from a consistent state and plays smoothly at the new speed.
+  useEffect(() => {
+    setFrameIndex(0);
+  }, [speed]);
 
   const currentFrame = frames[frameIndex] ?? null;
 
@@ -325,18 +343,29 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
       return edges;
     }
 
-    const activeEdgeId = `${currentFrame.from}->${currentFrame.to}`;
+    const directEdgeId = `${currentFrame.from}->${currentFrame.to}`;
+    const reverseEdgeId = `${currentFrame.to}->${currentFrame.from}`;
+    const hasDirectEdge = edges.some((edge) => edge.id === directEdgeId);
+    const hasReverseEdge = edges.some((edge) => edge.id === reverseEdgeId);
+
+    const activeEdgeId = hasDirectEdge
+      ? directEdgeId
+      : hasReverseEdge
+        ? reverseEdgeId
+        : directEdgeId;
+    const isReverseMotion = !hasDirectEdge && hasReverseEdge;
 
     return edges.map((edge) => ({
       ...edge,
       data: {
         ...edge.data,
         active: edge.id === activeEdgeId,
+        reverseMotion: edge.id === activeEdgeId ? isReverseMotion : false,
         packetDuration: edge.id === activeEdgeId ? 1 / speed : 2.2,
       },
       style: {
         ...edge.style,
-        stroke: edge.id === activeEdgeId ? "#8b5cf6" : "#60a5fa",
+        stroke: edge.id === activeEdgeId ? (isReverseMotion ? "#f59e0b" : "#8b5cf6") : "#60a5fa",
       },
     }));
   }, [currentFrame, edges, speed]);
@@ -386,7 +415,10 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             </button>
             <button
               type="button"
-              onClick={() => setIsPlaying(true)}
+              onClick={() => {
+                setFrameIndex(0)
+                setIsPlaying((prev) => !prev);
+              }}
               className="rounded-md border border-[var(--border)] px-3 py-1 text-sm"
             >
               Play
