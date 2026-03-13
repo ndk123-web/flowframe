@@ -145,7 +145,7 @@ export function createSimpleLoadBalancerSimulationBundle(
       type: "packet",
       markerEnd: { type: MarkerType.ArrowClosed, color: "#60a5fa" },
       style: edgeBaseStyle,
-      data: { active: false, packetDuration: 1.9 },
+      data: { active: false, packetDuration: 2.15 },
     },
     {
       id: `${lbId}->${s1Id}`,

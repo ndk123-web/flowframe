@@ -377,7 +377,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
         ...edge.data,
         active: edge.id === activeEdgeId,
         reverseMotion: edge.id === activeEdgeId ? isReverseMotion : false,
-        packetDuration: edge.id === activeEdgeId ? 1 / speed : 2.2,
+        packetDuration: edge.id === activeEdgeId ? (1 / speed)  : 2.2,
       },
       style: {
         ...edge.style,
