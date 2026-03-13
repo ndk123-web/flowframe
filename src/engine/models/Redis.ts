@@ -3,7 +3,7 @@ import type { NodeInstance } from "../contracts";
 class RedisModel implements NodeInstance{
   id: string;
   name: string;
-  type: string = "REDIS_DATABASE";
+  type: string = "REDIS_CACHE";
   data: Map<string, any> = new Map();
 
   constructor(id: string, name: string) {

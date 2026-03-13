@@ -31,6 +31,17 @@ const SCENARIOS: ScenarioCard[] = [
 		expectedFrames: 16,
 		updatedAt: "2026-03-12",
 	},
+	{
+		id: "simple-cache",
+		title: "Simple Cache (Redis + Postgres)",
+		description:
+			"Observe cache hit, cache miss fallback to Postgres, and invalid-key lookups with per-frame debug details.",
+		href: "/scenarios/simple-cache",
+		difficulty: "Beginner",
+		focus: ["Cache Aside", "Redis Hit/Miss", "DB Fallback"],
+		expectedFrames: 6,
+		updatedAt: "2026-03-13",
+	},
 ];
 
 function Reveal({
@@ -176,10 +187,10 @@ export default function ScenariosPage() {
 				<div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface)]/65 p-5 text-sm text-[color:var(--foreground)]/70 md:flex md:items-center md:justify-between">
 					<p>Add new hardcoded scenario IDs in src/scenarios/all.ts and they can be listed here.</p>
 					<Link
-						href="/scenarios/simple-load-balancer"
+						href="/scenarios/simple-cache"
 						className="mt-3 inline-flex rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 font-medium md:mt-0"
 					>
-						Launch Current Demo
+						Launch Cache Demo
 					</Link>
 				</div>
 			</section>

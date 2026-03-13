@@ -18,13 +18,19 @@ type FrameObject = {
   to: string;
   timestamp: number;
   action?: string;
+  lookupKey?: string;
+  redisKeysSnapshot?: string[];
 };
 
 type Frame = {
   requestId: string;
+  requestName?: string;
   from: string;
   to: string;
   timestamp: number;
+  action?: string;
+  lookupKey?: string;
+  redisKeysSnapshot?: string[];
 };
 
 type SimBundle = {

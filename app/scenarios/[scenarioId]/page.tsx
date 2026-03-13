@@ -35,6 +35,8 @@ type Frame = {
   to: string;
   timestamp: number;
   action?: string;
+  lookupKey?: string;
+  redisKeysSnapshot?: string[];
 };
 
 type SimBundle = {
@@ -386,7 +388,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
     }));
   }, [currentFrame, edges, speed]);
 
-  if (scenarioId !== "simple-load-balancer") {
+  if (!ALL_SCENARIOS.has(scenarioId)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--background)]">
         <p className="text-lg text-[color:var(--foreground)]/75">Scenario not found.</p>
@@ -414,6 +416,21 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             {currentFrame && (
               <span className="ml-3 text-[color:var(--foreground)]/60">
                 {currentFrame.from.slice(0, 6)} {"->"} {currentFrame.to.slice(0, 6)}
+              </span>
+            )}
+            {currentFrame?.action && (
+              <span className="ml-3 text-[color:var(--foreground)]/60">
+                Action: {currentFrame.action}
+              </span>
+            )}
+            {currentFrame?.lookupKey && (
+              <span className="ml-3 text-[color:var(--foreground)]/60">
+                Lookup Key: {currentFrame.lookupKey}
+              </span>
+            )}
+            {currentFrame?.redisKeysSnapshot && (
+              <span className="ml-3 text-[color:var(--foreground)]/60">
+                Redis Keys: [{currentFrame.redisKeysSnapshot.join(", ")}]
               </span>
             )}
           </div>

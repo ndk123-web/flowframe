@@ -6,6 +6,8 @@ import { NodeRegistry } from "../Graph/nodeResgistry";
 import ShortUniqueId from "short-unique-id";
 import { NodeInstance } from "@/engine/contracts";
 import LoadBalancerModel from "@/engine/models/LoadBalancer";
+import RedisModel from "@/engine/models/Redis";
+import PostgresModel from "@/engine/models/Postgres";
 
 class SimulationManager {
   graph: GraphManager;
@@ -15,12 +17,49 @@ class SimulationManager {
   registry: NodeRegistry;
   uid: ShortUniqueId = new ShortUniqueId({ length: 10 });
   timestamp: number = 0;
+  dataToPass: { [key: string]: { [key: string]: any } };
+  redisLookupCursor: number = 0;
 
-  constructor(graph: GraphManager, registry: NodeRegistry) {
+  constructor(
+    graph: GraphManager,
+    registry: NodeRegistry,
+
+    // means the object.key is string and object.value.key is string and object.value.value can be anything, this is used to pass data from one node to another node in the simulation, for example, client can pass some data to server which will be stored in the registry and then server can pass the same data to redis cache or postgres database, this will help us to simulate cache hit and cache miss scenarios in the simple cache scenario
+    dataToPass: { [key: string]: { [key: string]: any } } = {},
+  ) {
     this.graph = graph;
     this.registry = registry;
     this.from = "";
     this.to = "";
+    this.dataToPass = dataToPass;
+  }
+
+  private pickRedisLookupKey(request: RequestManager): string | null {
+    const data = request.getRequestData();
+    const testCasesForRedis = data["testCasesForRedis"]?.data;
+
+    if (!Array.isArray(testCasesForRedis) || testCasesForRedis.length === 0) {
+      return null;
+    }
+
+    const key = String(
+      testCasesForRedis[this.redisLookupCursor % testCasesForRedis.length],
+    );
+    this.redisLookupCursor++;
+    return key;
+  }
+
+  private getNextNodeByType(fromNode: NodeId, nodeType: string): NodeId | null {
+    const nextNodes = this.graph.getNextNodes(fromNode);
+
+    for (const nodeId of nextNodes) {
+      const nodeInstance = this.registry.getInstance(nodeId);
+      if (nodeInstance?.type === nodeType) {
+        return nodeId;
+      }
+    }
+
+    return null;
   }
 
   // the logic is:
@@ -72,6 +111,85 @@ class SimulationManager {
             return;
           }
         }
+      } else if (currentNode?.type === "SERVER") {
+        const redisNodeId = this.getNextNodeByType(this.from, "REDIS_CACHE");
+        const postgresNodeId = this.getNextNodeByType(
+          this.from,
+          "POSTGRES_DATABASE",
+        );
+
+        if (redisNodeId) {
+          const redisInstance = this.registry.getInstance(redisNodeId) as
+            | RedisModel
+            | null;
+          const lookupKey = this.pickRedisLookupKey(request);
+
+          if (redisInstance && lookupKey !== null) {
+            const cachedValue = redisInstance.getData(lookupKey);
+            const redisKeysSnapshot = Array.from(redisInstance.data.keys());
+
+            if (cachedValue !== null) {
+              this.frames.push({
+                requestId: request.id,
+                requestName: request.name,
+                from: this.from,
+                to: redisNodeId,
+                timestamp: ++this.timestamp,
+                action: "cache_hit",
+                lookupKey,
+                redisKeysSnapshot,
+              });
+
+              request.path.push(this.from);
+              request.currentNodeId = redisNodeId;
+              request.direction = "backward";
+              return;
+            }
+
+            if (postgresNodeId) {
+              const postgresInstance = this.registry.getInstance(postgresNodeId) as
+                | PostgresModel
+                | null;
+              const dbRecord = postgresInstance?.getRecord("users", lookupKey);
+
+              if (dbRecord !== null && dbRecord !== undefined) {
+                redisInstance.addData(lookupKey, dbRecord);
+              }
+
+              this.frames.push({
+                requestId: request.id,
+                requestName: request.name,
+                from: this.from,
+                to: postgresNodeId,
+                timestamp: ++this.timestamp,
+                action: "cache_miss_fallback",
+                lookupKey,
+                redisKeysSnapshot,
+              });
+
+              request.path.push(this.from);
+              request.currentNodeId = postgresNodeId;
+              request.direction = "backward";
+              return;
+            }
+
+            this.frames.push({
+              requestId: request.id,
+              requestName: request.name,
+              from: this.from,
+              to: redisNodeId,
+              timestamp: ++this.timestamp,
+              action: "cache_miss_no_fallback",
+              lookupKey,
+              redisKeysSnapshot,
+            });
+
+            request.path.push(this.from);
+            request.currentNodeId = redisNodeId;
+            request.direction = "backward";
+            return;
+          }
+        }
       }
 
       const nextNodes = this.graph.getNextNodes(this.from);
@@ -82,8 +200,7 @@ class SimulationManager {
         return;
       }
 
-      let nextFirst = nextNodes[0];
-      const instance = this.registry.getInstance(nextFirst);
+      const nextFirst = nextNodes[0];
 
       this.frames.push({
         requestId: request.id,
@@ -102,7 +219,14 @@ class SimulationManager {
   runTest(startNode: NodeId, hideResponse: boolean) {
     const request_id = this.uid.rnd(10);
     const request_name = `Request_${request_id}`;
-    const request = new RequestManager(request_id, request_name, startNode);
+
+    // create a new request instance for the simulation, which will be used to track the current node, path, and direction of the request as it moves through the graph. This allows us to simulate the flow of a request through a distributed system, and to visualize how requests are processed and how responses are generated based on the structure of the graph and the behavior of the nodes.
+    const request = new RequestManager(
+      request_id,
+      request_name,
+      startNode,
+      this.dataToPass,
+    );
 
     // record the index of the first frame for the current request, so that after the simulation is done, we can add backward frames accordingly
     // initially 0 then updated to the index of the first frame for the current request after the first step is executed. This allows us to keep track of which frames belong to which request, which is crucial for adding backward frames correctly after the simulation is done.
