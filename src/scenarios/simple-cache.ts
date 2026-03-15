@@ -74,7 +74,8 @@ function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
   const simulation = new SimulationManager(graph, registry, dataToPass);
 
   for (let i = 0; i < 3; i++) {
-    simulation.runTest(clientId, hideResponse);
+   
+    simulation.runSimulation(clientId);
   }
 
   const flowNodes: Node[] = [

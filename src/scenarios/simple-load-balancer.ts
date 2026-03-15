@@ -46,8 +46,10 @@ export function createSimpleLoadBalancerSimulationBundle(
   registry.register(s3Id, s3);
 
   for (let i = 0; i < 3; i++) {
-    simulation.runTest(clientId, hideResponse);
+    simulation.runSimulation(clientId);
   }
+
+  console.log("Frames generated from simulation:", simulation.getFrames());
 
   const flowNodes: Node[] = [
     {

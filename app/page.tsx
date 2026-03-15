@@ -87,7 +87,8 @@ function buildSimulation() {
 
   // 6 requests × 2 frames each = 12 total, round-robin: S1→S2→S3→S1→S2→S3
   for (let i = 0; i < 6; i++) {
-    simulation.runTest(clientId);
+    
+    simulation.runSimulation(clientId);
   }
 
   return {
