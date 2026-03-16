@@ -49,7 +49,6 @@ export function createSimpleLoadBalancerSimulationBundle(
   registry.register(s3Id, s3);
 
   const allFrames: Frame[] = [];
-  let timestampOffset = 0;
 
   for (let i = 0; i < 3; i++) {
     const simulation = new SimulationManager(
@@ -61,13 +60,7 @@ export function createSimpleLoadBalancerSimulationBundle(
     simulation.runSimulation(clientId);
 
     const runFrames = simulation.getFrames() as Frame[];
-    const runFramesWithOffset = runFrames.map((frame) => ({
-      ...frame,
-      timestamp: timestampOffset++,
-    }));
-
-    allFrames.push(...runFramesWithOffset);
-    timestampOffset = 0;
+    allFrames.push(...runFrames);
   }
 
   console.log("Frames generated from simulation:", allFrames);

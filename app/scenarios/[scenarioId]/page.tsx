@@ -72,6 +72,7 @@ function PacketEdge(props: EdgeProps) {
   const isActive = Boolean(data?.active);
   const packetDuration = Number(data?.packetDuration ?? 2.4);
   const isReverseMotion = Boolean(data?.reverseMotion);
+  const packetCount = Math.max(1, Number(data?.packetCount ?? 1));
   const edgeOpacity = isActive ? 0.95 : 0.45;
 
   return (
@@ -85,33 +86,36 @@ function PacketEdge(props: EdgeProps) {
           transition: "stroke-opacity 220ms ease",
         }}
       />
-      {isActive && (
-        <circle
-          key={`${packetDuration}-${isReverseMotion ? "rev" : "fwd"}`}
-          r="5"
+      {isActive &&
+        Array.from({ length: Math.min(packetCount, 3) }).map((_, index) => (
+          <circle
+            key={`${packetDuration}-${isReverseMotion ? "rev" : "fwd"}-${index}`}
+            r={5 - index * 0.5}
 
-          // we use different colors and drop shadow effects for forward vs reverse motion to help users visually distinguish between request and response flows in the simulation. Forward motions (requests) are styled with a violet color, while reverse motions (responses) are styled with an orange color. The drop shadow adds a glowing effect to the active packet, making it more visually prominent as it moves along the edge.
-          fill={isReverseMotion ? "#f59e0b" : "#8b5cf6"}
-          
-          // we apply a drop shadow filter to the animated packet to make it stand out more against the background and edges. The color of the drop shadow corresponds to the type of motion (forward or reverse) to enhance visual clarity and help users quickly identify the flow of requests and responses in the simulation.
-          style={{
-            filter: isReverseMotion
-              ? "drop-shadow(0 0 8px rgba(245,158,11,0.95))"
-              : "drop-shadow(0 0 8px rgba(139,92,246,0.95))",
-          }}
-        >
-          <animateMotion
-            dur={`${packetDuration}s`}
-            repeatCount="indefinite"
-            path={edgePath}
+            // we use different colors and drop shadow effects for forward vs reverse motion to help users visually distinguish between request and response flows in the simulation. Forward motions (requests) are styled with a violet color, while reverse motions (responses) are styled with an orange color. The drop shadow adds a glowing effect to the active packet, making it more visually prominent as it moves along the edge.
+            fill={isReverseMotion ? "#f59e0b" : "#8b5cf6"}
 
-            // if it's a reverse motion, we want the animation to start from the end of the path and move backwards, so we set keyPoints to "1;0". If it's a forward motion, we want it to start from the beginning and move forwards, so we set keyPoints to "0;1". This allows us to use the same edgePath for both forward and reverse animations while controlling the direction of motion based on the type of frame being visualized.
-            keyPoints={isReverseMotion ? "1;0" : "0;1"}
-            keyTimes="0;1"
-            calcMode="linear"
-          />
-        </circle>
-      )}
+            // we apply a drop shadow filter to the animated packet to make it stand out more against the background and edges. The color of the drop shadow corresponds to the type of motion (forward or reverse) to enhance visual clarity and help users quickly identify the flow of requests and responses in the simulation.
+            style={{
+              filter: isReverseMotion
+                ? "drop-shadow(0 0 8px rgba(245,158,11,0.95))"
+                : "drop-shadow(0 0 8px rgba(139,92,246,0.95))",
+              opacity: Math.max(0.55, 0.95 - index * 0.2),
+            }}
+          >
+            <animateMotion
+              dur={`${packetDuration}s`}
+              repeatCount="indefinite"
+              begin={`${index * 0.12}s`}
+              path={edgePath}
+
+              // if it's a reverse motion, we want the animation to start from the end of the path and move backwards, so we set keyPoints to "1;0". If it's a forward motion, we want it to start from the beginning and move forwards, so we set keyPoints to "0;1". This allows us to use the same edgePath for both forward and reverse animations while controlling the direction of motion based on the type of frame being visualized.
+              keyPoints={isReverseMotion ? "1;0" : "0;1"}
+              keyTimes="0;1"
+              calcMode="linear"
+            />
+          </circle>
+        ))}
     </>
   );
 }
@@ -313,6 +317,23 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
     [hideResponse, scenarioId]
   );
 
+  const frameGroups = useMemo(() => {
+    const groupedByTimestamp = new Map<number, Frame[]>();
+
+    for (const frame of frames) {
+      const existing = groupedByTimestamp.get(frame.timestamp) ?? [];
+      existing.push(frame);
+      groupedByTimestamp.set(frame.timestamp, existing);
+    }
+
+    return Array.from(groupedByTimestamp.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([timestamp, groupFrames]) => ({
+        timestamp,
+        frames: groupFrames,
+      }));
+  }, [frames]);
+
   const [isPlaying, setIsPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
 
@@ -335,58 +356,80 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
   }, [theme]);
 
   useEffect(() => {
-    if (!isPlaying || frames.length === 0) {
+    if (!isPlaying || frameGroups.length === 0) {
       return;
     }
 
     const id = setInterval(() => {
-      setFrameIndex((prev) => (prev + 1) % frames.length);
+      setFrameIndex((prev) => (prev + 1) % frameGroups.length);
     }, 1000 / speed);
 
     return () => clearInterval(id);
-  }, [isPlaying, frames.length, speed, hideResponse]);
+  }, [isPlaying, frameGroups.length, speed, hideResponse]);
 
   // whenever speed changes always start from the first frame, this is because the frames are designed to be played at normal speed, if we change the speed in the middle of the playback, it might cause some frames to be skipped or played too fast, which can lead to a confusing visualization. By resetting to the first frame whenever the speed changes, we ensure that the simulation always starts from a consistent state and plays smoothly at the new speed.
   useEffect(() => {
     setFrameIndex(0);
-  }, [speed, hideResponse]);
+  }, [speed, hideResponse, scenarioId]);
 
-  const currentFrame = frames[frameIndex] ?? null;
+  const currentFrameGroup = frameGroups[frameIndex] ?? null;
+  const currentFrames = currentFrameGroup?.frames ?? [];
+  const currentFrame = currentFrames[0] ?? null;
 
   // useMemo in react use for expensive calculation and return memoized value, it only recompute the memoized value when one of the dependencies has changed. This optimization helps to avoid expensive calculations on every render when the dependencies haven't changed.
   const animatedEdges = useMemo(() => {
-    if (!currentFrame) {
+    if (currentFrames.length === 0) {
       return edges;
     }
 
-    const directEdgeId = `${currentFrame.from}->${currentFrame.to}`;
-    const reverseEdgeId = `${currentFrame.to}->${currentFrame.from}`;
-    const hasDirectEdge = edges.some((edge) => edge.id === directEdgeId);
-    const hasReverseEdge = edges.some((edge) => edge.id === reverseEdgeId);
+    const edgeState = new Map<string, { reverseMotion: boolean; packetCount: number }>();
 
-    const activeEdgeId = hasDirectEdge
-      ? directEdgeId
-      : hasReverseEdge
-        ? reverseEdgeId
-        : directEdgeId;
-      
-    // If the current frame's from-to pair matches a direct edge, we consider it a forward motion. If it matches a reverse edge, we consider it a backward motion. This allows us to use different colors or animations for forward vs backward packet movements, which can help users understand the flow of requests and responses in the simulation more intuitively.
-    const isReverseMotion = !hasDirectEdge && hasReverseEdge;
+    for (const frame of currentFrames) {
+      const directEdgeId = `${frame.from}->${frame.to}`;
+      const reverseEdgeId = `${frame.to}->${frame.from}`;
+      const hasDirectEdge = edges.some((edge) => edge.id === directEdgeId);
+      const hasReverseEdge = edges.some((edge) => edge.id === reverseEdgeId);
+
+      const resolvedEdgeId = hasDirectEdge
+        ? directEdgeId
+        : hasReverseEdge
+          ? reverseEdgeId
+          : directEdgeId;
+
+      // If the current frame's from-to pair matches a direct edge, we consider it a forward motion. If it matches a reverse edge, we consider it a backward motion. This allows us to use different colors or animations for forward vs backward packet movements, which can help users understand the flow of requests and responses in the simulation more intuitively.
+      const isReverseMotion = !hasDirectEdge && hasReverseEdge;
+
+      const previousState = edgeState.get(resolvedEdgeId);
+      if (!previousState) {
+        edgeState.set(resolvedEdgeId, {
+          reverseMotion: isReverseMotion,
+          packetCount: 1,
+        });
+      } else {
+        edgeState.set(resolvedEdgeId, {
+          reverseMotion: previousState.reverseMotion && isReverseMotion,
+          packetCount: previousState.packetCount + 1,
+        });
+      }
+    }
 
     return edges.map((edge) => ({
       ...edge,
       data: {
         ...edge.data,
-        active: edge.id === activeEdgeId,
-        reverseMotion: edge.id === activeEdgeId ? isReverseMotion : false,
-        packetDuration: edge.id === activeEdgeId ? (1 / speed)  : 2.2,
+        active: edgeState.has(edge.id),
+        reverseMotion: edgeState.get(edge.id)?.reverseMotion ?? false,
+        packetCount: edgeState.get(edge.id)?.packetCount ?? 0,
+        packetDuration: edgeState.has(edge.id) ? (1 / speed) : 2.2,
       },
       style: {
         ...edge.style,
-        stroke: edge.id === activeEdgeId ? (isReverseMotion ? "#f59e0b" : "#8b5cf6") : "#60a5fa",
+        stroke: edgeState.has(edge.id)
+          ? (edgeState.get(edge.id)?.reverseMotion ? "#f59e0b" : "#8b5cf6")
+          : "#60a5fa",
       },
     }));
-  }, [currentFrame, edges, speed]);
+  }, [currentFrames, edges, speed]);
 
   if (!ALL_SCENARIOS.has(scenarioId)) {
     return (
@@ -412,7 +455,17 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
       <div className="relative z-10 mx-auto max-w-6xl px-6 py-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)]/75 px-4 py-3 backdrop-blur">
           <div className="text-sm text-[color:var(--foreground)]/75">
-            Frame {frameIndex + 1} / {frames.length || "-"}
+            Frame Group {frameIndex + 1} / {frameGroups.length || "-"}
+            {currentFrameGroup && (
+              <span className="ml-3 text-[color:var(--foreground)]/60">
+                Timestamp: {currentFrameGroup.timestamp}
+              </span>
+            )}
+            {currentFrames.length > 1 && (
+              <span className="ml-3 text-[color:var(--foreground)]/60">
+                Parallel Frames: {currentFrames.length}
+              </span>
+            )}
             {currentFrame && (
               <span className="ml-3 text-[color:var(--foreground)]/60">
                 {currentFrame.from.slice(0, 6)} {"->"} {currentFrame.to.slice(0, 6)}
@@ -470,7 +523,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             </button>
             <button
               type="button"
-              onClick={() => setFrameIndex((prev) => (prev + 1) % Math.max(frames.length, 1))}
+              onClick={() => setFrameIndex((prev) => (prev + 1) % Math.max(frameGroups.length, 1))}
               className="rounded-md border border-[var(--border)] px-3 py-1 text-sm"
             >
               Next
