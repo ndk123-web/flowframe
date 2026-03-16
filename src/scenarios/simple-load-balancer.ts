@@ -8,6 +8,8 @@ import ServerModel from "@/engine/models/server";
 import ClientModel from "@/engine/models/Client";
 import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
 import Ipv4Generator from "@/utils/generateRandomIp";
+import type { Event } from "@/engine/types";
+import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 
 export function createSimpleLoadBalancerSimulationBundle(
   hideResponse: boolean,
@@ -15,12 +17,6 @@ export function createSimpleLoadBalancerSimulationBundle(
   const graph = new GraphManager("graph-1");
   const registry = new NodeRegistry("registry-1");
   const ipv4Instance = new Ipv4Generator();
-  const simulation = new SimulationManager(
-    graph,
-    registry,
-    {},
-    ipv4Instance.getRandomIpv4() as string,
-  );
   const strategy = new RoundRobinStrategy();
 
   const clientId = "client-1";
@@ -52,11 +48,29 @@ export function createSimpleLoadBalancerSimulationBundle(
   registry.register(s2Id, s2);
   registry.register(s3Id, s3);
 
+  const allFrames: Frame[] = [];
+  let timestampOffset = 0;
+
   for (let i = 0; i < 3; i++) {
+    const simulation = new SimulationManager(
+      graph,
+      registry,
+      {},
+      ipv4Instance.getRandomIpv4() as string,
+    );
     simulation.runSimulation(clientId);
+
+    const runFrames = simulation.getFrames() as Frame[];
+    const runFramesWithOffset = runFrames.map((frame) => ({
+      ...frame,
+      timestamp: timestampOffset++,
+    }));
+
+    allFrames.push(...runFramesWithOffset);
+    timestampOffset = 0;
   }
 
-  console.log("Frames generated from simulation:", simulation.getFrames());
+  console.log("Frames generated from simulation:", allFrames);
 
   const flowNodes: Node[] = [
     {
@@ -185,8 +199,23 @@ export function createSimpleLoadBalancerSimulationBundle(
     },
   ];
 
+  const ALL_FRAMES = allFrames;
+  // parallel edge animation for load balancer to servers
+  // for that use PriorityQueue to manage the edges and animate them in parallel based on the frames generated from simulation based on timestamp of the frames and the source and target of the edges
+
+  const pq = new PriorityQueue();
+  pq.pushMultipleIntoQueue(ALL_FRAMES as Event[]);
+
+  const ParallelFrames: Frame[] = [];
+  while (!pq.isEmpty()) {
+    const event = pq.popMinTimeStampItem();
+    ParallelFrames.push(event as Frame);
+  }
+
+  console.log("Frames after parallel processing:", ParallelFrames);
+
   return {
-    frames: simulation.getFrames() as Frame[],
+    frames: ParallelFrames,
     nodes: flowNodes,
     edges: flowEdges,
   };

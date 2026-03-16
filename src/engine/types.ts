@@ -37,4 +37,13 @@ type SimBundle = {
   edges: Edge[];
 };
 
-export type { NodeId, RequestPath, Frame, SimBundle };
+type Event = {
+  requestId: string;
+  from: string;
+  to: string;
+  timestamp: number;
+  action: string;
+  type?: string;
+};
+
+export type { NodeId, RequestPath, Frame, SimBundle, Event };
