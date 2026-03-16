@@ -1,5 +1,5 @@
 interface LoadBalancingConfig {
-  selectServer(serverIds: any[]): any;
+  selectServer(serverIds: any[], clientIp?: string): any 
 }
 
 export type { LoadBalancingConfig };
