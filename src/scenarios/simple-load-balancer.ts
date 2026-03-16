@@ -7,13 +7,20 @@ import LoadBalancerModel from "@/engine/models/LoadBalancer";
 import ServerModel from "@/engine/models/server";
 import ClientModel from "@/engine/models/Client";
 import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
+import Ipv4Generator from "@/utils/generateRandomIp";
 
 export function createSimpleLoadBalancerSimulationBundle(
   hideResponse: boolean,
 ): SimBundle {
   const graph = new GraphManager("graph-1");
   const registry = new NodeRegistry("registry-1");
-  const simulation = new SimulationManager(graph, registry);
+  const ipv4Instance = new Ipv4Generator();
+  const simulation = new SimulationManager(
+    graph,
+    registry,
+    {},
+    ipv4Instance.getRandomIpv4() as string,
+  );
   const strategy = new RoundRobinStrategy();
 
   const clientId = "client-1";

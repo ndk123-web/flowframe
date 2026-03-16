@@ -7,10 +7,12 @@ import { GraphManager } from "@/engine/core/Graph/graph";
 import { NodeRegistry } from "@/engine/core/Graph/nodeResgistry";
 import { Frame, SimBundle } from "@/engine/types";
 import { MarkerType, Position, type Edge, type Node } from "@xyflow/react";
+import Ipv4Generator from "@/utils/generateRandomIp";
 
 function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
   const graph = new GraphManager("graph-cache");
   const registry = new NodeRegistry("registry-cache");
+  const ipv4Instance = new Ipv4Generator();
 
   // we will have 1 client and 1 server and 1 redis cache in between them
   // client -> server
@@ -71,10 +73,14 @@ function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
   registry.register(redisId, redisInstance);
   registry.register(postgresId, postgresInstance);
 
-  const simulation = new SimulationManager(graph, registry, dataToPass);
+  const simulation = new SimulationManager(
+    graph,
+    registry,
+    dataToPass,
+    ipv4Instance.getRandomIpv4() as string,
+  );
 
   for (let i = 0; i < 3; i++) {
-   
     simulation.runSimulation(clientId);
   }
 

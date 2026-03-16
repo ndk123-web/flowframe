@@ -27,6 +27,7 @@ class SimulationManager {
   timestamp: number = 0;
   payloadForRequest: { [key: string]: any } = {};
   redisLookupCursor: number = 0;
+  ipv4: string;
 
   constructor(
     graph: GraphManager,
@@ -34,12 +35,14 @@ class SimulationManager {
 
     // means the object.key is string and object.value.key is string and object.value.value can be anything, this is used to pass data from one node to another node in the simulation, for example, client can pass some data to server which will be stored in the registry and then server can pass the same data to redis cache or postgres database, this will help us to simulate cache hit and cache miss scenarios in the simple cache scenario
     payloadForRequest: { [key: string]: any } = {},
+    ipv4: string,
   ) {
     this.graph = graph;
     this.registry = registry;
     this.from = "";
     this.to = "";
     this.payloadForRequest = payloadForRequest;
+    this.ipv4 = ipv4;
   }
 
   private normalizeNodeType(type: string): SimulationNodeKind {
@@ -77,7 +80,12 @@ class SimulationManager {
     return this.normalizeNodeType(nodeInstance.type);
   }
 
-  private pushFrame(requestId: string, from: NodeId, to: NodeId, action: string) {
+  private pushFrame(
+    requestId: string,
+    from: NodeId,
+    to: NodeId,
+    action: string,
+  ) {
     this.frames.push({
       requestId,
       from,
@@ -113,6 +121,7 @@ class SimulationManager {
       requestName,
       currentNodeId,
       this.payloadForRequest,
+      this.ipv4,
     );
     request.task = "GET_DATA";
 
@@ -261,7 +270,9 @@ class SimulationManager {
 
           const redisInstance = nodeInstance as RedisModel;
           const lookUpKey = request.context.lookupKey as string | undefined;
-          const lookUpData = lookUpKey ? redisInstance.getData(lookUpKey) : null;
+          const lookUpData = lookUpKey
+            ? redisInstance.getData(lookUpKey)
+            : null;
 
           const previousNodeId = traversalPath[traversalPath.length - 2];
           this.pushFrame(
@@ -308,7 +319,6 @@ class SimulationManager {
           return;
       }
     }
-
   }
 
   getFrames() {
