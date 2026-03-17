@@ -8,6 +8,9 @@ import { NodeRegistry } from "@/engine/core/Graph/nodeResgistry";
 import { Frame, SimBundle } from "@/engine/types";
 import { MarkerType, Position, type Edge, type Node } from "@xyflow/react";
 import Ipv4Generator from "@/utils/generateRandomIp";
+import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
+import type { Event } from "@/engine/types";
+import { ALL } from "dns";
 
 function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
   const graph = new GraphManager("graph-cache");
@@ -73,15 +76,30 @@ function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
   registry.register(redisId, redisInstance);
   registry.register(postgresId, postgresInstance);
 
-  const simulation = new SimulationManager(
-    graph,
-    registry,
-    dataToPass,
-    ipv4Instance.getRandomIpv4() as string,
-  );
+  let allFrames: Frame[] = [];
 
   for (let i = 0; i < 3; i++) {
+    const simulation = new SimulationManager(
+      graph,
+      registry,
+      {},
+      ipv4Instance.getRandomIpv4() as string,
+    );
     simulation.runSimulation(clientId);
+
+    const runFrames = simulation.getFrames() as Frame[];
+    allFrames.push(...runFrames);
+  }
+
+  const ALL_FRAMES = allFrames as Event[];
+
+  const pq = new PriorityQueue();
+  pq.pushMultipleIntoQueue(ALL_FRAMES);
+
+  const Parallel_Frames: Event[] = [];
+  while (!pq.isEmpty()) {
+    const event = pq.popMinTimeStampItem();
+    Parallel_Frames.push(event as Frame);
   }
 
   const flowNodes: Node[] = [
@@ -188,7 +206,7 @@ function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
 
   // in this simple cache scenario, we will only have 4 nodes and 3 edges, so we can hardcode the positions and styles for simplicity
   return {
-    frames: simulation.getFrames() as Frame[],
+    frames: Parallel_Frames,
     nodes: flowNodes,
     edges: flowEdges,
   };
