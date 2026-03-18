@@ -24,26 +24,54 @@ type RequestPath = {
 
 type Frame = {
   requestId: string;
+  requestName?: string;
   from: string;
   to: string;
   timestamp: number;
   action: string;
   type?: string;
+  sourceIp?: string;
+  lookupKey?: string;
+  redisKeysSnapshot?: string[];
+  payloadSummary?: string;
+};
+
+type ScenarioRunOptions = {
+  hideResponse: boolean;
+  parallelResponse: boolean;
+};
+
+type SimDebug = {
+  parallelResponse: boolean;
+  testCasesForRedis?: string[];
+  redisStore?: Record<string, string>;
+  postgresStore?: Record<string, string>;
+  requestInputs?: Array<{
+    requestId?: string;
+    sourceIp?: string;
+    lookupKey?: string;
+  }>;
 };
 
 type SimBundle = {
   frames: Frame[];
   nodes: Node[];
   edges: Edge[];
+  debug?: SimDebug;
 };
 
 type Event = {
   requestId: string;
+  requestName?: string;
   from: string;
   to: string;
   timestamp: number;
   action: string;
   type?: string;
+  sourceIp?: string;
+  lookupKey?: string;
+  redisKeysSnapshot?: string[];
+  payloadSummary?: string;
 };
 
-export type { NodeId, RequestPath, Frame, SimBundle, Event };
+export type { NodeId, RequestPath, Frame, SimBundle, Event, ScenarioRunOptions, SimDebug };

@@ -5,14 +5,25 @@ import PostgresModel from "@/engine/models/Postgres";
 import { SimulationManager } from "@/engine/core/Simulations/Simulation";
 import { GraphManager } from "@/engine/core/Graph/graph";
 import { NodeRegistry } from "@/engine/core/Graph/nodeResgistry";
-import { Frame, SimBundle } from "@/engine/types";
+import { Event, Frame, ScenarioRunOptions, SimBundle } from "@/engine/types";
 import { MarkerType, Position, type Edge, type Node } from "@xyflow/react";
 import Ipv4Generator from "@/utils/generateRandomIp";
 import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
-import type { Event } from "@/engine/types";
-import { ALL } from "dns";
 
-function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
+function shouldKeepFrame(hideResponse: boolean, frame: Frame) {
+  if (!hideResponse) {
+    return true;
+  }
+
+  return !(
+    frame.action.includes("SEND_RESPONSE") ||
+    frame.action.includes("RETURN_DATA") ||
+    frame.action === "RESPONSE_BACKTRACK"
+  );
+}
+
+function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
+  const { hideResponse, parallelResponse } = options;
   const graph = new GraphManager("graph-cache");
   const registry = new NodeRegistry("registry-cache");
   const ipv4Instance = new Ipv4Generator();
@@ -26,15 +37,7 @@ function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
   const clientName = "Client 1";
   const clientInstance = new ClientModel(clientId, clientName);
 
-  const dataToPass = {
-    redis: {
-      data: [{ rohan: "cached data for rohan" }],
-    },
-    testCasesForRedis: {
-      // deterministic order in simulation: hit -> db fallback -> invalid key
-      data: ["rohan", "doe", "invalid-user"],
-    },
-  };
+  const redisTestCases = ["rohan", "doe", "invalid-user"];
 
   // add some data for redis cache, we will use the same data for postgres database to simulate cache hit and cache miss scenarios
   clientInstance.addDataToPassToNextNode("redis", [
@@ -59,6 +62,20 @@ function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
   postgresInstance.addRecord("users", "doe", "db data for doe");
   postgresInstance.addRecord("users", "john", "db data for john");
 
+  const redisStoreSnapshot: Record<string, string> = Object.fromEntries(
+    Array.from(redisInstance.data.entries()).map(([key, value]) => [
+      String(key),
+      String(value),
+    ]),
+  );
+
+  const usersDb = postgresInstance.data.get("users") as Map<string, unknown> | undefined;
+  const postgresStoreSnapshot: Record<string, string> = Object.fromEntries(
+    Array.from((usersDb ?? new Map<string, unknown>()).entries()).map(
+      ([key, value]) => [String(key), String(value)],
+    ),
+  );
+
   // add nodes to graph
   graph.addNode(clientId, clientName);
   graph.addNode(serverId, serverName);
@@ -76,31 +93,62 @@ function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
   registry.register(redisId, redisInstance);
   registry.register(postgresId, postgresInstance);
 
-  let allFrames: Frame[] = [];
+  const allFrames: Frame[] = [];
+  const requestInputs: Array<{ requestId?: string; sourceIp?: string; lookupKey?: string }> = [];
 
   for (let i = 0; i < 3; i++) {
+    const lookupKey = redisTestCases[i % redisTestCases.length];
+    const sourceIp = ipv4Instance.getRandomIpv4() as string;
+
     const simulation = new SimulationManager(
       graph,
       registry,
-      {},
-      ipv4Instance.getRandomIpv4() as string,
+      {
+        lookupKey,
+        testCasesForRedis: {
+          data: redisTestCases,
+        },
+      },
+      sourceIp,
     );
     simulation.runSimulation(clientId);
 
-    const runFrames = simulation.getFrames() as Frame[];
+    const runFrames = (simulation.getFrames() as Frame[]).map((frame) => ({
+      ...frame,
+      timestamp: parallelResponse ? frame.timestamp : frame.timestamp + i * 100,
+    }));
+
+    const firstFrame = runFrames[0];
+    if (firstFrame) {
+      requestInputs.push({
+        requestId: firstFrame.requestId,
+        sourceIp,
+        lookupKey,
+      });
+    }
+
     allFrames.push(...runFrames);
   }
 
-  const ALL_FRAMES = allFrames as Event[];
+  const framesToRender: Frame[] = parallelResponse
+    ? (() => {
+        const pq = new PriorityQueue();
+        pq.pushMultipleIntoQueue(allFrames as Event[]);
 
-  const pq = new PriorityQueue();
-  pq.pushMultipleIntoQueue(ALL_FRAMES);
+        const mergedFrames: Frame[] = [];
+        while (!pq.isEmpty()) {
+          const event = pq.popMinTimeStampItem();
+          if (event) {
+            mergedFrames.push(event as Frame);
+          }
+        }
+        return mergedFrames;
+      })()
+    : allFrames.sort((a, b) => a.timestamp - b.timestamp);
 
-  const Parallel_Frames: Event[] = [];
-  while (!pq.isEmpty()) {
-    const event = pq.popMinTimeStampItem();
-    Parallel_Frames.push(event as Frame);
-  }
+  const filteredFrames = framesToRender.filter((frame) =>
+    shouldKeepFrame(hideResponse, frame),
+  );
 
   const flowNodes: Node[] = [
     {
@@ -206,9 +254,16 @@ function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
 
   // in this simple cache scenario, we will only have 4 nodes and 3 edges, so we can hardcode the positions and styles for simplicity
   return {
-    frames: Parallel_Frames,
+    frames: filteredFrames,
     nodes: flowNodes,
     edges: flowEdges,
+    debug: {
+      parallelResponse,
+      testCasesForRedis: redisTestCases,
+      redisStore: redisStoreSnapshot,
+      postgresStore: postgresStoreSnapshot,
+      requestInputs,
+    },
   };
 }
 

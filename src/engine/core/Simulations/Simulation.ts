@@ -35,7 +35,7 @@ class SimulationManager {
 
     // means the object.key is string and object.value.key is string and object.value.value can be anything, this is used to pass data from one node to another node in the simulation, for example, client can pass some data to server which will be stored in the registry and then server can pass the same data to redis cache or postgres database, this will help us to simulate cache hit and cache miss scenarios in the simple cache scenario
     payloadForRequest: { [key: string]: any } = {},
-    ipv4: string,
+    ipv4: string = "0.0.0.0",
   ) {
     this.graph = graph;
     this.registry = registry;
@@ -81,17 +81,25 @@ class SimulationManager {
   }
 
   private pushFrame(
-    requestId: string,
+    request: RequestManager,
     from: NodeId,
     to: NodeId,
     action: string,
+    extra: Partial<Frame> = {},
   ) {
     this.frames.push({
-      requestId,
+      requestId: request.id,
+      requestName: request.name,
       from,
       to,
       timestamp: this.timestamp++,
       action,
+      sourceIp: request.ipAddress,
+      lookupKey:
+        typeof request.context.lookupKey === "string"
+          ? request.context.lookupKey
+          : undefined,
+      ...extra,
     });
   }
 
@@ -126,11 +134,16 @@ class SimulationManager {
     request.task = "GET_DATA";
 
     // deterministic lookup key selection for cache scenarios.
-    const testCases = this.payloadForRequest?.testCasesForRedis?.data;
-    if (Array.isArray(testCases) && testCases.length > 0) {
-      const selectedIndex = this.redisLookupCursor % testCases.length;
-      request.context.lookupKey = testCases[selectedIndex];
-      this.redisLookupCursor++;
+    const explicitLookupKey = this.payloadForRequest?.lookupKey;
+    if (typeof explicitLookupKey === "string" && explicitLookupKey.length > 0) {
+      request.context.lookupKey = explicitLookupKey;
+    } else {
+      const testCases = this.payloadForRequest?.testCasesForRedis?.data;
+      if (Array.isArray(testCases) && testCases.length > 0) {
+        const selectedIndex = this.redisLookupCursor % testCases.length;
+        request.context.lookupKey = testCases[selectedIndex];
+        this.redisLookupCursor++;
+      }
     }
 
     const traversalPath: NodeId[] = [currentNodeId];
@@ -148,7 +161,7 @@ class SimulationManager {
         const responseFrom = traversalPath[traversalPath.length - 1];
         const responseTo = traversalPath[traversalPath.length - 2];
         this.pushFrame(
-          request.id,
+          request,
           responseFrom,
           responseTo,
           this.getResponseAction(responseFrom),
@@ -175,10 +188,13 @@ class SimulationManager {
 
           const toNodeId = nextNodes[0];
           this.pushFrame(
-            request.id,
+            request,
             currentNodeId,
             toNodeId,
             "CLIENT_SEND_REQUEST",
+            {
+              payloadSummary: request.task || "GET_DATA",
+            },
           );
           request.currentNodeId = toNodeId;
           traversalPath.push(toNodeId);
@@ -200,7 +216,7 @@ class SimulationManager {
           }
 
           this.pushFrame(
-            request.id,
+            request,
             currentNodeId,
             selectedNodeId,
             "LOAD_BALANCER_FORWARD_REQUEST",
@@ -216,7 +232,7 @@ class SimulationManager {
           const serverInstance = nodeInstance as ServerModel;
           if (!serverInstance.canAccepthRequest()) {
             this.pushFrame(
-              request.id,
+              request,
               currentNodeId,
               "",
               "SERVER_REJECT_REQUEST",
@@ -233,7 +249,7 @@ class SimulationManager {
 
           if (request.context.awaitingDbLookup && postgresNodeId) {
             this.pushFrame(
-              request.id,
+              request,
               currentNodeId,
               postgresNodeId,
               "SERVER_FORWARD_REQUEST_TO_POSTGRES",
@@ -247,7 +263,7 @@ class SimulationManager {
 
           if (!request.context.redisLookupDone && redisNodeId) {
             this.pushFrame(
-              request.id,
+              request,
               currentNodeId,
               redisNodeId,
               "SERVER_FORWARD_REQUEST_TO_REDIS",
@@ -276,10 +292,13 @@ class SimulationManager {
 
           const previousNodeId = traversalPath[traversalPath.length - 2];
           this.pushFrame(
-            request.id,
+            request,
             currentNodeId,
             previousNodeId,
             lookUpData === null ? "REDIS_CACHE_MISS" : "REDIS_CACHE_HIT",
+            {
+              redisKeysSnapshot: Array.from(redisInstance.data.keys()),
+            },
           );
 
           traversalPath.pop();
@@ -302,7 +321,7 @@ class SimulationManager {
 
           const previousNodeId = traversalPath[traversalPath.length - 2];
           this.pushFrame(
-            request.id,
+            request,
             currentNodeId,
             previousNodeId,
             "POSTGRES_RETURN_DATA",

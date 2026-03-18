@@ -5,7 +5,6 @@ import {
   BaseEdge,
   Background,
   BackgroundVariant,
-  MarkerType,
   ReactFlow,
   type Edge,
   type EdgeProps,
@@ -13,15 +12,9 @@ import {
   getSmoothStepPath,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { GraphManager } from "@/engine/core/Graph/graph";
-import { NodeRegistry } from "@/engine/core/Graph/nodeResgistry";
-import { SimulationManager } from "@/engine/core/Simulations/Simulation";
-import LoadBalancerModel from "@/engine/models/LoadBalancer";
-import ServerModel from "@/engine/models/server";
-import ClientModel from "@/engine/models/Client";
-import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
+import type { SimDebug, ScenarioRunOptions } from "@/engine/types";
 
 // In a real app, you might fetch this from an API or filesystem based on the scenarioId. For this demo, we're hardcoding it.
 import { ALL_SCENARIOS } from "@/scenarios/all";
@@ -30,19 +23,22 @@ type Theme = "light" | "dark";
 
 type Frame = {
   requestId: string;
-  requestName: string;
+  requestName?: string;
   from: string;
   to: string;
   timestamp: number;
-  action?: string;
+  action: string;
+  sourceIp?: string;
   lookupKey?: string;
   redisKeysSnapshot?: string[];
+  payloadSummary?: string;
 };
 
 type SimBundle = {
   frames: Frame[];
   nodes: Node[];
   edges: Edge[];
+  debug?: SimDebug;
 };
 
 function PacketEdge(props: EdgeProps) {
@@ -290,7 +286,7 @@ type ScenarioPropsPage = {
   params : Promise<{ scenarioId: string }>;
 }
 
-function GenerateFrames(hideResponse: boolean, scnenarioId: string): SimBundle {
+function GenerateFrames(options: ScenarioRunOptions, scnenarioId: string): SimBundle {
     const createSimulationBundle: any = ALL_SCENARIOS.get(scnenarioId)
     if (!createSimulationBundle) {
       return {
@@ -300,7 +296,7 @@ function GenerateFrames(hideResponse: boolean, scnenarioId: string): SimBundle {
       }
     }
 
-    return createSimulationBundle(hideResponse);
+    return createSimulationBundle(options);
 }
 
 export default function ScenarioPage({ params }: ScenarioPropsPage) {
@@ -309,12 +305,31 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
   const { scenarioId } = use(params);
 
   const [hideResponse, setHideResponse] = useState(true);
+  const [parallelResponse, setParallelResponse] = useState(true);
   const [frameIndex, setFrameIndex] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // useMemo ensures frames regenerate whenever hideResponse or scenarioId changes.
-  const { frames, nodes, edges } = useMemo(
-    () => GenerateFrames(hideResponse, scenarioId),
-    [hideResponse, scenarioId]
+  const { frames, nodes, edges, debug } = useMemo(
+    () =>
+      isMounted
+        ? GenerateFrames(
+            {
+              hideResponse,
+              parallelResponse,
+            },
+            scenarioId,
+          )
+        : {
+            frames: [],
+            nodes: [],
+            edges: [],
+          },
+    [hideResponse, parallelResponse, scenarioId, isMounted]
   );
 
   const frameGroups = useMemo(() => {
@@ -365,16 +380,18 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
     }, 1000 / speed);
 
     return () => clearInterval(id);
-  }, [isPlaying, frameGroups.length, speed, hideResponse]);
+  }, [isPlaying, frameGroups.length, speed, hideResponse, parallelResponse]);
 
   // whenever speed changes always start from the first frame, this is because the frames are designed to be played at normal speed, if we change the speed in the middle of the playback, it might cause some frames to be skipped or played too fast, which can lead to a confusing visualization. By resetting to the first frame whenever the speed changes, we ensure that the simulation always starts from a consistent state and plays smoothly at the new speed.
   useEffect(() => {
     setFrameIndex(0);
-  }, [speed, hideResponse, scenarioId]);
+  }, [speed, hideResponse, parallelResponse, scenarioId]);
 
   const currentFrameGroup = frameGroups[frameIndex] ?? null;
   const currentFrames = currentFrameGroup?.frames ?? [];
   const currentFrame = currentFrames[0] ?? null;
+  const redisStoreEntries = Object.entries(debug?.redisStore ?? {});
+  const postgresStoreEntries = Object.entries(debug?.postgresStore ?? {});
 
   // useMemo in react use for expensive calculation and return memoized value, it only recompute the memoized value when one of the dependencies has changed. This optimization helps to avoid expensive calculations on every render when the dependencies haven't changed.
   const animatedEdges = useMemo(() => {
@@ -476,6 +493,16 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                 Action: {currentFrame.action}
               </span>
             )}
+            {currentFrame?.sourceIp && (
+              <span className="ml-3 text-[color:var(--foreground)]/60">
+                Source IP: {currentFrame.sourceIp}
+              </span>
+            )}
+            {currentFrame?.payloadSummary && (
+              <span className="ml-3 text-[color:var(--foreground)]/60">
+                Payload: {currentFrame.payloadSummary}
+              </span>
+            )}
             {currentFrame?.lookupKey && (
               <span className="ml-3 text-[color:var(--foreground)]/60">
                 Lookup Key: {currentFrame.lookupKey}
@@ -494,6 +521,19 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
               setHideResponse((prev) => !prev);
             } } className="accent-blue-500" />
             <label htmlFor="hideResponse" className="text-sm text-[color:var(--foreground)]/75">Hide Response</label>
+            <input
+              type="checkbox"
+              id="parallelResponse"
+              checked={parallelResponse}
+              onChange={() => {
+                setParallelResponse((prev) => !prev);
+                setFrameIndex(0);
+              }}
+              className="accent-blue-500"
+            />
+            <label htmlFor="parallelResponse" className="text-sm text-[color:var(--foreground)]/75">
+              Parallel Response
+            </label>
             <button
               type="button"
               onClick={() => {
@@ -542,24 +582,103 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
           </div>
         </div>
 
-        <div className="h-[72vh] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]/65 shadow-[0_20px_50px_-35px_var(--glow)]">
-          <ReactFlow
-            nodes={nodes}
-            edges={animatedEdges}
-            edgeTypes={edgeTypes}
-            fitView
-            fitViewOptions={{ padding: 0.28 }}
-            nodesDraggable={true}
-            nodesConnectable={false}
-            elementsSelectable={false}
-            panOnDrag={true}
-            zoomOnScroll={true}
-            zoomOnPinch={true}
-            nodesFocusable={false}
-          >
-            <Background variant={BackgroundVariant.Dots} gap={18} size={1.1} color="rgba(100,116,139,0.24)" />
-          </ReactFlow>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="h-[72vh] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]/65 shadow-[0_20px_50px_-35px_var(--glow)]">
+            <ReactFlow
+              nodes={nodes}
+              edges={animatedEdges}
+              edgeTypes={edgeTypes}
+              fitView
+              fitViewOptions={{ padding: 0.28 }}
+              nodesDraggable={true}
+              nodesConnectable={false}
+              elementsSelectable={false}
+              panOnDrag={true}
+              zoomOnScroll={true}
+              zoomOnPinch={true}
+              nodesFocusable={false}
+            >
+              <Background variant={BackgroundVariant.Dots} gap={18} size={1.1} color="rgba(100,116,139,0.24)" />
+            </ReactFlow>
+          </div>
+
+          {scenarioId === "simple-cache" && (
+            <aside className="h-[72vh] overflow-auto rounded-2xl border border-[var(--border)] bg-[linear-gradient(165deg,var(--surface)_0%,var(--surface-muted)_100%)] p-4 shadow-[0_20px_50px_-35px_var(--glow)]">
+              <div className="sticky top-0 z-10 mb-3 rounded-lg border border-[var(--border)] bg-[var(--surface)]/90 px-3 py-2 backdrop-blur">
+                <p className="text-xs uppercase tracking-[0.16em] text-[color:var(--foreground)]/60">Data Stores</p>
+                <p className="text-sm font-semibold text-[color:var(--foreground)]">Live Scenario Snapshot</p>
+              </div>
+
+              <div className="space-y-4">
+                <section className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-emerald-300">Redis</h3>
+                    <span className="rounded-full border border-emerald-500/30 px-2 py-0.5 text-[11px] text-emerald-300/90">
+                      {redisStoreEntries.length} keys
+                    </span>
+                  </div>
+
+                  {redisStoreEntries.length > 0 ? (
+                    <div className="space-y-2">
+                      {redisStoreEntries.map(([key, value]) => (
+                        <div key={`redis-${key}`} className="rounded-md border border-emerald-500/20 bg-emerald-500/10 p-2">
+                          <p className="text-xs text-emerald-200/90">Key: {key}</p>
+                          <p className="mt-1 text-xs text-[color:var(--foreground)]/80">Value: {value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[color:var(--foreground)]/65">No Redis keys found.</p>
+                  )}
+                </section>
+
+                <section className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-sky-300">Postgres (users)</h3>
+                    <span className="rounded-full border border-sky-500/30 px-2 py-0.5 text-[11px] text-sky-300/90">
+                      {postgresStoreEntries.length} rows
+                    </span>
+                  </div>
+
+                  {postgresStoreEntries.length > 0 ? (
+                    <div className="space-y-2">
+                      {postgresStoreEntries.map(([key, value]) => (
+                        <div key={`postgres-${key}`} className="rounded-md border border-sky-500/20 bg-sky-500/10 p-2">
+                          <p className="text-xs text-sky-200/90">Primary Key: {key}</p>
+                          <p className="mt-1 text-xs text-[color:var(--foreground)]/80">Record: {value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[color:var(--foreground)]/65">No Postgres records found.</p>
+                  )}
+                </section>
+              </div>
+            </aside>
+          )}
         </div>
+
+        {!parallelResponse && debug?.requestInputs && debug.requestInputs.length > 0 && (
+          <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface)]/75 p-4 text-sm text-[color:var(--foreground)]/75">
+            <p className="font-medium text-[color:var(--foreground)]">Request Inputs</p>
+            <div className="mt-2 grid gap-2 md:grid-cols-3">
+              {debug.requestInputs.map((entry, idx) => (
+                <div key={`${entry.requestId ?? "req"}-${idx}`} className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]/60 p-2">
+                  <p>Req: {entry.requestId?.slice(0, 8) ?? "-"}</p>
+                  <p>IP: {entry.sourceIp ?? "-"}</p>
+                  <p>Lookup Key: {entry.lookupKey ?? "-"}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!parallelResponse && scenarioId === "simple-cache" && debug?.testCasesForRedis && (
+          <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface)]/75 p-4 text-sm text-[color:var(--foreground)]/75">
+            <p className="font-medium text-[color:var(--foreground)]">Redis Test Cases</p>
+            <p className="mt-1">{debug.testCasesForRedis.join(" -> ")}</p>
+          </div>
+        )}
       </div>
 
       <div className="relative z-10">
