@@ -116,6 +116,34 @@ function PacketEdge(props: EdgeProps) {
   );
 }
 
+function MediaButton({
+  label,
+  onClick,
+  children,
+  active = false,
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+  active?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${
+        active
+          ? "border-cyan-400/60 bg-cyan-500/20 text-cyan-200"
+          : "border-[var(--border)] bg-[var(--surface-muted)] text-[color:var(--foreground)]/80"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 const edgeTypes = { packet: PacketEdge };
 
 // function createSimulationBundle(): SimBundle {
@@ -370,6 +398,8 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
+  const [showCurrentFlowPanel, setShowCurrentFlowPanel] = useState(true);
+  const [showTelemetryPanel, setShowTelemetryPanel] = useState(true);
 
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window === "undefined") {
@@ -405,6 +435,70 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
   useEffect(() => {
     setFrameIndex(0);
   }, [speed, hideResponse, parallelResponse, scenarioId]);
+
+  const goToPreviousFrame = () => {
+    setIsPlaying(false);
+    setFrameIndex((prev) =>
+      frameGroups.length === 0
+        ? 0
+        : prev === 0
+          ? frameGroups.length - 1
+          : prev - 1
+    );
+  };
+
+  const goToNextFrame = () => {
+    setIsPlaying(false);
+    setFrameIndex((prev) => (prev + 1) % Math.max(frameGroups.length, 1));
+  };
+
+  const restartPlayback = () => {
+    setFrameIndex(0);
+    setIsPlaying(true);
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      if (target) {
+        const tagName = target.tagName;
+        const isEditable =
+          target.isContentEditable ||
+          tagName === "INPUT" ||
+          tagName === "TEXTAREA" ||
+          tagName === "SELECT" ||
+          tagName === "BUTTON";
+
+        if (isEditable) {
+          return;
+        }
+      }
+
+      if (event.code === "Space") {
+        event.preventDefault();
+        setIsPlaying((prev) => !prev);
+        return;
+      }
+
+      if (event.code === "ArrowLeft") {
+        event.preventDefault();
+        goToPreviousFrame();
+        return;
+      }
+
+      if (event.code === "ArrowRight") {
+        event.preventDefault();
+        goToNextFrame();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [frameGroups.length]);
 
   const currentFrameGroup = frameGroups[frameIndex] ?? null;
   const currentFrames = currentFrameGroup?.frames ?? [];
@@ -456,6 +550,10 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
       return edges;
     }
 
+    /**
+     * edgestate of string to { reverseMotion: boolean, packetCount: number }
+     * which is 
+     */
     const edgeState = new Map<string, { reverseMotion: boolean; packetCount: number }>();
 
     for (const frame of currentFrames) {
@@ -527,123 +625,133 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
       />
 
       <div className="relative z-10 mx-auto max-w-6xl px-6 py-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)]/75 px-4 py-3 backdrop-blur">
-          <div className="text-sm text-[color:var(--foreground)]/75">
-            Frame Group {frameIndex + 1} / {frameGroups.length || "-"}
-            {currentFrameGroup && (
-              <span className="ml-3 text-[color:var(--foreground)]/60">
-                Timestamp: {currentFrameGroup.timestamp}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)]/75 px-3 py-2">
+          <p className="text-xs uppercase tracking-[0.14em] text-[color:var(--foreground)]/60">View Panels</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowCurrentFlowPanel((prev) => !prev)}
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs text-[color:var(--foreground)]/80"
+            >
+              {showCurrentFlowPanel ? "Hide" : "Show"} Current Flow
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowTelemetryPanel((prev) => !prev)}
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs text-[color:var(--foreground)]/80"
+            >
+              {showTelemetryPanel ? "Hide" : "Show"} Playback Telemetry
+            </button>
+          </div>
+        </div>
+
+        {showCurrentFlowPanel && (
+          <div className="mb-4 rounded-2xl border border-[var(--border)] bg-[linear-gradient(140deg,rgba(34,211,238,0.12)_0%,var(--surface)_38%,var(--surface-muted)_100%)] p-4 shadow-[0_16px_40px_-32px_var(--glow)]">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--foreground)]/55">Current Request Flow</p>
+                <p className="text-sm font-semibold text-[color:var(--foreground)]">Live Requests At Active Timestamp</p>
+              </div>
+              <span className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-2.5 py-1 text-xs text-cyan-300">
+                {currentRequestData.length} Active
               </span>
+            </div>
+
+            {currentRequestData.length > 0 ? (
+              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                {currentRequestData.map((entry) => (
+                  <div key={entry.requestId} className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/80 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-mono text-sm text-[color:var(--foreground)]">{entry.requestId.slice(0, 8)}</p>
+                      <span className="rounded-md bg-[var(--surface-muted)] px-2 py-0.5 text-[11px] text-[color:var(--foreground)]/70">
+                        {currentFrameGroup?.timestamp ?? "-"}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-[color:var(--foreground)]/75">IP: {entry.sourceIp ?? "-"}</p>
+                    <p className="text-xs text-[color:var(--foreground)]/75">Lookup: {entry.lookupKey ?? "-"}</p>
+                    <p className="text-xs text-[color:var(--foreground)]/75">Payload: {entry.payloadSummary ?? "-"}</p>
+                    <p className="mt-2 rounded-md border border-[var(--border)] bg-[var(--surface-muted)] px-2 py-1 text-xs font-medium text-[color:var(--foreground)]/90">
+                      {entry.action ?? "-"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface)]/60 px-3 py-6 text-center text-sm text-[color:var(--foreground)]/65">
+                No active requests on this frame yet.
+              </div>
             )}
-            {currentFrames.length > 1 && (
-              <span className="ml-3 text-[color:var(--foreground)]/60">
-                Parallel Frames: {currentFrames.length}
-              </span>
-            )}
-            {currentFrame && (
-              <span className="ml-3 text-[color:var(--foreground)]/60">
-                {currentFrame.from.slice(0, 6)} {"->"} {currentFrame.to.slice(0, 6)}
-              </span>
-            )}
-            {currentFrame?.action && (
-              <span className="ml-3 text-[color:var(--foreground)]/60">
-                Action: {currentFrame.action}
-              </span>
-            )}
+          </div>
+        )}
+
+        {showTelemetryPanel && (
+        <div className="mb-4 rounded-2xl border border-[var(--border)] bg-[linear-gradient(145deg,var(--surface)_0%,var(--surface-muted)_100%)] p-4 shadow-[0_18px_45px_-36px_var(--glow)]">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--foreground)]/55">Playback Telemetry</p>
+            <span className="rounded-full border border-teal-500/35 bg-teal-500/10 px-2.5 py-1 text-xs text-teal-300">
+              {isPlaying ? "Live" : "Paused"}
+            </span>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/70 p-3">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--foreground)]/55">Frame Group</p>
+              <p className="mt-1 text-lg font-semibold text-[color:var(--foreground)]">{frameIndex + 1} / {frameGroups.length || "-"}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/70 p-3">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--foreground)]/55">Timestamp</p>
+              <p className="mt-1 text-lg font-semibold text-[color:var(--foreground)]">{currentFrameGroup?.timestamp ?? "-"}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/70 p-3">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--foreground)]/55">Parallel Frames</p>
+              <p className="mt-1 text-lg font-semibold text-[color:var(--foreground)]">{currentFrames.length}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/70 p-3">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--foreground)]/55">Current Route</p>
+              <p className="mt-1 text-sm font-semibold text-[color:var(--foreground)]">
+                {currentFrame ? `${currentFrame.from} -> ${currentFrame.to}` : "-"}
+              </p>
+            </div>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/70 p-3">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--foreground)]/55">Action</p>
+              <p className="mt-1 text-sm font-semibold text-[color:var(--foreground)] overflow-hidden">{currentFrame?.action ?? "-"}</p>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--foreground)]/70">
             {currentFrame?.sourceIp && (
-              <span className="ml-3 text-[color:var(--foreground)]/60">
-                Source IP: {currentFrame.sourceIp}
-              </span>
-            )}
-            {currentFrame?.payloadSummary && (
-              <span className="ml-3 text-[color:var(--foreground)]/60">
-                Payload: {currentFrame.payloadSummary}
+              <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1">
+                IP: {currentFrame.sourceIp}
               </span>
             )}
             {currentFrame?.lookupKey && (
-              <span className="ml-3 text-[color:var(--foreground)]/60">
-                Lookup Key: {currentFrame.lookupKey}
+              <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1">
+                Lookup: {currentFrame.lookupKey}
+              </span>
+            )}
+            {currentFrame?.payloadSummary && (
+              <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1">
+                Payload: {currentFrame.payloadSummary}
               </span>
             )}
             {currentFrame?.redisKeysSnapshot && (
-              <span className="ml-3 text-[color:var(--foreground)]/60">
+              <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1">
                 Redis Keys: [{currentFrame.redisKeysSnapshot.join(", ")}]
               </span>
             )}
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* now we need input for the check whether hide response or not */}
-            <input type="checkbox" id="hideResponse" checked={hideResponse} onChange={() => {
-              setHideResponse((prev) => !prev);
-            } } className="accent-blue-500" />
-            <label htmlFor="hideResponse" className="text-sm text-[color:var(--foreground)]/75">Hide Response</label>
-            <input
-              type="checkbox"
-              id="parallelResponse"
-              checked={parallelResponse}
-              onChange={() => {
-                setParallelResponse((prev) => !prev);
-                setFrameIndex(0);
-              }}
-              className="accent-blue-500"
-            />
-            <label htmlFor="parallelResponse" className="text-sm text-[color:var(--foreground)]/75">
-              Parallel Response
-            </label>
-            <button
-              type="button"
-              onClick={() => {
-                setFrameIndex(0);
-                setIsPlaying(false);
-              }}
-              className="rounded-md border border-[var(--border)] px-3 py-1 text-sm"
-            >
-              Debug
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setFrameIndex(0)
-                setIsPlaying((prev) => !prev);
-              }}
-              className="rounded-md border border-[var(--border)] px-3 py-1 text-sm"
-            >
-              Play
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsPlaying(false)}
-              className="rounded-md border border-[var(--border)] px-3 py-1 text-sm"
-            >
-              Pause
-            </button>
-            <button
-              type="button"
-              onClick={() => setFrameIndex((prev) => (prev + 1) % Math.max(frameGroups.length, 1))}
-              className="rounded-md border border-[var(--border)] px-3 py-1 text-sm"
-            >
-              Next
-            </button>
-
-            <p className="ml-2 text-sm text-[color:var(--foreground)]/75">{speed.toFixed(1)}x</p>
-            <input
-              type="range"
-              min={0.5}
-              max={2}
-              step={0.1}
-              value={speed}
-              onChange={(event) => setSpeed(Number(event.target.value))}
-              className="ml-1 w-24 accent-blue-500"
-            />
-          </div>
         </div>
+        )}
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="h-[72vh] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]/65 shadow-[0_20px_50px_-35px_var(--glow)]">
             <ReactFlow
               nodes={nodes}
+
+              // brain of the edges, we determine which edges should be animated based on the current frames being visualized. For each frame, we check if it corresponds to a direct edge (from->to) or a reverse edge (to->from) in the graph. We then create a mapping of edge IDs to their animation state, which includes whether it's a reverse motion and how many packets are currently active on that edge. This allows us to dynamically update the appearance and animation of edges in the ReactFlow visualization based on the simulation data, providing a clear visual representation of the flow of requests and responses in the system. 
               edges={animatedEdges}
+
+              // edge renderer, we use custom edge type "packet" to render the animated packets on the edges. The PacketEdge component uses SVG animations to create moving circles along the edge paths, which represent the flow of requests and responses in the simulation. By defining a custom edge type, we can easily control the appearance and behavior of these animated packets based on the frame data, such as changing colors for forward vs reverse motion and adjusting animation speed based on the simulation speed.
               edgeTypes={edgeTypes}
               fitView
               fitViewOptions={{ padding: 0.28 }}
@@ -716,31 +824,16 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
         </div>
 
         {!parallelResponse && debug?.requestInputs && debug.requestInputs.length > 0 && (
-          <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface)]/75 p-4 text-sm text-[color:var(--foreground)]/75">
-            <p className="font-medium text-[color:var(--foreground)]">Request Inputs</p>
+          <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[linear-gradient(145deg,var(--surface)_0%,var(--surface-muted)_100%)] p-4 text-sm text-[color:var(--foreground)]/75">
+            <p className="text-xs uppercase tracking-[0.15em] text-[color:var(--foreground)]/55">Request Inputs</p>
+            <p className="mt-1 font-medium text-[color:var(--foreground)]">Initial Requests Snapshot</p>
             <div className="mt-2 grid gap-2 md:grid-cols-3">
               {debug.requestInputs.map((entry, idx) => (
-                <div key={`${entry.requestId ?? "req"}-${idx}`} className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]/60 p-2">
-                  <p>Req: {entry.requestId?.slice(0, 8) ?? "-"}</p>
-                  <p>IP: {entry.sourceIp ?? "-"}</p>
-                  <p>Lookup Key: {entry.lookupKey ?? "-"}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {currentRequestData.length > 0 && (
-          <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface)]/75 p-4 text-sm text-[color:var(--foreground)]/75">
-            <p className="font-medium text-[color:var(--foreground)]">Current Request Data</p>
-            <div className="mt-2 grid gap-2 md:grid-cols-3">
-              {currentRequestData.map((entry) => (
-                <div key={entry.requestId} className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]/60 p-2">
-                  <p>Req: {entry.requestId.slice(0, 8)}</p>
-                  <p>IP: {entry.sourceIp ?? "-"}</p>
-                  <p>Lookup Key: {entry.lookupKey ?? "-"}</p>
-                  <p>Payload: {entry.payloadSummary ?? "-"}</p>
-                  <p>Action: {entry.action ?? "-"}</p>
+                <div key={`${entry.requestId ?? "req"}-${idx}`} className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/80 p-3">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-[color:var(--foreground)]/55">Request</p>
+                  <p className="font-mono text-sm text-[color:var(--foreground)]">{entry.requestId?.slice(0, 8) ?? "-"}</p>
+                  <p className="mt-1 text-xs text-[color:var(--foreground)]/75">IP: {entry.sourceIp ?? "-"}</p>
+                  <p className="text-xs text-[color:var(--foreground)]/75">Lookup: {entry.lookupKey ?? "-"}</p>
                 </div>
               ))}
             </div>
@@ -753,6 +846,92 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             <p className="mt-1">{debug.testCasesForRedis.join(" -> ")}</p>
           </div>
         )}
+
+        <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/78 p-4 shadow-[0_18px_45px_-36px_var(--glow)]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <MediaButton label="Previous" onClick={goToPreviousFrame}>
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <line x1="6" y1="5" x2="6" y2="19" />
+                  <polygon points="18 6 8 12 18 18 18 6" />
+                </svg>
+              </MediaButton>
+
+              <MediaButton
+                label={isPlaying ? "Pause" : "Play"}
+                onClick={() => setIsPlaying((prev) => !prev)}
+                active={isPlaying}
+              >
+                {isPlaying ? (
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+                    <rect x="6" y="5" width="4" height="14" rx="1" />
+                    <rect x="14" y="5" width="4" height="14" rx="1" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+                    <polygon points="8 5 19 12 8 19 8 5" />
+                  </svg>
+                )}
+              </MediaButton>
+
+              <MediaButton label="Next" onClick={goToNextFrame}>
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <polygon points="6 6 16 12 6 18 6 6" />
+                  <line x1="18" y1="5" x2="18" y2="19" />
+                </svg>
+              </MediaButton>
+
+              <MediaButton label="Restart" onClick={restartPlayback}>
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3 12a9 9 0 1 0 3-6.7" />
+                  <polyline points="3 4 3 9 8 9" />
+                </svg>
+              </MediaButton>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-[color:var(--foreground)]/70">
+              <span>{speed.toFixed(1)}x</span>
+              <input
+                type="range"
+                min={0.5}
+                max={2}
+                step={0.1}
+                value={speed}
+                onChange={(event) => setSpeed(Number(event.target.value))}
+                className="w-28 accent-cyan-500"
+              />
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)]/75 px-3 py-2.5">
+            <label htmlFor="hideResponse" className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-2.5 py-1.5 text-xs text-[color:var(--foreground)]/80">
+              <input
+                type="checkbox"
+                id="hideResponse"
+                checked={hideResponse}
+                onChange={() => {
+                  setHideResponse((prev) => !prev);
+                }}
+                className="accent-cyan-500"
+              />
+              Hide Response
+            </label>
+
+            <label htmlFor="parallelResponse" className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-2.5 py-1.5 text-xs text-[color:var(--foreground)]/80">
+              <input
+                type="checkbox"
+                id="parallelResponse"
+                checked={parallelResponse}
+                onChange={() => {
+                  setParallelResponse((prev) => !prev);
+                  setFrameIndex(0);
+                }}
+                className="accent-cyan-500"
+              />
+              Parallel Response
+            </label>
+          </div>
+        </div>
       </div>
 
       <div className="relative z-10">
