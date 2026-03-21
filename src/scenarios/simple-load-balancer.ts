@@ -18,6 +18,8 @@ function shouldKeepFrame(hideResponse: boolean, frame: Frame) {
   return !(
     frame.action.includes("SEND_RESPONSE") ||
     frame.action.includes("RETURN_DATA") ||
+    frame.action.includes("CACHE_HIT") ||
+    frame.action.includes("CACHE_MISS") ||
     frame.action === "RESPONSE_BACKTRACK"
   );
 }
@@ -62,6 +64,7 @@ export function createSimpleLoadBalancerSimulationBundle(
 
   const allFrames: Frame[] = [];
   const requestInputs: Array<{ requestId?: string; sourceIp?: string; lookupKey?: string }> = [];
+  let globalTimestampOffset = 0;
 
   for (let i = 0; i < 3; i++) {
     const sourceIp = ipv4Instance.getRandomIpv4() as string;
@@ -75,7 +78,11 @@ export function createSimpleLoadBalancerSimulationBundle(
 
     const runFrames = (simulation.getFrames() as Frame[]).map((frame) => ({
       ...frame,
-      timestamp: parallelResponse ? frame.timestamp : frame.timestamp + i * 100,
+      timestamp: parallelResponse
+        ? frame.timestamp
+        : frame.timestamp + globalTimestampOffset,
+      sourceIp,
+      payloadSummary: "{}",
     }));
 
     const firstFrame = runFrames[0];
@@ -87,6 +94,10 @@ export function createSimpleLoadBalancerSimulationBundle(
     }
 
     allFrames.push(...runFrames);
+
+    if (!parallelResponse) {
+      globalTimestampOffset += (simulation.getFrames() as Frame[]).length;
+    }
   }
 
   const flowNodes: Node[] = [

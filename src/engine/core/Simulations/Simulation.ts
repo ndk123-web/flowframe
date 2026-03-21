@@ -177,9 +177,16 @@ class SimulationManager {
         break;
       }
 
+      /**
+       * get the next nodes from the graph manager and type and normalize it and  of current node from the registry 
+       */
       const nextNodes = this.graph.getNextNodes(currentNodeId);
       const nodeType = this.normalizeNodeType(nodeInstance.type);
 
+      /**
+       * Simulate bases on the type of Node, because it becomes easier to resone about the behavior of each node type and also it becomes easier to add new node types in the future, for example, 
+       * if we want to add a new node type called "CACHE" then we can simply add a new case in the switch statement below without affecting the existing logic of other node types.
+       */
       switch (nodeType) {
         case "CLIENT": {
           if (nextNodes.length === 0) {
@@ -260,7 +267,11 @@ class SimulationManager {
             currentNodeId = postgresNodeId;
             break;
           }
-
+          
+          /**
+           * if the request has not done redis lookup and there is a redis then go to redis bro then 
+           * because our system prioritize cache over the database 
+           */
           if (!request.context.redisLookupDone && redisNodeId) {
             this.pushFrame(
               request,
@@ -305,6 +316,9 @@ class SimulationManager {
           request.currentNodeId = previousNodeId;
           currentNodeId = previousNodeId;
 
+          /**
+           * trigger point for cache miss and call the database as awaitingDBLookup to true
+           */
           if (lookUpData === null) {
             request.context.awaitingDbLookup = true;
             request.direction = "forward";

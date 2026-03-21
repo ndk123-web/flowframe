@@ -10,6 +10,9 @@ import { MarkerType, Position, type Edge, type Node } from "@xyflow/react";
 import Ipv4Generator from "@/utils/generateRandomIp";
 import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 
+/**
+ * Helper function to determine whether to keep a frame for renderring or not
+ */
 function shouldKeepFrame(hideResponse: boolean, frame: Frame) {
   if (!hideResponse) {
     return true;
@@ -18,6 +21,8 @@ function shouldKeepFrame(hideResponse: boolean, frame: Frame) {
   return !(
     frame.action.includes("SEND_RESPONSE") ||
     frame.action.includes("RETURN_DATA") ||
+    frame.action.includes("CACHE_HIT") ||
+    frame.action.includes("CACHE_MISS") ||
     frame.action === "RESPONSE_BACKTRACK"
   );
 }
@@ -62,6 +67,9 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
   postgresInstance.addRecord("users", "doe", "db data for doe");
   postgresInstance.addRecord("users", "john", "db data for john");
 
+  /**
+   * Snapshot of the data in Redis into the redisStoreSnapshot object
+   */
   const redisStoreSnapshot: Record<string, string> = Object.fromEntries(
     Array.from(redisInstance.data.entries()).map(([key, value]) => [
       String(key),
@@ -69,7 +77,12 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
     ]),
   );
 
-  const usersDb = postgresInstance.data.get("users") as Map<string, unknown> | undefined;
+  /**
+   * Snapshot of the data in Postgres into the postgresStoreSnapshot object
+   */
+  const usersDb = postgresInstance.data.get("users") as
+    | Map<string, unknown>
+    | undefined;
   const postgresStoreSnapshot: Record<string, string> = Object.fromEntries(
     Array.from((usersDb ?? new Map<string, unknown>()).entries()).map(
       ([key, value]) => [String(key), String(value)],
@@ -93,13 +106,33 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
   registry.register(redisId, redisInstance);
   registry.register(postgresId, postgresInstance);
 
+  /**
+   * AllFrames will hold the frames for all simulations we run for the scenario
+   */
   const allFrames: Frame[] = [];
-  const requestInputs: Array<{ requestId?: string; sourceIp?: string; lookupKey?: string }> = [];
+  const requestInputs: Array<{
+    requestId?: string;
+    sourceIp?: string;
+    lookupKey?: string;
+  }> = [];
+
+  let globalTimestampOffset = 0;
 
   for (let i = 0; i < 3; i++) {
+    /**
+     * each loop iteration i % 3 then (0-2) means first 0 then 1 then 2 index of testcases
+     */
     const lookupKey = redisTestCases[i % redisTestCases.length];
+
+    /**
+     * get the random source ip for client request
+     */
     const sourceIp = ipv4Instance.getRandomIpv4() as string;
 
+    /**
+     * create a new simulation manager
+     * with data lookupkey and test cases for redis if needed in future
+     */
     const simulation = new SimulationManager(
       graph,
       registry,
@@ -111,12 +144,30 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
       },
       sourceIp,
     );
-    simulation.runSimulation(clientId);
 
+    /**
+     * run the simulation from client node and create for i = 0,1,2 it stores the frames for each simulation in frames
+     */
+    simulation.runSimulation(clientId);
+    console.log(
+      "frames for simulation with lookupKey",
+      lookupKey,
+      simulation.getFrames(),
+    );
+
+    /**
+     * for each simulation frames for i request, runFrames will be the
+     */
     const runFrames = (simulation.getFrames() as Frame[]).map((frame) => ({
       ...frame,
-      timestamp: parallelResponse ? frame.timestamp : frame.timestamp + i * 100,
+      timestamp: parallelResponse
+        ? frame.timestamp
+        : frame.timestamp + globalTimestampOffset,
+      sourceIp,
+      lookupKey,
+      payloadSummary: `lookupKey=${lookupKey}`,
     }));
+    console.log("runFrames for lookupKey", lookupKey, runFrames);
 
     const firstFrame = runFrames[0];
     if (firstFrame) {
@@ -127,9 +178,22 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
       });
     }
 
+    /**
+     * store each frames for each simulation in allFrames which will be used later to merge and sort frames based on timestamp for final rendering of the scenario
+     */
     allFrames.push(...runFrames);
+
+    /**
+     * for non parallel response we will add the timestamp offset to make sure the frames are rendered one after another based on the order of simulations we ran, for parallel response we will keep the original timestamps and later merge and sort them based on timestamp to simulate parallel execution of requests
+     */
+    if (!parallelResponse) {
+      globalTimestampOffset += (simulation.getFrames() as Frame[]).length;
+    }
   }
 
+  /**
+   * for parallel response we will merge the frames from different simulations and sort them based on timestamp to simulate interleaving of frames from different requests, for non parallel response we will keep the order of frames as is since we already added timestamp offset to ensure they are rendered one after another
+   */
   const framesToRender: Frame[] = parallelResponse
     ? (() => {
         const pq = new PriorityQueue();

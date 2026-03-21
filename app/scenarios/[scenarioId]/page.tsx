@@ -313,7 +313,9 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
     setIsMounted(true);
   }, []);
 
-  // useMemo ensures frames regenerate whenever hideResponse or scenarioId changes.
+  /**
+   * we use useMemo to memoize the generated frames, nodes, edges, debug
+   */
   const { frames, nodes, edges, debug } = useMemo(
     () =>
       isMounted
@@ -332,15 +334,32 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
     [hideResponse, parallelResponse, scenarioId, isMounted]
   );
 
+  /**
+   * group frames by timestamp, this is useful for parallel frames and also it will work for non-parallel frames
+   */
   const frameGroups = useMemo(() => {
+
+    /**
+     * groupedByTimestamp is a map of timestamp to frames
+     */
     const groupedByTimestamp = new Map<number, Frame[]>();
 
+    /**
+     * for each frame if frame.timestamp 
+     * timestamp 1 -> [Frame1, Frame2]
+     * timestamp 2 -> [Frame3,Frame4, Frame5]
+     */
     for (const frame of frames) {
       const existing = groupedByTimestamp.get(frame.timestamp) ?? [];
       existing.push(frame);
       groupedByTimestamp.set(frame.timestamp, existing);
     }
-
+    
+    /**
+     * example: 
+     * 1 -> sort timestamp in ascending order 
+     * 2 -> convert the groupedByTimestamp map to an array of { timestamp, frames } objects, where each object represents a group of frames that share the same timestamp. This structure allows us to easily render all frames that occur at the same time together in the visualization, which is especially important for scenarios with parallel events.
+     */
     return Array.from(groupedByTimestamp.entries())
       .sort((a, b) => a[0] - b[0])
       .map(([timestamp, groupFrames]) => ({
@@ -392,6 +411,44 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
   const currentFrame = currentFrames[0] ?? null;
   const redisStoreEntries = Object.entries(debug?.redisStore ?? {});
   const postgresStoreEntries = Object.entries(debug?.postgresStore ?? {});
+  const requestInputById = useMemo(() => {
+    const map = new Map<string, { requestId?: string; sourceIp?: string; lookupKey?: string }>();
+    for (const entry of debug?.requestInputs ?? []) {
+      if (entry.requestId) {
+        map.set(entry.requestId, entry);
+      }
+    }
+    return map;
+  }, [debug?.requestInputs]);
+
+  const currentRequestData = useMemo(() => {
+    const rows: Array<{
+      requestId: string;
+      sourceIp?: string;
+      lookupKey?: string;
+      payloadSummary?: string;
+      action?: string;
+    }> = [];
+    const seen = new Set<string>();
+
+    for (const frame of currentFrames) {
+      if (seen.has(frame.requestId)) {
+        continue;
+      }
+
+      const requestInput = requestInputById.get(frame.requestId);
+      rows.push({
+        requestId: frame.requestId,
+        sourceIp: frame.sourceIp ?? requestInput?.sourceIp,
+        lookupKey: frame.lookupKey ?? requestInput?.lookupKey,
+        payloadSummary: frame.payloadSummary,
+        action: frame.action,
+      });
+      seen.add(frame.requestId);
+    }
+
+    return rows;
+  }, [currentFrames, requestInputById]);
 
   // useMemo in react use for expensive calculation and return memoized value, it only recompute the memoized value when one of the dependencies has changed. This optimization helps to avoid expensive calculations on every render when the dependencies haven't changed.
   const animatedEdges = useMemo(() => {
@@ -667,6 +724,23 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                   <p>Req: {entry.requestId?.slice(0, 8) ?? "-"}</p>
                   <p>IP: {entry.sourceIp ?? "-"}</p>
                   <p>Lookup Key: {entry.lookupKey ?? "-"}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {currentRequestData.length > 0 && (
+          <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface)]/75 p-4 text-sm text-[color:var(--foreground)]/75">
+            <p className="font-medium text-[color:var(--foreground)]">Current Request Data</p>
+            <div className="mt-2 grid gap-2 md:grid-cols-3">
+              {currentRequestData.map((entry) => (
+                <div key={entry.requestId} className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]/60 p-2">
+                  <p>Req: {entry.requestId.slice(0, 8)}</p>
+                  <p>IP: {entry.sourceIp ?? "-"}</p>
+                  <p>Lookup Key: {entry.lookupKey ?? "-"}</p>
+                  <p>Payload: {entry.payloadSummary ?? "-"}</p>
+                  <p>Action: {entry.action ?? "-"}</p>
                 </div>
               ))}
             </div>
