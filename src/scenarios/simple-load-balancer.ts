@@ -1,5 +1,5 @@
 import { MarkerType, Position, type Edge, type Node } from "@xyflow/react";
-import type { Frame, SimBundle } from "@/engine/types";
+import type { Event, Frame, ScenarioRunOptions, SimBundle } from "@/engine/types";
 import { GraphManager } from "@/engine/core/Graph/graph";
 import { NodeRegistry } from "@/engine/core/Graph/nodeResgistry";
 import { SimulationManager } from "@/engine/core/Simulations/Simulation";
@@ -8,12 +8,26 @@ import ServerModel from "@/engine/models/server";
 import ClientModel from "@/engine/models/Client";
 import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
 import Ipv4Generator from "@/utils/generateRandomIp";
-import type { Event } from "@/engine/types";
 import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 
+function shouldKeepFrame(hideResponse: boolean, frame: Frame) {
+  if (!hideResponse) {
+    return true;
+  }
+
+  return !(
+    frame.action.includes("SEND_RESPONSE") ||
+    frame.action.includes("RETURN_DATA") ||
+    frame.action.includes("CACHE_HIT") ||
+    frame.action.includes("CACHE_MISS") ||
+    frame.action === "RESPONSE_BACKTRACK"
+  );
+}
+
 export function createSimpleLoadBalancerSimulationBundle(
-  hideResponse: boolean,
+  options: ScenarioRunOptions,
 ): SimBundle {
+  const { hideResponse, parallelResponse } = options;
   const graph = new GraphManager("graph-1");
   const registry = new NodeRegistry("registry-1");
   const ipv4Instance = new Ipv4Generator();
@@ -49,28 +63,42 @@ export function createSimpleLoadBalancerSimulationBundle(
   registry.register(s3Id, s3);
 
   const allFrames: Frame[] = [];
-  let timestampOffset = 0;
+  const requestInputs: Array<{ requestId?: string; sourceIp?: string; lookupKey?: string }> = [];
+  let globalTimestampOffset = 0;
 
   for (let i = 0; i < 3; i++) {
+    const sourceIp = ipv4Instance.getRandomIpv4() as string;
     const simulation = new SimulationManager(
       graph,
       registry,
       {},
-      ipv4Instance.getRandomIpv4() as string,
+      sourceIp,
     );
     simulation.runSimulation(clientId);
 
-    const runFrames = simulation.getFrames() as Frame[];
-    const runFramesWithOffset = runFrames.map((frame) => ({
+    const runFrames = (simulation.getFrames() as Frame[]).map((frame) => ({
       ...frame,
-      timestamp: timestampOffset++,
+      timestamp: parallelResponse
+        ? frame.timestamp
+        : frame.timestamp + globalTimestampOffset,
+      sourceIp,
+      payloadSummary: "{}",
     }));
 
-    allFrames.push(...runFramesWithOffset);
-    timestampOffset = 0;
-  }
+    const firstFrame = runFrames[0];
+    if (firstFrame) {
+      requestInputs.push({
+        requestId: firstFrame.requestId,
+        sourceIp,
+      });
+    }
 
-  console.log("Frames generated from simulation:", allFrames);
+    allFrames.push(...runFrames);
+
+    if (!parallelResponse) {
+      globalTimestampOffset += (simulation.getFrames() as Frame[]).length;
+    }
+  }
 
   const flowNodes: Node[] = [
     {
@@ -199,25 +227,35 @@ export function createSimpleLoadBalancerSimulationBundle(
     },
   ];
 
-  const ALL_FRAMES = allFrames;
-  // parallel edge animation for load balancer to servers
-  // for that use PriorityQueue to manage the edges and animate them in parallel based on the frames generated from simulation based on timestamp of the frames and the source and target of the edges
+  const framesToRender: Frame[] = parallelResponse
+    ? (() => {
+        const pq = new PriorityQueue();
+        pq.pushMultipleIntoQueue(allFrames as Event[]);
 
-  const pq = new PriorityQueue();
-  pq.pushMultipleIntoQueue(ALL_FRAMES as Event[]);
+        const mergedFrames: Frame[] = [];
+        while (!pq.isEmpty()) {
+          const event = pq.popMinTimeStampItem();
+          if (event) {
+            mergedFrames.push(event as Frame);
+          }
+        }
 
-  const ParallelFrames: Frame[] = [];
-  while (!pq.isEmpty()) {
-    const event = pq.popMinTimeStampItem();
-    ParallelFrames.push(event as Frame);
-  }
+        return mergedFrames;
+      })()
+    : allFrames.sort((a, b) => a.timestamp - b.timestamp);
 
-  console.log("Frames after parallel processing:", ParallelFrames);
+  const filteredFrames = framesToRender.filter((frame) =>
+    shouldKeepFrame(hideResponse, frame),
+  );
 
   return {
-    frames: ParallelFrames,
+    frames: filteredFrames,
     nodes: flowNodes,
     edges: flowEdges,
+    debug: {
+      parallelResponse,
+      requestInputs,
+    },
   };
 }
 

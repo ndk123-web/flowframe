@@ -5,11 +5,30 @@ import PostgresModel from "@/engine/models/Postgres";
 import { SimulationManager } from "@/engine/core/Simulations/Simulation";
 import { GraphManager } from "@/engine/core/Graph/graph";
 import { NodeRegistry } from "@/engine/core/Graph/nodeResgistry";
-import { Frame, SimBundle } from "@/engine/types";
+import { Event, Frame, ScenarioRunOptions, SimBundle } from "@/engine/types";
 import { MarkerType, Position, type Edge, type Node } from "@xyflow/react";
 import Ipv4Generator from "@/utils/generateRandomIp";
+import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 
-function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
+/**
+ * Helper function to determine whether to keep a frame for renderring or not
+ */
+function shouldKeepFrame(hideResponse: boolean, frame: Frame) {
+  if (!hideResponse) {
+    return true;
+  }
+
+  return !(
+    frame.action.includes("SEND_RESPONSE") ||
+    frame.action.includes("RETURN_DATA") ||
+    frame.action.includes("CACHE_HIT") ||
+    frame.action.includes("CACHE_MISS") ||
+    frame.action === "RESPONSE_BACKTRACK"
+  );
+}
+
+function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
+  const { hideResponse, parallelResponse } = options;
   const graph = new GraphManager("graph-cache");
   const registry = new NodeRegistry("registry-cache");
   const ipv4Instance = new Ipv4Generator();
@@ -23,15 +42,7 @@ function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
   const clientName = "Client 1";
   const clientInstance = new ClientModel(clientId, clientName);
 
-  const dataToPass = {
-    redis: {
-      data: [{ rohan: "cached data for rohan" }],
-    },
-    testCasesForRedis: {
-      // deterministic order in simulation: hit -> db fallback -> invalid key
-      data: ["rohan", "doe", "invalid-user"],
-    },
-  };
+  const redisTestCases = ["rohan", "doe", "invalid-user"];
 
   // add some data for redis cache, we will use the same data for postgres database to simulate cache hit and cache miss scenarios
   clientInstance.addDataToPassToNextNode("redis", [
@@ -56,6 +67,28 @@ function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
   postgresInstance.addRecord("users", "doe", "db data for doe");
   postgresInstance.addRecord("users", "john", "db data for john");
 
+  /**
+   * Snapshot of the data in Redis into the redisStoreSnapshot object
+   */
+  const redisStoreSnapshot: Record<string, string> = Object.fromEntries(
+    Array.from(redisInstance.data.entries()).map(([key, value]) => [
+      String(key),
+      String(value),
+    ]),
+  );
+
+  /**
+   * Snapshot of the data in Postgres into the postgresStoreSnapshot object
+   */
+  const usersDb = postgresInstance.data.get("users") as
+    | Map<string, unknown>
+    | undefined;
+  const postgresStoreSnapshot: Record<string, string> = Object.fromEntries(
+    Array.from((usersDb ?? new Map<string, unknown>()).entries()).map(
+      ([key, value]) => [String(key), String(value)],
+    ),
+  );
+
   // add nodes to graph
   graph.addNode(clientId, clientName);
   graph.addNode(serverId, serverName);
@@ -73,16 +106,113 @@ function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
   registry.register(redisId, redisInstance);
   registry.register(postgresId, postgresInstance);
 
-  const simulation = new SimulationManager(
-    graph,
-    registry,
-    dataToPass,
-    ipv4Instance.getRandomIpv4() as string,
-  );
+  /**
+   * AllFrames will hold the frames for all simulations we run for the scenario
+   */
+  const allFrames: Frame[] = [];
+  const requestInputs: Array<{
+    requestId?: string;
+    sourceIp?: string;
+    lookupKey?: string;
+  }> = [];
+
+  let globalTimestampOffset = 0;
 
   for (let i = 0; i < 3; i++) {
+    /**
+     * each loop iteration i % 3 then (0-2) means first 0 then 1 then 2 index of testcases
+     */
+    const lookupKey = redisTestCases[i % redisTestCases.length];
+
+    /**
+     * get the random source ip for client request
+     */
+    const sourceIp = ipv4Instance.getRandomIpv4() as string;
+
+    /**
+     * create a new simulation manager
+     * with data lookupkey and test cases for redis if needed in future
+     */
+    const simulation = new SimulationManager(
+      graph,
+      registry,
+      {
+        lookupKey,
+        testCasesForRedis: {
+          data: redisTestCases,
+        },
+      },
+      sourceIp,
+    );
+
+    /**
+     * run the simulation from client node and create for i = 0,1,2 it stores the frames for each simulation in frames
+     */
     simulation.runSimulation(clientId);
+    console.log(
+      "frames for simulation with lookupKey",
+      lookupKey,
+      simulation.getFrames(),
+    );
+
+    /**
+     * for each simulation frames for i request, runFrames will be the
+     */
+    const runFrames = (simulation.getFrames() as Frame[]).map((frame) => ({
+      ...frame,
+      timestamp: parallelResponse
+        ? frame.timestamp
+        : frame.timestamp + globalTimestampOffset,
+      sourceIp,
+      lookupKey,
+      payloadSummary: `lookupKey=${lookupKey}`,
+    }));
+    console.log("runFrames for lookupKey", lookupKey, runFrames);
+
+    const firstFrame = runFrames[0];
+    if (firstFrame) {
+      requestInputs.push({
+        requestId: firstFrame.requestId,
+        sourceIp,
+        lookupKey,
+      });
+    }
+
+    /**
+     * store each frames for each simulation in allFrames which will be used later to merge and sort frames based on timestamp for final rendering of the scenario
+     */
+    allFrames.push(...runFrames);
+
+    /**
+     * for non parallel response we will add the timestamp offset to make sure the frames are rendered one after another based on the order of simulations we ran, for parallel response we will keep the original timestamps and later merge and sort them based on timestamp to simulate parallel execution of requests
+     */
+    if (!parallelResponse) {
+      globalTimestampOffset += (simulation.getFrames() as Frame[]).length;
+    }
   }
+
+  /**
+   * for parallel response we will merge the frames from different simulations and sort them based on timestamp to simulate interleaving of frames from different requests, for non parallel response we will keep the order of frames as is since we already added timestamp offset to ensure they are rendered one after another
+   */
+  const framesToRender: Frame[] = parallelResponse
+    ? (() => {
+        const pq = new PriorityQueue();
+        pq.pushMultipleIntoQueue(allFrames as Event[]);
+
+        const mergedFrames: Frame[] = [];
+        while (!pq.isEmpty()) {
+          const event = pq.popMinTimeStampItem();
+          if (event) {
+            mergedFrames.push(event as Frame);
+          }
+        }
+        return mergedFrames;
+      })()
+    : allFrames.sort((a, b) => a.timestamp - b.timestamp);
+
+  const filteredFrames = framesToRender.filter((frame) =>
+    shouldKeepFrame(hideResponse, frame),
+  );
 
   const flowNodes: Node[] = [
     {
@@ -188,9 +318,16 @@ function createSimpleCacheScenario(hideResponse: boolean): SimBundle {
 
   // in this simple cache scenario, we will only have 4 nodes and 3 edges, so we can hardcode the positions and styles for simplicity
   return {
-    frames: simulation.getFrames() as Frame[],
+    frames: filteredFrames,
     nodes: flowNodes,
     edges: flowEdges,
+    debug: {
+      parallelResponse,
+      testCasesForRedis: redisTestCases,
+      redisStore: redisStoreSnapshot,
+      postgresStore: postgresStoreSnapshot,
+      requestInputs,
+    },
   };
 }
 
