@@ -16,3 +16,5 @@ class FrameTracking {
     this.fromId = startNodeId;
   }
 }
+
+export default FrameTracking;

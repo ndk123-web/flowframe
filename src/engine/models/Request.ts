@@ -13,6 +13,7 @@ class RequestManager implements NodeInstance {
   task: string = "";
   context: { [key: string]: any } = {};
   ipAddress: string;
+  endpoint: string = "";
 
   constructor(
     id: string,
