@@ -8,6 +8,7 @@ import LoadBalancerModel from "@/engine/models/LoadBalancer";
 import RedisModel from "@/engine/models/Redis";
 import PostgresModel from "@/engine/models/Postgres";
 import ServerModel from "@/engine/models/server";
+import ApiGatewayModel from "@/engine/models/ApiGateway";
 
 type SimulationNodeKind =
   | "CLIENT"
@@ -15,6 +16,7 @@ type SimulationNodeKind =
   | "SERVER"
   | "REDIS"
   | "POSTGRES"
+  | "API_GATEWAY"
   | "UNKNOWN";
 
 class SimulationManager {
@@ -68,6 +70,10 @@ class SimulationManager {
       return "POSTGRES";
     }
 
+    if (normalized === "API_GATEWAY") {
+      return "API_GATEWAY";
+    }
+
     return "UNKNOWN";
   }
 
@@ -111,6 +117,8 @@ class SimulationManager {
         return "SERVER_SEND_RESPONSE";
       case "LOAD_BALANCER":
         return "LOAD_BALANCER_SEND_RESPONSE";
+      case "API_GATEWAY":
+        return "API_GATEWAY_SEND_RESPONSE";
       case "POSTGRES":
         return "POSTGRES_RETURN_DATA";
       default:
@@ -132,6 +140,13 @@ class SimulationManager {
       this.ipv4,
     );
     request.task = "GET_DATA";
+
+    // Optional endpoint comes from scenario payload for API Gateway routing.
+    const explicitEndpoint = this.payloadForRequest?.endpoint;
+    if (typeof explicitEndpoint === "string" && explicitEndpoint.length > 0) {
+      request.endpoint = explicitEndpoint;
+      request.task = `GET ${explicitEndpoint}`;
+    }
 
     // deterministic lookup key selection for cache scenarios.
     const explicitLookupKey = this.payloadForRequest?.lookupKey;
@@ -178,13 +193,13 @@ class SimulationManager {
       }
 
       /**
-       * get the next nodes from the graph manager and type and normalize it and  of current node from the registry 
+       * get the next nodes from the graph manager and type and normalize it and  of current node from the registry
        */
       const nextNodes = this.graph.getNextNodes(currentNodeId);
       const nodeType = this.normalizeNodeType(nodeInstance.type);
 
       /**
-       * Simulate bases on the type of Node, because it becomes easier to resone about the behavior of each node type and also it becomes easier to add new node types in the future, for example, 
+       * Simulate bases on the type of Node, because it becomes easier to resone about the behavior of each node type and also it becomes easier to add new node types in the future, for example,
        * if we want to add a new node type called "CACHE" then we can simply add a new case in the switch statement below without affecting the existing logic of other node types.
        */
       switch (nodeType) {
@@ -238,12 +253,7 @@ class SimulationManager {
         case "SERVER": {
           const serverInstance = nodeInstance as ServerModel;
           if (!serverInstance.canAccepthRequest()) {
-            this.pushFrame(
-              request,
-              currentNodeId,
-              "",
-              "SERVER_REJECT_REQUEST",
-            );
+            this.pushFrame(request, currentNodeId, "", "SERVER_REJECT_REQUEST");
             return;
           }
 
@@ -267,10 +277,10 @@ class SimulationManager {
             currentNodeId = postgresNodeId;
             break;
           }
-          
+
           /**
-           * if the request has not done redis lookup and there is a redis then go to redis bro then 
-           * because our system prioritize cache over the database 
+           * if the request has not done redis lookup and there is a redis then go to redis bro then
+           * because our system prioritize cache over the database
            */
           if (!request.context.redisLookupDone && redisNodeId) {
             this.pushFrame(
@@ -345,6 +355,62 @@ class SimulationManager {
           request.currentNodeId = previousNodeId;
           currentNodeId = previousNodeId;
           request.direction = "backward";
+          break;
+        }
+
+        case "API_GATEWAY": {
+          /*
+           * API Gateway flow:
+           * 1) Read request.endpoint and resolve service node using gateway routing config.
+           * 2) Validate the selected node is connected from gateway in the graph.
+           * 3) Forward request to selected service. If no route is found, switch to backward.
+           */
+          const apiGatewayInstance = nodeInstance as ApiGatewayModel;
+          const previousNodeId = traversalPath[traversalPath.length - 2] ?? currentNodeId;
+
+          if (nextNodes.length === 0) {
+            this.pushFrame(
+              request,
+              currentNodeId,
+              previousNodeId,
+              "API_GATEWAY_EMPTY_ROUTE_REJECT",
+            );
+            request.direction = "backward";
+            break;
+          }
+
+          try {
+            const selectedNodeId = apiGatewayInstance.runGateway(request);
+            if (!selectedNodeId || !nextNodes.includes(selectedNodeId)) {
+              this.pushFrame(
+                request,
+                currentNodeId,
+                previousNodeId,
+                "API_GATEWAY_ROUTE_NOT_FOUND",
+              );
+              request.direction = "backward";
+              break;
+            }
+
+            this.pushFrame(
+              request,
+              currentNodeId,
+              selectedNodeId,
+              "API_GATEWAY_FORWARD_REQUEST",
+            );
+
+            request.currentNodeId = selectedNodeId;
+            traversalPath.push(selectedNodeId);
+            currentNodeId = selectedNodeId;
+          } catch (_error) {
+            this.pushFrame(
+              request,
+              currentNodeId,
+              previousNodeId,
+              "API_GATEWAY_ROUTE_ERROR",
+            );
+            request.direction = "backward";
+          }
           break;
         }
 
