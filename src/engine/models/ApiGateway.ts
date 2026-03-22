@@ -31,11 +31,10 @@ class ApiGatewayModel implements NodeInstance {
    * The Routes objects defines the mapping between incoming request path and the corresponding service nodeId
    */
   routes: { [key: string]: string } = {
-    "/api/v1/users": "USER_SERVICE",
+    '/api/v1/posts': "POST_SERVICE",
   };
 
   services: { [key: string]: string[] } = {
-    USER_SERVICE: ["server1-node-id", "server2-node-id"],
   };
 
   constructor(id: string, name: string) {
