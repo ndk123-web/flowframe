@@ -42,6 +42,17 @@ const SCENARIOS: ScenarioCard[] = [
 		expectedFrames: 6,
 		updatedAt: "2026-03-13",
 	},
+	{
+		id: "simple-api-gateway",
+		title: "Simple API Gateway (Routing + Cache)",
+		description:
+			"Track endpoint-based routing from API Gateway to backend services with Redis/Postgres flow snapshots.",
+		href: "/scenarios/simple-api-gateway",
+		difficulty: "Intermediate",
+		focus: ["Endpoint Routing", "Round Robin", "Gateway + Data Stores"],
+		expectedFrames: 7,
+		updatedAt: "2026-03-22",
+	},
 ];
 
 function Reveal({

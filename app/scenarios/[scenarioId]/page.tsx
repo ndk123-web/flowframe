@@ -544,6 +544,8 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
     return rows;
   }, [currentFrames, requestInputById]);
 
+  const hasStorePanel = redisStoreEntries.length > 0 || postgresStoreEntries.length > 0;
+
   // useMemo in react use for expensive calculation and return memoized value, it only recompute the memoized value when one of the dependencies has changed. This optimization helps to avoid expensive calculations on every render when the dependencies haven't changed.
   const animatedEdges = useMemo(() => {
     if (currentFrames.length === 0) {
@@ -743,7 +745,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
         </div>
         )}
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className={`grid gap-4 ${hasStorePanel ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-1"}`}>
           <div className="h-[72vh] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]/65 shadow-[0_20px_50px_-35px_var(--glow)]">
             <ReactFlow
               nodes={nodes}
@@ -767,7 +769,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             </ReactFlow>
           </div>
 
-          {scenarioId === "simple-cache" && (
+          {hasStorePanel && (
             <aside className="h-[72vh] overflow-auto rounded-2xl border border-[var(--border)] bg-[linear-gradient(165deg,var(--surface)_0%,var(--surface-muted)_100%)] p-4 shadow-[0_20px_50px_-35px_var(--glow)]">
               <div className="sticky top-0 z-10 mb-3 rounded-lg border border-[var(--border)] bg-[var(--surface)]/90 px-3 py-2 backdrop-blur">
                 <p className="text-xs uppercase tracking-[0.16em] text-[color:var(--foreground)]/60">Data Stores</p>

@@ -2,6 +2,7 @@ import RedisModel from "@/engine/models/Redis";
 import ClientModel from "@/engine/models/Client";
 import ServerModel from "@/engine/models/server";
 import PostgresModel from "@/engine/models/Postgres";
+import { SimulationManager } from "@/engine/core/Simulations/Simulation";
 import { GraphManager } from "@/engine/core/Graph/graph";
 import { NodeRegistry } from "@/engine/core/Graph/nodeResgistry";
 import { Event, Frame, ScenarioRunOptions, SimBundle } from "@/engine/types";
@@ -9,7 +10,6 @@ import { MarkerType, Position, type Edge, type Node } from "@xyflow/react";
 import Ipv4Generator from "@/utils/generateRandomIp";
 import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 import ApiGatewayModel from "@/engine/models/ApiGateway";
-import { RequestManager } from "@/engine/models/Request";
 
 function shouldKeepFrame(hideResponse: boolean, frame: Frame) {
   if (!hideResponse) {
@@ -117,6 +117,7 @@ function createSimpleApiGatewaySimulation(
    * Add some redis test cases
    */
   const testcases = ["rohan", "doe", "john", "smith", "alice", "bob"];
+  const endpointCases = ["/api/v1/posts/list", "/api/v1/users/profile"];
 
   redis.addData("rohan", "cached data for rohan");
   redis.addData("john", "cached data for john");
@@ -126,11 +127,11 @@ function createSimpleApiGatewaySimulation(
   postgres.addRecord("users", "bob", "db data for bob");
 
   apiGateway.setRoutes({
-    "/api/v1/users": "USER_SERVICE",
     "/api/v1/posts": "POST_SERVICE",
+    "/api/v1/users": "USER_SERVICE",
   });
-  apiGateway.setServiceNodes("USER_SERVICE", [server1Id, server2Id, server3Id]);
-  apiGateway.setServiceNodes("POST_SERVICE", [server1Id, server2Id, server3Id]);
+  apiGateway.setServiceNodes("USER_SERVICE", [server1Id]);
+  apiGateway.setServiceNodes("POST_SERVICE", [server2Id, server3Id]);
 
   /**
    * Generate the simulation by running the SimulationManager with the client as the source node. The simulation will run the request through the API Gateway and to one of the servers based on the routing strategy defined in the API Gateway. The servers will then interact with Redis and Postgres as part of handling the request.
@@ -146,90 +147,49 @@ function createSimpleApiGatewaySimulation(
 
   let globalOffset = 0;
 
+  /*
+   * Simulation loop (scenario only orchestrates config):
+   * - pick endpoint + lookup key
+   * - run SimulationManager from client
+   * - remap timestamps per parallel/non-parallel mode
+   */
   for (let i = 0; i < 3; i++) {
-    // For each simulation run, we can randomly select a lookupKey from the testcases to simulate different request scenarios. This will allow us to see how the API Gateway routes requests to different servers and how the servers interact with Redis and Postgres based on the incoming request.
     const lookupKey = testcases[Math.floor(Math.random() * testcases.length)];
-    console.log(`Running simulation with lookupKey: ${lookupKey}`);
+    const endpoint = endpointCases[i % endpointCases.length];
+    const sourceIp = ipv4Instance.getRandomIpv4() as string;
 
-    // Generate a random IP address for the client to simulate requests coming from different clients. This will also allow us to see how the API Gateway routes requests based on the client's IP address if we are using an IP_HASH strategy.
-    const ip: string = ipv4Instance.getRandomIpv4() as string;
-
-    /**
-     * Run the simulation with the generated lookupKey and IP address. The payloadForRequest can include the lookupKey and any other relevant data that we want to pass along with the request. The SimulationManager will then handle the execution of the simulation based on the defined graph, registry, and the logic in the runSimulation method.
-     */
-    const endpoint = i % 2 === 0 ? "/api/v1/users/profile" : "/api/v1/posts/list";
-    const requestId = `api-req-${i + 1}`;
-    const request = new RequestManager(
-      requestId,
-      `API-Request-${i + 1}`,
-      clientId,
-      { lookupKey },
-      ip,
-    );
-    request.endpoint = endpoint;
-    request.context.lookupKey = lookupKey;
-
-    const selectedServerId = apiGateway.runGateway(request);
-    if (!selectedServerId) {
-      continue;
-    }
-
-    let localTimestamp = 0;
-    const runFrames: Frame[] = [];
-    const pushFrame = (
-      from: string,
-      to: string,
-      action: string,
-      extra: Partial<Frame> = {},
-    ) => {
-      runFrames.push({
-        requestId,
-        requestName: request.name,
-        from,
-        to,
-        timestamp: localTimestamp++,
-        action,
-        sourceIp: ip,
-        lookupKey,
-        payloadSummary: `${endpoint} | lookupKey=${lookupKey}`,
-        ...extra,
-      });
-    };
-
-    pushFrame(clientId, apigateWayId, "CLIENT_SEND_REQUEST");
-    pushFrame(apigateWayId, selectedServerId, "API_GATEWAY_FORWARD_REQUEST");
-    pushFrame(selectedServerId, redisId, "SERVER_FORWARD_REQUEST_TO_REDIS");
-
-    const lookUpData = redis.getData(lookupKey);
-    pushFrame(
-      redisId,
-      selectedServerId,
-      lookUpData === null ? "REDIS_CACHE_MISS" : "REDIS_CACHE_HIT",
+    const simulation = new SimulationManager(
+      graph,
+      registry,
       {
-        redisKeysSnapshot: Array.from(redis.data.keys()),
+        lookupKey,
+        endpoint,
+        testCasesForRedis: {
+          data: testcases,
+        },
       },
+      sourceIp,
     );
 
-    if (lookUpData === null) {
-      pushFrame(selectedServerId, postgresId, "SERVER_FORWARD_REQUEST_TO_POSTGRES");
-      pushFrame(postgresId, selectedServerId, "POSTGRES_RETURN_DATA");
-    }
+    simulation.runSimulation(clientId);
 
-    pushFrame(selectedServerId, apigateWayId, "SERVER_SEND_RESPONSE");
-    pushFrame(apigateWayId, clientId, "API_GATEWAY_SEND_RESPONSE");
-
-    const remappedRunFrames = runFrames.map((frame) => ({
+    const rawFrames = simulation.getFrames() as Frame[];
+    const remappedRunFrames = rawFrames.map((frame) => ({
       ...frame,
       timestamp: parallelResponse
         ? frame.timestamp
         : frame.timestamp + globalOffset,
+      sourceIp,
+      lookupKey,
+      payloadSummary: `${endpoint} | lookupKey=${lookupKey}`,
     }));
 
+    // Capture the requestId and sourceIp of the first frame to use for rendering and debugging purposes
     const firstFrame = remappedRunFrames[0];
     if (firstFrame) {
       requestInputs.push({
         requestId: firstFrame.requestId,
-        sourceIp: ip,
+        sourceIp,
         lookupKey,
       });
     }
@@ -237,7 +197,7 @@ function createSimpleApiGatewaySimulation(
     allFrames.push(...remappedRunFrames);
 
     if (!parallelResponse) {
-      globalOffset += runFrames.length;
+      globalOffset += rawFrames.length;
     }
   }
 
@@ -482,7 +442,9 @@ function createSimpleApiGatewaySimulation(
     ]),
   );
 
-  const usersDb = postgres.data.get("users") as Map<string, unknown> | undefined;
+  const usersDb = postgres.data.get("users") as
+    | Map<string, unknown>
+    | undefined;
   const postgresStoreSnapshot: Record<string, string> = Object.fromEntries(
     Array.from((usersDb ?? new Map<string, unknown>()).entries()).map(
       ([key, value]) => [String(key), String(value)],

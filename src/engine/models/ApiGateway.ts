@@ -25,17 +25,16 @@ class ApiGatewayModel implements NodeInstance {
   name: string;
   type: string = "API_GATEWAY";
   strategy: Strategy = "ROUND_ROBIN"; // or "LEAST_CONNECTIONS", "IP_HASH", etc.
-  pointer: number = 0; // for any strategy that needs to keep track of the last used server (like round robin)
-
+  // Keep one pointer per service so USER_SERVICE traffic does not affect POST_SERVICE RR.
+  pointersByService: { [serviceName: string]: number } = {};
   /**
    * The Routes objects defines the mapping between incoming request path and the corresponding service nodeId
    */
   routes: { [key: string]: string } = {
-    '/api/v1/posts': "POST_SERVICE",
+    "/api/v1/posts": "POST_SERVICE",
   };
 
-  services: { [key: string]: string[] } = {
-  };
+  services: { [key: string]: string[] } = {};
 
   constructor(id: string, name: string) {
     this.id = id;
@@ -99,8 +98,10 @@ class ApiGatewayModel implements NodeInstance {
       throw new Error(`No servers available for service: ${serviceName}`);
     }
 
-    const server = servers[this.pointer];
-    this.pointer = (this.pointer + 1) % servers.length; // Move pointer to the next server
+    const pointer = this.pointersByService[serviceName] ?? 0;
+    const index = pointer % servers.length;
+    const server = servers[index];
+    this.pointersByService[serviceName] = (index + 1) % servers.length;
     return server;
   }
 
@@ -148,14 +149,18 @@ class ApiGatewayModel implements NodeInstance {
    */
   setServiceNodes(serviceName: string, nodeIds: string[]) {
     this.services[serviceName] = nodeIds;
+    // Reset service pointer when backend pool changes.
+    this.pointersByService[serviceName] = 0;
   }
 
   deleteService(serviceName: string) {
     delete this.services[serviceName];
+    delete this.pointersByService[serviceName];
   }
 
   clearServices() {
     this.services = {};
+    this.pointersByService = {};
   }
 }
 
