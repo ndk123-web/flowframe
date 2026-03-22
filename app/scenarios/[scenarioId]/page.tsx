@@ -332,8 +332,8 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
   // For simplicity, we're only supporting one scenario in this demo. In a real app, you might fetch scenario data from an API or filesystem based on the scenarioId.
   const { scenarioId } = use(params);
 
-  const [hideResponse, setHideResponse] = useState(true);
-  const [parallelResponse, setParallelResponse] = useState(true);
+  const [hideResponse, setHideResponse] = useState(false);
+  const [parallelResponse, setParallelResponse] = useState(false);
   const [frameIndex, setFrameIndex] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -823,32 +823,8 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
           )}
         </div>
 
-        {!parallelResponse && debug?.requestInputs && debug.requestInputs.length > 0 && (
-          <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[linear-gradient(145deg,var(--surface)_0%,var(--surface-muted)_100%)] p-4 text-sm text-[color:var(--foreground)]/75">
-            <p className="text-xs uppercase tracking-[0.15em] text-[color:var(--foreground)]/55">Request Inputs</p>
-            <p className="mt-1 font-medium text-[color:var(--foreground)]">Initial Requests Snapshot</p>
-            <div className="mt-2 grid gap-2 md:grid-cols-3">
-              {debug.requestInputs.map((entry, idx) => (
-                <div key={`${entry.requestId ?? "req"}-${idx}`} className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/80 p-3">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-[color:var(--foreground)]/55">Request</p>
-                  <p className="font-mono text-sm text-[color:var(--foreground)]">{entry.requestId?.slice(0, 8) ?? "-"}</p>
-                  <p className="mt-1 text-xs text-[color:var(--foreground)]/75">IP: {entry.sourceIp ?? "-"}</p>
-                  <p className="text-xs text-[color:var(--foreground)]/75">Lookup: {entry.lookupKey ?? "-"}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {!parallelResponse && scenarioId === "simple-cache" && debug?.testCasesForRedis && (
-          <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface)]/75 p-4 text-sm text-[color:var(--foreground)]/75">
-            <p className="font-medium text-[color:var(--foreground)]">Redis Test Cases</p>
-            <p className="mt-1">{debug.testCasesForRedis.join(" -> ")}</p>
-          </div>
-        )}
-
         <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/78 p-4 shadow-[0_18px_45px_-36px_var(--glow)]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <MediaButton label="Previous" onClick={goToPreviousFrame}>
                 <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -932,6 +908,31 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             </label>
           </div>
         </div>
+
+        {!parallelResponse && debug?.requestInputs && debug.requestInputs.length > 0 && (
+          <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[linear-gradient(145deg,var(--surface)_0%,var(--surface-muted)_100%)] p-4 text-sm text-[color:var(--foreground)]/75">
+            <p className="text-xs uppercase tracking-[0.15em] text-[color:var(--foreground)]/55">Request Inputs</p>
+            <p className="mt-1 font-medium text-[color:var(--foreground)]">Initial Requests Snapshot</p>
+            <div className="mt-2 grid gap-2 md:grid-cols-3">
+              {debug.requestInputs.map((entry, idx) => (
+                <div key={`${entry.requestId ?? "req"}-${idx}`} className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/80 p-3">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-[color:var(--foreground)]/55">Request</p>
+                  <p className="font-mono text-sm text-[color:var(--foreground)]">{entry.requestId?.slice(0, 8) ?? "-"}</p>
+                  <p className="mt-1 text-xs text-[color:var(--foreground)]/75">IP: {entry.sourceIp ?? "-"}</p>
+                  <p className="text-xs text-[color:var(--foreground)]/75">Lookup: {entry.lookupKey ?? "-"}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!parallelResponse && scenarioId === "simple-cache" && debug?.testCasesForRedis && (
+          <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface)]/75 p-4 text-sm text-[color:var(--foreground)]/75">
+            <p className="font-medium text-[color:var(--foreground)]">Redis Test Cases</p>
+            <p className="mt-1">{debug.testCasesForRedis.join(" -> ")}</p>
+          </div>
+        )}
+
       </div>
 
       <div className="relative z-10">
