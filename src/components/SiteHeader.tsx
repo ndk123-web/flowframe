@@ -45,11 +45,11 @@ export default function SiteHeader({
           </div>
         </Link>
 
-        <nav className="flex items-center gap-2">
+        <nav className="flex items-center gap-3">
           {showHomeLink && (
             <Link
               href="/"
-              className="rounded-full border border-[var(--border)] bg-[var(--surface)]/85 px-3.5 py-1.5 text-sm font-medium text-[color:var(--foreground)] transition hover:-translate-y-0.5"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface)]/85 px-4 py-2 text-sm font-medium text-[color:var(--foreground)] transition hover:bg-[var(--surface)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)_inset]"
             >
               Home
             </Link>
@@ -57,9 +57,15 @@ export default function SiteHeader({
           <button
             type="button"
             onClick={onToggleTheme}
-            className="rounded-full border border-[var(--border)] bg-[var(--surface)]/85 px-3.5 py-1.5 text-sm font-medium text-[color:var(--foreground)] transition hover:-translate-y-0.5"
+            className="group relative inline-flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-gradient-to-r from-[var(--surface)]/90 to-[var(--surface)]/70 px-0.5 py-0.5 transition hover:shadow-[0_4px_16px_var(--glow)]"
+            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
           >
-            {theme === "dark" ? "Light" : "Dark"}
+            <span className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${theme === "dark" ? "bg-[var(--surface-muted)] shadow-sm" : ""}`}>
+              ☀️
+            </span>
+            <span className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${theme === "light" ? "bg-[var(--surface-muted)] shadow-sm" : ""}`}>
+              🌙
+            </span>
           </button>
         </nav>
       </div>
