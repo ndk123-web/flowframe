@@ -447,6 +447,95 @@ function NodeInspectorPanel({
   );
 }
 
+function DebugPanel({
+  currentFrames,
+  frameIndex,
+  theme,
+}: {
+  currentFrames: Frame[];
+  frameIndex: number;
+  theme: Theme;
+}) {
+  const bgColor = theme === "dark" ? "bg-slate-950" : "bg-slate-50";
+  const borderColor = theme === "dark" ? "border-slate-800" : "border-slate-300";
+  const textColor = theme === "dark" ? "text-slate-400" : "text-slate-600";
+  const labelColor = theme === "dark" ? "text-slate-600" : "text-slate-500";
+  const headerColor = theme === "dark" ? "text-slate-100" : "text-slate-900";
+  const accentBg = theme === "dark" ? "bg-slate-900/50" : "bg-slate-100/50";
+
+  if (currentFrames.length === 0) {
+    return (
+      <div className={`rounded-md border ${borderColor} ${bgColor} p-3`}>
+        <p className={`text-xs ${textColor}`}>No active frames</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {currentFrames.map((frame, idx) => (
+        <div key={`${frame.requestId}-${idx}`} className={`rounded-md border ${borderColor} ${accentBg} p-3`}>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Request</p>
+              <p className={`mt-1 font-mono text-xs ${headerColor}`}>{frame.requestName || frame.requestId.slice(0, 12)}</p>
+            </div>
+
+            <div>
+              <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Action</p>
+              <p className={`mt-1 text-xs ${textColor}`}>{frame.action}</p>
+            </div>
+
+            <div>
+              <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Flow</p>
+              <p className={`mt-1 font-mono text-xs ${textColor}`}>
+                {frame.from} <span className="text-violet-400">→</span> {frame.to}
+              </p>
+            </div>
+
+            {frame.sourceIp && (
+              <div>
+                <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Source IP</p>
+                <p className={`mt-1 font-mono text-xs ${textColor}`}>{frame.sourceIp}</p>
+              </div>
+            )}
+
+            {frame.lookupKey && (
+              <div className="col-span-2">
+                <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Lookup Key</p>
+                <p className={`mt-1 font-mono text-xs text-violet-400`}>{frame.lookupKey}</p>
+              </div>
+            )}
+
+            {frame.payloadSummary && (
+              <div className="col-span-2">
+                <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Payload</p>
+                <p className={`mt-1 text-xs ${textColor}`}>{frame.payloadSummary}</p>
+              </div>
+            )}
+
+            {frame.redisKeysSnapshot && frame.redisKeysSnapshot.length > 0 && (
+              <div className="col-span-2">
+                <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Redis Keys</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {frame.redisKeysSnapshot.map((key) => (
+                    <span
+                      key={key}
+                      className={`rounded px-2 py-0.5 text-[10px] font-mono ${theme === "dark" ? "bg-emerald-500/20 text-emerald-300" : "bg-emerald-100 text-emerald-700"}`}
+                    >
+                      {key}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function generateFrames(options: ScenarioRunOptions, scenarioId: string): SimBundle {
   const createSimulationBundle = ALL_SCENARIOS.get(scenarioId);
 
@@ -487,6 +576,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [debugEnabled, setDebugEnabled] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -758,6 +848,16 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                 Parallel
               </label>
 
+              <label className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs text-[color:var(--foreground)] transition hover:border-[var(--border)]/80">
+                <input
+                  type="checkbox"
+                  checked={debugEnabled}
+                  onChange={() => setDebugEnabled((prev) => !prev)}
+                  className="accent-violet-500"
+                />
+                Debug
+              </label>
+
               <div className="h-6 w-px bg-[var(--border)]" />
 
               <div className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs">
@@ -822,8 +922,8 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                 onPrev={goToPreviousFrame}
                 onNext={goToNextFrame}
                 onReset={resetPlayback}
-                debugEnabled={false}
-                onDebugToggle={() => {}}
+                debugEnabled={debugEnabled}
+                onDebugToggle={() => setDebugEnabled((prev) => !prev)}
                 speed={speed}
                 onSpeedChange={setSpeed}
                 theme={theme}
@@ -842,6 +942,26 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
               }}
               theme={theme}
             />
+
+            {debugEnabled && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className={`rounded-lg border border-[var(--border)] bg-[var(--surface)]/50 p-3`}>
+                  <p className={`text-xs uppercase tracking-widest text-[color:var(--foreground)]/50 mb-3`}>
+                    Frame {frameIndex + 1} Debug
+                  </p>
+                  <DebugPanel
+                    currentFrames={currentFrames}
+                    frameIndex={frameIndex}
+                    theme={theme}
+                  />
+                </div>
+              </motion.div>
+            )}
           </div>
         </motion.section>
       </div>
