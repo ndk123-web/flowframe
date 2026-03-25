@@ -9,6 +9,7 @@ import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
 import type { LoadBalancingConfig } from "@/engine/core/Strategy/LoadBalancingConfig";
 import { SimulationManager } from "@/engine/core/Simulations/Simulation";
 import { RequestManager } from "@/engine/models/Request";
+import Ipv4Generator from "@/utils/generateRandomIp";
 
 // it simply means 1 LoadBalancer and 2 Servers
 class Test {
@@ -68,14 +69,18 @@ class Test {
     registry.register(server_2_id, server_2_instance);
     registry.register(client_id, client_instance);
 
+    const ipv4Generator = new Ipv4Generator();
+
     const request = new RequestManager(
       requestId,
       `Request_${requestId}`,
       client_id,
+      {},
+      ipv4Generator.getRandomIpv4(),
     );
 
     // it will run entire and store inside frames
-    simulation.runTest(client_id);
+    simulation.runSimulation(client_id);
 
     // print frames
     console.log(simulation.getFrames());
