@@ -156,7 +156,13 @@ export default function ScenariosPage() {
 				{SCENARIOS.map((scenario, index) => (
 					<Reveal key={scenario.id} delay={index * 0.08}>
 						<article className="group relative overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/85 p-5 shadow-[0_26px_70px_-45px_var(--glow)] transition duration-300 hover:-translate-y-1">
-							<div className="absolute right-3 top-3 rounded-full border border-[var(--border)] bg-[var(--surface-muted)] px-2.5 py-1 text-[11px] font-medium tracking-wide text-[color:var(--foreground)]/75">
+							<div className={`absolute right-3 top-3 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-wide ${
+								scenario.difficulty === "Beginner"
+									? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+									: scenario.difficulty === "Intermediate"
+										? "border-amber-500/50 bg-amber-500/10 text-amber-300"
+										: "border-red-500/50 bg-red-500/10 text-red-300"
+							}`}>
 								{scenario.difficulty}
 							</div>
 

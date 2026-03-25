@@ -26,26 +26,51 @@ function Reveal({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1], delay }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ duration: 0.7, ease: "easeOut", delay }}
     >
       {children}
     </motion.div>
   );
 }
 
+function AnimatedBadge() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: 0.2, duration: 0.5 }}
+      className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)]/80 px-3 py-1.5 text-xs uppercase tracking-[0.2em] text-[color:var(--foreground)]/70"
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
+      Distributed System Simulator
+    </motion.div>
+  );
+}
+
 function HeroArchitecture() {
   return (
-    <div className="relative h-[330px] w-full overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/60 p-4 shadow-[0_25px_80px_-40px_var(--glow)] backdrop-blur">
-      <div className="technical-grid absolute inset-0 opacity-65" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(59,130,246,0.2),transparent_45%),radial-gradient(circle_at_35%_85%,rgba(124,58,237,0.16),transparent_45%)]" />
+    <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.8 }}
+      className="relative h-[330px] w-full overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/60 p-4 shadow-[0_25px_80px_-40px_var(--glow)] backdrop-blur"
+    >
+      <div className="technical-grid absolute inset-0 opacity-40" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(59,130,246,0.15),transparent_50%),radial-gradient(circle_at_35%_85%,rgba(124,58,237,0.12),transparent_50%)]" />
       <ArchDiagram active speed={1} className="relative z-10" />
-      <div className="absolute bottom-4 left-4 z-20 rounded-lg border border-[var(--border)] bg-[var(--surface)]/85 px-3 py-2 text-xs text-[color:var(--foreground)]/70 backdrop-blur">
-        live request stream
-      </div>
-    </div>
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+        className="absolute bottom-4 left-4 z-20 rounded-lg border border-[var(--border)] bg-[var(--surface)]/90 px-3 py-2 text-xs text-[color:var(--foreground)]/70 backdrop-blur"
+      >
+        Frame-by-frame simulation
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -102,7 +127,6 @@ function InteractivePreview() {
   const [speed, setSpeed] = useState(1);
   const [frameIndex, setFrameIndex] = useState(0);
 
-  // Run simulation once — lazy initialiser avoids setState-in-effect lint rule
   const [{ frames }] = useState<ReturnType<typeof buildSimulation>>(buildSimulation);
 
   useEffect(() => {
@@ -116,59 +140,82 @@ function InteractivePreview() {
   return (
     <Reveal>
       <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/80 p-6 shadow-[0_35px_90px_-50px_var(--glow)]">
-          <div className="technical-grid absolute inset-0 opacity-60" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(59,130,246,0.14),transparent_40%),radial-gradient(circle_at_85%_80%,rgba(124,58,237,0.12),transparent_40%)]" />
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/80 p-6 shadow-[0_35px_90px_-50px_var(--glow)]"
+        >
+          <div className="technical-grid absolute inset-0 opacity-40" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(59,130,246,0.12),transparent_45%),radial-gradient(circle_at_85%_80%,rgba(124,58,237,0.1),transparent_45%)]" />
 
-          <div className="relative z-10 mb-6 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              Interactive Simulation Preview
-            </h2>
-            <div className="rounded-full border border-[var(--border)] bg-[var(--surface)]/70 px-3 py-1 text-sm text-[color:var(--foreground)]/70">
-              frame {frameIndex + 1} / {frames.length || "—"}
-            </div>
+          <div className="relative z-10 mb-6 flex flex-wrap items-center justify-between gap-4">
+            <motion.div initial={{ opacity: 0, x: -12 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
+              <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
+                Live Simulation Playground
+              </h2>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="rounded-full border border-[var(--border)] bg-[var(--surface)]/70 px-4 py-1.5 text-sm font-medium text-[color:var(--foreground)]/80"
+            >
+              Frame <span className="text-violet-500 font-semibold">{frameIndex + 1}</span> / {frames.length || "—"}
+            </motion.div>
           </div>
 
-          <div className="relative z-10 grid gap-6 lg:grid-cols-[1fr_280px]">
-            <div className="relative h-[360px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/70 p-4">
+          <div className="relative z-10 grid gap-6 lg:grid-cols-[1fr_300px]">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.15 }}
+              className="relative h-[360px] overflow-hidden rounded-2xl border border-[var(--border)]/50 bg-[var(--surface-muted)]/70 backdrop-blur p-4"
+            >
               <ArchDiagram
                 active={isPlaying}
                 speed={speed}
                 frameIndex={frameIndex}
                 className="h-full w-full"
               />
-            </div>
+            </motion.div>
 
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/75 p-4 backdrop-blur">
-              <p className="mb-3 text-xs uppercase tracking-[0.15em] text-[color:var(--foreground)]/55">
-                controls
+            <motion.div
+              initial={{ opacity: 0, x: 12 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/75 p-4 backdrop-blur"
+            >
+              <p className="mb-4 text-xs uppercase tracking-[0.15em] font-semibold text-[color:var(--foreground)]/55">
+                Playback Controls
               </p>
-              <div className="space-y-3">
-                <button
+              <div className="space-y-2.5">
+                <motion.button
                   type="button"
-                  onClick={() => setIsPlaying(true)}
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-left text-sm transition hover:-translate-y-0.5"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setIsPlaying(!isPlaying)}
+                  className={`w-full rounded-lg border px-3 py-2.5 text-sm font-medium transition ${
+                    isPlaying
+                      ? "border-violet-500/50 bg-violet-500/10 text-violet-300"
+                      : "border-[var(--border)] bg-[var(--surface-muted)] text-[color:var(--foreground)]/80"
+                  }`}
                 >
-                  Play
-                </button>
-                <button
+                  {isPlaying ? "⏸ Pause" : "▶ Play"}
+                </motion.button>
+                <motion.button
                   type="button"
-                  onClick={() => setIsPlaying(false)}
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-left text-sm transition hover:-translate-y-0.5"
-                >
-                  Pause
-                </button>
-                <button
-                  type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setFrameIndex((prev) => (prev + 1) % Math.max(frames.length, 1))}
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-left text-sm transition hover:-translate-y-0.5"
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2.5 text-sm font-medium text-[color:var(--foreground)]/80 transition hover:border-[var(--border)]/80"
                 >
-                  Next Frame
-                </button>
-                <label className="block text-sm">
-                  <span className="mb-1 block text-[color:var(--foreground)]/70">
-                    Speed: {speed.toFixed(1)}x
-                  </span>
+                  Next Frame →
+                </motion.button>
+                <div>
+                  <label className="mb-2 block text-xs text-[color:var(--foreground)]/60">
+                    Speed: <span className="font-semibold text-[color:var(--foreground)]">{speed.toFixed(1)}x</span>
+                  </label>
                   <input
                     type="range"
                     min="0.5"
@@ -176,13 +223,16 @@ function InteractivePreview() {
                     step="0.1"
                     value={speed}
                     onChange={(event) => setSpeed(Number(event.target.value))}
-                    className="w-full accent-blue-500"
+                    className="w-full"
+                    style={{
+                      accentColor: "var(--color-violet-500)",
+                    }}
                   />
-                </label>
+                </div>
               </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </section>
     </Reveal>
   );
@@ -225,42 +275,61 @@ export default function Home() {
       <section className="mx-auto grid w-full max-w-6xl gap-12 px-6 pb-14 pt-4 lg:grid-cols-[1.05fr_1fr] lg:items-center">
         <Reveal>
           <div>
-            <p className="mb-4 inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--surface)]/80 px-3 py-1 text-xs uppercase tracking-[0.2em] text-[color:var(--foreground)]/70">
-              Interactive Distributed System Simulator
-            </p>
-            <h1 className="max-w-xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">
-              See Distributed Systems in Motion
-            </h1>
-            <p className="mt-5 max-w-xl text-base text-[color:var(--foreground)]/70 md:text-lg">
-              FlowFrame lets you design architectures and watch requests move
-              through your system step-by-step.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <AnimatedBadge />
+            <motion.h1
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="mt-6 max-w-xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl"
+            >
+              <span className="bg-gradient-to-r from-blue-500 to-violet-600 bg-clip-text text-transparent">
+                FlowFrame
+              </span>
+              <br />
+              Watch Systems Come Alive
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+              className="mt-5 max-w-xl text-base text-[color:var(--foreground)]/70 md:text-lg"
+            >
+              Design distributed architectures and trace every request in real-time. 
+              Step through simulations frame-by-frame to understand complex system behavior.
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
+              className="mt-8 flex flex-wrap gap-3"
+            >
               <motion.button
                 type="button"
-                whileHover={{ y: -2, scale: 1.01 }}
-                className="rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-5 py-3 text-sm font-medium text-white shadow-[0_15px_40px_-20px_var(--glow)]"
+                whileHover={{ y: -3, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-[0_15px_40px_-20px_var(--glow)] transition hover:shadow-[0_20px_50px_-20px_var(--glow)]"
                 onClick={() => {
                   router.push("/scenarios/");
                 }}
               >
-                Open Simulator
+                Launch Simulator
               </motion.button>
               <motion.button
                 type="button"
-                whileHover={{ y: -2 }}
-                className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/80 px-5 py-3 text-sm font-medium"
+                whileHover={{ y: -3 }}
+                whileTap={{ scale: 0.98 }}
+                className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/80 px-6 py-3 text-sm font-semibold backdrop-blur transition hover:border-[var(--border)]/80"
                 onClick={() => {
                   router.push("/scenarios/simple-load-balancer");
                 }}
               >
-                View Demo
+                View Live Demo
               </motion.button>
-            </div>
+            </motion.div>
           </div>
         </Reveal>
 
-        <Reveal delay={0.12}>
+        <Reveal delay={0.1}>
           <HeroArchitecture />
         </Reveal>
       </section>
@@ -270,102 +339,79 @@ export default function Home() {
       <section className="mx-auto grid max-w-6xl gap-6 px-6 py-12 md:grid-cols-3">
         {[
           {
-            title: "Frame-by-frame simulation",
-            body: "Step through distributed systems one request at a time.",
+            title: "Step-by-step Tracing",
+            body: "Pause and inspect each frame to see exactly what happens at every stage of request flow.",
+            icon: "▶"
           },
           {
-            title: "Strategy-driven behavior",
-            body: "Visualize load balancing algorithms like round robin and more.",
+            title: "Smart Load Balancing",
+            body: "Visualize round-robin, random, and custom strategies distributing load across servers.",
+            icon: "⚖️"
           },
           {
-            title: "Architecture playground",
-            body: "Build and test system designs interactively.",
+            title: "Cache & Database",
+            body: "Watch Redis hits/misses and database queries in real time with live data snapshots.",
+            icon: "💾"
           },
         ].map((feature, index) => (
-          <Reveal key={feature.title} delay={index * 0.08}>
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 p-5 shadow-[0_20px_40px_-35px_var(--glow)]">
-              <div className="mb-4 h-28 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3">
-                <motion.div
-                  className="h-2 w-20 rounded-full bg-gradient-to-r from-blue-400 to-violet-500"
-                  animate={{ x: [0, 52, 0] }}
-                  transition={{ duration: 2.4 + index * 0.3, repeat: Infinity, ease: "easeInOut" }}
-                />
-                <div className="mt-4 grid grid-cols-3 gap-2">
-                  <div className="h-8 rounded-md border border-[var(--border)] bg-[var(--surface)]" />
-                  <div className="h-8 rounded-md border border-[var(--border)] bg-[var(--surface)]" />
-                  <div className="h-8 rounded-md border border-[var(--border)] bg-[var(--surface)]" />
-                </div>
-              </div>
+          <Reveal key={feature.title} delay={index * 0.1}>
+            <motion.div
+              whileHover={{ y: -4 }}
+              className="group overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 p-5 shadow-[0_20px_40px_-35px_var(--glow)] transition"
+            >
+              <div className="mb-4 text-3xl">{feature.icon}</div>
               <h3 className="text-lg font-semibold">{feature.title}</h3>
               <p className="mt-2 text-sm text-[color:var(--foreground)]/70">{feature.body}</p>
-            </div>
+            </motion.div>
           </Reveal>
         ))}
       </section>
 
       <Reveal>
-        <section className="mx-auto max-w-6xl px-6 py-12">
-          <div className="grid gap-6 rounded-3xl border border-[var(--border)] bg-[var(--surface)]/75 p-6 md:grid-cols-[1.1fr_1fr] md:p-8">
-            <div>
-              <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
-                Built for engineers who want to understand systems, not just draw diagrams.
-              </h2>
-              <p className="mt-4 text-[color:var(--foreground)]/70">
-                Model realistic architectures with load balancers, caches, message queues,
-                and databases, then trace how every request behaves over time.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-2 text-sm text-[color:var(--foreground)]/75">
-                {[
-                  "load balancers",
-                  "caches",
-                  "message queues",
-                  "databases",
-                ].map((item) => (
-                  <span
-                    key={item}
-                    className="rounded-full border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-1"
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="relative h-56 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]">
-              <div className="technical-grid absolute inset-0 opacity-60" />
-              <ArchDiagram active speed={0.7} className="relative z-10 h-full w-full" />
-            </div>
-          </div>
-        </section>
-      </Reveal>
-
-      <Reveal>
         <section className="mx-auto max-w-6xl px-6 py-16">
-          <div className="rounded-3xl border border-white/20 bg-gradient-to-br from-blue-600 via-blue-500 to-violet-600 px-6 py-16 text-center text-white shadow-[0_40px_100px_-50px_rgba(59,130,246,0.55)] md:px-14">
-            <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">
-              Start exploring system behavior.
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+            className="rounded-3xl border border-white/15 bg-gradient-to-br from-blue-600/80 via-blue-500/70 to-violet-600/80 px-6 py-16 text-center text-white shadow-[0_40px_100px_-50px_rgba(59,130,246,0.5)] backdrop-blur md:px-14"
+          >
+            <h2 className="text-3xl font-bold tracking-tight md:text-5xl">
+              Ready to explore distributed systems?
             </h2>
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <button
+            <p className="mt-4 text-base text-white/80 md:text-lg">
+              Launch FlowFrame and start building simulations instantly.
+            </p>
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="mt-8 flex flex-wrap items-center justify-center gap-4"
+            >
+              <motion.button
                 type="button"
-                className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:-translate-y-0.5"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition shadow-lg hover:shadow-xl"
                 onClick={() => {
                   router.push("/scenarios");
                 }}
               >
-                Open Simulator
-              </button>
-              <button
+                Launch Simulator →
+              </motion.button>
+              <motion.button
                 type="button"
-                className="rounded-xl border border-white/45 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="rounded-xl border border-white/40 bg-white/15 px-6 py-3 text-sm font-semibold text-white transition backdrop-blur hover:bg-white/20"
                 onClick={() => {
                   window.open("https://github.com/ndk123-web/flow-frame", "_blank")
                 }}
               >
-                View GitHub
-              </button>
-            </div>
-          </div>
+                GitHub ↗
+              </motion.button>
+            </motion.div>
+          </motion.div>
         </section>
       </Reveal>
 
