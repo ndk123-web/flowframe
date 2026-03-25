@@ -224,38 +224,40 @@ function Controls({
   const buttonClass = `rounded-md border ${btnBorder} ${btnBg} px-3 py-1.5 text-xs ${btnText} transition hover:bg-${theme === "dark" ? "slate-900" : "slate-200"}`;
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <button type="button" onClick={onPlayToggle} className={buttonClass}>
-          {isPlaying ? "Pause" : "Play"}
-        </button>
-        <button type="button" onClick={onPrev} className={buttonClass}>
-          ← Prev
-        </button>
-        <button type="button" onClick={onNext} className={buttonClass}>
-          Next →
-        </button>
-        <button type="button" onClick={onReset} className={buttonClass}>
-          Reset
-        </button>
-      </div>
-      
-      <div className="h-6 w-px bg-[var(--border)]" />
-      
-      <div className="flex items-center gap-2">
-        <label className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>
-          Speed: <span className="font-semibold">{speed?.toFixed(1)}x</span>
-        </label>
-        <input
-          type="range"
-          min="0.5"
-          max="2"
-          step="0.1"
-          value={speed}
-          onChange={(e) => onSpeedChange(Number(e.target.value))}
-          className="w-20"
-          style={{ accentColor: "#8b5cf6" }}
-        />
+    <div className="flex flex-col gap-2 sm:gap-3 w-full overflow-x-hidden">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+          <button type="button" onClick={onPlayToggle} className={buttonClass}>
+            {isPlaying ? "Pause" : "Play"}
+          </button>
+          <button type="button" onClick={onPrev} className={buttonClass}>
+            ← Prev
+          </button>
+          <button type="button" onClick={onNext} className={buttonClass}>
+            Next →
+          </button>
+          <button type="button" onClick={onReset} className={buttonClass}>
+            Reset
+          </button>
+        </div>
+        
+        <div className="h-6 w-px bg-[var(--border)] hidden sm:block" />
+        
+        <div className="flex items-center gap-1 sm:gap-2">
+          <label className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>
+            <span className="hidden sm:inline">Speed: </span><span className="font-semibold">{speed?.toFixed(1)}x</span>
+          </label>
+          <input
+            type="range"
+            min="0.5"
+            max="2"
+            step="0.1"
+            value={speed}
+            onChange={(e) => onSpeedChange(Number(e.target.value))}
+            className="w-16 sm:w-20"
+            style={{ accentColor: "#8b5cf6" }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -286,7 +288,7 @@ function Timeline({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 overflow-x-hidden">
       <input
         type="range"
         min={0}
@@ -296,7 +298,7 @@ function Timeline({
         className="w-full accent-violet-500"
       />
 
-      <div className="flex gap-1 overflow-x-auto">
+      <div className="flex gap-1 overflow-x-auto pb-1">
         {frameGroups.map((group, index) => {
           const isActive = index === frameIndex;
 
@@ -579,6 +581,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
   const [isMounted, setIsMounted] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [debugEnabled, setDebugEnabled] = useState(false);
+  const [inspectorVisible, setInspectorVisible] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -854,10 +857,10 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
         showHomeLink
         badgeText="Simulator"
       />
-      <div className="flex h-[calc(100vh-70px)] flex-col" data-resizable-container>
+      <div className="flex h-[calc(100vh-70px)] flex-col overflow-x-hidden" data-resizable-container>
         {/* Top Bar */}
-        <header className="border-b border-[var(--border)] bg-[var(--surface)]/50 px-4 py-3 backdrop-blur">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+        <header className="border-b border-[var(--border)] bg-[var(--surface)]/50 px-4 py-3 backdrop-blur overflow-x-auto">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 flex-wrap sm:gap-4 md:flex-nowrap">
             <div className="flex items-center gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--foreground)]">{scenarioId}</p>
@@ -865,60 +868,88 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <label className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs text-[color:var(--foreground)] transition hover:border-[var(--border)]/80">
+            <div className="flex items-center gap-1 sm:gap-2 flex-wrap md:flex-nowrap">
+              <label 
+                title="Hide the response/return packets flowing back from servers"
+                className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 sm:px-2.5 sm:py-1.5 text-xs text-[color:var(--foreground)] transition hover:border-violet-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+              >
                 <input
                   type="checkbox"
                   checked={hideResponse}
                   onChange={() => setHideResponse((prev) => !prev)}
                   className="accent-violet-500"
                 />
-                Hide Response
+                <span className="hidden sm:inline group-hover:text-violet-300">Hide Response</span>
+                <span className="sm:hidden text-[10px]">↔️</span>
               </label>
 
-              <label className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs text-[color:var(--foreground)] transition hover:border-[var(--border)]/80">
+              <label 
+                title="Show parallel request and response flows simultaneously"
+                className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 sm:px-2.5 sm:py-1.5 text-xs text-[color:var(--foreground)] transition hover:border-blue-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+              >
                 <input
                   type="checkbox"
                   checked={parallelResponse}
                   onChange={() => setParallelResponse((prev) => !prev)}
                   className="accent-violet-500"
                 />
-                Parallel
+                <span className="hidden sm:inline group-hover:text-blue-300">Parallel</span>
+                <span className="sm:hidden text-[10px]">⚡</span>
               </label>
 
-              <label className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs text-[color:var(--foreground)] transition hover:border-[var(--border)]/80">
+              <label 
+                title="Show detailed frame-by-frame debug information below the graph"
+                className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 sm:px-2.5 sm:py-1.5 text-xs text-[color:var(--foreground)] transition hover:border-emerald-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+              >
                 <input
                   type="checkbox"
                   checked={debugEnabled}
                   onChange={() => setDebugEnabled((prev) => !prev)}
                   className="accent-violet-500"
                 />
-                Debug
+                <span className="hidden sm:inline group-hover:text-emerald-300">Debug</span>
+                <span className="sm:hidden text-[10px]">🐛</span>
               </label>
 
-              <div className="h-6 w-px bg-[var(--border)]" />
+              <div className="h-6 w-px bg-[var(--border)] hidden md:block" />
 
-              <div className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs">
+              <div className="flex items-center gap-1 sm:gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 sm:px-3 py-1 sm:py-1.5 text-xs whitespace-nowrap">
                 <span className={`h-2 w-2 rounded-full ${isPlaying ? "bg-emerald-400" : "bg-[color:var(--foreground)]/30"}`} />
-                <span className="text-[color:var(--foreground)]/70">
+                <span className="text-[color:var(--foreground)]/70 hidden sm:inline">
                   {isPlaying ? "Playing" : frameGroups.length > 0 ? "Paused" : "Idle"}
                 </span>
-                <span className="ml-1 text-[color:var(--foreground)]/50">
+                <span className="ml-0 sm:ml-1 text-[color:var(--foreground)]/50 text-[10px] sm:text-xs">
                   {frameIndex + 1}/{frameGroups.length || 0}
                 </span>
               </div>
             </div>
           </div>
+
+          {/* Info Section - Show what each control does */}
+          <div className="mt-3 hidden sm:grid grid-cols-3 gap-3 text-[11px] text-[color:var(--foreground)]/60 border-t border-[var(--border)]/30 pt-3">
+            <div className="flex items-start gap-2">
+              <span className="text-violet-400">↔️</span>
+              <span><strong>Hide Response:</strong> Toggle response packets from servers</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-blue-400">⚡</span>
+              <span><strong>Parallel:</strong> Show simultaneous request-response flows</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-emerald-400">🐛</span>
+              <span><strong>Debug:</strong> Open detailed frame inspection panel</span>
+            </div>
+          </div>
         </header>
 
         {/* Main Content: Graph + Inspector */}
-        <section className="flex min-h-0 flex-1 overflow-hidden">
+        <section className="flex min-h-0 flex-1 overflow-hidden flex-col lg:flex-row">
           {/* Graph Canvas */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
-            className="flex-1 border-r border-[var(--border)]"
+            className="flex-1 border-b lg:border-b-0 lg:border-r border-[var(--border)] min-h-0"
           >
             <GraphCanvas
               nodes={styledNodes}
@@ -928,12 +959,12 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             />
           </motion.div>
 
-          {/* Inspector Panel */}
+          {/* Inspector Panel - Hidden on mobile, visible on lg+ */}
           <motion.div
             initial={{ opacity: 0, x: 8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.2, delay: 0.05 }}
-            className="w-80 overflow-hidden border-l border-[var(--border)] bg-[var(--surface)]/30"
+            className="hidden lg:flex w-full lg:w-80 overflow-hidden border-l border-[var(--border)] bg-[var(--surface)]/30 flex-col"
           >
             <NodeInspectorPanel
               selectedNode={selectedNode}
@@ -943,6 +974,33 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
               theme={theme}
             />
           </motion.div>
+
+          {/* Mobile Inspector Toggle Button */}
+          <button
+            onClick={() => setInspectorVisible(!inspectorVisible)}
+            className="lg:hidden px-4 py-2 text-xs font-medium border-t border-[var(--border)] bg-[var(--surface)]/50 hover:bg-[var(--surface)] transition text-[color:var(--foreground)]/70"
+          >
+            {inspectorVisible ? "Hide Inspector" : "Show Inspector"}
+          </button>
+
+          {/* Mobile Inspector Drawer */}
+          {inspectorVisible && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="lg:hidden w-full max-h-60 overflow-y-auto border-t border-[var(--border)] bg-[var(--surface)]/30"
+            >
+              <NodeInspectorPanel
+                selectedNode={selectedNode}
+                currentFrames={currentFrames}
+                redisStoreEntries={redisStoreEntries}
+                postgresStoreEntries={postgresStoreEntries}
+                theme={theme}
+              />
+            </motion.div>
+          )}
         </section>
 
         {/* Bottom Playback Panel - Resizable */}
@@ -963,36 +1021,38 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2, delay: 0.1 }}
-            className="flex flex-1 flex-col overflow-y-auto p-3"
+            className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 py-3"
           >
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <Controls
-                isPlaying={isPlaying}
-                onPlayToggle={() => setIsPlaying((prev) => !prev)}
-                onPrev={goToPreviousFrame}
-                onNext={goToNextFrame}
-                onReset={resetPlayback}
-                debugEnabled={debugEnabled}
-                onDebugToggle={() => setDebugEnabled((prev) => !prev)}
-                speed={speed}
-                onSpeedChange={setSpeed}
-                theme={theme}
-              />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="overflow-x-auto">
+                  <Controls
+                  isPlaying={isPlaying}
+                  onPlayToggle={() => setIsPlaying((prev) => !prev)}
+                  onPrev={goToPreviousFrame}
+                  onNext={goToNextFrame}
+                  onReset={resetPlayback}
+                  debugEnabled={debugEnabled}
+                  onDebugToggle={() => setDebugEnabled((prev) => !prev)}
+                  speed={speed}
+                  onSpeedChange={setSpeed}
+                  theme={theme}
+                />
+                </div>
+              </div>
               <p className={`text-[11px] ${theme === "dark" ? "text-slate-500" : "text-slate-600"}`}>
                 Space: Play/Pause | ←→: Prev/Next | R: Reset
               </p>
-            </div>
 
-            <Timeline
-              frameIndex={frameIndex}
-              frameGroups={frameGroups}
-              onSeek={(index) => {
-                setIsPlaying(false);
-                setFrameIndex(index);
-              }}
-              theme={theme}
-            />
+              <Timeline
+                frameIndex={frameIndex}
+                frameGroups={frameGroups}
+                onSeek={(index) => {
+                  setIsPlaying(false);
+                  setFrameIndex(index);
+                }}
+                theme={theme}
+              />
 
               {debugEnabled && (
                 <motion.div
