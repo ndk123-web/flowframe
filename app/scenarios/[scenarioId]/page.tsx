@@ -574,9 +574,49 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
   const [speed, setSpeed] = useState(1);
   const [frameIndex, setFrameIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [panelHeight, setPanelHeight] = useState(200); // Default height in pixels
+  const [isDragging, setIsDragging] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [debugEnabled, setDebugEnabled] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+
+      const container = document.querySelector('[data-resizable-container]') as HTMLElement;
+      if (!container) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const newHeight = containerRect.bottom - e.clientY;
+
+      // Min height 100px, max 80% of container
+      const minHeight = 100;
+      const maxHeight = containerRect.height * 0.8;
+
+      if (newHeight >= minHeight && newHeight <= maxHeight) {
+        setPanelHeight(newHeight);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "none";
+      document.body.style.cursor = "row-resize";
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "auto";
+      document.body.style.cursor = "auto";
+    };
+  }, [isDragging]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -814,16 +854,14 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
         showHomeLink
         badgeText="Simulator"
       />
-      <div className="flex h-[calc(100vh-70px)] flex-col">
+      <div className="flex h-[calc(100vh-70px)] flex-col" data-resizable-container>
         {/* Top Bar */}
         <header className="border-b border-[var(--border)] bg-[var(--surface)]/50 px-4 py-3 backdrop-blur">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div>
-                <p className="text-xs uppercase tracking-wider text-[color:var(--foreground)]/50">Simulator</p>
-                <p className="text-sm font-medium text-[color:var(--foreground)]">
-                  Live Simulation
-                </p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--foreground)]">{scenarioId}</p>
+                <p className="text-[11px] text-[color:var(--foreground)]/50">Simulation</p>
               </div>
             </div>
 
@@ -907,16 +945,29 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
           </motion.div>
         </section>
 
-        {/* Bottom Playback Panel */}
-        <motion.section
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, delay: 0.1 }}
-          className="border-t border-[var(--border)] bg-[var(--surface)]/30 p-3 backdrop-blur"
+        {/* Bottom Playback Panel - Resizable */}
+        <div
+          style={{ height: debugEnabled ? `${panelHeight}px` : "auto" }}
+          className="flex flex-col border-t border-[var(--border)] bg-[var(--surface)]/30 transition-all duration-150 backdrop-blur overflow-hidden"
         >
-          <div className="mx-auto flex max-w-7xl flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <Controls
+          {/* Drag Handle */}
+          {debugEnabled && (
+            <div
+              onMouseDown={() => setIsDragging(true)}
+              className="h-1 w-full cursor-row-resize bg-[var(--border)] hover:bg-violet-500/50 transition-colors"
+              title="Drag to resize debug panel"
+            />
+          )}
+
+          <motion.section
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2, delay: 0.1 }}
+            className="flex flex-1 flex-col overflow-y-auto p-3"
+          >
+            <div className="mx-auto flex w-full max-w-7xl flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <Controls
                 isPlaying={isPlaying}
                 onPlayToggle={() => setIsPlaying((prev) => !prev)}
                 onPrev={goToPreviousFrame}
@@ -943,27 +994,29 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
               theme={theme}
             />
 
-            {debugEnabled && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className={`rounded-lg border border-[var(--border)] bg-[var(--surface)]/50 p-3`}>
-                  <p className={`text-xs uppercase tracking-widest text-[color:var(--foreground)]/50 mb-3`}>
-                    Frame {frameIndex + 1} Debug
-                  </p>
-                  <DebugPanel
-                    currentFrames={currentFrames}
-                    frameIndex={frameIndex}
-                    theme={theme}
-                  />
-                </div>
-              </motion.div>
-            )}
-          </div>
-        </motion.section>
+              {debugEnabled && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="min-h-0 flex-1 overflow-y-auto"
+                >
+                  <div className={`rounded-lg border border-[var(--border)] bg-[var(--surface)]/50 p-3`}>
+                    <p className={`text-xs uppercase tracking-widest text-[color:var(--foreground)]/50 mb-3`}>
+                      Frame {frameIndex + 1} Debug
+                    </p>
+                    <DebugPanel
+                      currentFrames={currentFrames}
+                      frameIndex={frameIndex}
+                      theme={theme}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </motion.section>
+        </div>
       </div>
     </main>
   );
