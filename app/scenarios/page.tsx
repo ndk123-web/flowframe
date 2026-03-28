@@ -61,6 +61,19 @@ const SCENARIOS: ScenarioCard[] = [
 		flowDiagram: "Client → API Gateway → LB → Servers, Cache, DB",
 		systemBehavior: "Gateway routes endpoints to appropriate services. Full chain with caching and persistence.",
 	},
+	{
+		id: "simple-valet-key",
+		title: "Simple Valet Key (Direct Upload)",
+		description:
+			"Simulate signed URL upload flow where server issues a valet key and client uploads directly to cloud storage.",
+		href: "/scenarios/simple-valet-key",
+		difficulty: "Intermediate",
+		focus: ["Signed URL", "Direct Upload", "Storage Offload"],
+		expectedFrames: 24,
+		updatedAt: "2026-03-29",
+		flowDiagram: "Client → Server → signedURL → Client → Cloud Storage",
+		systemBehavior: "Client first gets a signed upload URL from server, then uploads directly to storage without streaming file through backend.",
+	},
 ];
 
 

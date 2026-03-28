@@ -9,6 +9,7 @@ import RedisModel from "@/engine/models/Redis";
 import PostgresModel from "@/engine/models/Postgres";
 import ServerModel from "@/engine/models/server";
 import ApiGatewayModel from "@/engine/models/ApiGateway";
+import StorageModel from "@/engine/models/Storage";
 
 type SimulationNodeKind =
   | "CLIENT"
@@ -175,6 +176,17 @@ class SimulationManager {
         this.redisLookupCursor++;
       }
     }
+
+    // valet-key scenario context:
+    // Client asks Server for signed URL, then Client uploads directly to Storage.
+    request.context.valetKeyFlow = Boolean(this.payloadForRequest?.valetKeyFlow);
+    request.context.signedUrlIssued = false;
+    request.context.uploadCompleted = false;
+    request.context.fileName =
+      typeof this.payloadForRequest?.fileName === "string" &&
+      this.payloadForRequest.fileName.length > 0
+        ? this.payloadForRequest.fileName
+        : "upload.bin";
      
     // set the traversal path to the current node id 
     const traversalPath: NodeId[] = [currentNodeId];
@@ -232,6 +244,51 @@ class SimulationManager {
          * If the node type is client, then we need to send the request to the next node
          */
         case "CLIENT": {
+
+          // Valet-key client behavior:
+          // 1) first hop -> Server for signed URL
+          // 2) second hop -> Storage using signed URL
+          if (request.context.valetKeyFlow) {
+            const serverNodeId = nextNodes.find(
+              (nodeId) => this.getNodeKind(nodeId) === "SERVER",
+            );
+            const storageNodeId = nextNodes.find(
+              (nodeId) => this.getNodeKind(nodeId) === "STORAGE",
+            );
+
+            const shouldRequestSignedUrl = !request.context.signedUrlIssued;
+            const targetNodeId = shouldRequestSignedUrl
+              ? serverNodeId
+              : storageNodeId;
+
+            if (!targetNodeId) {
+              request.direction = "backward";
+              break;
+            }
+
+            this.pushFrame(
+              request,
+              currentNodeId,
+              targetNodeId,
+              shouldRequestSignedUrl
+                ? "CLIENT_REQUEST_UPLOAD_URL"
+                : "CLIENT_UPLOAD_USING_VALET_KEY",
+              {
+                payloadSummary: shouldRequestSignedUrl
+                  ? `file=${request.context.fileName}`
+                  : `signedUrl=${request.context.signedUrl ?? "missing"}`,
+                signedUrl:
+                  typeof request.context.signedUrl === "string"
+                    ? request.context.signedUrl
+                    : undefined,
+              },
+            );
+
+            request.currentNodeId = targetNodeId;
+            traversalPath.push(targetNodeId);
+            currentNodeId = targetNodeId;
+            break;
+          }
 
           // if there are no next nodes, then return 
           if (nextNodes.length === 0) {
@@ -302,6 +359,48 @@ class SimulationManager {
           if (!serverInstance.canAccepthRequest()) {
             this.pushFrame(request, currentNodeId, "", "SERVER_REJECT_REQUEST");
             return;
+          }
+
+          // Valet-key server behavior:
+          // Server generates signed URL and returns it to previous Client.
+          if (request.context.valetKeyFlow) {
+            if (traversalPath.length < 2) {
+              request.direction = "backward";
+              break;
+            }
+
+            const previousNodeId = traversalPath[traversalPath.length - 2];
+            const previousNodeKind = this.getNodeKind(previousNodeId);
+
+            if (previousNodeKind !== "CLIENT") {
+              request.direction = "backward";
+              break;
+            }
+
+            const fileName = String(request.context.fileName ?? "upload.bin");
+            const signedUrl =
+              `https://storage.example/upload/${fileName}` +
+              `?token=signed-url-for-${request.id}`;
+
+            request.context.signedUrl = signedUrl;
+            request.context.signedUrlIssued = true;
+
+            this.pushFrame(
+              request,
+              currentNodeId,
+              previousNodeId,
+              "SERVER_RETURN_VALET_KEY",
+              {
+                signedUrl,
+                payloadSummary: `ttl=120s file=${fileName}`,
+              },
+            );
+
+            traversalPath.pop();
+            request.currentNodeId = previousNodeId;
+            currentNodeId = previousNodeId;
+            request.direction = "forward";
+            break;
           }
 
           // check whether redis is there ? 
@@ -481,6 +580,101 @@ class SimulationManager {
             );
             request.direction = "backward";
           }
+          break;
+        }
+        
+        /**
+         * if node is Storage , 
+         * now we can store the file in storage and return the some signed url to the client for uploading the file to storage, this is simulating the valet key scenario where client can directly upload the file to storage without going through the server after getting the signed url from the server, this is a common pattern used in real world applications to offload the file upload traffic from the server and also to improve the upload performance by allowing client to upload directly to storage, in this flow we are assuming that client will request a signed url from the server and then server will generate a signed url and return it to the client and then client will use that signed url to upload the file directly to storage, so in this case we are simulating the generation of signed url and returning it to the client without actually implementing the file upload functionality because our focus is on simulating the request flow rather than implementing the actual file upload logic
+         */
+        case "STORAGE": {
+
+          // Valet-key storage behavior:
+          // Storage receives direct upload from Client and confirms upload.
+          if (request.context.valetKeyFlow) {
+            if (traversalPath.length < 2) {
+              return;
+            }
+
+            const storageInstance = nodeInstance as StorageModel;
+            const previousNodeId = traversalPath[traversalPath.length - 2];
+            const fileName = String(request.context.fileName ?? "upload.bin");
+
+            if (!request.context.signedUrlIssued) {
+              this.pushFrame(
+                request,
+                currentNodeId,
+                previousNodeId,
+                "STORAGE_REJECT_MISSING_VALET_KEY",
+                {
+                  payloadSummary: `file=${fileName}`,
+                },
+              );
+            } else {
+              storageInstance.addFileIntoBucket(
+                "media-uploads",
+                fileName,
+                {
+                  requestId: request.id,
+                  sourceIp: request.ipAddress,
+                },
+              );
+
+              this.pushFrame(
+                request,
+                currentNodeId,
+                previousNodeId,
+                "STORAGE_UPLOAD_SUCCESS",
+                {
+                  signedUrl:
+                    typeof request.context.signedUrl === "string"
+                      ? request.context.signedUrl
+                      : undefined,
+                  payloadSummary: `uploaded file=${fileName}`,
+                },
+              );
+              request.context.uploadCompleted = true;
+            }
+
+            request.direction = "backward";
+            traversalPath.pop();
+            request.currentNodeId = previousNodeId;
+            currentNodeId = previousNodeId;
+            break;
+          }
+          
+          const storageInstance = nodeInstance as StorageModel;
+          
+          const file = request.context.isThereFileToUpload ? request.context.filesToUpload?.[0] : undefined;
+          
+          if (file === undefined) {
+            this.pushFrame(
+              request,
+              currentNodeId,
+              traversalPath[traversalPath.length - 2],
+              "STORAGE_NO_FILE_TO_UPLOAD",              
+            )
+            request.direction = "backward";
+            break;
+          }
+
+          const signedUrl: string = storageInstance.addFileIntoBucket("media-uploads", file, "file-content-placeholder");
+          
+          // send the signed url back to client and then client will use that signed url to upload the file directly to storage
+          this.pushFrame(
+            request, 
+            currentNodeId,
+            traversalPath[traversalPath.length - 2],
+            "STORAGE_RETURN_SIGNED_URL",
+            {
+              signedUrl,
+            }
+          )
+
+          request.direction = "backward";
+          traversalPath.pop();
+          request.currentNodeId = traversalPath[traversalPath.length - 1];
+          currentNodeId = traversalPath[traversalPath.length - 1];
           break;
         }
       

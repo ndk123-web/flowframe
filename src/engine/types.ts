@@ -34,6 +34,7 @@ type Frame = {
   lookupKey?: string;
   redisKeysSnapshot?: string[];
   payloadSummary?: string;
+  signedUrl?: string;
 };
 
 type ScenarioRunOptions = {
