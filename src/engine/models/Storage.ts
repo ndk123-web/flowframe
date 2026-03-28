@@ -63,3 +63,5 @@ class StorageModel implements NodeInstance {
         return false;
     }
 }
+
+export default StorageModel;

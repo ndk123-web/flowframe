@@ -277,7 +277,7 @@ class SimulationManager {
             break;
           }
 
-          
+          // push the frame lb -> selectedNodeId(server)
           this.pushFrame(
             request,
             currentNodeId,
@@ -285,33 +285,48 @@ class SimulationManager {
             "LOAD_BALANCER_FORWARD_REQUEST",
           );
 
+          // change the current to that serverNodeId
           request.currentNodeId = selectedNodeId;
+
+          // add serverNodeId as traversal
           traversalPath.push(selectedNodeId);
           currentNodeId = selectedNodeId;
           break;
         }
 
         case "SERVER": {
+
           const serverInstance = nodeInstance as ServerModel;
+          
+          // we are checking here load
           if (!serverInstance.canAccepthRequest()) {
             this.pushFrame(request, currentNodeId, "", "SERVER_REJECT_REQUEST");
             return;
           }
 
+          // check whether redis is there ? 
           const redisNodeId = nextNodes.find(
             (nodeId) => this.getNodeKind(nodeId) === "REDIS",
           );
+
+          // check whether postgres is there ?
           const postgresNodeId = nextNodes.find(
             (nodeId) => this.getNodeKind(nodeId) === "POSTGRES",
           );
 
+
+          // important one (if it is then awaitingDbLookup search in postgres)
           if (request.context.awaitingDbLookup && postgresNodeId) {
+
+            // add current to postgres
             this.pushFrame(
               request,
               currentNodeId,
               postgresNodeId,
               "SERVER_FORWARD_REQUEST_TO_POSTGRES",
             );
+
+            // rollback to false once we used 
             request.context.awaitingDbLookup = false;
             request.currentNodeId = postgresNodeId;
             traversalPath.push(postgresNodeId);
@@ -320,23 +335,32 @@ class SimulationManager {
           }
 
           /**
-           * if the request has not done redis lookup and there is a redis then go to redis bro then
+           * if the request has not done redis lookup and there is a redis then go to redis bro
            * because our system prioritize cache over the database
            */
           if (!request.context.redisLookupDone && redisNodeId) {
+            
+            // push frame from (server-redis)
             this.pushFrame(
               request,
               currentNodeId,
               redisNodeId,
               "SERVER_FORWARD_REQUEST_TO_REDIS",
             );
+
+            // set redisLookUpDone to true so that redis will process the key 
             request.context.redisLookupDone = true;
+
+            // change current to redisNodeId
             request.currentNodeId = redisNodeId;
+
+            // add redis to path traversed
             traversalPath.push(redisNodeId);
             currentNodeId = redisNodeId;
             break;
           }
 
+          // if not then go backward
           request.direction = "backward";
           break;
         }
@@ -346,12 +370,16 @@ class SimulationManager {
             return;
           }
 
+
           const redisInstance = nodeInstance as RedisModel;
+          
+          // get the lookUpKey From the request context 
           const lookUpKey = request.context.lookupKey as string | undefined;
           const lookUpData = lookUpKey
             ? redisInstance.getData(lookUpKey)
             : null;
 
+          // return back to previousNodeId
           const previousNodeId = traversalPath[traversalPath.length - 2];
           this.pushFrame(
             request,
@@ -363,7 +391,8 @@ class SimulationManager {
             },
           );
 
-          traversalPath.pop();
+          // once we used then pop 
+          traversalPath.pop();  
           request.currentNodeId = previousNodeId;
           currentNodeId = previousNodeId;
 
@@ -454,7 +483,7 @@ class SimulationManager {
           }
           break;
         }
-
+      
         default:
           return;
       }
