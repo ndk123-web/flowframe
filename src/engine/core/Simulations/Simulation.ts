@@ -17,6 +17,7 @@ type SimulationNodeKind =
   | "REDIS"
   | "POSTGRES"
   | "API_GATEWAY"
+  | "STORAGE"
   | "UNKNOWN";
 
 class SimulationManager {
@@ -74,6 +75,10 @@ class SimulationManager {
       return "API_GATEWAY";
     }
 
+    if (normalized === "STORAGE" || normalized === "STORAGE_SYSTEM" || normalized === "CLOUD_STORAGE") { 
+      return "STORAGE";
+    }
+
     return "UNKNOWN";
   }
 
@@ -121,11 +126,19 @@ class SimulationManager {
         return "API_GATEWAY_SEND_RESPONSE";
       case "POSTGRES":
         return "POSTGRES_RETURN_DATA";
+      case "STORAGE":
+        return "STORAGE_RETURN_URL";
       default:
         return "RESPONSE_BACKTRACK";
     }
   }
-
+  
+  /**
+   * 
+   * @param from - the node id from which the simulation starts
+   * @returns - void because it will push the frames to the frames array
+   * 
+   */
   runSimulation(from: NodeId) {
     const requestId = this.uid.rnd(10);
     const requestName = `Request-${requestId}`;
@@ -135,10 +148,12 @@ class SimulationManager {
     const request = new RequestManager(
       requestId,
       requestName,
-      currentNodeId,
-      this.payloadForRequest,
-      this.ipv4,
+      currentNodeId, // starting node id
+      this.payloadForRequest, // payload for the request
+      this.ipv4, // ipv4 address of the request
     );
+
+    // set the task to "GET_DATA" 
     request.task = "GET_DATA";
 
     // Optional endpoint comes from scenario payload for API Gateway routing.
@@ -160,29 +175,41 @@ class SimulationManager {
         this.redisLookupCursor++;
       }
     }
-
+     
+    // set the traversal path to the current node id 
     const traversalPath: NodeId[] = [currentNodeId];
+
+    // set the max steps to 24 
     const maxSteps = 24;
     let steps = 0;
 
+    // while the steps are less than the max steps, increment the steps
     while (steps < maxSteps) {
       steps++;
 
+      // if request is backward and the traversal path is less than 2, then break the loop because we can't go backward anymore
+      // minimum must be 2 because we need to have at least 2 nodes in the traversal path to go backward 
       if (request.direction === "backward") {
         if (traversalPath.length < 2) {
           break;
         }
-
+        
+        // if request is backward and the traversal path is greater than 2, then 
         const responseFrom = traversalPath[traversalPath.length - 1];
         const responseTo = traversalPath[traversalPath.length - 2];
+
+        // push the frame to the frames array 
         this.pushFrame(
           request,
           responseFrom,
           responseTo,
           this.getResponseAction(responseFrom),
         );
-
+        
+        // pop the last node because we have processed the last node in the traversal path
         traversalPath.pop();
+
+        // set the current node id to the last node in the traversal path
         currentNodeId = responseTo;
         continue;
       }
@@ -192,22 +219,26 @@ class SimulationManager {
         break;
       }
 
-      /**
-       * get the next nodes from the graph manager and type and normalize it and  of current node from the registry
-       */
+
+      // get the next nodes from the graph manager
       const nextNodes = this.graph.getNextNodes(currentNodeId);
+
+      // normalize the node type 
       const nodeType = this.normalizeNodeType(nodeInstance.type);
 
-      /**
-       * Simulate bases on the type of Node, because it becomes easier to resone about the behavior of each node type and also it becomes easier to add new node types in the future, for example,
-       * if we want to add a new node type called "CACHE" then we can simply add a new case in the switch statement below without affecting the existing logic of other node types.
-       */
       switch (nodeType) {
+
+        /**
+         * If the node type is client, then we need to send the request to the next node
+         */
         case "CLIENT": {
+
+          // if there are no next nodes, then return 
           if (nextNodes.length === 0) {
             return;
           }
 
+          // get the first next node
           const toNodeId = nextNodes[0];
           this.pushFrame(
             request,
@@ -218,25 +249,35 @@ class SimulationManager {
               payloadSummary: request.task || "GET_DATA",
             },
           );
+
+          // set nodeId to next nodeId to send req from
           request.currentNodeId = toNodeId;
+          
+          // assumed as traversed toNodeId as well 
           traversalPath.push(toNodeId);
           currentNodeId = toNodeId;
           break;
         }
 
         case "LOAD_BALANCER": {
+
+          // if nodes of Load_balancers are empty then set direction as backward 
           if (nextNodes.length === 0) {
             request.direction = "backward";
             break;
           }
 
+          // get instance of LoadBalancer
           const lbInstance = nodeInstance as LoadBalancerModel;
+          
+          // used Default Round Robin Strategy By Load Balancer Model
           const selectedNodeId = lbInstance.runLoadBalancer(nextNodes);
           if (!selectedNodeId) {
             request.direction = "backward";
             break;
           }
 
+          
           this.pushFrame(
             request,
             currentNodeId,

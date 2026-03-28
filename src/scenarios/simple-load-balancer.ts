@@ -24,15 +24,25 @@ function shouldKeepFrame(hideResponse: boolean, frame: Frame) {
   );
 }
 
+/**
+ * 
+ * @param options - options for the simulation
+ * @param options.hideResponse - if true, the response will not be shown
+ * @param options.parallelResponse - if true, the response will be shown in parallel
+ * @returns - a bundle of the simulation (frames, nodes, edges, debug)
+ */
 export function createSimpleLoadBalancerSimulationBundle(
   options: ScenarioRunOptions,
 ): SimBundle {
   const { hideResponse, parallelResponse } = options;
+
+  // create the graph, registry, ipv4 generator, strategy
   const graph = new GraphManager("graph-1");
   const registry = new NodeRegistry("registry-1");
   const ipv4Instance = new Ipv4Generator();
   const strategy = new RoundRobinStrategy();
 
+  // create the nodes and edges
   const clientId = "client-1";
   const lbId = "lb-1";
   const s1Id = "server-1";
@@ -56,16 +66,28 @@ export function createSimpleLoadBalancerSimulationBundle(
   graph.addEdge(lbId, s2Id);
   graph.addEdge(lbId, s3Id);
 
+  // Register Components On Registry
   registry.register(clientId, client);
   registry.register(lbId, lb);
   registry.register(s1Id, s1);
   registry.register(s2Id, s2);
   registry.register(s3Id, s3);
 
+  // This will the actual frame 
   const allFrames: Frame[] = [];
+
+  
   const requestInputs: Array<{ requestId?: string; sourceIp?: string; lookupKey?: string }> = [];
+  
   let globalTimestampOffset = 0;
 
+  /**
+   * @step1 - generate random ip for the CLient For each request
+   * @step2 - create object of simulation and add graph, egdes, registry, ip to that
+   * @step3 - runframes() will handle timestamp of each frame (parallelResponse / single response)
+   * @step4 - if generated frames has length > 0 then get the first frame
+   * @step5 - add all the frames that are generated currently push into global `allFrame`
+   */
   for (let i = 0; i < 3; i++) {
     const sourceIp = ipv4Instance.getRandomIpv4() as string;
     const simulation = new SimulationManager(
@@ -85,6 +107,7 @@ export function createSimpleLoadBalancerSimulationBundle(
       payloadSummary: "{}",
     }));
 
+    // for the first frame, add the request input to the request inputs array because we will need to show it in the UI (each request will have a unique request id)
     const firstFrame = runFrames[0];
     if (firstFrame) {
       requestInputs.push({
@@ -93,8 +116,10 @@ export function createSimpleLoadBalancerSimulationBundle(
       });
     }
 
+    
     allFrames.push(...runFrames);
 
+    // if the response is not parallel, then we need to increment the global timestamp offset by the length of the frames generated 
     if (!parallelResponse) {
       globalTimestampOffset += (simulation.getFrames() as Frame[]).length;
     }
@@ -248,13 +273,14 @@ export function createSimpleLoadBalancerSimulationBundle(
     shouldKeepFrame(hideResponse, frame),
   );
 
+  // return the bundle of the simulation
   return {
     frames: filteredFrames,
     nodes: flowNodes,
     edges: flowEdges,
     debug: {
-      parallelResponse,
-      requestInputs,
+      parallelResponse, // if true, the response will be shown in parallel
+      requestInputs, // request inputs for the simulation (each request will have a unique request id)
     },
   };
 }
