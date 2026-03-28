@@ -2,6 +2,7 @@ import { MarkerType, Position, type Edge, type Node } from "@xyflow/react";
 import type { Event, Frame, ScenarioRunOptions, SimBundle } from "@/engine/types";
 import { GraphManager } from "@/engine/core/Graph/graph";
 import { NodeRegistry } from "@/engine/core/Graph/nodeResgistry";
+import { SimulationManager } from "@/engine/core/Simulations/Simulation";
 import ServerModel from "@/engine/models/server";
 import ClientModel from "@/engine/models/Client";
 import StorageModel from "@/engine/models/Storage";
@@ -73,114 +74,40 @@ function createSimpleValetKeySimulationBundle(
     for (let i = 0; i < testFiles.length; i++) {
         const fileName = testFiles[i];
         const sourceIp = ipv4Instance.getRandomIpv4() as string;
-        const requestId = `vk-req-${i + 1}`;
-        const requestName = `ValetKeyRequest-${i + 1}`;
-        const signedUrl = `https://storage.example/upload/${fileName}?token=vkey-${i + 1}`;
+        const simulation = new SimulationManager(
+            graph,
+            registry,
+            {
+                valetKeyFlow: true,
+                fileName,
+            },
+            sourceIp,
+        );
 
-        const runFrames: Frame[] = [
-            {
-                requestId,
-                requestName,
-                from: clientId,
-                to: serverId,
-                timestamp: 0,
-                action: "CLIENT_REQUEST_UPLOAD_URL",
-                sourceIp,
-                payloadSummary: `file=${fileName}`,
-            },
-            {
-                requestId,
-                requestName,
-                from: serverId,
-                to: storageId,
-                timestamp: 1,
-                action: "SERVER_REQUEST_SIGNED_UPLOAD_URL",
-                sourceIp,
-                payloadSummary: `bucket=media-uploads file=${fileName}`,
-            },
-            {
-                requestId,
-                requestName,
-                from: storageId,
-                to: serverId,
-                timestamp: 2,
-                action: "STORAGE_RETURN_SIGNED_UPLOAD_URL",
-                sourceIp,
-                payloadSummary: `signedUrl=${signedUrl}`,
-            },
-            {
-                requestId,
-                requestName,
-                from: serverId,
-                to: clientId,
-                timestamp: 3,
-                action: "SERVER_RETURN_VALET_KEY",
-                sourceIp,
-                payloadSummary: `ttl=120s permission=PUT` ,
-            },
-            {
-                requestId,
-                requestName,
-                from: clientId,
-                to: storageId,
-                timestamp: 4,
-                action: "CLIENT_UPLOAD_USING_VALET_KEY",
-                sourceIp,
-                payloadSummary: `upload ${fileName}`,
-            },
-            {
-                requestId,
-                requestName,
-                from: storageId,
-                to: clientId,
-                timestamp: 5,
-                action: "STORAGE_UPLOAD_SUCCESS",
-                sourceIp,
-                payloadSummary: `status=201` ,
-            },
-            {
-                requestId,
-                requestName,
-                from: clientId,
-                to: serverId,
-                timestamp: 6,
-                action: "CLIENT_NOTIFY_UPLOAD_COMPLETE",
-                sourceIp,
-                payloadSummary: `file=${fileName}`,
-            },
-            {
-                requestId,
-                requestName,
-                from: serverId,
-                to: clientId,
-                timestamp: 7,
-                action: "SERVER_SEND_RESPONSE_UPLOAD_CONFIRMED",
-                sourceIp,
-                payloadSummary: `db=metadata-saved`,
-            },
-        ].map((frame) => ({
+        simulation.runSimulation(clientId);
+
+        const generatedFrames = simulation.getFrames() as Frame[];
+        const runFrames = generatedFrames.map((frame) => ({
             ...frame,
             timestamp: parallelResponse
                 ? frame.timestamp
                 : frame.timestamp + globalTimestampOffset,
+            sourceIp,
         }));
 
-        storage.addFileIntoBucket("media-uploads", fileName, {
-            uploadedBy: clientId,
-            requestId,
-            sourceIp,
-        });
-
-        requestInputs.push({
-            requestId,
-            sourceIp,
-            lookupKey: fileName,
-        });
+        const firstFrame = runFrames[0];
+        if (firstFrame) {
+            requestInputs.push({
+                requestId: firstFrame.requestId,
+                sourceIp,
+                lookupKey: fileName,
+            });
+        }
 
         allFrames.push(...runFrames);
 
         if (!parallelResponse) {
-            globalTimestampOffset += runFrames.length;
+            globalTimestampOffset += generatedFrames.length;
         }
     }
 
@@ -224,7 +151,7 @@ function createSimpleValetKeySimulationBundle(
         },
         {
             id: serverId,
-            data: { label: "Upload Service" },
+            data: { label: "Server" },
             position: { x: 380, y: 100 },
             type: "default",
             sourcePosition: Position.Right,
@@ -298,6 +225,7 @@ function createSimpleValetKeySimulationBundle(
         debug: {
             parallelResponse,
             requestInputs,
+            storageStore: storage.getAllBuckets(),
         },
     };
 }

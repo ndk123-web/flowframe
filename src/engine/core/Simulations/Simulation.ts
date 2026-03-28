@@ -630,7 +630,7 @@ class SimulationManager {
                     typeof request.context.signedUrl === "string"
                       ? request.context.signedUrl
                       : undefined,
-                  payloadSummary: `uploaded file=${fileName}`,
+                  payloadSummary: `uploaded file=${fileName} at signedUrl=${request.context.signedUrl ?? "missing"}`,
                 },
               );
               request.context.uploadCompleted = true;

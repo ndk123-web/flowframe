@@ -50,6 +50,7 @@ type NodeRole =
   | "api-gateway"
   | "load-balancer"
   | "server"
+  | "storage"
   | "redis"
   | "postgres"
   | "other";
@@ -67,6 +68,14 @@ function getNodeRole(label: string): NodeRole {
 
   if (normalized.includes("load") && normalized.includes("balancer")) {
     return "load-balancer";
+  }
+
+  if (normalized.includes("storage") || normalized.includes("cloud")) {
+    return "storage";
+  }
+
+  if (normalized.includes("upload") && normalized.includes("service")) {
+    return "server";
   }
 
   if (normalized.includes("server")) {
@@ -328,12 +337,14 @@ function NodeInspectorPanel({
   currentFrames,
   redisStoreEntries,
   postgresStoreEntries,
+  storageStoreEntries,
   theme,
 }: {
   selectedNode: Node | null;
   currentFrames: Frame[];
   redisStoreEntries: Array<[string, unknown]>;
   postgresStoreEntries: Array<[string, unknown]>;
+  storageStoreEntries: Array<[string, { [key: string]: unknown }]>;
   theme: Theme;
 }) {
   const bgColor = theme === "dark" ? "bg-slate-950" : "bg-white";
@@ -437,7 +448,46 @@ function NodeInspectorPanel({
             </div>
           )}
 
-          {role !== "server" && role !== "redis" && role !== "postgres" && (
+          {role === "storage" && (
+            <div className={`rounded-md border ${cardBorder} ${cardBg} p-3`}>
+              <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Storage Buckets</p>
+              {storageStoreEntries.length === 0 ? (
+                <p className={`mt-2 text-xs ${textColor}`}>No buckets found</p>
+              ) : (
+                <div className="mt-2 space-y-2">
+                  {storageStoreEntries.map(([bucketName, bucketFiles]) => {
+                    const files = Object.keys(bucketFiles ?? {});
+
+                    return (
+                      <div
+                        key={bucketName}
+                        className={`rounded border ${borderColor} ${theme === "dark" ? "bg-slate-950" : "bg-slate-100"} p-2`}
+                      >
+                        <p className="font-mono text-[11px] text-violet-400">{bucketName}</p>
+                        <p className={`mt-1 text-[10px] ${textColor}`}>
+                          {files.length} file{files.length === 1 ? "" : "s"}
+                        </p>
+                        {files.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {files.map((fileName) => (
+                              <span
+                                key={`${bucketName}-${fileName}`}
+                                className={`rounded px-1.5 py-0.5 text-[10px] font-mono ${theme === "dark" ? "bg-emerald-500/20 text-emerald-300" : "bg-emerald-100 text-emerald-700"}`}
+                              >
+                                {fileName}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {role !== "server" && role !== "storage" && role !== "redis" && role !== "postgres" && (
             <div className={`rounded-md border ${cardBorder} ${cardBg} p-3`}>
               <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Activity</p>
               <p className={`mt-2 text-xs ${textColor}`}>{relatedFrames.length} event(s) this frame</p>
@@ -669,6 +719,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
   const currentFrames = currentFrameGroup?.frames ?? [];
   const redisStoreEntries = Object.entries(debug?.redisStore ?? {});
   const postgresStoreEntries = Object.entries(debug?.postgresStore ?? {});
+  const storageStoreEntries = Object.entries(debug?.storageStore ?? {});
 
   useEffect(() => {
     if (!isPlaying || frameGroups.length === 0) {
@@ -971,6 +1022,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
               currentFrames={currentFrames}
               redisStoreEntries={redisStoreEntries}
               postgresStoreEntries={postgresStoreEntries}
+              storageStoreEntries={storageStoreEntries}
               theme={theme}
             />
           </motion.div>
@@ -997,6 +1049,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                 currentFrames={currentFrames}
                 redisStoreEntries={redisStoreEntries}
                 postgresStoreEntries={postgresStoreEntries}
+                storageStoreEntries={storageStoreEntries}
                 theme={theme}
               />
             </motion.div>

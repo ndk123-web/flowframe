@@ -64,6 +64,10 @@ class StorageModel implements NodeInstance {
 
         return false;
     }
+
+    getAllBuckets(): { [key: string]: {[key: string]: any}} {
+        return Object.fromEntries(this.data.entries());
+    }
 }
 
 export default StorageModel;

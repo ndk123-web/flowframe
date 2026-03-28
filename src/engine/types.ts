@@ -47,6 +47,7 @@ type SimDebug = {
   testCasesForRedis?: string[];
   redisStore?: Record<string, string>;
   postgresStore?: Record<string, string>;
+  storageStore?: Record<string, { [key: string]: unknown }>;
   requestInputs?: Array<{
     requestId?: string;
     sourceIp?: string;
