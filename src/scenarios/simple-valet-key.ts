@@ -43,6 +43,11 @@ function createSimpleValetKeySimulationBundle(
     const server = new ServerModel(serverId, "Upload Service");
     const storage = new StorageModel(storageId, "Cloud Storage");
     storage.addBucket("media-uploads");
+    
+        // Snapshot initial empty buckets once, before upload simulations mutate storage.
+        const storageInitialStore = JSON.parse(
+            JSON.stringify(storage.getAllBuckets()),
+        ) as Record<string, { [key: string]: unknown }>;
 
     graph.addNode(clientId, "Client");
     graph.addNode(serverId, "Upload Service");
@@ -225,6 +230,7 @@ function createSimpleValetKeySimulationBundle(
         debug: {
             parallelResponse,
             requestInputs,
+                storageInitialStore,
             storageStore: storage.getAllBuckets(),
         },
     };

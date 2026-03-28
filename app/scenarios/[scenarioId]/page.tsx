@@ -13,7 +13,6 @@ import {
   getSmoothStepPath,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useRouter } from "next/navigation";
 import type { SimDebug, ScenarioRunOptions } from "@/engine/types";
 import { ALL_SCENARIOS } from "@/scenarios/all";
 import Link from "next/link";
@@ -44,6 +43,116 @@ type Theme = "light" | "dark";
 type ScenarioPropsPage = {
   params: Promise<{ scenarioId: string }>;
 };
+
+type FrameGroup = {
+  timestamp: number;
+  frames: Frame[];
+};
+
+type StorageStore = Record<string, { [key: string]: unknown }>;
+
+const DEFAULT_STORAGE_BUCKET = "media-uploads";
+
+function cloneStorageStore(store?: StorageStore): StorageStore {
+  const cloned: StorageStore = {};
+  for (const [bucketName, bucketData] of Object.entries(store ?? {})) {
+    cloned[bucketName] = { ...(bucketData ?? {}) };
+  }
+  return cloned;
+}
+
+function extractBucketName(payloadSummary?: string): string | undefined {
+  if (!payloadSummary) return undefined;
+  const bucketMatch = payloadSummary.match(/bucket=([^\s]+)/i);
+  return bucketMatch?.[1];
+}
+
+function extractFileName(frame: Frame): string | undefined {
+  const payload = frame.payloadSummary ?? "";
+
+  const explicitFile = payload.match(/file=([^\s]+)/i)?.[1];
+  if (explicitFile) return explicitFile;
+
+  const uploadVerb = payload.match(/upload\s+([^\s]+)/i)?.[1];
+  if (uploadVerb) return uploadVerb;
+
+  const signedUrl = payload.match(/signedUrl=([^\s]+)/i)?.[1];
+  if (signedUrl) {
+    const fileInUrl = signedUrl.match(/\/upload\/([^?\s]+)/i)?.[1];
+    if (fileInUrl) return decodeURIComponent(fileInUrl);
+  }
+
+  if (typeof frame.lookupKey === "string" && frame.lookupKey.length > 0) {
+    return frame.lookupKey;
+  }
+
+  return undefined;
+}
+
+function isStorageMutationFrame(frame: Frame): boolean {
+  const normalized = frame.action.toUpperCase();
+  return (
+    normalized === "STORAGE_UPLOAD_SUCCESS" ||
+    normalized.includes("UPLOAD_SUCCESS") ||
+    normalized.includes("STORE_FILE")
+  );
+}
+
+function buildProgressiveStorageStore(
+  frameGroups: FrameGroup[],
+  uptoGroupIndex: number,
+  seedStore?: StorageStore,
+): StorageStore {
+  const store = cloneStorageStore(seedStore);
+  const requestToFile = new Map<string, string>();
+  const requestToBucket = new Map<string, string>();
+
+  if (frameGroups.length === 0 || uptoGroupIndex < 0) {
+    return store;
+  }
+
+  const maxIndex = Math.min(uptoGroupIndex, frameGroups.length - 1);
+
+  for (let groupIdx = 0; groupIdx <= maxIndex; groupIdx++) {
+    for (const frame of frameGroups[groupIdx].frames) {
+      const maybeBucket = extractBucketName(frame.payloadSummary);
+      if (maybeBucket) {
+        requestToBucket.set(frame.requestId, maybeBucket);
+      }
+
+      const maybeFile = extractFileName(frame);
+      if (maybeFile) {
+        requestToFile.set(frame.requestId, maybeFile);
+      }
+
+      if (!isStorageMutationFrame(frame)) {
+        continue;
+      }
+
+      const bucket =
+        requestToBucket.get(frame.requestId) ??
+        extractBucketName(frame.payloadSummary) ??
+        DEFAULT_STORAGE_BUCKET;
+
+      const file =
+        requestToFile.get(frame.requestId) ??
+        extractFileName(frame) ??
+        `${frame.requestId}.bin`;
+
+      if (!store[bucket]) {
+        store[bucket] = {};
+      }
+
+      store[bucket][file] = {
+        requestId: frame.requestId,
+        action: frame.action,
+        timestamp: frame.timestamp,
+      };
+    }
+  }
+
+  return store;
+}
 
 type NodeRole =
   | "client"
@@ -124,7 +233,7 @@ function PacketEdge(props: EdgeProps) {
   const duration = Number(data?.packetDuration ?? 1.8);
   const isReverseMotion = Boolean(data?.reverseMotion);
   const count = Math.max(1, Math.min(Number(data?.packetCount ?? 1), 4));
-
+  
   return (
     <>
       <BaseEdge
@@ -603,8 +712,8 @@ function generateFrames(options: ScenarioRunOptions, scenarioId: string): SimBun
 }
 
 export default function ScenarioPage({ params }: ScenarioPropsPage) {
-  const router = useRouter();
   const { scenarioId } = use(params);
+
 
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window === "undefined") {
@@ -719,7 +828,22 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
   const currentFrames = currentFrameGroup?.frames ?? [];
   const redisStoreEntries = Object.entries(debug?.redisStore ?? {});
   const postgresStoreEntries = Object.entries(debug?.postgresStore ?? {});
-  const storageStoreEntries = Object.entries(debug?.storageStore ?? {});
+
+  const storageStoreForInspector = useMemo(() => {
+    const progressiveStore = buildProgressiveStorageStore(
+      frameGroups,
+      frameIndex,
+      debug?.storageInitialStore,
+    );
+
+    if (Object.keys(progressiveStore).length > 0) {
+      return progressiveStore;
+    }
+
+    return debug?.storageStore ?? {};
+  }, [frameGroups, frameIndex, debug?.storageInitialStore, debug?.storageStore]);
+
+  const storageStoreEntries = Object.entries(storageStoreForInspector);
 
   useEffect(() => {
     if (!isPlaying || frameGroups.length === 0) {
