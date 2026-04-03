@@ -4,12 +4,17 @@ import { NodeRegistry } from "./nodeResgistry";
 /**
  * GraphManager is responsible for managing the graph structure, including nodes and edges. It provides functionalities to add nodes and edges, detect cycles, and check the validity of the graph based on certain conditions. The graph is represented using adjacency lists, where each node maintains a list of its outgoing edges. The GraphManager also interacts with the NodeRegistry to access node details when needed.
  */
+
+type NodeType = "Client" | "Server" | "Database" | "Cache" | "ApiGateway" | "LoadBalancer";
+
 class GraphManager {
   id: string;
   Nodes: Map<NodeId, string>; // id -> name
   Edges: Map<NodeId, any[]>; // id -> [instanceOfNode1, instanceOfNode2]
   IncomingEdges: Map<NodeId, any[]>; // id -> [instanceOfNode1, instanceOfNode2]
   OutgoingEdges: Map<NodeId, any[]>; // id -> [instanceOfNode1, instanceOfNode2]
+
+  DataNodes: Map<NodeType, any[]>;
 
   // Overview:
   // 1. Nodes: NodeId -> string(name)
@@ -21,17 +26,21 @@ class GraphManager {
     this.Edges = new Map<NodeId, NodeId[]>();
     this.IncomingEdges = new Map<NodeId, NodeId[]>();
     this.OutgoingEdges = new Map<NodeId, NodeId[]>();
+    this.DataNodes = new Map<NodeType, any[]>();
   }
 
   addNode(id: NodeId, name: string) {
     this.Nodes.set(id, name);
   }
 
-  addEdge(from: NodeId, to: NodeId) {
+  addEdge(from: NodeId, to: NodeId, fromDataType?: NodeType, toDataType?: NodeType) {
     const neighbours = this.Edges.get(from);
 
     this.OutgoingEdges.set(from, [...(this.OutgoingEdges.get(from) || []), to]);
     this.IncomingEdges.set(to, [...(this.IncomingEdges.get(to) || []), from]);
+
+    this.DataNodes.set(fromDataType || "Client", [...(this.DataNodes.get(fromDataType || "Client") || []), from]);
+    this.DataNodes.set(toDataType || "Client", [...(this.DataNodes.get(toDataType || "Client") || []), to]);
 
     if (neighbours) {
       neighbours.push(to);
@@ -84,6 +93,11 @@ class GraphManager {
     return false; // No cycle detected in this path
   }
 
+  /**
+   * 
+   * @param registry - for future use case
+   * @returns - boolean whetehr there is cycle or not
+   */
   detectCycle(registry: NodeRegistry) : boolean {
     const visited = new Set<NodeId>();
     const currRecursionStack = new Set<NodeId>();
@@ -117,6 +131,14 @@ class GraphManager {
 
     if (this.detectCycle(registry)) {
         return false; // Graph is not valid if it contains a cycle
+    }
+
+    // client should not have outgoing edge
+    const clientNodes = this.DataNodes.get("Client") || [];
+    for (const clientNode of clientNodes) {
+      if (this.IncomingEdges.get(clientNode)?.length || 0 > 0) {
+        return false; // Client should not have incoming edge
+      }
     }
 
     return true // Graph is valid if it does not contain any cycle and satisfies all the above conditions (for now we are only checking for cycle, we can add more checks in future)
