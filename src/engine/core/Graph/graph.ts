@@ -1,9 +1,15 @@
 import type { NodeId } from "@/engine/types";
 import { NodeRegistry } from "./nodeResgistry";
+
+/**
+ * GraphManager is responsible for managing the graph structure, including nodes and edges. It provides functionalities to add nodes and edges, detect cycles, and check the validity of the graph based on certain conditions. The graph is represented using adjacency lists, where each node maintains a list of its outgoing edges. The GraphManager also interacts with the NodeRegistry to access node details when needed.
+ */
 class GraphManager {
   id: string;
   Nodes: Map<NodeId, string>; // id -> name
   Edges: Map<NodeId, any[]>; // id -> [instanceOfNode1, instanceOfNode2]
+  IncomingEdges: Map<NodeId, any[]>; // id -> [instanceOfNode1, instanceOfNode2]
+  OutgoingEdges: Map<NodeId, any[]>; // id -> [instanceOfNode1, instanceOfNode2]
 
   // Overview:
   // 1. Nodes: NodeId -> string(name)
@@ -13,6 +19,8 @@ class GraphManager {
     this.id = id;
     this.Nodes = new Map<NodeId, string>();
     this.Edges = new Map<NodeId, NodeId[]>();
+    this.IncomingEdges = new Map<NodeId, NodeId[]>();
+    this.OutgoingEdges = new Map<NodeId, NodeId[]>();
   }
 
   addNode(id: NodeId, name: string) {
@@ -21,6 +29,9 @@ class GraphManager {
 
   addEdge(from: NodeId, to: NodeId) {
     const neighbours = this.Edges.get(from);
+
+    this.OutgoingEdges.set(from, [...(this.OutgoingEdges.get(from) || []), to]);
+    this.IncomingEdges.set(to, [...(this.IncomingEdges.get(to) || []), from]);
 
     if (neighbours) {
       neighbours.push(to);
