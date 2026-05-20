@@ -25,6 +25,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import Ipv4Generator from "@/utils/generateRandomIp";
+import Link from "next/link";
 
 type Theme = "light" | "dark";
 
@@ -92,6 +93,17 @@ const animationStyles = `
     50% {
       transform: translateX(4px);
     }
+  }
+
+  @keyframes packetSlide {
+    0% { left: 0%; opacity: 0; }
+    20% { opacity: 1; transform: scale(1.2); }
+    80% { opacity: 1; transform: scale(1); }
+    100% { left: 100%; opacity: 0; transform: scale(0.8); }
+  }
+
+  .animate-packet-slide {
+    animation: packetSlide 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   }
 
   @keyframes underlineExpand {
@@ -291,7 +303,7 @@ function HeroArchitecture() {
     return [
       {
         id: simData.meta.clientId,
-        data: { label: "C" },
+        data: { label: "Client" },
         position: { x: 0, y: -200 },
         style: {
           background: "rgba(139, 92, 246, 0.6)",
@@ -310,26 +322,26 @@ function HeroArchitecture() {
       },
       {
         id: simData.meta.lbId,
-        data: { label: "⚖️" },
+        data: { label: "Load Balancer" },
         position: { x: 0, y: -50 },
         style: {
           background: "rgba(59, 130, 246, 0.6)",
           border: "2px solid rgba(59, 130, 246, 0.8)",
           borderRadius: "50%",
           padding: "0",
-          width: "60px",
-          height: "60px",
+          width: "100px",
+          height: "80px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           color: "#e2e8f0",
-          fontSize: "28px",
+          fontSize: "16px",
           fontWeight: 600,
         },
       },
       {
         id: simData.meta.s1Id,
-        data: { label: "S1" },
+        data: { label: "Server 1" },
         position: { x: -120, y: 100 },
         style: {
           background: "rgba(16, 185, 129, 0.6)",
@@ -348,7 +360,7 @@ function HeroArchitecture() {
       },
       {
         id: simData.meta.s2Id,
-        data: { label: "S2" },
+        data: { label: "Server 2" },
         position: { x: 0, y: 100 },
         style: {
           background: "rgba(16, 185, 129, 0.6)",
@@ -367,7 +379,7 @@ function HeroArchitecture() {
       },
       {
         id: simData.meta.s3Id,
-        data: { label: "S3" },
+        data: { label: "Server 3" },
         position: { x: 120, y: 100 },
         style: {
           background: "rgba(16, 185, 129, 0.6)",
@@ -629,50 +641,37 @@ function buildSimulation() {
 // ===== HOW IT WORKS SECTION =====
 function HowItWorks() {
   const steps = [
-    {
-      num: "01",
-      title: "Choose Scenario",
-      description: "Pick a predefined system pattern (cache, load balancer, API gateway)",
-    },
-    {
-      num: "02",
-      title: "Run Simulation",
-      description: "Watch requests flow through your architecture in real time",
-    },
-    {
-      num: "03",
-      title: "Debug & Learn",
-      description: "Pause frames, inspect node state, view Redis/DB snapshots",
-    },
+    { num: "01", title: "Choose a Scenario", description: "Select from predefined distributed system patterns like load balancing, caching, or rate limiting.", icon: "🎯" },
+    { num: "02", title: "Watch the Flow", description: "See requests travel through your architecture in real-time. Understand bottlenecks and latencies.", icon: "🌊" },
+    { num: "03", title: "Inspect State", description: "Pause the simulation at any frame. Check Redis cache, Postgres data, or server loads instantly.", icon: "🔍" },
   ];
 
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="mb-12 animate-fade-in-blur">
-          <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-            How It Works
+      <section className="mx-auto max-w-6xl px-6 py-24">
+        <div className="mb-20 text-center animate-fade-in-blur">
+          <h2 className="mb-6 text-4xl font-bold tracking-tight md:text-5xl">
+            How FlowFrame Works
           </h2>
-          <p className="text-base text-[color:var(--foreground)]/70">
-            Three simple steps to understand distributed systems
+          <p className="mx-auto max-w-2xl text-lg text-[color:var(--foreground)]/70">
+            A visual, interactive approach to mastering complex backend architectures.
           </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="relative grid gap-12 md:grid-cols-3">
+          <div className="absolute top-12 left-10 hidden h-0.5 w-[calc(100%-5rem)] bg-gradient-to-r from-transparent via-[var(--border)] to-transparent md:block" />
+
           {steps.map((step, index) => (
             <Reveal key={step.num} delay={index * 0.15}>
-              <div className="group relative">
-                <div className="rounded-2xl border border-[var(--border)]/50 bg-[var(--surface)]/40 p-6 transition-all duration-300 hover:bg-[var(--surface)]/60 hover:border-violet-500/30 hover:shadow-[0_20px_40px_rgba(139,92,246,0.15)] hover:-translate-y-1.5">
-                  <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/25 to-blue-500/20 text-lg font-bold text-violet-300 transition-all duration-300 group-hover:from-violet-500/40 group-hover:to-blue-500/30 group-hover:rotate-12">
-                    {step.num}
-                  </div>
-                  <h3 className="mb-2 text-lg font-semibold transition-colors group-hover:text-violet-300">{step.title}</h3>
-                  <p className="text-sm text-[color:var(--foreground)]/70 transition-colors group-hover:text-[color:var(--foreground)]/80">{step.description}</p>
+              <div className="group relative z-10 mx-auto flex flex-col items-center text-center">
+                <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-3xl bg-[var(--surface)] border-2 border-[var(--border)] shadow-xl transition-all duration-300 group-hover:scale-110 group-hover:border-violet-500/50 group-hover:shadow-[0_0_40px_rgba(139,92,246,0.2)]">
+                  <span className="text-4xl">{step.icon}</span>
                 </div>
-
-                {index < steps.length - 1 && (
-                  <div className="absolute right-0 top-1/2 hidden h-0.5 w-8 -translate-y-1/2 translate-x-full bg-gradient-to-r from-violet-500/50 to-transparent md:block animate-pulse" />
-                )}
+                <div className="rounded-3xl border border-[var(--border)]/50 bg-[var(--surface)]/40 p-8 backdrop-blur-sm transition-all duration-300 group-hover:bg-[var(--surface)]/80 hover:border-violet-500/30">
+                  <div className="mb-3 text-xs font-bold tracking-widest text-violet-400">STEP {step.num}</div>
+                  <h3 className="mb-4 text-2xl font-bold text-[color:var(--foreground)]">{step.title}</h3>
+                  <p className="text-base leading-relaxed text-[color:var(--foreground)]/70">{step.description}</p>
+                </div>
               </div>
             </Reveal>
           ))}
@@ -682,138 +681,145 @@ function HowItWorks() {
   );
 }
 
-// ===== CORE CONCEPTS SECTION =====
-function CoreConcepts() {
-  const concepts = [
-    {
-      title: "Frame-Based Execution",
-      description: "Time moves in discrete frames. Each frame contains one unit of work across the system.",
-    },
-    {
-      title: "Request Tracing",
-      description: "Follow a single request as it flows through clients, gateways, servers, caches, and databases.",
-    },
-    {
-      title: "Live State Inspection",
-      description: "Pause at any frame to inspect node state, cache contents, and pending requests.",
-    },
-  ];
-
+// ===== MODERN BENTO GRID FEATURES =====
+function FeaturesBentoGrid() {
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="mb-8 animate-fade-in-blur">
-          <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-            Core Concepts
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="mb-14 animate-fade-in-blur md:w-2/3">
+          <h2 className="mb-6 text-4xl font-bold tracking-tight md:text-5xl">
+            Powerful Simulation Engine
           </h2>
-          <p className="text-base text-[color:var(--foreground)]/70">
-            Understand the unique approach FlowFrame uses to visualize systems
+          <p className="text-lg text-[color:var(--foreground)]/70">
+            Explore concepts that are usually hidden behind terminal logs and metrics dashboards.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          {concepts.map((concept, index) => (
-            <Reveal key={concept.title} delay={index * 0.12}>
-              <div className="group rounded-xl border border-[var(--border)]/50 bg-[var(--surface)]/30 p-4 transition-all duration-300 hover:bg-[var(--surface)]/50 hover:border-violet-500/60 hover:-translate-y-1">
-                <h3 className="mb-2 font-semibold text-[color:var(--foreground)] transition-colors group-hover:text-violet-300">{concept.title}</h3>
-                <p className="text-sm text-[color:var(--foreground)]/70 transition-colors group-hover:text-[color:var(--foreground)]/80">{concept.description}</p>
-                <div className="mt-3 h-0.5 w-0 bg-gradient-to-r from-violet-500 to-transparent transition-all duration-400 group-hover:w-full" />
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-    </Reveal>
-  );
-}
-
-// ===== FEATURES PREVIEW SECTION =====
-function FeaturePreview() {
-  const features = [
-    {
-      title: "Graph Visualization",
-      description: "See your entire architecture at a glance with live node states",
-      icon: "🔗",
-    },
-    {
-      title: "Node Inspector",
-      description: "Inspect Redis, Postgres, or server state at any frame",
-      icon: "🔍",
-    },
-    {
-      title: "Timeline Playback",
-      description: "Step through frames with precise control and real-time speed adjustment",
-      icon: "⏱",
-    },
-    {
-      title: "Debug Panel",
-      description: "View current request details, flow paths, and system state",
-      icon: "🐛",
-    },
-  ];
-
-  return (
-    <Reveal>
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="mb-12 animate-fade-in-blur">
-          <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-            Built-in Features
-          </h2>
-          <p className="text-base text-[color:var(--foreground)]/70">
-            Everything you need to understand how your systems work
-          </p>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-2">
-          {features.map((feature, index) => (
-            <Reveal key={feature.title} delay={index * 0.12}>
-              <div className="group rounded-xl border border-[var(--border)]/50 bg-[var(--surface)]/40 p-5 transition-all duration-300 hover:bg-[var(--surface)]/60 hover:border-violet-500/30 hover:shadow-[0_15px_35px_rgba(139,92,246,0.12)] hover:-translate-y-1.25">
-                <div className="mb-3 inline-flex rounded-lg bg-gradient-to-br from-violet-500/20 to-blue-500/20 p-2.5 text-xl transition-all duration-300 group-hover:from-violet-500/30 group-hover:to-blue-500/30 group-hover:scale-110 group-hover:rotate-5">
-                  {feature.icon}
-                </div>
-                <h3 className="mb-1.5 font-semibold text-[color:var(--foreground)] transition-colors group-hover:text-violet-300">{feature.title}</h3>
-                <p className="text-sm text-[color:var(--foreground)]/70 transition-colors group-hover:text-[color:var(--foreground)]/80">{feature.description}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-    </Reveal>
-  );
-}
-
-// ===== OLD CAPABILITIES (keeping but simplified) =====
-function KeyCapabilities() {
-  const capabilities = [
-    {
-      label: "Real-time Tracing",
-      description: "Watch request flows propagate through your architecture instantly",
-    },
-    {
-      label: "Smart Routing",
-      description: "Visualize load balancing strategies distributing traffic",
-    },
-    {
-      label: "Data Persistence",
-      description: "See how Redis caches and databases handle requests",
-    },
-  ];
-
-  return (
-    <Reveal>
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="grid gap-5 md:grid-cols-3">
-          {capabilities.map((capability, index) => (
-            <Reveal key={capability.label} delay={index * 0.12}>
-              <div className="group relative overflow-hidden rounded-lg border border-[var(--border)]/40 bg-gradient-to-br from-[var(--surface)]/50 to-[var(--surface)]/30 p-5 transition-all duration-300 hover:from-[var(--surface)]/70 hover:to-[var(--surface)]/50 hover:border-emerald-500/30 hover:shadow-[0_12px_28px_rgba(139,92,246,0.08)] hover:-translate-y-1">
-                <h3 className="mb-3 font-semibold text-[color:var(--foreground)] transition-colors group-hover:text-emerald-300">{capability.label}</h3>
-                <p className="text-sm leading-relaxed text-[color:var(--foreground)]/70 transition-colors group-hover:text-[color:var(--foreground)]/75">
-                  {capability.description}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:grid-rows-2">
+          <div className="md:col-span-2 md:row-span-2 group relative overflow-hidden rounded-[2.5rem] border border-[var(--border)]/50 bg-[var(--surface)]/30 p-10 transition-all hover:bg-[var(--surface)]/50 hover:border-blue-500/30">
+            <div className="absolute right-0 top-0 -mr-20 -mt-20 h-80 w-80 rounded-full bg-blue-500/10 blur-[80px] transition-all group-hover:bg-blue-500/20" />
+            <div className="relative z-10 flex h-full flex-col justify-between">
+              <div className="mb-10">
+                <span className="mb-6 inline-block rounded-2xl bg-blue-500/20 p-4 text-3xl">⚡</span>
+                <h3 className="mb-4 text-3xl font-bold tracking-tight">Real-time Visualization</h3>
+                <p className="max-w-md text-lg leading-relaxed text-[color:var(--foreground)]/70">
+                  Watch packets travel across your network. See exactly how load balancers distribute traffic and how databases handle concurrent requests in real-time.
                 </p>
-
-                <div className="mt-4 h-0.5 w-0 bg-gradient-to-r from-emerald-500 to-transparent transition-all duration-600 group-hover:w-full" />
               </div>
-            </Reveal>
+              <div className="relative mt-2 h-56 w-full overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/20 shadow-inner flex flex-col justify-center">
+                {/* Status Bar */}
+                <div className="absolute top-4 left-4 z-20 flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 font-mono text-xs backdrop-blur-md border border-white/5">
+                  <span className="text-emerald-400 animate-pulse">●</span>
+                  <span className="text-[color:var(--foreground)]/80">Live Traffic</span>
+                </div>
+                
+                {/* Abstract grid background */}
+                <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg%20width=%2730%27%20height=%2730%27%20viewBox=%270%200%2030%2030%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cpath%20d=%27M0%200h30v30H0z%27%20fill=%27none%27/%3E%3Cpath%20d=%27M0%2029h30M29%200v30%27%20stroke=%27%23fff%27%20stroke-width=%271%27/%3E%3C/svg%3E')" }} />
+                
+                <div className="relative flex w-full max-w-[85%] mx-auto items-center justify-between z-10">
+                  {/* Flow Path 1 */}
+                  <div className="absolute left-[3rem] right-[50%] top-1/2 h-[2px] -translate-y-1/2 bg-gradient-to-r from-violet-500/20 to-blue-500/20">
+                    <div className="absolute top-1/2 h-2 w-6 -translate-y-1/2 rounded-full bg-violet-400 shadow-[0_0_12px_rgba(167,139,250,0.8)] animate-packet-slide" />
+                  </div>
+
+                  {/* Client Node */}
+                  <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-500/50 bg-violet-500/10 shadow-[0_0_20px_rgba(139,92,246,0.2)] backdrop-blur-md">
+                    <span className="text-xl">💻</span>
+                  </div>
+
+                  {/* Flow Path 2 (to servers) */}
+                  <div className="absolute left-[50%] right-[3rem] top-[30%] h-[2px] bg-gradient-to-r from-blue-500/20 to-emerald-500/20 rotate-[15deg] origin-left">
+                     <div className="absolute top-1/2 h-2 w-6 -translate-y-1/2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)] animate-packet-slide" style={{ animationDelay: "1s" }} />
+                  </div>
+                  <div className="absolute left-[50%] right-[3rem] top-[70%] h-[2px] bg-gradient-to-r from-blue-500/20 to-emerald-500/20 -rotate-[15deg] origin-left">
+                     <div className="absolute top-1/2 h-2 w-6 -translate-y-1/2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)] animate-packet-slide" style={{ animationDelay: "2s" }} />
+                  </div>
+
+                  {/* Load Balancer */}
+                  <div className="relative z-10 flex h-16 w-16 items-center justify-center rounded-full border border-blue-500/50 bg-blue-500/10 shadow-[0_0_30px_rgba(59,130,246,0.3)] backdrop-blur-md">
+                    <span className="text-2xl animate-breathe">⚖️</span>
+                  </div>
+
+                  {/* Servers */}
+                  <div className="relative z-10 flex flex-col gap-6">
+                    <div className="relative flex w-12 h-12 items-center justify-center rounded-xl border border-emerald-500/50 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)] backdrop-blur-md">
+                      <span className="text-xs font-bold text-emerald-400">S1</span>
+                    </div>
+                    <div className="relative flex w-12 h-12 items-center justify-center rounded-xl border border-emerald-500/50 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)] backdrop-blur-md">
+                      <span className="text-xs font-bold text-emerald-400">S2</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="group relative overflow-hidden rounded-[2.5rem] border border-[var(--border)]/50 bg-[var(--surface)]/30 p-8 transition-all hover:bg-[var(--surface)]/50 hover:border-violet-500/30">
+            <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-violet-500/10 blur-[50px] transition-all group-hover:bg-violet-500/20" />
+            <div className="relative z-10">
+               <span className="mb-5 inline-block rounded-2xl bg-violet-500/20 p-3 text-2xl">💾</span>
+               <h3 className="mb-3 text-xl font-bold">State Inspection</h3>
+               <p className="text-base leading-relaxed text-[color:var(--foreground)]/70">
+                 Pause the timeline. Inspect Redis memory limits, Postgres connections, and queue lengths globally.
+               </p>
+            </div>
+          </div>
+
+          <div className="group relative overflow-hidden rounded-[2.5rem] border border-[var(--border)]/50 bg-[var(--surface)]/30 p-8 transition-all hover:bg-[var(--surface)]/50 hover:border-emerald-500/30">
+            <div className="absolute bottom-0 left-0 h-40 w-40 rounded-full bg-emerald-500/10 blur-[50px] transition-all group-hover:bg-emerald-500/20" />
+            <div className="relative z-10">
+               <span className="mb-5 inline-block rounded-2xl bg-emerald-500/20 p-3 text-2xl">🎮</span>
+               <h3 className="mb-3 text-xl font-bold">Interactive Playback</h3>
+               <p className="text-base leading-relaxed text-[color:var(--foreground)]/70">
+                 Rewind mistakes. Fast-forward simulations. Learn at your own pace with precise timeline controls.
+               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </Reveal>
+  );
+}
+
+// ===== WHAT YOU CAN BUILD / SCENARIOS =====
+function ScenariosShowcase() {
+  const scenarios = [
+    { title: "Load Balancing", desc: "Round-robin, IP Hash, Least Connections", color: "from-blue-500/10 to-cyan-500/5 hover:border-cyan-500/30", icon: "⚖️" },
+    { title: "Caching Layers", desc: "Cache penetration, Redis hit/miss ratios", color: "from-orange-500/10 to-red-500/5 hover:border-orange-500/30", icon: "🚀" },
+    { title: "API Gateway", desc: "Authentication, Rate Limiting, Routing", color: "from-violet-500/10 to-fuchsia-500/5 hover:border-fuchsia-500/30", icon: "🚪" },
+    { title: "Valet Key Pattern", desc: "Direct client-storage access via tokens", color: "from-emerald-500/10 to-teal-500/5 hover:border-emerald-500/30", icon: "🔑" },
+  ];
+
+  return (
+    <Reveal>
+      <section className="mx-auto max-w-6xl px-6 py-24 border-y border-[var(--border)]/30 bg-[var(--surface-muted)]/10 my-10">
+         <div className="mb-14 text-center animate-fade-in-blur">
+          <h2 className="mb-6 text-4xl font-bold tracking-tight md:text-5xl">
+            Simulate Complex Scenarios
+          </h2>
+          <p className="mx-auto max-w-2xl text-lg text-[color:var(--foreground)]/70">
+            Pre-built architectural patterns ready for exploration.
+          </p>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {scenarios.map((s, i) => (
+             <Reveal key={s.title} delay={i * 0.1}>
+              <div className={`group flex h-full cursor-pointer flex-col justify-between rounded-[2rem] border border-[var(--border)]/50 bg-gradient-to-br ${s.color} p-8 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)]`}>
+                <div>
+                  <div className="mb-6 text-4xl drop-shadow-md transition-transform group-hover:scale-110 group-hover:rotate-6 origin-bottom-left">{s.icon}</div>
+                  <h3 className="mb-3 text-xl font-bold text-[color:var(--foreground)]">{s.title}</h3>
+                  <p className="text-sm leading-relaxed text-[color:var(--foreground)]/70">{s.desc}</p>
+                </div>
+                <div className="mt-8 flex items-center text-sm font-bold text-[color:var(--foreground)]/40 transition-colors group-hover:text-[color:var(--foreground)]" onClick={() => {
+                  // Navigate to scenarios page with no loading
+                }}>
+                  
+                   <Link href="/scenarios" className="absolute inset-0 z-10" ></Link>
+                  Explore Scenario <span className="ml-2 transition-transform group-hover:translate-x-2">→</span>
+                </div>
+              </div>
+             </Reveal>
           ))}
         </div>
       </section>
@@ -868,19 +874,20 @@ export default function Home() {
             <p className="mt-4 max-w-xl text-base text-[color:var(--foreground)]/70 md:text-lg">
               Distributed Systems Made Visible. Watch your architecture breathe.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-8 flex flex-wrap gap-4">
               <button
                 type="button"
-                className="rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-[0_15px_40px_-20px_var(--glow)] transition hover:shadow-[0_20px_50px_-20px_var(--glow)]"
+                className="group relative inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-violet-600 px-8 py-4 text-sm font-bold text-white shadow-[0_15px_40px_-20px_var(--glow)] transition-all hover:shadow-[0_25px_50px_-20px_var(--glow)] hover:scale-105 active:scale-95"
                 onClick={() => {
                   router.push("/scenarios/");
                 }}
               >
-                Start Simulation
+                <span>Start Simulation</span>
+                <span className="transition-transform group-hover:translate-x-1">→</span>
               </button>
               <button
                 type="button"
-                className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/80 px-6 py-3 text-sm font-semibold backdrop-blur transition hover:border-[var(--border)]/80"
+                className="rounded-2xl border-2 border-[var(--border)] bg-[var(--surface)]/50 px-8 py-4 text-sm font-bold backdrop-blur transition-all hover:bg-[var(--surface)] hover:border-[var(--border)]/80 hover:scale-105 active:scale-95"
                 onClick={() => {
                   router.push("/scenarios");
                 }}
@@ -897,12 +904,8 @@ export default function Home() {
       </section>
 
       <HowItWorks />
-
-      <CoreConcepts />
-
-      <FeaturePreview />
-
-      <KeyCapabilities />
+      <FeaturesBentoGrid />
+      <ScenariosShowcase />
 
       <Reveal>
         <section className="mx-auto max-w-6xl px-6 py-16">
