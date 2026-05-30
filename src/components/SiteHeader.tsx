@@ -54,6 +54,12 @@ export default function SiteHeader({
               Home
             </Link>
           )}
+          <Link
+            href="/workspace"
+            className="rounded-lg border border-[var(--border)] bg-gradient-to-r from-violet-500/10 to-blue-500/10 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-violet-500 dark:text-violet-300 transition hover:from-violet-500/20 hover:to-blue-500/20 hover:scale-105"
+          >
+            Workspace Sandbox
+          </Link>
           <button
             type="button"
             onClick={onToggleTheme}

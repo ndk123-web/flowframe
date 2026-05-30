@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { use, useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState, useRef } from "react";
 import {
   BaseEdge,
   Background,
@@ -11,6 +11,8 @@ import {
   type EdgeProps,
   type Node,
   getSmoothStepPath,
+  Handle,
+  Position,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { SimDebug, ScenarioRunOptions } from "@/engine/types";
@@ -233,7 +235,28 @@ function PacketEdge(props: EdgeProps) {
   const duration = Number(data?.packetDuration ?? 1.8);
   const isReverseMotion = Boolean(data?.reverseMotion);
   const count = Math.max(1, Math.min(Number(data?.packetCount ?? 1), 4));
-  
+  const frameIndex = Number(data?.frameIndex ?? 0);
+
+  const animateRefs = useRef<Array<any>>([]);
+
+  useEffect(() => {
+    if (isActive) {
+      animateRefs.current.forEach((ref, index) => {
+        if (ref) {
+          try {
+            if (typeof ref.beginElementAt === "function") {
+              ref.beginElementAt(index * 0.12);
+            } else if (typeof ref.beginElement === "function") {
+              ref.beginElement();
+            }
+          } catch (e) {
+            console.error("Error starting SMIL animation:", e);
+          }
+        }
+      });
+    }
+  }, [isActive, frameIndex]);
+
   return (
     <>
       <BaseEdge
@@ -248,9 +271,11 @@ function PacketEdge(props: EdgeProps) {
       {isActive &&
         Array.from({ length: count }).map((_, index) => (
           <circle
-            key={`${props.id}-${index}`}
+            key={`${props.id}-${index}-${edgePath}-${frameIndex}`}
             r={4.5 - index * 0.5}
             fill={packetColor(isReverseMotion)}
+            cx="0"
+            cy="0"
             style={{
               filter: isReverseMotion
                 ? "drop-shadow(0 0 5px rgba(245,158,11,0.85))"
@@ -259,9 +284,13 @@ function PacketEdge(props: EdgeProps) {
             }}
           >
             <animateMotion
+              ref={(el) => {
+                animateRefs.current[index] = el;
+              }}
               dur={`${duration}s`}
-              repeatCount="indefinite"
-              begin={`${index * 0.1}s`}
+              repeatCount={data?.isPlaying ? "1" : "indefinite"}
+              fill="freeze"
+              begin={`${index * 0.12}s`}
               path={edgePath}
               keyPoints={isReverseMotion ? "1;0" : "0;1"}
               keyTimes="0;1"
@@ -272,6 +301,81 @@ function PacketEdge(props: EdgeProps) {
     </>
   );
 }
+
+function CustomNode({ id, data, selected }: any) {
+  const typeColors: any = {
+    client: "border-l-violet-500 shadow-violet-500/10",
+    "api-gateway": "border-l-fuchsia-500 shadow-fuchsia-500/10",
+    "load-balancer": "border-l-blue-500 shadow-blue-500/10",
+    server: "border-l-emerald-500 shadow-emerald-500/10",
+    redis: "border-l-amber-500 shadow-amber-500/10",
+    postgres: "border-l-cyan-500 shadow-cyan-500/10",
+    storage: "border-l-yellow-500 shadow-yellow-500/10",
+  };
+
+  const icons: any = {
+    client: "💻",
+    "api-gateway": "🚪",
+    "load-balancer": "⚖️",
+    server: "🖥️",
+    redis: "💾",
+    postgres: "🗄️",
+    storage: "☁️",
+  };
+
+  const colorClass = typeColors[data.type] || "border-l-slate-400";
+  const icon = icons[data.type] || "⚙️";
+
+  const hasTarget = data.type !== "client";
+  const hasSource = data.type !== "redis" && data.type !== "postgres" && data.type !== "storage";
+
+  return (
+    <div
+      className={`relative rounded-xl border border-[var(--border)] border-l-4 bg-[var(--surface)] px-4 py-3 shadow-md transition-all duration-300 ${colorClass} ${
+        selected ? "ring-2 ring-violet-500 scale-105" : "hover:border-[var(--border)]/80"
+      } min-w-[145px]`}
+    >
+      {hasTarget && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          style={{ background: "#8b5cf6", width: 8, height: 8 }}
+          id="left"
+        />
+      )}
+
+      <div className="flex items-center gap-2">
+        <span className="text-xl">{icon}</span>
+        <div className="leading-tight">
+          <p className="text-[9px] font-semibold uppercase tracking-wider text-[color:var(--foreground)]/45">
+            {data.type}
+          </p>
+          <p className="text-xs font-bold text-[color:var(--foreground)] truncate max-w-[100px]">{data.label}</p>
+        </div>
+      </div>
+
+      {data.isActive && (
+        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
+        </span>
+      )}
+
+      {hasSource && (
+        <Handle
+          type="source"
+          position={Position.Right}
+          style={{ background: "#8b5cf6", width: 8, height: 8 }}
+          id="right"
+        />
+      )}
+    </div>
+  );
+}
+
+const nodeTypes = {
+  customNode: CustomNode,
+};
 
 function GraphCanvas({
   nodes,
@@ -291,6 +395,7 @@ function GraphCanvas({
     <ReactFlow
       nodes={nodes}
       edges={edges}
+      nodeTypes={nodeTypes}
       edgeTypes={{ packet: PacketEdge }}
       fitView
       fitViewOptions={{ padding: 0.22 }}
@@ -853,7 +958,13 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
     const baseInterval = 1000;
     const speedAdjustedInterval = baseInterval / speed;
     const timerId = setInterval(() => {
-      setFrameIndex((prev) => (prev + 1) % frameGroups.length);
+      setFrameIndex((prev) => {
+        if (prev >= frameGroups.length - 1) {
+          setIsPlaying(false);
+          return prev;
+        }
+        return prev + 1;
+      });
     }, speedAdjustedInterval);
 
     return () => clearInterval(timerId);
@@ -884,26 +995,26 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
     () =>
       nodes.map((node) => {
         const isSelected = node.id === selectedNodeId;
-        const bgColor = theme === "dark" ? "#0f172a" : "#ffffff";
-        const textColor = theme === "dark" ? "#e2e8f0" : "#0f172a";
-        const borderColor = isSelected ? "#8b5cf6" : (theme === "dark" ? "#334155" : "#e2e8f0");
+        const label = typeof node.data?.label === "string" ? node.data.label : node.id;
+        const role = getNodeRole(label);
+        const isActive = currentFrames.some((f) => f.from === node.id || f.to === node.id);
 
         return {
           ...node,
-          style: {
-            ...node.style,
-            background: bgColor,
-            color: textColor,
-            border: isSelected ? `2px solid ${borderColor}` : `1px solid ${borderColor}`,
-            borderRadius: "8px",
-            padding: "8px 12px",
-            fontSize: "12px",
-            fontWeight: 600,
-            boxShadow: isSelected ? "0 0 0 2px rgba(139,92,246,0.2)" : "none",
+          type: "customNode",
+          selected: isSelected,
+          sourcePosition: Position.Right,
+          targetPosition: Position.Left,
+          style: undefined,
+          data: {
+            ...node.data,
+            label,
+            type: role,
+            isActive,
           },
         };
       }),
-    [nodes, selectedNodeId, theme],
+    [nodes, selectedNodeId, currentFrames],
   );
 
   const animatedEdges = useMemo(() => {
@@ -960,6 +1071,8 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
           reverseMotion,
           packetCount: edgeState.get(edge.id)?.packetCount ?? 0,
           packetDuration: speedAdjustedDuration,
+          isPlaying,
+          frameIndex,
         },
         style: {
           ...edge.style,
@@ -968,7 +1081,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
         },
       };
     });
-  }, [currentFrames, edges, theme, speed]);
+  }, [currentFrames, edges, theme, speed, isPlaying, frameIndex]);
 
   const goToPreviousFrame = () => {
     setIsPlaying(false);

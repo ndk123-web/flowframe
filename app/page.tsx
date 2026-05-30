@@ -261,8 +261,11 @@ function PacketEdge(props: EdgeProps) {
       />
       {isActive && (
         <circle
+          key={`${props.id}-${edgePath}`}
           r={4.5}
           fill={packetColor(isReverseMotion)}
+          cx="0"
+          cy="0"
           style={{
             filter: isReverseMotion
               ? "drop-shadow(0 0 5px rgba(245,158,11,0.85))"
@@ -879,20 +882,20 @@ export default function Home() {
                 type="button"
                 className="group relative inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-violet-600 px-8 py-4 text-sm font-bold text-white shadow-[0_15px_40px_-20px_var(--glow)] transition-all hover:shadow-[0_25px_50px_-20px_var(--glow)] hover:scale-105 active:scale-95"
                 onClick={() => {
-                  router.push("/scenarios/");
+                  router.push("/scenarios");
                 }}
               >
-                <span>Start Simulation</span>
+                <span>Explore Scenarios</span>
                 <span className="transition-transform group-hover:translate-x-1">→</span>
               </button>
               <button
                 type="button"
-                className="rounded-2xl border-2 border-[var(--border)] bg-[var(--surface)]/50 px-8 py-4 text-sm font-bold backdrop-blur transition-all hover:bg-[var(--surface)] hover:border-[var(--border)]/80 hover:scale-105 active:scale-95"
+                className="rounded-2xl border-2 border-violet-500/35 bg-gradient-to-r from-violet-500/10 to-blue-500/10 px-8 py-4 text-sm font-bold backdrop-blur transition-all hover:border-violet-500/60 hover:scale-105 active:scale-95 text-violet-400"
                 onClick={() => {
-                  router.push("/scenarios");
+                  router.push("/workspace");
                 }}
               >
-                View Scenarios
+                Interactive Sandbox 🛠️
               </button>
             </div>
           </div>
