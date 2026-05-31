@@ -1526,7 +1526,7 @@ export default function WorkspacePage() {
 
                 {/* Client specific configuration */}
                 {selectedNode.data.type === "client" && (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <p className="text-xs font-semibold text-violet-400">Client Settings</p>
                     
                     <label className="flex items-center gap-2 text-xs text-[color:var(--foreground)]/80 cursor-pointer">
@@ -1534,54 +1534,139 @@ export default function WorkspacePage() {
                         type="checkbox"
                         checked={nodeConfigs[selectedNode.id]?.valetKeyFlow ?? false}
                         onChange={(e) => updateNodeConfig(selectedNode.id, { valetKeyFlow: e.target.checked })}
-                        className="accent-violet-500"
+                        className="accent-violet-500 cursor-pointer"
                       />
                       <span>Enable Valet Key Direct Upload Flow</span>
                     </label>
 
-                    {!nodeConfigs[selectedNode.id]?.valetKeyFlow ? (
-                      <>
-                        <div>
-                          <label className="text-[10px] text-[color:var(--foreground)]/60 block mb-1">Target Endpoint Path</label>
-                          <input
-                            type="text"
-                            value={nodeConfigs[selectedNode.id]?.endpoint ?? "/api/v1/posts"}
-                            onChange={(e) => updateNodeConfig(selectedNode.id, { endpoint: e.target.value })}
-                            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-mono outline-none focus:border-violet-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-[color:var(--foreground)]/60 block mb-1">Target Lookup Key</label>
-                          <input
-                            type="text"
-                            value={nodeConfigs[selectedNode.id]?.lookupKey ?? "rohan"}
-                            onChange={(e) => updateNodeConfig(selectedNode.id, { lookupKey: e.target.value })}
-                            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-mono outline-none focus:border-violet-500"
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div>
-                          <label className="text-[10px] text-[color:var(--foreground)]/60 block mb-1">Upload File Name</label>
-                          <input
-                            type="text"
-                            value={nodeConfigs[selectedNode.id]?.fileName ?? "image.png"}
-                            onChange={(e) => updateNodeConfig(selectedNode.id, { fileName: e.target.value })}
-                            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-mono outline-none focus:border-violet-500"
-                          />
-                        </div>
-                        <label className="flex items-center gap-2 text-xs text-[color:var(--foreground)]/80 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={nodeConfigs[selectedNode.id]?.isThereFileToUpload ?? true}
-                            onChange={(e) => updateNodeConfig(selectedNode.id, { isThereFileToUpload: e.target.checked })}
-                            className="accent-violet-500"
-                          />
-                          <span>Attach File Payload</span>
-                        </label>
-                      </>
-                    )}
+                    <div className="h-px bg-[var(--border)]/70" />
+
+                    <div>
+                      <label className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Simulated Requests List
+                      </label>
+                      
+                      <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                        {(nodeConfigs[selectedNode.id]?.requests || [
+                          {
+                            endpoint: nodeConfigs[selectedNode.id]?.endpoint || "/api/v1/posts",
+                            lookupKey: nodeConfigs[selectedNode.id]?.lookupKey || "rohan",
+                            fileName: nodeConfigs[selectedNode.id]?.fileName || "file.png",
+                            isThereFileToUpload: nodeConfigs[selectedNode.id]?.isThereFileToUpload !== false,
+                          }
+                        ]).map((req: any, idx: number) => (
+                          <div key={idx} className="border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50 space-y-2 relative group/req">
+                            <button
+                              onClick={() => {
+                                const currentRequests = nodeConfigs[selectedNode.id]?.requests || [
+                                  {
+                                    endpoint: nodeConfigs[selectedNode.id]?.endpoint || "/api/v1/posts",
+                                    lookupKey: nodeConfigs[selectedNode.id]?.lookupKey || "rohan",
+                                    fileName: nodeConfigs[selectedNode.id]?.fileName || "file.png",
+                                    isThereFileToUpload: nodeConfigs[selectedNode.id]?.isThereFileToUpload !== false,
+                                  }
+                                ];
+                                if (currentRequests.length <= 1) return;
+                                const nextRequests = currentRequests.filter((_: any, i: number) => i !== idx);
+                                updateNodeConfig(selectedNode.id, { requests: nextRequests });
+                              }}
+                              className="absolute top-1.5 right-1.5 text-rose-500 hover:text-rose-600 text-xs font-bold px-1.5 cursor-pointer opacity-40 group-hover/req:opacity-100 transition"
+                              title="Delete Request"
+                            >
+                              ×
+                            </button>
+
+                            <p className="text-[10px] font-bold text-violet-400">Request #{idx + 1}</p>
+
+                            {!nodeConfigs[selectedNode.id]?.valetKeyFlow ? (
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-[9px] text-[color:var(--foreground)]/50 block mb-0.5">Path</label>
+                                  <input
+                                    type="text"
+                                    value={req.endpoint}
+                                    onChange={(e) => {
+                                      const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
+                                      currentRequests[idx].endpoint = e.target.value;
+                                      updateNodeConfig(selectedNode.id, { requests: currentRequests });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] text-[color:var(--foreground)]/50 block mb-0.5">Key</label>
+                                  <input
+                                    type="text"
+                                    value={req.lookupKey}
+                                    onChange={(e) => {
+                                      const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
+                                      currentRequests[idx].lookupKey = e.target.value;
+                                      updateNodeConfig(selectedNode.id, { requests: currentRequests });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-1.5">
+                                <div>
+                                  <label className="text-[9px] text-[color:var(--foreground)]/50 block mb-0.5">Upload File</label>
+                                  <input
+                                    type="text"
+                                    value={req.fileName}
+                                    onChange={(e) => {
+                                      const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
+                                      currentRequests[idx].fileName = e.target.value;
+                                      updateNodeConfig(selectedNode.id, { requests: currentRequests });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500"
+                                  />
+                                </div>
+                                <label className="flex items-center gap-1.5 text-[10px] text-[color:var(--foreground)]/80 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={req.isThereFileToUpload}
+                                    onChange={(e) => {
+                                      const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
+                                      currentRequests[idx].isThereFileToUpload = e.target.checked;
+                                      updateNodeConfig(selectedNode.id, { requests: currentRequests });
+                                    }}
+                                    className="accent-violet-500"
+                                  />
+                                  <span>Attach File Payload</span>
+                                </label>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          const currentRequests = nodeConfigs[selectedNode.id]?.requests || [
+                            {
+                              endpoint: nodeConfigs[selectedNode.id]?.endpoint || "/api/v1/posts",
+                              lookupKey: nodeConfigs[selectedNode.id]?.lookupKey || "rohan",
+                              fileName: nodeConfigs[selectedNode.id]?.fileName || "file.png",
+                              isThereFileToUpload: nodeConfigs[selectedNode.id]?.isThereFileToUpload !== false,
+                            }
+                          ];
+                          const nextRequests = [
+                            ...currentRequests,
+                            {
+                              endpoint: "/api/v1/posts",
+                              lookupKey: `key-${currentRequests.length + 1}`,
+                              fileName: `file-${currentRequests.length + 1}.png`,
+                              isThereFileToUpload: true,
+                            }
+                          ];
+                          updateNodeConfig(selectedNode.id, { requests: nextRequests });
+                        }}
+                        className="w-full mt-2 rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
+                      >
+                        + Add Custom Request
+                      </button>
+                    </div>
                   </div>
                 )}
 
