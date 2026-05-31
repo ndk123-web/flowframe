@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import ArchDiagram from "@/components/ArchDiagram";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
@@ -19,6 +19,8 @@ import {
   Background,
   BackgroundVariant,
   getSmoothStepPath,
+  Handle,
+  Position,
   type Node,
   type Edge,
   type EdgeProps,
@@ -245,8 +247,30 @@ function PacketEdge(props: EdgeProps) {
   });
 
   const isActive = Boolean(data?.active);
-  const duration = Number(data?.packetDuration ?? 1.6);
+  const duration = Number(data?.packetDuration ?? 1.8);
   const isReverseMotion = Boolean(data?.reverseMotion);
+  const count = Math.max(1, Math.min(Number(data?.packetCount ?? 1), 4));
+  const frameIndex = Number(data?.frameIndex ?? 0);
+
+  const animateRefs = useRef<Array<any>>([]);
+
+  useEffect(() => {
+    if (isActive) {
+      animateRefs.current.forEach((ref, index) => {
+        if (ref) {
+          try {
+            if (typeof ref.beginElementAt === "function") {
+              ref.beginElementAt(index * 0.12);
+            } else if (typeof ref.beginElement === "function") {
+              ref.beginElement();
+            }
+          } catch (e) {
+            console.error("Error starting SMIL animation:", e);
+          }
+        }
+      });
+    }
+  }, [isActive, frameIndex]);
 
   return (
     <>
@@ -255,36 +279,116 @@ function PacketEdge(props: EdgeProps) {
         markerEnd={markerEnd}
         style={{
           ...style,
-          strokeOpacity: isActive ? 0.95 : 0.3,
-          transition: "stroke-opacity 120ms ease",
+          strokeOpacity: isActive ? 0.95 : 0.28,
+          transition: "stroke-opacity 150ms ease",
         }}
       />
-      {isActive && (
-        <circle
-          key={`${props.id}-${edgePath}`}
-          r={4.5}
-          fill={packetColor(isReverseMotion)}
-          cx="0"
-          cy="0"
-          style={{
-            filter: isReverseMotion
-              ? "drop-shadow(0 0 5px rgba(245,158,11,0.85))"
-              : "drop-shadow(0 0 5px rgba(139,92,246,0.85))",
-          }}
-        >
-          <animateMotion
-            dur={`${duration}s`}
-            repeatCount="indefinite"
-            path={edgePath}
-            keyPoints={isReverseMotion ? "1;0" : "0;1"}
-            keyTimes="0;1"
-            calcMode="linear"
-          />
-        </circle>
-      )}
+      {isActive &&
+        Array.from({ length: count }).map((_, index) => (
+          <circle
+            key={`${props.id}-${index}-${edgePath}-${frameIndex}`}
+            r={4.5 - index * 0.5}
+            fill={packetColor(isReverseMotion)}
+            cx="0"
+            cy="0"
+            style={{
+              filter: isReverseMotion
+                ? "drop-shadow(0 0 5px rgba(245,158,11,0.85))"
+                : "drop-shadow(0 0 5px rgba(139,92,246,0.85))",
+              opacity: Math.max(0.45, 0.9 - index * 0.15),
+            }}
+          >
+            <animateMotion
+              ref={(el) => {
+                animateRefs.current[index] = el;
+              }}
+              dur={`${duration}s`}
+              repeatCount={data?.isPlaying ? "1" : "indefinite"}
+              fill="freeze"
+              begin={`${index * 0.12}s`}
+              path={edgePath}
+              keyPoints={isReverseMotion ? "1;0" : "0;1"}
+              keyTimes="0;1"
+              calcMode="linear"
+            />
+          </circle>
+        ))}
     </>
   );
 }
+
+function CustomNode({ id, data, selected }: any) {
+  const typeColors: any = {
+    client: "border-l-violet-500 shadow-violet-500/10",
+    "api-gateway": "border-l-fuchsia-500 shadow-fuchsia-500/10",
+    "load-balancer": "border-l-blue-500 shadow-blue-500/10",
+    server: "border-l-emerald-500 shadow-emerald-500/10",
+    redis: "border-l-amber-500 shadow-amber-500/10",
+    postgres: "border-l-cyan-500 shadow-cyan-500/10",
+    storage: "border-l-yellow-500 shadow-yellow-500/10",
+  };
+
+  const icons: any = {
+    client: "💻",
+    "api-gateway": "🚪",
+    "load-balancer": "⚖️",
+    server: "🖥️",
+    redis: "💾",
+    postgres: "🗄️",
+    storage: "☁️",
+  };
+
+  const colorClass = typeColors[data.type] || "border-l-slate-400";
+  const icon = icons[data.type] || "⚙️";
+
+  const hasTarget = data.type !== "client";
+  const hasSource = data.type !== "redis" && data.type !== "postgres" && data.type !== "storage";
+
+  return (
+    <div
+      className={`relative rounded-xl border border-[var(--border)] border-l-4 bg-[var(--surface)] px-4 py-3 shadow-md transition-all duration-300 ${colorClass} ${
+        selected ? "ring-2 ring-violet-500 scale-105" : "hover:border-[var(--border)]/80"
+      } min-w-[145px]`}
+    >
+      {hasTarget && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          style={{ background: "#8b5cf6", width: 8, height: 8 }}
+        />
+      )}
+
+      <div className="flex items-center gap-2">
+        <span className="text-xl">{icon}</span>
+        <div className="leading-tight">
+          <p className="text-[9px] font-semibold uppercase tracking-wider text-[color:var(--foreground)]/45">
+            {data.type}
+          </p>
+          <p className="text-xs font-bold text-[color:var(--foreground)] truncate max-w-[100px]">{data.label}</p>
+        </div>
+      </div>
+
+      {data.isActive && (
+        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
+        </span>
+      )}
+
+      {hasSource && (
+        <Handle
+          type="source"
+          position={Position.Right}
+          style={{ background: "#8b5cf6", width: 8, height: 8 }}
+        />
+      )}
+    </div>
+  );
+}
+
+const nodeTypes = {
+  customNode: CustomNode,
+};
 
 function HeroArchitecture() {
   const [frameIndex, setFrameIndex] = useState(0);
@@ -303,104 +407,60 @@ function HeroArchitecture() {
       return [];
     }
 
+    const currentFrame = simData.frames?.[frameIndex];
+    const isNodeActive = (id: string) => {
+      if (!currentFrame) return false;
+      return currentFrame.from === id || currentFrame.to === id;
+    };
+
     return [
       {
         id: simData.meta.clientId,
-        data: { label: "Client" },
-        position: { x: 0, y: -200 },
-        style: {
-          background: "rgba(139, 92, 246, 0.6)",
-          border: "2px solid rgba(139, 92, 246, 0.8)",
-          borderRadius: "50%",
-          padding: "0",
-          width: "60px",
-          height: "60px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#e2e8f0",
-          fontSize: "16px",
-          fontWeight: 600,
-        },
+        type: "customNode",
+        data: { label: "Client Browser", type: "client", isActive: isNodeActive(simData.meta.clientId) },
+        position: { x: 40, y: 190 },
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
+        style: undefined,
       },
       {
         id: simData.meta.lbId,
-        data: { label: "Load Balancer" },
-        position: { x: 0, y: -50 },
-        style: {
-          background: "rgba(59, 130, 246, 0.6)",
-          border: "2px solid rgba(59, 130, 246, 0.8)",
-          borderRadius: "50%",
-          padding: "0",
-          width: "100px",
-          height: "80px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#e2e8f0",
-          fontSize: "16px",
-          fontWeight: 600,
-        },
+        type: "customNode",
+        data: { label: "Load Balancer", type: "load-balancer", isActive: isNodeActive(simData.meta.lbId) },
+        position: { x: 260, y: 190 },
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
+        style: undefined,
       },
       {
         id: simData.meta.s1Id,
-        data: { label: "Server 1" },
-        position: { x: -120, y: 100 },
-        style: {
-          background: "rgba(16, 185, 129, 0.6)",
-          border: "2px solid rgba(16, 185, 129, 0.8)",
-          borderRadius: "50%",
-          padding: "0",
-          width: "60px",
-          height: "60px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#e2e8f0",
-          fontSize: "14px",
-          fontWeight: 600,
-        },
+        type: "customNode",
+        data: { label: "Web Server 1", type: "server", isActive: isNodeActive(simData.meta.s1Id) },
+        position: { x: 500, y: 40 },
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
+        style: undefined,
       },
       {
         id: simData.meta.s2Id,
-        data: { label: "Server 2" },
-        position: { x: 0, y: 100 },
-        style: {
-          background: "rgba(16, 185, 129, 0.6)",
-          border: "2px solid rgba(16, 185, 129, 0.8)",
-          borderRadius: "50%",
-          padding: "0",
-          width: "60px",
-          height: "60px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#e2e8f0",
-          fontSize: "14px",
-          fontWeight: 600,
-        },
+        type: "customNode",
+        data: { label: "Web Server 2", type: "server", isActive: isNodeActive(simData.meta.s2Id) },
+        position: { x: 500, y: 190 },
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
+        style: undefined,
       },
       {
         id: simData.meta.s3Id,
-        data: { label: "Server 3" },
-        position: { x: 120, y: 100 },
-        style: {
-          background: "rgba(16, 185, 129, 0.6)",
-          border: "2px solid rgba(16, 185, 129, 0.8)",
-          borderRadius: "50%",
-          padding: "0",
-          width: "60px",
-          height: "60px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#e2e8f0",
-          fontSize: "14px",
-          fontWeight: 600,
-        },
+        type: "customNode",
+        data: { label: "Web Server 3", type: "server", isActive: isNodeActive(simData.meta.s3Id) },
+        position: { x: 500, y: 340 },
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
+        style: undefined,
       },
     ];
-  }, [simData]);
+  }, [simData, frameIndex]);
 
   const edges = useMemo<Edge[]>(() => {
     if (!simData) {
@@ -470,6 +530,9 @@ function HeroArchitecture() {
           active,
           reverseMotion,
           packetDuration: 1 / speed,
+          isPlaying,
+          frameIndex,
+          packetCount: active ? 1 : 0,
         },
         style: {
           stroke: active ? packetColor(reverseMotion) : inactiveStroke,
@@ -478,7 +541,7 @@ function HeroArchitecture() {
         },
       };
     });
-  }, [frameIndex, simData, speed]);
+  }, [frameIndex, simData, speed, isPlaying]);
 
   // Auto-play animation
   useEffect(() => {
@@ -506,6 +569,7 @@ function HeroArchitecture() {
         <ReactFlow
           nodes={nodes}
           edges={edges}
+          nodeTypes={nodeTypes}
           edgeTypes={{ packet: PacketEdge }}
           fitView
           fitViewOptions={{ padding: 0.2 }}
@@ -684,6 +748,103 @@ function HowItWorks() {
   );
 }
 
+
+// ===== MOCK SYSTEM DASHBOARD FOR BENTO GRID =====
+function MockSystemDashboard() {
+  const [logs, setLogs] = useState<Array<{ time: string; text: string; type: string }>>([
+    { time: "13:40:01", text: "GET /api/v1/posts - Cache Hit - 4ms", type: "success" },
+    { time: "13:40:04", text: "POST /api/v1/users - DB Write - 42ms", type: "info" },
+    { time: "13:40:08", text: "GET /api/v1/users - Cache Miss -> DB Read - 22ms", type: "warn" },
+  ]);
+
+  useEffect(() => {
+    const templates = [
+      { text: "GET /api/v1/posts - Cache Hit - 3ms", type: "success" },
+      { text: "GET /api/v1/users - Cache Hit - 2ms", type: "success" },
+      { text: "POST /api/v1/comments - DB Write - 35ms", type: "info" },
+      { text: "GET /api/v1/comments - Cache Miss -> DB Read - 28ms", type: "warn" },
+      { text: "UPLOAD /api/v1/media - Bucket Upload - 156ms", type: "info" },
+      { text: "GET /api/v1/auth - Token Validate - 5ms", type: "success" },
+      { text: "PUT /api/v1/users/rohan - Cache Invalidate - 8ms", type: "info" },
+      { text: "GET /api/v1/search - Redis Cache Hit - 1ms", type: "success" },
+    ];
+
+    const interval = setInterval(() => {
+      const date = new Date();
+      const timeStr = date.toTimeString().split(" ")[0];
+      const template = templates[Math.floor(Math.random() * templates.length)];
+      setLogs((prev) => {
+        const next = [...prev, { time: timeStr, text: template.text, type: template.type }];
+        if (next.length > 5) {
+          return next.slice(next.length - 5);
+        }
+        return next;
+      });
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="relative mt-4 h-64 w-full overflow-hidden rounded-2xl border border-[var(--border)]/50 bg-[var(--surface-muted)]/30 p-4 font-mono text-xs shadow-inner flex flex-col md:flex-row gap-4">
+      {/* Metrics Section */}
+      <div className="flex flex-col justify-between gap-3 md:w-1/3 border-b md:border-b-0 md:border-r border-[var(--border)]/40 pb-3 md:pb-0 md:pr-4">
+        <div>
+          <span className="text-[10px] uppercase tracking-wider text-[color:var(--foreground)]/50">System Load</span>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span className="text-2xl font-bold text-violet-400">99.98%</span>
+            <span className="text-[9px] text-emerald-400">Uptime</span>
+          </div>
+        </div>
+        <div>
+          <span className="text-[10px] uppercase tracking-wider text-[color:var(--foreground)]/50">Avg Latency</span>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span className="text-2xl font-bold text-blue-400">14.2ms</span>
+            <span className="text-[9px] text-blue-400">P95</span>
+          </div>
+        </div>
+        <div>
+          <span className="text-[10px] uppercase tracking-wider text-[color:var(--foreground)]/50">Cache Efficiency</span>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span className="text-2xl font-bold text-emerald-400">84.6%</span>
+            <span className="text-[9px] text-emerald-400">Hit Rate</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Terminal Logs Section */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex items-center justify-between pb-2 mb-2 border-b border-[var(--border)]/30">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[9px] uppercase tracking-wider text-[color:var(--foreground)]/70">Simulation Logs</span>
+          </div>
+          <span className="text-[8px] text-[color:var(--foreground)]/30">STREAM ACTIVE</span>
+        </div>
+        
+        <div className="flex-1 flex flex-col justify-end gap-1.5 overflow-hidden">
+          {logs.map((log, idx) => {
+            const colors: Record<string, string> = {
+              success: "text-emerald-400",
+              info: "text-blue-400",
+              warn: "text-amber-400",
+            };
+            return (
+              <div key={idx} className="flex gap-2 items-start text-[11px] animate-fade-in-blur">
+                <span className="text-[color:var(--foreground)]/35 select-none">{log.time}</span>
+                <span className="text-violet-400 font-bold select-none">&gt;</span>
+                <span className={`${colors[log.type] || "text-[color:var(--foreground)]/80"} break-all truncate`}>
+                  {log.text}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ===== MODERN BENTO GRID FEATURES =====
 function FeaturesBentoGrid() {
   return (
@@ -709,51 +870,7 @@ function FeaturesBentoGrid() {
                   Watch packets travel across your network. See exactly how load balancers distribute traffic and how databases handle concurrent requests in real-time.
                 </p>
               </div>
-              <div className="relative mt-2 h-56 w-full overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/20 shadow-inner flex flex-col justify-center">
-                {/* Status Bar */}
-                <div className="absolute top-4 left-4 z-20 flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 font-mono text-xs backdrop-blur-md border border-white/5">
-                  <span className="text-emerald-400 animate-pulse">●</span>
-                  <span className="text-[color:var(--foreground)]/80">Live Traffic</span>
-                </div>
-                
-                {/* Abstract grid background */}
-                <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg%20width=%2730%27%20height=%2730%27%20viewBox=%270%200%2030%2030%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cpath%20d=%27M0%200h30v30H0z%27%20fill=%27none%27/%3E%3Cpath%20d=%27M0%2029h30M29%200v30%27%20stroke=%27%23fff%27%20stroke-width=%271%27/%3E%3C/svg%3E')" }} />
-                
-                <div className="relative flex w-full max-w-[85%] mx-auto items-center justify-between z-10">
-                  {/* Flow Path 1 */}
-                  <div className="absolute left-[3rem] right-[50%] top-1/2 h-[2px] -translate-y-1/2 bg-gradient-to-r from-violet-500/20 to-blue-500/20">
-                    <div className="absolute top-1/2 h-2 w-6 -translate-y-1/2 rounded-full bg-violet-400 shadow-[0_0_12px_rgba(167,139,250,0.8)] animate-packet-slide" />
-                  </div>
-
-                  {/* Client Node */}
-                  <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-500/50 bg-violet-500/10 shadow-[0_0_20px_rgba(139,92,246,0.2)] backdrop-blur-md">
-                    <span className="text-xl">💻</span>
-                  </div>
-
-                  {/* Flow Path 2 (to servers) */}
-                  <div className="absolute left-[50%] right-[3rem] top-[30%] h-[2px] bg-gradient-to-r from-blue-500/20 to-emerald-500/20 rotate-[15deg] origin-left">
-                     <div className="absolute top-1/2 h-2 w-6 -translate-y-1/2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)] animate-packet-slide" style={{ animationDelay: "1s" }} />
-                  </div>
-                  <div className="absolute left-[50%] right-[3rem] top-[70%] h-[2px] bg-gradient-to-r from-blue-500/20 to-emerald-500/20 -rotate-[15deg] origin-left">
-                     <div className="absolute top-1/2 h-2 w-6 -translate-y-1/2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)] animate-packet-slide" style={{ animationDelay: "2s" }} />
-                  </div>
-
-                  {/* Load Balancer */}
-                  <div className="relative z-10 flex h-16 w-16 items-center justify-center rounded-full border border-blue-500/50 bg-blue-500/10 shadow-[0_0_30px_rgba(59,130,246,0.3)] backdrop-blur-md">
-                    <span className="text-2xl animate-breathe">⚖️</span>
-                  </div>
-
-                  {/* Servers */}
-                  <div className="relative z-10 flex flex-col gap-6">
-                    <div className="relative flex w-12 h-12 items-center justify-center rounded-xl border border-emerald-500/50 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)] backdrop-blur-md">
-                      <span className="text-xs font-bold text-emerald-400">S1</span>
-                    </div>
-                    <div className="relative flex w-12 h-12 items-center justify-center rounded-xl border border-emerald-500/50 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)] backdrop-blur-md">
-                      <span className="text-xs font-bold text-emerald-400">S2</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <MockSystemDashboard />
             </div>
           </div>
 
