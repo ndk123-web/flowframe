@@ -534,6 +534,66 @@ function Timeline({
   );
 }
 
+function getFormattedLogText(frame: any) {
+  const normAction = frame.action.toUpperCase();
+  const flow = `${frame.from} ➔ ${frame.to}`;
+  
+  if (normAction.includes("CACHE_HIT")) {
+    return {
+      text: `${flow} | Cache HIT - Key: "${frame.lookupKey || 'N/A'}"`,
+      type: "success"
+    };
+  }
+  
+  if (normAction.includes("CACHE_MISS")) {
+    return {
+      text: `${flow} | Cache MISS - Key: "${frame.lookupKey || 'N/A'}"`,
+      type: "warn"
+    };
+  }
+  
+  if (normAction.includes("DB_READ") || normAction.includes("READ_RECORD")) {
+    return {
+      text: `${flow} | DB Read - Key: "${frame.lookupKey || 'N/A'}"`,
+      type: "warn"
+    };
+  }
+  
+  if (normAction.includes("DB_WRITE") || normAction.includes("STORE_FILE") || normAction.includes("WRITE_RECORD") || normAction.includes("UPLOAD_SUCCESS")) {
+    const payloadStr = frame.payloadSummary && frame.payloadSummary !== "{}" ? ` - Data: ${frame.payloadSummary}` : "";
+    return {
+      text: `${flow} | DB Write - Key: "${frame.lookupKey || 'N/A'}"${payloadStr}`,
+      type: "info"
+    };
+  }
+
+  if (normAction.includes("SEND_RESPONSE") || normAction.includes("RETURN_DATA")) {
+    const payloadStr = frame.payloadSummary && frame.payloadSummary !== "{}" ? ` - Payload: ${frame.payloadSummary}` : "";
+    return {
+      text: `${flow} | Respond - Status: 200 OK${payloadStr}`,
+      type: "success"
+    };
+  }
+
+  if (normAction.includes("SEND_REQUEST") || normAction.includes("ROUTE_REQUEST")) {
+    const payloadStr = frame.payloadSummary && frame.payloadSummary !== "{}" ? ` - Payload: ${frame.payloadSummary}` : "";
+    return {
+      text: `${flow} | Dispatch Request - Action: ${frame.action}${payloadStr}`,
+      type: "default"
+    };
+  }
+
+  const details = [
+    frame.lookupKey ? `Key: "${frame.lookupKey}"` : "",
+    frame.payloadSummary && frame.payloadSummary !== "{}" ? `Payload: ${frame.payloadSummary}` : ""
+  ].filter(Boolean).join(", ");
+  
+  return {
+    text: `${flow} | ${frame.action}${details ? ` (${details})` : ""}`,
+    type: "default"
+  };
+}
+
 function DebugPanel({
   currentFrames,
   frameIndex,
@@ -543,82 +603,44 @@ function DebugPanel({
   frameIndex: number;
   theme: Theme;
 }) {
-  const bgColor = theme === "dark" ? "bg-slate-950" : "bg-slate-50";
-  const borderColor = theme === "dark" ? "border-slate-800" : "border-slate-300";
-  const textColor = theme === "dark" ? "text-slate-400" : "text-slate-600";
-  const labelColor = theme === "dark" ? "text-slate-600" : "text-slate-500";
-  const headerColor = theme === "dark" ? "text-slate-100" : "text-slate-900";
-  const accentBg = theme === "dark" ? "bg-slate-900/50" : "bg-slate-100/50";
+  const textColor = theme === "dark" ? "text-slate-500" : "text-slate-400";
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [currentFrames.length]);
 
   if (currentFrames.length === 0) {
     return (
-      <div className={`rounded-md border ${borderColor} ${bgColor} p-3`}>
-        <p className={`text-xs ${textColor}`}>No active frames</p>
+      <div className="font-mono text-xs p-1">
+        <p className={textColor}>No active frames</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
-      {currentFrames.map((frame, idx) => (
-        <div key={`${frame.requestId}-${idx}`} className={`rounded-md border ${borderColor} ${accentBg} p-3`}>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Request</p>
-              <p className={`mt-1 font-mono text-xs ${headerColor}`}>{frame.requestName || frame.requestId.slice(0, 12)}</p>
-            </div>
-
-            <div>
-              <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Action</p>
-              <p className={`mt-1 text-xs ${textColor}`}>{frame.action}</p>
-            </div>
-
-            <div>
-              <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Flow</p>
-              <p className={`mt-1 font-mono text-xs ${textColor}`}>
-                {frame.from} <span className="text-violet-400">→</span> {frame.to}
-              </p>
-            </div>
-
-            {frame.sourceIp && (
-              <div>
-                <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Source IP</p>
-                <p className={`mt-1 font-mono text-xs ${textColor}`}>{frame.sourceIp}</p>
-              </div>
-            )}
-
-            {frame.lookupKey && (
-              <div className="col-span-2">
-                <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Lookup Key</p>
-                <p className={`mt-1 font-mono text-xs text-violet-400`}>{frame.lookupKey}</p>
-              </div>
-            )}
-
-            {frame.payloadSummary && (
-              <div className="col-span-2">
-                <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Payload</p>
-                <p className={`mt-1 text-xs ${textColor}`}>{frame.payloadSummary}</p>
-              </div>
-            )}
-
-            {frame.redisKeysSnapshot && frame.redisKeysSnapshot.length > 0 && (
-              <div className="col-span-2">
-                <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Redis Keys</p>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {frame.redisKeysSnapshot.map((key: string) => (
-                    <span
-                      key={key}
-                      className={`rounded px-2 py-0.5 text-[10px] font-mono ${theme === "dark" ? "bg-emerald-500/20 text-emerald-300" : "bg-emerald-100 text-emerald-700"}`}
-                    >
-                      {key}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+    <div ref={containerRef} className="font-mono text-xs space-y-1.5 max-h-64 overflow-y-auto p-1 scroll-smooth">
+      {currentFrames.map((frame, idx) => {
+        const formatted = getFormattedLogText(frame);
+        const colors: Record<string, string> = {
+          success: "text-emerald-400",
+          info: "text-blue-400",
+          warn: "text-amber-400",
+          default: "text-[color:var(--foreground)]/80",
+        };
+        
+        return (
+          <div key={`${frame.requestId}-${idx}`} className="flex gap-2 items-start text-[11px] leading-relaxed">
+            <span className="text-[color:var(--foreground)]/35 select-none">[t={frame.timestamp}]</span>
+            <span className="text-violet-400 font-bold select-none">&gt;</span>
+            <span className={colors[formatted.type] || colors.default}>
+              {formatted.text}
+            </span>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -997,6 +1019,16 @@ export default function WorkspacePage() {
 
   const currentFrameGroup = frameGroups[frameIndex] ?? null;
   const currentFrames = currentFrameGroup?.frames ?? [];
+
+  const accumulatedFrames = useMemo(() => {
+    const acc: any[] = [];
+    for (let i = 0; i <= frameIndex; i++) {
+      if (frameGroups[i]) {
+        acc.push(...frameGroups[i].frames);
+      }
+    }
+    return acc;
+  }, [frameGroups, frameIndex]);
 
   // Playback timer loop
   useEffect(() => {
@@ -1806,7 +1838,7 @@ export default function WorkspacePage() {
                     Frame {frameIndex + 1} Debug Details
                   </p>
                   <DebugPanel
-                    currentFrames={currentFrames}
+                    currentFrames={accumulatedFrames}
                     frameIndex={frameIndex}
                     theme={theme}
                   />
