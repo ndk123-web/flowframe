@@ -746,6 +746,14 @@ function getFormattedLogText(frame: Frame) {
     };
   }
 
+  if (normAction.includes("RESPONSE_ERROR")) {
+    const payloadStr = frame.payloadSummary && frame.payloadSummary !== "{}" ? ` - Payload: ${frame.payloadSummary}` : "";
+    return {
+      text: `${flow} | Respond - Status: 404 Not Found${payloadStr}`,
+      type: "warn"
+    };
+  }
+
   if (normAction.includes("SEND_RESPONSE") || normAction.includes("RETURN_DATA")) {
     const payloadStr = frame.payloadSummary && frame.payloadSummary !== "{}" ? ` - Payload: ${frame.payloadSummary}` : "";
     return {
@@ -759,6 +767,20 @@ function getFormattedLogText(frame: Frame) {
     return {
       text: `${flow} | Dispatch Request - Action: ${frame.action}${payloadStr}`,
       type: "default"
+    };
+  }
+
+  if (normAction.includes("POSTGRES_QUERY_HIT")) {
+    return {
+      text: `${flow} | POSTGRES QUERY HIT`,
+      type: "success"
+    };
+  }
+
+  if (normAction.includes("POSTGRES_QUERY_MISS")) {
+    return {
+      text: `${flow} | POSTGRES QUERY MISS`,
+      type: "warn"
     };
   }
 

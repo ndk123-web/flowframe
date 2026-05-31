@@ -115,11 +115,14 @@ class SimulationManager {
     });
   }
 
-  private getResponseAction(fromNodeId: NodeId): string {
+  private getResponseAction(fromNodeId: NodeId, request?: RequestManager): string {
     const kind = this.getNodeKind(fromNodeId);
 
     switch (kind) {
       case "SERVER":
+        if (request?.context?.dbMiss) {
+          return "SERVER_RESPONSE_ERROR";
+        }
         return "SERVER_SEND_RESPONSE";
       case "LOAD_BALANCER":
         return "LOAD_BALANCER_SEND_RESPONSE";
@@ -192,7 +195,7 @@ class SimulationManager {
     const traversalPath: NodeId[] = [currentNodeId];
 
     // set the max steps to 24 
-    const maxSteps = 24;
+    const maxSteps = 500;
     let steps = 0;
 
     // while the steps are less than the max steps, increment the steps
@@ -215,7 +218,7 @@ class SimulationManager {
           request,
           responseFrom,
           responseTo,
-          this.getResponseAction(responseFrom),
+          this.getResponseAction(responseFrom, request),
         );
         
         // pop the last node because we have processed the last node in the traversal path
@@ -469,7 +472,6 @@ class SimulationManager {
             return;
           }
 
-
           const redisInstance = nodeInstance as RedisModel;
           
           // get the lookUpKey From the request context 
@@ -512,12 +514,22 @@ class SimulationManager {
             return;
           }
 
+          const postgresInstance = nodeInstance as PostgresModel;
+          const lookUpKey = request.context.lookupKey as string | undefined;
+          const lookUpData = postgresInstance.getRecord("users", lookUpKey as string); 
+
+          console.log("lookUpData", lookUpData); 
+
+          if (lookUpData === null) {
+            request.context.dbMiss = true;
+          }
+
           const previousNodeId = traversalPath[traversalPath.length - 2];
           this.pushFrame(
             request,
             currentNodeId,
             previousNodeId,
-            "POSTGRES_RETURN_DATA",
+            lookUpData === null ? "POSTGRES_QUERY_MISS" : "POSTGRES_QUERY_HIT",
           );
 
           traversalPath.pop();

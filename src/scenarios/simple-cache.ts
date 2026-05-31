@@ -23,7 +23,9 @@ function shouldKeepFrame(hideResponse: boolean, frame: Frame) {
     frame.action.includes("RETURN_DATA") ||
     frame.action.includes("CACHE_HIT") ||
     frame.action.includes("CACHE_MISS") ||
-    frame.action === "RESPONSE_BACKTRACK"
+    frame.action === "RESPONSE_BACKTRACK" ||
+    frame.action === "POSTGRES_QUERY_HIT" ||
+    frame.action === "POSTGRES_QUERY_MISS"
   );
 }
 
