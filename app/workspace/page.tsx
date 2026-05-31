@@ -884,8 +884,39 @@ export default function WorkspacePage() {
               return targetNode?.data.type === "server";
             });
 
-          modelInstance.setServiceNodes("POST_SERVICE", connectedServers);
-          modelInstance.setServiceNodes("USER_SERVICE", connectedServers);
+          const serviceMapping = config.serviceMapping || {};
+          const serviceGroups: Record<string, string[]> = {};
+          const routesList = config.routes || {};
+          const serviceOptions = Array.from(new Set(Object.values(routesList)));
+
+          connectedServers.forEach((serverId) => {
+            const serverNode = nodes.find((node) => node.id === serverId);
+            const serverLabel = String(serverNode?.data.label || serverId);
+            let serviceName = serviceMapping[serverId];
+
+            if (!serviceName) {
+              const labelLower = serverLabel.toLowerCase();
+              if (labelLower.includes("user")) {
+                serviceName = "USER_SERVICE";
+              } else if (labelLower.includes("post")) {
+                serviceName = "POST_SERVICE";
+              } else {
+                serviceName = serviceOptions[0] || "DEFAULT_SERVICE";
+              }
+            }
+
+            if (serviceName !== "UNASSIGNED") {
+              if (!serviceGroups[serviceName]) {
+                serviceGroups[serviceName] = [];
+              }
+              serviceGroups[serviceName].push(serverId);
+            }
+          });
+
+          // Register service groups with gateway
+          for (const serviceName in serviceGroups) {
+            modelInstance.setServiceNodes(serviceName, serviceGroups[serviceName]);
+          }
           break;
         case "storage":
           modelInstance = new StorageModel(n.id, labelStr);
@@ -922,20 +953,26 @@ export default function WorkspacePage() {
     
     const allFrames: any[] = [];
     
-    // Cycle keys (e.g. 1st is cache miss, 2nd is cache hit, 3rd is DB query)
-    const lookupKeys = [clientConfig.lookupKey, clientConfig.lookupKey, "john"];
+    const clientRequests = clientConfig.requests || [
+      {
+        endpoint: clientConfig.endpoint || "/api/v1/posts",
+        lookupKey: clientConfig.lookupKey || "rohan",
+        fileName: clientConfig.fileName || "file.png",
+        isThereFileToUpload: clientConfig.isThereFileToUpload !== false,
+      }
+    ];
 
     try {
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < clientRequests.length; i++) {
         const sourceIp = ipv4Instance.getRandomIpv4();
-        const currentKey = lookupKeys[i];
+        const reqItem = clientRequests[i];
 
         const payload: any = {
           valetKeyFlow: clientConfig.valetKeyFlow,
-          lookupKey: currentKey,
-          fileName: clientConfig.fileName,
-          isThereFileToUpload: clientConfig.isThereFileToUpload,
-          endpoint: clientConfig.endpoint,
+          lookupKey: reqItem.lookupKey,
+          fileName: reqItem.fileName,
+          isThereFileToUpload: reqItem.isThereFileToUpload,
+          endpoint: reqItem.endpoint,
         };
 
         const simulation = new SimulationManager(graph, registry, payload, sourceIp);
@@ -944,7 +981,7 @@ export default function WorkspacePage() {
         const runFrames = (simulation.getFrames() as any[]).map((frame) => ({
           ...frame,
           sourceIp,
-          payloadSummary: frame.payloadSummary || `lookupKey=${currentKey}`,
+          payloadSummary: frame.payloadSummary || `lookupKey=${reqItem.lookupKey}`,
         }));
 
         allFrames.push({
@@ -1550,15 +1587,15 @@ export default function WorkspacePage() {
 
                 {/* API Gateway Configuration */}
                 {selectedNode.data.type === "api-gateway" && (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <p className="text-xs font-semibold text-fuchsia-400">Gateway Settings</p>
                     
                     <div>
-                      <label className="text-[10px] text-[color:var(--foreground)]/60 block mb-1">Load Balancing Strategy</label>
+                      <label className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1.5">Load Balancing Strategy</label>
                       <select
                         value={nodeConfigs[selectedNode.id]?.strategy ?? "ROUND_ROBIN"}
                         onChange={(e) => updateNodeConfig(selectedNode.id, { strategy: e.target.value })}
-                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-xs outline-none focus:border-violet-500 cursor-pointer"
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500 cursor-pointer"
                       >
                         <option value="ROUND_ROBIN">Round Robin</option>
                         <option value="RANDOM">Random Dispatch</option>
@@ -1566,6 +1603,149 @@ export default function WorkspacePage() {
                         <option value="LEAST_CONNECTIONS">Least Connections</option>
                       </select>
                     </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
+
+                    {/* Route Mappings */}
+                    <div>
+                      <label className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Route Rules (Path ➔ Service)
+                      </label>
+                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        {Object.entries(nodeConfigs[selectedNode.id]?.routes || {}).map(([path, svc]: [string, any], idx) => (
+                          <div key={path} className="flex gap-1.5 items-center">
+                            <input
+                              type="text"
+                              value={path}
+                              placeholder="Path prefix"
+                              onChange={(e) => {
+                                const nextRoutes = { ...(nodeConfigs[selectedNode.id]?.routes || {}) };
+                                delete nextRoutes[path];
+                                nextRoutes[e.target.value] = svc;
+                                updateNodeConfig(selectedNode.id, { routes: nextRoutes });
+                              }}
+                              className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none font-mono"
+                            />
+                            <input
+                              type="text"
+                              value={svc}
+                              placeholder="Service name"
+                              onChange={(e) => {
+                                const nextRoutes = { ...(nodeConfigs[selectedNode.id]?.routes || {}) };
+                                nextRoutes[path] = e.target.value;
+                                updateNodeConfig(selectedNode.id, { routes: nextRoutes });
+                              }}
+                              className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none font-mono"
+                            />
+                            <button
+                              onClick={() => {
+                                const nextRoutes = { ...(nodeConfigs[selectedNode.id]?.routes || {}) };
+                                delete nextRoutes[path];
+                                updateNodeConfig(selectedNode.id, { routes: nextRoutes });
+                              }}
+                              className="text-rose-500 hover:text-rose-600 text-xs px-1.5 cursor-pointer font-bold"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => {
+                          const routes = nodeConfigs[selectedNode.id]?.routes || {};
+                          const nextRoutes = {
+                            ...routes,
+                            [`/api/v1/route-${Object.keys(routes).length + 1}`]: `NEW_SERVICE`,
+                          };
+                          updateNodeConfig(selectedNode.id, { routes: nextRoutes });
+                        }}
+                        className="w-full mt-2 rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
+                      >
+                        + Add Route Rule
+                      </button>
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
+
+                    {/* Service Pools Mapping */}
+                    {(() => {
+                      const connectedServers = edges
+                        .filter((e) => e.source === selectedNode.id)
+                        .map((e) => e.target)
+                        .filter((targetId) => {
+                          const targetNode = nodes.find((node) => node.id === targetId);
+                          return targetNode?.data.type === "server";
+                        });
+
+                      if (connectedServers.length === 0) {
+                        return (
+                          <div>
+                            <label className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                              Service Pools Mapping
+                            </label>
+                            <p className="text-[11px] text-[color:var(--foreground)]/50 italic">
+                              No servers connected. Link this Gateway to Web Servers.
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      const routes = nodeConfigs[selectedNode.id]?.routes || {};
+                      const serviceOptions = Array.from(new Set(Object.values(routes)));
+
+                      return (
+                        <div className="space-y-2">
+                          <label className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block">
+                            Service Pools Mapping
+                          </label>
+                          <div className="space-y-3 border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50">
+                            {connectedServers.map((serverId) => {
+                              const serverNode = nodes.find((node) => node.id === serverId);
+                              const serverLabel = String(serverNode?.data.label || serverId);
+                              const serviceMapping = nodeConfigs[selectedNode.id]?.serviceMapping || {};
+                              
+                              let currentVal = serviceMapping[serverId];
+                              if (!currentVal) {
+                                const labelLower = serverLabel.toLowerCase();
+                                if (labelLower.includes("user")) {
+                                  currentVal = "USER_SERVICE";
+                                } else if (labelLower.includes("post")) {
+                                  currentVal = "POST_SERVICE";
+                                } else {
+                                  currentVal = serviceOptions[0] || "DEFAULT_SERVICE";
+                                }
+                              }
+
+                              return (
+                                <div key={serverId} className="flex flex-col gap-1">
+                                  <span className="text-[11px] font-medium text-[color:var(--foreground)]/70 truncate">
+                                    🖥️ {serverLabel}
+                                  </span>
+                                  <select
+                                    value={currentVal}
+                                    onChange={(e) => {
+                                      const nextMapping = {
+                                        ...(nodeConfigs[selectedNode.id]?.serviceMapping || {}),
+                                        [serverId]: e.target.value,
+                                      };
+                                      updateNodeConfig(selectedNode.id, { serviceMapping: nextMapping });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-xs outline-none focus:border-violet-500 cursor-pointer"
+                                  >
+                                    {serviceOptions.map((opt: any) => (
+                                      <option key={opt} value={opt}>
+                                        {opt}
+                                      </option>
+                                    ))}
+                                    <option value="UNASSIGNED">Unassigned</option>
+                                  </select>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 
