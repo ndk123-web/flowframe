@@ -877,12 +877,20 @@ export default function WorkspacePage() {
 
           // Dynamic routing node target registration
           const connectedServers = edges
-            .filter((e) => e.source === n.id)
-            .map((e) => e.target)
-            .filter((targetId) => {
-              const targetNode = nodes.find((node) => node.id === targetId);
-              return targetNode?.data.type === "server";
-            });
+            .filter((e) => {
+              const isSourceGateway = e.source === n.id;
+              const isTargetGateway = e.target === n.id;
+              if (isSourceGateway) {
+                const targetNode = nodes.find((node) => node.id === e.target);
+                return targetNode?.data.type === "server";
+              }
+              if (isTargetGateway) {
+                const sourceNode = nodes.find((node) => node.id === e.source);
+                return sourceNode?.data.type === "server";
+              }
+              return false;
+            })
+            .map((e) => (e.source === n.id ? e.target : e.source));
 
           const serviceMapping = config.serviceMapping || {};
           const serviceGroups: Record<string, string[]> = {};
@@ -938,6 +946,11 @@ export default function WorkspacePage() {
       const targetNode = nodes.find((n) => n.id === edge.target);
       if (sourceNode && targetNode) {
         graph.addEdge(edge.source, edge.target);
+        
+        // Bidirectional routing fallback for gateway -> server in graph
+        if (sourceNode.data.type === "server" && targetNode.data.type === "api-gateway") {
+          graph.addEdge(edge.target, edge.source);
+        }
       }
     });
 
@@ -1698,15 +1711,21 @@ export default function WorkspacePage() {
                       </label>
                       <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                         {Object.entries(nodeConfigs[selectedNode.id]?.routes || {}).map(([path, svc]: [string, any], idx) => (
-                          <div key={path} className="flex gap-1.5 items-center">
+                          <div key={idx} className="flex gap-1.5 items-center">
                             <input
                               type="text"
                               value={path}
                               placeholder="Path prefix"
                               onChange={(e) => {
-                                const nextRoutes = { ...(nodeConfigs[selectedNode.id]?.routes || {}) };
-                                delete nextRoutes[path];
-                                nextRoutes[e.target.value] = svc;
+                                const routes = (nodeConfigs[selectedNode.id]?.routes || {}) as Record<string, string>;
+                                const nextRoutes: Record<string, string> = {};
+                                for (const [k, v] of Object.entries(routes)) {
+                                  if (k === path) {
+                                    nextRoutes[e.target.value] = svc as string;
+                                  } else {
+                                    nextRoutes[k] = v;
+                                  }
+                                }
                                 updateNodeConfig(selectedNode.id, { routes: nextRoutes });
                               }}
                               className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none font-mono"
@@ -1754,22 +1773,16 @@ export default function WorkspacePage() {
 
                     {/* Service Pools Mapping */}
                     {(() => {
-                      const connectedServers = edges
-                        .filter((e) => e.source === selectedNode.id)
-                        .map((e) => e.target)
-                        .filter((targetId) => {
-                          const targetNode = nodes.find((node) => node.id === targetId);
-                          return targetNode?.data.type === "server";
-                        });
+                      const allServers = nodes.filter((n) => n.data.type === "server");
 
-                      if (connectedServers.length === 0) {
+                      if (allServers.length === 0) {
                         return (
                           <div>
                             <label className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
                               Service Pools Mapping
                             </label>
                             <p className="text-[11px] text-[color:var(--foreground)]/50 italic">
-                              No servers connected. Link this Gateway to Web Servers.
+                              No servers on the canvas. Add a Server component first.
                             </p>
                           </div>
                         );
@@ -1784,11 +1797,15 @@ export default function WorkspacePage() {
                             Service Pools Mapping
                           </label>
                           <div className="space-y-3 border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50">
-                            {connectedServers.map((serverId) => {
-                              const serverNode = nodes.find((node) => node.id === serverId);
-                              const serverLabel = String(serverNode?.data.label || serverId);
+                            {allServers.map((serverNode) => {
+                              const serverId = serverNode.id;
+                              const serverLabel = String(serverNode.data.label || serverId);
                               const serviceMapping = nodeConfigs[selectedNode.id]?.serviceMapping || {};
                               
+                              const isConnectedCorrectly = edges.some((e) => e.source === selectedNode.id && e.target === serverId);
+                              const isConnectedBackwards = edges.some((e) => e.source === serverId && e.target === selectedNode.id);
+                              const isConnected = isConnectedCorrectly || isConnectedBackwards;
+
                               let currentVal = serviceMapping[serverId];
                               if (!currentVal) {
                                 const labelLower = serverLabel.toLowerCase();
@@ -1802,10 +1819,27 @@ export default function WorkspacePage() {
                               }
 
                               return (
-                                <div key={serverId} className="flex flex-col gap-1">
-                                  <span className="text-[11px] font-medium text-[color:var(--foreground)]/70 truncate">
-                                    🖥️ {serverLabel}
-                                  </span>
+                                <div key={serverId} className="flex flex-col gap-1.5 border-b border-[var(--border)]/35 pb-2.5 last:border-b-0 last:pb-0">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-[11px] font-medium text-[color:var(--foreground)]/70 truncate flex items-center gap-1">
+                                      🖥️ {serverLabel}
+                                    </span>
+                                    {!isConnected && (
+                                      <span className="text-[9px] text-amber-500 font-semibold bg-amber-500/10 px-1.5 py-0.5 rounded" title="Draw a connection from API Gateway to this Server">
+                                        ⚠️ Not Linked
+                                      </span>
+                                    )}
+                                    {isConnectedBackwards && (
+                                      <span className="text-[9px] text-rose-500 font-semibold bg-rose-500/10 px-1.5 py-0.5 rounded animate-pulse" title="Draw the connection from Gateway -> Server, not Server -> Gateway">
+                                        ⚠️ Reverse Link
+                                      </span>
+                                    )}
+                                    {isConnectedCorrectly && (
+                                      <span className="text-[9px] text-emerald-400 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                                        ✓ Linked
+                                      </span>
+                                    )}
+                                  </div>
                                   <select
                                     value={currentVal}
                                     onChange={(e) => {
