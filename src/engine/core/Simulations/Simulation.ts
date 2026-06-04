@@ -556,6 +556,9 @@ class SimulationManager {
               previousNodeId,
               "API_GATEWAY_EMPTY_ROUTE_REJECT",
             );
+            traversalPath.pop();
+            request.currentNodeId = previousNodeId;
+            currentNodeId = previousNodeId;
             request.direction = "backward";
             break;
           }
@@ -569,6 +572,9 @@ class SimulationManager {
                 previousNodeId,
                 "API_GATEWAY_ROUTE_NOT_FOUND",
               );
+              traversalPath.pop();
+              request.currentNodeId = previousNodeId;
+              currentNodeId = previousNodeId;
               request.direction = "backward";
               break;
             }
@@ -590,6 +596,9 @@ class SimulationManager {
               previousNodeId,
               "API_GATEWAY_ROUTE_ERROR",
             );
+            traversalPath.pop();
+            request.currentNodeId = previousNodeId;
+            currentNodeId = previousNodeId;
             request.direction = "backward";
           }
           break;

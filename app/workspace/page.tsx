@@ -432,7 +432,7 @@ function Controls({
   const btnBg = theme === "dark" ? "bg-slate-950" : "bg-slate-100";
   const btnBorder = theme === "dark" ? "border-slate-700 hover:border-slate-600" : "border-slate-300 hover:border-slate-400";
   const btnText = theme === "dark" ? "text-slate-300" : "text-slate-700";
-  const buttonClass = `rounded-md border ${btnBorder} ${btnBg} px-3 py-1.5 text-xs ${btnText} transition hover:bg-${theme === "dark" ? "slate-900" : "slate-200"} cursor-pointer`;
+  const buttonClass = `rounded-md border ${btnBorder} ${btnBg} px-3 py-1.5 text-xs ${btnText} transition hover:bg-${theme === "dark" ? "slate-900" : "slate-200"} cursor-pointer font-semibold`;
 
   return (
     <div className="flex flex-col gap-2 sm:gap-3 w-full overflow-x-hidden">
@@ -465,8 +465,7 @@ function Controls({
             step="0.1"
             value={speed}
             onChange={(e) => onSpeedChange(Number(e.target.value))}
-            className="w-16 sm:w-20 cursor-pointer"
-            style={{ accentColor: "#8b5cf6" }}
+            className="w-16 sm:w-20 cursor-pointer accent-violet-500"
           />
         </div>
       </div>
@@ -488,11 +487,11 @@ function Timeline({
   const emptyBg = theme === "dark" ? "bg-slate-950 border-slate-800" : "bg-slate-100 border-slate-300";
   const emptyText = theme === "dark" ? "text-slate-500" : "text-slate-600";
   const inactiveBg = theme === "dark" ? "bg-slate-950 border-slate-700 text-slate-400" : "bg-slate-100 border-slate-300 text-slate-600";
-  const inactiveHover = theme === "dark" ? "hover:border-slate-600" : "hover:border-slate-400";
+  const inactiveHover = theme === "dark" ? "hover:border-slate-600 hover:bg-slate-900" : "hover:border-slate-400 hover:bg-slate-200";
 
   if (frameGroups.length === 0) {
     return (
-      <div className={`rounded-md border ${emptyBg} p-2.5`}>
+      <div className={`rounded-lg border ${emptyBg} p-2.5`}>
         <p className={`text-xs ${emptyText}`}>No frames available. Run simulation first.</p>
       </div>
     );
@@ -509,7 +508,7 @@ function Timeline({
         className="w-full accent-violet-500 cursor-pointer"
       />
 
-      <div className="flex gap-1 overflow-x-auto pb-1">
+      <div className="flex gap-1 overflow-x-auto pb-1 max-h-12 scrollbar-thin">
         {frameGroups.map((group, index) => {
           const isActive = index === frameIndex;
 
@@ -518,9 +517,9 @@ function Timeline({
               key={`${group.timestamp}-${index}`}
               type="button"
               onClick={() => onSeek(index)}
-              className={`shrink-0 rounded-sm border px-2 py-1.5 text-[11px] transition cursor-pointer ${
+              className={`shrink-0 rounded-md border px-2.5 py-1 text-[10px] transition cursor-pointer font-medium ${
                 isActive
-                  ? "border-violet-400 bg-violet-500/25 text-violet-100"
+                  ? "border-violet-400 bg-violet-500/25 text-violet-100 shadow-inner"
                   : `${inactiveBg} ${inactiveHover}`
               }`}
               title={`t=${group.timestamp} (${group.frames.length} frame${group.frames.length > 1 ? "s" : ""})`}
@@ -621,7 +620,7 @@ function DebugPanel({
   }
 
   return (
-    <div ref={containerRef} className="font-mono text-xs space-y-1.5 max-h-64 overflow-y-auto p-1 scroll-smooth">
+    <div ref={containerRef} className="font-mono text-xs space-y-1.5 max-h-40 overflow-y-auto p-1 scroll-smooth">
       {currentFrames.map((frame, idx) => {
         const formatted = getFormattedLogText(frame);
         const colors: Record<string, string> = {
@@ -691,9 +690,8 @@ export default function WorkspacePage() {
   const [rawSimulationFrames, setRawSimulationFrames] = useState<any[]>([]);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
 
-  // Resizable panel states
-  const [panelHeight, setPanelHeight] = useState(220);
-  const [isDragging, setIsDragging] = useState(false);
+  // Floating Panel Visibility States
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const uid = useMemo(() => new ShortUniqueId({ length: 8 }), []);
 
@@ -701,8 +699,8 @@ export default function WorkspacePage() {
   const loadTemplate = useCallback((templateKey: keyof typeof TEMPLATES) => {
     const template = TEMPLATES[templateKey];
     
-    // Choose connection colors dynamically based on theme
-    const inactiveStrokeColor = theme === "dark" ? "#475569" : "#cbd5e1";
+    // Choose connection colors dynamically based on theme (handled in animatedEdges)
+    const defaultInactiveStroke = "#475569";
 
     setNodes(
       template.nodes.map((n) => ({
@@ -716,7 +714,7 @@ export default function WorkspacePage() {
       template.edges.map((e) => ({
         ...e,
         markerEnd: { type: MarkerType.ArrowClosed, color: "#60a5fa" },
-        style: { stroke: inactiveStrokeColor, strokeWidth: 1.8 },
+        style: { stroke: defaultInactiveStroke, strokeWidth: 1.8 },
       }))
     );
 
@@ -733,12 +731,13 @@ export default function WorkspacePage() {
     setFrameIndex(0);
     setValidationWarning(null);
     setSelectedNodeId(null);
-  }, [setNodes, setEdges, theme]);
+  }, [setNodes, setEdges]);
 
-  // Load default template on mount
+  // Load default template once on mount only!
   useEffect(() => {
     loadTemplate("cacheAside");
-  }, [loadTemplate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Add Component to Canvas
   const addComponent = (type: ComponentType) => {
@@ -1245,44 +1244,6 @@ export default function WorkspacePage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [frameGroups.length]);
 
-  // Resizable panel logic
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
-
-      const container = document.querySelector("[data-resizable-container]") as HTMLElement;
-      if (!container) return;
-
-      const containerRect = container.getBoundingClientRect();
-      const newHeight = containerRect.bottom - e.clientY;
-
-      const minHeight = 100;
-      const maxHeight = containerRect.height * 0.8;
-
-      if (newHeight >= minHeight && newHeight <= maxHeight) {
-        setPanelHeight(newHeight);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.userSelect = "none";
-      document.body.style.cursor = "row-resize";
-    }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.userSelect = "auto";
-      document.body.style.cursor = "auto";
-    };
-  }, [isDragging]);
-
   // Clear Canvas handler
   const handleClearCanvas = () => {
     setNodes([]);
@@ -1304,629 +1265,576 @@ export default function WorkspacePage() {
         onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         showHomeLink
         badgeText="Interactive Sandbox Workspace"
+        hideSandboxLink={true}
+        alwaysGlass={true}
       />
 
-      {/* Main container with resizing tracking */}
-      <div className="flex-1 flex min-h-0 overflow-hidden flex-col h-[calc(100vh-70px)]" data-resizable-container>
+      {/* Modern Full-Screen Canvas Workspace with Floating UI Panels */}
+      <div className="flex-1 w-full min-h-0 relative overflow-hidden" data-resizable-container>
         
-        {/* Scenario-player style Top Header Bar controls */}
-        <header className="border-b border-[var(--border)] bg-[var(--surface)]/50 px-4 py-3 backdrop-blur overflow-x-auto shrink-0 z-10">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 flex-wrap sm:gap-4 md:flex-nowrap">
-            <div className="flex items-center gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--foreground)]">Workspace Sandbox</p>
-                <p className="text-[11px] text-[color:var(--foreground)]/50">Dynamic Simulation Playground</p>
-              </div>
-            </div>
+        {/* Full-Screen React Flow Canvas */}
+        <div className="absolute inset-0 z-0 h-full w-full">
+          <ReactFlow
+            nodes={styledNodes}
+            edges={animatedEdges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onNodeClick={onNodeClick}
+            fitView
+            fitViewOptions={{ padding: 0.15 }}
+            style={{ width: "100%", height: "100%" }}
+          >
+            <Background variant={BackgroundVariant.Dots} gap={16} size={0.7} color="rgba(148,163,184,0.15)" />
+          </ReactFlow>
+        </div>
 
-            <div className="flex items-center gap-1 sm:gap-2 flex-wrap md:flex-nowrap">
-              <label 
-                title="Hide response/return packets flowing back"
-                className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs text-[color:var(--foreground)] transition hover:border-violet-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
-              >
-                <input
-                  type="checkbox"
-                  checked={hideResponse}
-                  onChange={() => setHideResponse((prev) => !prev)}
-                  className="accent-violet-500 cursor-pointer"
-                />
-                <span className="hidden sm:inline group-hover:text-violet-300">Hide Response</span>
-                <span className="sm:hidden text-[10px]">↔️</span>
-              </label>
-
-              <label 
-                title="Show parallel requests simultaneously"
-                className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs text-[color:var(--foreground)] transition hover:border-blue-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
-              >
-                <input
-                  type="checkbox"
-                  checked={parallelResponse}
-                  onChange={() => setParallelResponse((prev) => !prev)}
-                  className="accent-violet-500 cursor-pointer"
-                />
-                <span className="hidden sm:inline group-hover:text-blue-300">Parallel</span>
-                <span className="sm:hidden text-[10px]">⚡</span>
-              </label>
-
-              <label 
-                title="Show detailed logs panel under graph"
-                className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs text-[color:var(--foreground)] transition hover:border-emerald-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
-              >
-                <input
-                  type="checkbox"
-                  checked={debugEnabled}
-                  onChange={() => setDebugEnabled((prev) => !prev)}
-                  className="accent-violet-500 cursor-pointer"
-                />
-                <span className="hidden sm:inline group-hover:text-emerald-300">Debug</span>
-                <span className="sm:hidden text-[10px]">🐛</span>
-              </label>
-
-              <div className="h-6 w-px bg-[var(--border)] hidden md:block" />
-
-              <div className="flex items-center gap-1 sm:gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 sm:px-3 py-1.5 text-xs whitespace-nowrap">
-                <span className={`h-2 w-2 rounded-full ${isPlaying ? "bg-emerald-400 animate-pulse" : "bg-[color:var(--foreground)]/30"}`} />
-                <span className="text-[color:var(--foreground)]/70 hidden sm:inline">
-                  {isPlaying ? "Playing" : simulationFrames.length > 0 ? "Paused" : "Idle"}
-                </span>
-                <span className="ml-0 sm:ml-1 text-[color:var(--foreground)]/50 text-[10px] sm:text-xs">
-                  {frameIndex + 1}/{simulationFrames.length || 0}
-                </span>
-              </div>
+        {/* Floating Warning Message */}
+        {validationWarning && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4">
+            <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 backdrop-blur-xl px-4 py-3 text-xs text-amber-300 flex items-center justify-between shadow-lg">
+              <span>⚠️ {validationWarning}</span>
+              <button onClick={() => setValidationWarning(null)} className="text-amber-400 font-bold ml-2 text-base hover:text-amber-300">×</button>
             </div>
           </div>
-        </header>
+        )}
 
-        {/* Content Body: Sidebar + Canvas + Inspector */}
-        <section className="flex min-h-0 flex-1 overflow-hidden flex-col lg:flex-row">
-          
-          {/* Left Column: Sidebar Component Selector & Templates - FIXED height and scrollable */}
-          <aside className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-[var(--border)] bg-[var(--surface)]/30 backdrop-blur-md flex flex-col h-full min-h-0 shrink-0 overflow-hidden">
-            <div className="p-4 border-b border-[var(--border)] shrink-0">
-              <h2 className="text-base font-bold tracking-tight text-[color:var(--foreground)]">Component Library</h2>
-              <p className="text-xs text-[color:var(--foreground)]/50 mt-1">
-                Add system elements to build your distributed design.
-              </p>
-            </div>
-
-            {/* Quick-load templates */}
-            <div className="p-4 border-b border-[var(--border)]/70 shrink-0">
-              <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45 mb-2.5">
-                Quick Templates
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => loadTemplate("cacheAside")}
-                  className="text-left text-xs p-2 rounded-lg border border-[var(--border)] hover:border-violet-500/50 bg-[var(--surface)]/50 font-semibold transition cursor-pointer"
-                >
-                  💾 Cache Aside
-                </button>
-                <button
-                  onClick={() => loadTemplate("loadBalancing")}
-                  className="text-left text-xs p-2 rounded-lg border border-[var(--border)] hover:border-violet-500/50 bg-[var(--surface)]/50 font-semibold transition cursor-pointer"
-                >
-                  ⚖️ Load Balancing
-                </button>
-                <button
-                  onClick={() => loadTemplate("valetKey")}
-                  className="text-left text-xs p-2 rounded-lg border border-[var(--border)] hover:border-violet-500/50 bg-[var(--surface)]/50 font-semibold transition cursor-pointer"
-                >
-                  🔑 Valet Key
-                </button>
-                <button
-                  onClick={() => loadTemplate("apiGateway")}
-                  className="text-left text-xs p-2 rounded-lg border border-[var(--border)] hover:border-violet-500/50 bg-[var(--surface)]/50 font-semibold transition cursor-pointer"
-                >
-                  🚪 API Gateway
-                </button>
-              </div>
-            </div>
-
-            {/* Scrollable list content - restricted correctly */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45 mb-1.5">
-                Components
-              </p>
-
-              {COMPONENTS_LIBRARY.map((item) => (
-                <div
-                  key={item.type}
-                  className="group relative border border-[var(--border)]/75 rounded-2xl bg-[var(--surface)]/60 p-3 hover:bg-[var(--surface)] hover:border-violet-500/35 transition duration-200"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">{item.icon}</span>
-                      <span className="text-xs font-bold">{item.label}</span>
-                    </div>
-                    <button
-                      onClick={() => addComponent(item.type)}
-                      className="rounded-lg bg-gradient-to-r from-violet-500/80 to-violet-600/80 text-white px-2.5 py-1 text-[10px] font-bold hover:from-violet-500 hover:to-violet-600 shadow-sm transition cursor-pointer"
-                    >
-                      + Add
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-[color:var(--foreground)]/65 mt-1.5 leading-relaxed">
-                    {item.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <div className="p-4 border-t border-[var(--border)] bg-[var(--surface)]/40 flex items-center justify-between shrink-0">
-              <button
-                onClick={handleClearCanvas}
-                className="text-xs font-semibold text-rose-500 dark:text-rose-400 hover:underline cursor-pointer"
-              >
-                Clear Canvas 🗑️
-              </button>
-              <p className="text-[10px] text-[color:var(--foreground)]/40">
-                Drag node handles to link them
-              </p>
-            </div>
-          </aside>
-
-          {/* Center: React Flow Canvas */}
-          <section className="flex-1 flex flex-col min-h-0 relative h-full overflow-hidden">
-            
-            {validationWarning && (
-              <div className="absolute top-4 left-4 right-4 z-20 rounded-xl border border-amber-500/50 bg-amber-500/10 backdrop-blur px-4 py-3 text-xs text-amber-300 flex items-center justify-between">
-                <span>{validationWarning}</span>
-                <button onClick={() => setValidationWarning(null)} className="text-amber-400 font-bold ml-2">×</button>
-              </div>
-            )}
-
-            <div className="flex-1 min-h-0 h-full">
-              <ReactFlow
-                nodes={styledNodes}
-                edges={animatedEdges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
-                onNodeClick={onNodeClick}
-                fitView
-                fitViewOptions={{ padding: 0.15 }}
-              >
-                <Background variant={BackgroundVariant.Dots} gap={16} size={0.7} color="rgba(148,163,184,0.15)" />
-              </ReactFlow>
-            </div>
-
-            {/* Float trigger helper if empty simulation */}
-            {simulationFrames.length === 0 && (
-              <div className="absolute bottom-4 left-4 right-4 z-10 text-center">
-                <div className="inline-block bg-[var(--surface)]/90 backdrop-blur border border-[var(--border)] rounded-2xl px-6 py-3 shadow-lg">
-                  <p className="text-xs text-[color:var(--foreground)]/75">
-                    💻 Click any **Client** node in the diagram or click **⚡ Run Simulation** at the bottom to start!
-                  </p>
-                </div>
-              </div>
-            )}
-
-          </section>
-
-          {/* Right Column: Inspector Panel */}
-          <aside className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-[var(--border)] bg-[var(--surface)]/30 backdrop-blur-md flex flex-col h-full min-h-0 overflow-y-auto shrink-0">
-            <div className="p-4 border-b border-[var(--border)]">
-              <h2 className="text-base font-bold tracking-tight text-[color:var(--foreground)]">Node Inspector</h2>
-              <p className="text-xs text-[color:var(--foreground)]/50 mt-1">
-                Select any component to configure its settings.
-              </p>
-            </div>
-
-            {selectedNode ? (
-              <div className="p-4 flex-1 space-y-4">
-                
-                {/* Rename Node section */}
+        {/* Floating Component Library & Quick Templates (Left Column) */}
+        <aside 
+          className={`absolute top-4 left-4 z-10 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-xl shadow-2xl flex flex-col max-h-[calc(100vh-160px)] transition-all duration-300 ${
+            isSidebarCollapsed ? "w-12 h-12 overflow-hidden p-0" : "w-80 p-4"
+          }`}
+        >
+          {isSidebarCollapsed ? (
+            <button
+              onClick={() => setIsSidebarCollapsed(false)}
+              className="h-12 w-12 flex items-center justify-center text-xl hover:bg-[var(--surface-muted)] rounded-2xl transition cursor-pointer"
+              title="Expand Component Library"
+            >
+              📚
+            </button>
+          ) : (
+            <div className="flex flex-col h-full min-h-0">
+              <div className="flex items-center justify-between shrink-0 pb-2 border-b border-[var(--border)]">
                 <div>
-                  <label className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1.5">
-                    Label / Component Name
-                  </label>
-                  <input
-                    type="text"
-                    value={(selectedNode.data.label as string) || ""}
-                    onChange={(e) => {
-                      const nextVal = e.target.value;
-                      setNodes((nds) =>
-                        nds.map((n) => (n.id === selectedNodeId ? { ...n, data: { ...n.data, label: nextVal } } : n))
-                      );
-                    }}
-                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[color:var(--foreground)] outline-none focus:border-violet-500"
-                  />
+                  <h2 className="text-sm font-bold tracking-tight text-[color:var(--foreground)]">Component Library</h2>
+                  <p className="text-[10px] text-[color:var(--foreground)]/50">Add elements to your distributed design.</p>
                 </div>
+                <button
+                  onClick={() => setIsSidebarCollapsed(true)}
+                  className="text-xs text-[color:var(--foreground)]/45 hover:text-[color:var(--foreground)] h-6 w-6 rounded-full hover:bg-[var(--surface-muted)] flex items-center justify-center font-bold transition cursor-pointer"
+                  title="Collapse Library"
+                >
+                  ◀
+                </button>
+              </div>
 
-                <div className="h-px bg-[var(--border)]/70" />
+              {/* Quick Templates */}
+              <div className="py-3 border-b border-[var(--border)]/70 shrink-0">
+                <p className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45 mb-2">
+                  Quick Templates
+                </p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => loadTemplate("cacheAside")}
+                    className="text-left text-[11px] p-2 rounded-xl border border-[var(--border)] hover:border-violet-500/50 bg-[var(--surface)]/50 font-semibold transition cursor-pointer hover:bg-[var(--surface-muted)]"
+                  >
+                    💾 Cache Aside
+                  </button>
+                  <button
+                    onClick={() => loadTemplate("loadBalancing")}
+                    className="text-left text-[11px] p-2 rounded-xl border border-[var(--border)] hover:border-violet-500/50 bg-[var(--surface)]/50 font-semibold transition cursor-pointer hover:bg-[var(--surface-muted)]"
+                  >
+                    ⚖️ Load Balance
+                  </button>
+                  <button
+                    onClick={() => loadTemplate("valetKey")}
+                    className="text-left text-[11px] p-2 rounded-xl border border-[var(--border)] hover:border-violet-500/50 bg-[var(--surface)]/50 font-semibold transition cursor-pointer hover:bg-[var(--surface-muted)]"
+                  >
+                    🔑 Valet Key
+                  </button>
+                  <button
+                    onClick={() => loadTemplate("apiGateway")}
+                    className="text-left text-[11px] p-2 rounded-xl border border-[var(--border)] hover:border-violet-500/50 bg-[var(--surface)]/50 font-semibold transition cursor-pointer hover:bg-[var(--surface-muted)]"
+                  >
+                    🚪 API Gateway
+                  </button>
+                </div>
+              </div>
 
-                {/* Client specific configuration */}
-                {selectedNode.data.type === "client" && (
-                  <div className="space-y-4">
-                    <p className="text-xs font-semibold text-violet-400">Client Settings</p>
-                    
-                    <label className="flex items-center gap-2 text-xs text-[color:var(--foreground)]/80 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={nodeConfigs[selectedNode.id]?.valetKeyFlow ?? false}
-                        onChange={(e) => updateNodeConfig(selectedNode.id, { valetKeyFlow: e.target.checked })}
-                        className="accent-violet-500 cursor-pointer"
-                      />
-                      <span>Enable Valet Key Direct Upload Flow</span>
+              {/* Scrollable list content */}
+              <div className="flex-1 overflow-y-auto py-3 space-y-2.5 scrollbar-thin">
+                <p className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45">
+                  Components
+                </p>
+
+                {COMPONENTS_LIBRARY.map((item) => (
+                  <div
+                    key={item.type}
+                    className="group border border-[var(--border)]/70 rounded-xl bg-[var(--surface)]/40 p-2.5 hover:bg-[var(--surface)]/80 hover:border-violet-500/35 transition duration-150"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{item.icon}</span>
+                        <span className="text-xs font-bold">{item.label}</span>
+                      </div>
+                      <button
+                        onClick={() => addComponent(item.type)}
+                        className="rounded-lg bg-gradient-to-r from-violet-500/80 to-violet-600/80 text-white px-2.5 py-1 text-[10px] font-bold hover:from-violet-500 hover:to-violet-600 shadow-sm transition cursor-pointer"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-[color:var(--foreground)]/65 mt-1 leading-normal">
+                      {item.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-2 border-t border-[var(--border)] bg-[var(--surface)]/40 flex items-center justify-between shrink-0">
+                <button
+                  onClick={handleClearCanvas}
+                  className="text-xs font-semibold text-rose-500 dark:text-rose-400 hover:underline cursor-pointer"
+                >
+                  Clear Canvas 🗑️
+                </button>
+                <p className="text-[9px] text-[color:var(--foreground)]/40">
+                  Connect handles to link
+                </p>
+              </div>
+            </div>
+          )}
+        </aside>
+
+        {/* Floating Inspector Panel (Right Column) */}
+        {selectedNode && (
+          <aside className="absolute top-4 right-4 z-10 w-80 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-xl shadow-2xl flex flex-col max-h-[calc(100vh-160px)] transition-all duration-300 overflow-y-auto scrollbar-thin">
+            <div className="p-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]/50">
+              <div>
+                <h2 className="text-sm font-bold tracking-tight text-[color:var(--foreground)]">Node Inspector</h2>
+                <p className="text-[10px] text-[color:var(--foreground)]/50">Configure component settings.</p>
+              </div>
+              <button 
+                onClick={() => setSelectedNodeId(null)}
+                className="text-xs text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] h-6 w-6 rounded-full hover:bg-[var(--surface-muted)] flex items-center justify-center font-bold transition cursor-pointer"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-4 flex-1 space-y-4">
+              {/* Rename Node section */}
+              <div>
+                <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                  Label / Component Name
+                </label>
+                <input
+                  type="text"
+                  value={(selectedNode.data.label as string) || ""}
+                  onChange={(e) => {
+                    const nextVal = e.target.value;
+                    setNodes((nds) =>
+                      nds.map((n) => (n.id === selectedNodeId ? { ...n, data: { ...n.data, label: nextVal } } : n))
+                    );
+                  }}
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[color:var(--foreground)] outline-none focus:border-violet-500 transition"
+                />
+              </div>
+
+              <div className="h-px bg-[var(--border)]/70" />
+
+              {/* Client specific configuration */}
+              {selectedNode.data.type === "client" && (
+                <div className="space-y-4">
+                  <p className="text-xs font-semibold text-violet-400 font-mono">Client Settings</p>
+                  
+                  <label className="flex items-center gap-2 text-xs text-[color:var(--foreground)]/80 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={nodeConfigs[selectedNode.id]?.valetKeyFlow ?? false}
+                      onChange={(e) => updateNodeConfig(selectedNode.id, { valetKeyFlow: e.target.checked })}
+                      className="accent-violet-500 cursor-pointer"
+                    />
+                    <span>Valet Key Flow</span>
+                  </label>
+
+                  <div className="h-px bg-[var(--border)]/70" />
+
+                  <div>
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                      Simulated Requests
                     </label>
+                    
+                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
+                      {(nodeConfigs[selectedNode.id]?.requests || [
+                        {
+                          endpoint: nodeConfigs[selectedNode.id]?.endpoint || "/api/v1/posts",
+                          lookupKey: nodeConfigs[selectedNode.id]?.lookupKey || "rohan",
+                          fileName: nodeConfigs[selectedNode.id]?.fileName || "file.png",
+                          isThereFileToUpload: nodeConfigs[selectedNode.id]?.isThereFileToUpload !== false,
+                        }
+                      ]).map((req: any, idx: number) => (
+                        <div key={idx} className="border border-[var(--border)] rounded-lg p-2 bg-[var(--surface)]/50 space-y-1.5 relative group/req">
+                          <button
+                            onClick={() => {
+                              const currentRequests = nodeConfigs[selectedNode.id]?.requests || [
+                                {
+                                  endpoint: nodeConfigs[selectedNode.id]?.endpoint || "/api/v1/posts",
+                                  lookupKey: nodeConfigs[selectedNode.id]?.lookupKey || "rohan",
+                                  fileName: nodeConfigs[selectedNode.id]?.fileName || "file.png",
+                                  isThereFileToUpload: nodeConfigs[selectedNode.id]?.isThereFileToUpload !== false,
+                                }
+                              ];
+                              if (currentRequests.length <= 1) return;
+                              const nextRequests = currentRequests.filter((_: any, i: number) => i !== idx);
+                              updateNodeConfig(selectedNode.id, { requests: nextRequests });
+                            }}
+                            className="absolute top-1 right-1 text-rose-500 hover:text-rose-600 text-xs font-bold px-1 cursor-pointer opacity-40 group-hover/req:opacity-100 transition"
+                            title="Delete Request"
+                          >
+                            ×
+                          </button>
 
-                    <div className="h-px bg-[var(--border)]/70" />
+                          <p className="text-[9px] font-bold text-violet-400">Request #{idx + 1}</p>
 
-                    <div>
-                      <label className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Simulated Requests List
-                      </label>
-                      
-                      <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-                        {(nodeConfigs[selectedNode.id]?.requests || [
+                          {!nodeConfigs[selectedNode.id]?.valetKeyFlow ? (
+                            <div className="grid grid-cols-2 gap-1.5">
+                              <div>
+                                <label className="text-[8px] text-[color:var(--foreground)]/50 block">Path</label>
+                                <input
+                                  type="text"
+                                  value={req.endpoint}
+                                  onChange={(e) => {
+                                    const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
+                                    currentRequests[idx].endpoint = e.target.value;
+                                    updateNodeConfig(selectedNode.id, { requests: currentRequests });
+                                  }}
+                                  className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[8px] text-[color:var(--foreground)]/50 block">Key</label>
+                                <input
+                                  type="text"
+                                  value={req.lookupKey}
+                                  onChange={(e) => {
+                                    const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
+                                    currentRequests[idx].lookupKey = e.target.value;
+                                    updateNodeConfig(selectedNode.id, { requests: currentRequests });
+                                  }}
+                                  className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <div>
+                                <label className="text-[8px] text-[color:var(--foreground)]/50 block">Upload File</label>
+                                <input
+                                  type="text"
+                                  value={req.fileName}
+                                  onChange={(e) => {
+                                    const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
+                                    currentRequests[idx].fileName = e.target.value;
+                                    updateNodeConfig(selectedNode.id, { requests: currentRequests });
+                                  }}
+                                  className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500"
+                                />
+                              </div>
+                              <label className="flex items-center gap-1 text-[9px] text-[color:var(--foreground)]/80 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={req.isThereFileToUpload}
+                                  onChange={(e) => {
+                                    const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
+                                    currentRequests[idx].isThereFileToUpload = e.target.checked;
+                                    updateNodeConfig(selectedNode.id, { requests: currentRequests });
+                                  }}
+                                  className="accent-violet-500"
+                                />
+                                <span>Attach File Payload</span>
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        const currentRequests = nodeConfigs[selectedNode.id]?.requests || [
                           {
                             endpoint: nodeConfigs[selectedNode.id]?.endpoint || "/api/v1/posts",
                             lookupKey: nodeConfigs[selectedNode.id]?.lookupKey || "rohan",
                             fileName: nodeConfigs[selectedNode.id]?.fileName || "file.png",
                             isThereFileToUpload: nodeConfigs[selectedNode.id]?.isThereFileToUpload !== false,
                           }
-                        ]).map((req: any, idx: number) => (
-                          <div key={idx} className="border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50 space-y-2 relative group/req">
-                            <button
-                              onClick={() => {
-                                const currentRequests = nodeConfigs[selectedNode.id]?.requests || [
-                                  {
-                                    endpoint: nodeConfigs[selectedNode.id]?.endpoint || "/api/v1/posts",
-                                    lookupKey: nodeConfigs[selectedNode.id]?.lookupKey || "rohan",
-                                    fileName: nodeConfigs[selectedNode.id]?.fileName || "file.png",
-                                    isThereFileToUpload: nodeConfigs[selectedNode.id]?.isThereFileToUpload !== false,
-                                  }
-                                ];
-                                if (currentRequests.length <= 1) return;
-                                const nextRequests = currentRequests.filter((_: any, i: number) => i !== idx);
-                                updateNodeConfig(selectedNode.id, { requests: nextRequests });
-                              }}
-                              className="absolute top-1.5 right-1.5 text-rose-500 hover:text-rose-600 text-xs font-bold px-1.5 cursor-pointer opacity-40 group-hover/req:opacity-100 transition"
-                              title="Delete Request"
-                            >
-                              ×
-                            </button>
-
-                            <p className="text-[10px] font-bold text-violet-400">Request #{idx + 1}</p>
-
-                            {!nodeConfigs[selectedNode.id]?.valetKeyFlow ? (
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <label className="text-[9px] text-[color:var(--foreground)]/50 block mb-0.5">Path</label>
-                                  <input
-                                    type="text"
-                                    value={req.endpoint}
-                                    onChange={(e) => {
-                                      const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
-                                      currentRequests[idx].endpoint = e.target.value;
-                                      updateNodeConfig(selectedNode.id, { requests: currentRequests });
-                                    }}
-                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-[9px] text-[color:var(--foreground)]/50 block mb-0.5">Key</label>
-                                  <input
-                                    type="text"
-                                    value={req.lookupKey}
-                                    onChange={(e) => {
-                                      const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
-                                      currentRequests[idx].lookupKey = e.target.value;
-                                      updateNodeConfig(selectedNode.id, { requests: currentRequests });
-                                    }}
-                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500"
-                                  />
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="space-y-1.5">
-                                <div>
-                                  <label className="text-[9px] text-[color:var(--foreground)]/50 block mb-0.5">Upload File</label>
-                                  <input
-                                    type="text"
-                                    value={req.fileName}
-                                    onChange={(e) => {
-                                      const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
-                                      currentRequests[idx].fileName = e.target.value;
-                                      updateNodeConfig(selectedNode.id, { requests: currentRequests });
-                                    }}
-                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500"
-                                  />
-                                </div>
-                                <label className="flex items-center gap-1.5 text-[10px] text-[color:var(--foreground)]/80 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    checked={req.isThereFileToUpload}
-                                    onChange={(e) => {
-                                      const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
-                                      currentRequests[idx].isThereFileToUpload = e.target.checked;
-                                      updateNodeConfig(selectedNode.id, { requests: currentRequests });
-                                    }}
-                                    className="accent-violet-500"
-                                  />
-                                  <span>Attach File Payload</span>
-                                </label>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          const currentRequests = nodeConfigs[selectedNode.id]?.requests || [
-                            {
-                              endpoint: nodeConfigs[selectedNode.id]?.endpoint || "/api/v1/posts",
-                              lookupKey: nodeConfigs[selectedNode.id]?.lookupKey || "rohan",
-                              fileName: nodeConfigs[selectedNode.id]?.fileName || "file.png",
-                              isThereFileToUpload: nodeConfigs[selectedNode.id]?.isThereFileToUpload !== false,
-                            }
-                          ];
-                          const nextRequests = [
-                            ...currentRequests,
-                            {
-                              endpoint: "/api/v1/posts",
-                              lookupKey: `key-${currentRequests.length + 1}`,
-                              fileName: `file-${currentRequests.length + 1}.png`,
-                              isThereFileToUpload: true,
-                            }
-                          ];
-                          updateNodeConfig(selectedNode.id, { requests: nextRequests });
-                        }}
-                        className="w-full mt-2 rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
-                      >
-                        + Add Custom Request
-                      </button>
-                    </div>
+                        ];
+                        const nextRequests = [
+                          ...currentRequests,
+                          {
+                            endpoint: "/api/v1/posts",
+                            lookupKey: `key-${currentRequests.length + 1}`,
+                            fileName: `file-${currentRequests.length + 1}.png`,
+                            isThereFileToUpload: true,
+                          }
+                        ];
+                        updateNodeConfig(selectedNode.id, { requests: nextRequests });
+                      }}
+                      className="w-full mt-2 rounded-lg border border-[var(--border)] py-1 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
+                    >
+                      + Add Request
+                    </button>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* API Gateway Configuration */}
-                {selectedNode.data.type === "api-gateway" && (
-                  <div className="space-y-4">
-                    <p className="text-xs font-semibold text-fuchsia-400">Gateway Settings</p>
-                    
-                    <div>
-                      <label className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1.5">Load Balancing Strategy</label>
-                      <select
-                        value={nodeConfigs[selectedNode.id]?.strategy ?? "ROUND_ROBIN"}
-                        onChange={(e) => updateNodeConfig(selectedNode.id, { strategy: e.target.value })}
-                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500 cursor-pointer"
-                      >
-                        <option value="ROUND_ROBIN">Round Robin</option>
-                        <option value="RANDOM">Random Dispatch</option>
-                        <option value="IP_HASH">IP Address Hash</option>
-                        <option value="LEAST_CONNECTIONS">Least Connections</option>
-                      </select>
+              {/* API Gateway Configuration */}
+              {selectedNode.data.type === "api-gateway" && (
+                <div className="space-y-4">
+                  <p className="text-xs font-semibold text-fuchsia-400 font-mono">Gateway Settings</p>
+                  
+                  <div>
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">Load Balance Strategy</label>
+                    <select
+                      value={nodeConfigs[selectedNode.id]?.strategy ?? "ROUND_ROBIN"}
+                      onChange={(e) => updateNodeConfig(selectedNode.id, { strategy: e.target.value })}
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500 cursor-pointer"
+                    >
+                      <option value="ROUND_ROBIN">Round Robin</option>
+                      <option value="RANDOM">Random Dispatch</option>
+                      <option value="IP_HASH">IP Address Hash</option>
+                      <option value="LEAST_CONNECTIONS">Least Connections</option>
+                    </select>
+                  </div>
+
+                  <div className="h-px bg-[var(--border)]/70" />
+
+                  {/* Route Mappings */}
+                  <div>
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                      Route Rules
+                    </label>
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1 scrollbar-thin">
+                      {Object.entries(nodeConfigs[selectedNode.id]?.routes || {}).map(([path, svc]: [string, any], idx) => (
+                        <div key={idx} className="flex gap-1 items-center">
+                          <input
+                            type="text"
+                            value={path}
+                            placeholder="Path prefix"
+                            onChange={(e) => {
+                              const routes = (nodeConfigs[selectedNode.id]?.routes || {}) as Record<string, string>;
+                              const nextRoutes: Record<string, string> = {};
+                              for (const [k, v] of Object.entries(routes)) {
+                                if (k === path) {
+                                  nextRoutes[e.target.value] = svc as string;
+                                } else {
+                                  nextRoutes[k] = v;
+                                }
+                              }
+                              updateNodeConfig(selectedNode.id, { routes: nextRoutes });
+                            }}
+                            className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono"
+                          />
+                          <input
+                            type="text"
+                            value={svc}
+                            placeholder="Service name"
+                            onChange={(e) => {
+                              const nextRoutes = { ...(nodeConfigs[selectedNode.id]?.routes || {}) };
+                              nextRoutes[path] = e.target.value;
+                              updateNodeConfig(selectedNode.id, { routes: nextRoutes });
+                            }}
+                            className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono"
+                          />
+                          <button
+                            onClick={() => {
+                              const nextRoutes = { ...(nodeConfigs[selectedNode.id]?.routes || {}) };
+                              delete nextRoutes[path];
+                              updateNodeConfig(selectedNode.id, { routes: nextRoutes });
+                            }}
+                            className="text-rose-500 hover:text-rose-600 text-xs px-1 cursor-pointer font-bold"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
                     </div>
+                    <button
+                      onClick={() => {
+                        const routes = nodeConfigs[selectedNode.id]?.routes || {};
+                        const nextRoutes = {
+                          ...routes,
+                          [`/api/v1/route-${Object.keys(routes).length + 1}`]: `NEW_SERVICE`,
+                        };
+                        updateNodeConfig(selectedNode.id, { routes: nextRoutes });
+                      }}
+                      className="w-full mt-2 rounded-lg border border-[var(--border)] py-1 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
+                    >
+                      + Add Route Rule
+                    </button>
+                  </div>
 
-                    <div className="h-px bg-[var(--border)]/70" />
+                  <div className="h-px bg-[var(--border)]/70" />
 
-                    {/* Route Mappings */}
-                    <div>
-                      <label className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Route Rules (Path ➔ Service)
-                      </label>
-                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                        {Object.entries(nodeConfigs[selectedNode.id]?.routes || {}).map(([path, svc]: [string, any], idx) => (
+                  {/* Service Pools Mapping */}
+                  {(() => {
+                    const allServers = nodes.filter((n) => n.data.type === "server");
+
+                    if (allServers.length === 0) {
+                      return (
+                        <div>
+                          <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                            Service Pools Mapping
+                          </label>
+                          <p className="text-[10px] text-[color:var(--foreground)]/50 italic">
+                            No servers on the canvas. Add a Server first.
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    const routes = nodeConfigs[selectedNode.id]?.routes || {};
+                    const serviceOptions = Array.from(new Set(Object.values(routes)));
+
+                    return (
+                      <div className="space-y-2">
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block">
+                          Service Pools Mapping
+                        </label>
+                        <div className="space-y-2 border border-[var(--border)] rounded-lg p-2 bg-[var(--surface)]/50">
+                          {allServers.map((serverNode) => {
+                            const serverId = serverNode.id;
+                            const serverLabel = String(serverNode.data.label || serverId);
+                            const serviceMapping = nodeConfigs[selectedNode.id]?.serviceMapping || {};
+                            
+                            const isConnectedCorrectly = edges.some((e) => e.source === selectedNode.id && e.target === serverId);
+                            const isConnectedBackwards = edges.some((e) => e.source === serverId && e.target === selectedNode.id);
+                            const isConnected = isConnectedCorrectly || isConnectedBackwards;
+
+                            let currentVal = serviceMapping[serverId];
+                            if (!currentVal) {
+                              const labelLower = serverLabel.toLowerCase();
+                              if (labelLower.includes("user")) {
+                                currentVal = "USER_SERVICE";
+                              } else if (labelLower.includes("post")) {
+                                currentVal = "POST_SERVICE";
+                              } else {
+                                currentVal = serviceOptions[0] || "DEFAULT_SERVICE";
+                              }
+                            }
+
+                            return (
+                              <div key={serverId} className="flex flex-col gap-1 border-b border-[var(--border)]/35 pb-2 last:border-b-0 last:pb-0">
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="text-[10px] font-medium text-[color:var(--foreground)]/70 truncate">
+                                    🖥️ {serverLabel}
+                                  </span>
+                                  {!isConnected && (
+                                    <span className="text-[8px] text-amber-500 font-semibold bg-amber-500/10 px-1 rounded">
+                                      ⚠️ Unlinked
+                                    </span>
+                                  )}
+                                  {isConnectedBackwards && (
+                                    <span className="text-[8px] text-rose-500 font-semibold bg-rose-500/10 px-1 rounded animate-pulse">
+                                      ⚠️ Reverse
+                                    </span>
+                                  )}
+                                  {isConnectedCorrectly && (
+                                    <span className="text-[8px] text-emerald-400 font-semibold bg-emerald-500/10 px-1 rounded">
+                                      ✓ Linked
+                                    </span>
+                                  )}
+                                </div>
+                                <select
+                                  value={currentVal}
+                                  onChange={(e) => {
+                                    const nextMapping = {
+                                      ...(nodeConfigs[selectedNode.id]?.serviceMapping || {}),
+                                      [serverId]: e.target.value,
+                                    };
+                                    updateNodeConfig(selectedNode.id, { serviceMapping: nextMapping });
+                                  }}
+                                  className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1 text-xs outline-none focus:border-violet-500 cursor-pointer"
+                                >
+                                  {serviceOptions.map((opt: any) => (
+                                    <option key={opt} value={opt}>
+                                      {opt}
+                                    </option>
+                                  ))}
+                                  <option value="UNASSIGNED">Unassigned</option>
+                                </select>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* Redis Configuration */}
+              {selectedNode.data.type === "redis" && (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-amber-400 font-mono">Redis Cache Memory</p>
+                  
+                  <div className="space-y-1.5">
+                    <p className="text-[9px] text-[color:var(--foreground)]/65">Cached Pairs</p>
+                    {(!nodeConfigs[selectedNode.id]?.data || nodeConfigs[selectedNode.id].data.length === 0) ? (
+                      <p className="text-xs italic text-[color:var(--foreground)]/50">No keys stored.</p>
+                    ) : (
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
+                        {nodeConfigs[selectedNode.id].data.map((item: any, idx: number) => (
                           <div key={idx} className="flex gap-1.5 items-center">
                             <input
                               type="text"
-                              value={path}
-                              placeholder="Path prefix"
+                              value={item.key}
+                              placeholder="Key"
                               onChange={(e) => {
-                                const routes = (nodeConfigs[selectedNode.id]?.routes || {}) as Record<string, string>;
-                                const nextRoutes: Record<string, string> = {};
-                                for (const [k, v] of Object.entries(routes)) {
-                                  if (k === path) {
-                                    nextRoutes[e.target.value] = svc as string;
-                                  } else {
-                                    nextRoutes[k] = v;
-                                  }
-                                }
-                                updateNodeConfig(selectedNode.id, { routes: nextRoutes });
-                              }}
-                              className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none font-mono"
-                            />
-                            <input
-                              type="text"
-                              value={svc}
-                              placeholder="Service name"
-                              onChange={(e) => {
-                                const nextRoutes = { ...(nodeConfigs[selectedNode.id]?.routes || {}) };
-                                nextRoutes[path] = e.target.value;
-                                updateNodeConfig(selectedNode.id, { routes: nextRoutes });
-                              }}
-                              className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none font-mono"
-                            />
-                            <button
-                              onClick={() => {
-                                const nextRoutes = { ...(nodeConfigs[selectedNode.id]?.routes || {}) };
-                                delete nextRoutes[path];
-                                updateNodeConfig(selectedNode.id, { routes: nextRoutes });
-                              }}
-                              className="text-rose-500 hover:text-rose-600 text-xs px-1.5 cursor-pointer font-bold"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => {
-                          const routes = nodeConfigs[selectedNode.id]?.routes || {};
-                          const nextRoutes = {
-                            ...routes,
-                            [`/api/v1/route-${Object.keys(routes).length + 1}`]: `NEW_SERVICE`,
-                          };
-                          updateNodeConfig(selectedNode.id, { routes: nextRoutes });
-                        }}
-                        className="w-full mt-2 rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
-                      >
-                        + Add Route Rule
-                      </button>
-                    </div>
-
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    {/* Service Pools Mapping */}
-                    {(() => {
-                      const allServers = nodes.filter((n) => n.data.type === "server");
-
-                      if (allServers.length === 0) {
-                        return (
-                          <div>
-                            <label className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
-                              Service Pools Mapping
-                            </label>
-                            <p className="text-[11px] text-[color:var(--foreground)]/50 italic">
-                              No servers on the canvas. Add a Server component first.
-                            </p>
-                          </div>
-                        );
-                      }
-
-                      const routes = nodeConfigs[selectedNode.id]?.routes || {};
-                      const serviceOptions = Array.from(new Set(Object.values(routes)));
-
-                      return (
-                        <div className="space-y-2">
-                          <label className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block">
-                            Service Pools Mapping
-                          </label>
-                          <div className="space-y-3 border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50">
-                            {allServers.map((serverNode) => {
-                              const serverId = serverNode.id;
-                              const serverLabel = String(serverNode.data.label || serverId);
-                              const serviceMapping = nodeConfigs[selectedNode.id]?.serviceMapping || {};
-                              
-                              const isConnectedCorrectly = edges.some((e) => e.source === selectedNode.id && e.target === serverId);
-                              const isConnectedBackwards = edges.some((e) => e.source === serverId && e.target === selectedNode.id);
-                              const isConnected = isConnectedCorrectly || isConnectedBackwards;
-
-                              let currentVal = serviceMapping[serverId];
-                              if (!currentVal) {
-                                const labelLower = serverLabel.toLowerCase();
-                                if (labelLower.includes("user")) {
-                                  currentVal = "USER_SERVICE";
-                                } else if (labelLower.includes("post")) {
-                                  currentVal = "POST_SERVICE";
-                                } else {
-                                  currentVal = serviceOptions[0] || "DEFAULT_SERVICE";
-                                }
-                              }
-
-                              return (
-                                <div key={serverId} className="flex flex-col gap-1.5 border-b border-[var(--border)]/35 pb-2.5 last:border-b-0 last:pb-0">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <span className="text-[11px] font-medium text-[color:var(--foreground)]/70 truncate flex items-center gap-1">
-                                      🖥️ {serverLabel}
-                                    </span>
-                                    {!isConnected && (
-                                      <span className="text-[9px] text-amber-500 font-semibold bg-amber-500/10 px-1.5 py-0.5 rounded" title="Draw a connection from API Gateway to this Server">
-                                        ⚠️ Not Linked
-                                      </span>
-                                    )}
-                                    {isConnectedBackwards && (
-                                      <span className="text-[9px] text-rose-500 font-semibold bg-rose-500/10 px-1.5 py-0.5 rounded animate-pulse" title="Draw the connection from Gateway -> Server, not Server -> Gateway">
-                                        ⚠️ Reverse Link
-                                      </span>
-                                    )}
-                                    {isConnectedCorrectly && (
-                                      <span className="text-[9px] text-emerald-400 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                                        ✓ Linked
-                                      </span>
-                                    )}
-                                  </div>
-                                  <select
-                                    value={currentVal}
-                                    onChange={(e) => {
-                                      const nextMapping = {
-                                        ...(nodeConfigs[selectedNode.id]?.serviceMapping || {}),
-                                        [serverId]: e.target.value,
-                                      };
-                                      updateNodeConfig(selectedNode.id, { serviceMapping: nextMapping });
-                                    }}
-                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-xs outline-none focus:border-violet-500 cursor-pointer"
-                                  >
-                                    {serviceOptions.map((opt: any) => (
-                                      <option key={opt} value={opt}>
-                                        {opt}
-                                      </option>
-                                    ))}
-                                    <option value="UNASSIGNED">Unassigned</option>
-                                  </select>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-
-                {/* Redis Configuration */}
-                {selectedNode.data.type === "redis" && (
-                  <div className="space-y-3">
-                    <p className="text-xs font-semibold text-amber-400 font-mono">Redis Cache Memory</p>
-                    
-                    {/* Key-values list */}
-                    <div className="space-y-1.5">
-                      <p className="text-[10px] text-[color:var(--foreground)]/65">Cached Pairs</p>
-                      {(!nodeConfigs[selectedNode.id]?.data || nodeConfigs[selectedNode.id].data.length === 0) ? (
-                        <p className="text-xs italic text-[color:var(--foreground)]/50">No keys stored.</p>
-                      ) : (
-                        <div className="space-y-1">
-                          {nodeConfigs[selectedNode.id].data.map((item: any, idx: number) => (
-                            <div key={idx} className="flex gap-2 items-center">
-                              <input
-                                type="text"
-                                value={item.key}
-                                placeholder="Key"
-                                onChange={(e) => {
                                   const nextList = [...nodeConfigs[selectedNode.id].data];
                                   nextList[idx].key = e.target.value;
                                   updateNodeConfig(selectedNode.id, { data: nextList });
                                 }}
-                                className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none font-mono"
-                              />
-                              <input
-                                type="text"
-                                value={item.val}
-                                placeholder="Value"
-                                onChange={(e) => {
+                              className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono"
+                            />
+                            <input
+                              type="text"
+                              value={item.val}
+                              placeholder="Value"
+                              onChange={(e) => {
                                   const nextList = [...nodeConfigs[selectedNode.id].data];
                                   nextList[idx].val = e.target.value;
                                   updateNodeConfig(selectedNode.id, { data: nextList });
                                 }}
-                                className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none"
-                              />
-                              <button
-                                onClick={() => {
+                              className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none"
+                            />
+                            <button
+                              onClick={() => {
                                   const nextList = nodeConfigs[selectedNode.id].data.filter((_: any, i: number) => i !== idx);
                                   updateNodeConfig(selectedNode.id, { data: nextList });
                                 }}
-                                className="text-red-500 hover:text-red-600 text-xs px-1 cursor-pointer"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <button
-                      onClick={() => {
-                        const prevList = nodeConfigs[selectedNode.id]?.data ?? [];
-                        updateNodeConfig(selectedNode.id, { data: [...prevList, { key: "", val: "" }] });
-                      }}
-                      className="w-full rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
-                    >
-                      + Add Cache Key
+                              className="text-red-500 hover:text-red-600 text-xs px-1 cursor-pointer"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      const prevList = nodeConfigs[selectedNode.id]?.data ?? [];
+                      updateNodeConfig(selectedNode.id, { data: [...prevList, { key: "", val: "" }] });
+                    }}
+                    className="w-full rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
+                  >
+                    + Add Cache Key
                   </button>
                 </div>
               )}
@@ -1934,10 +1842,10 @@ export default function WorkspacePage() {
               {/* Postgres Configuration */}
               {selectedNode.data.type === "postgres" && (
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold text-cyan-400">Database Records</p>
+                  <p className="text-xs font-semibold text-cyan-400 font-mono">Database Records</p>
                   
                   <div>
-                    <label className="text-[10px] text-[color:var(--foreground)]/60 block mb-1">Target Table Name</label>
+                    <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">Table Name</label>
                     <input
                       type="text"
                       value={nodeConfigs[selectedNode.id]?.table ?? "users"}
@@ -1947,34 +1855,34 @@ export default function WorkspacePage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <p className="text-[10px] text-[color:var(--foreground)]/65">Row Entries (ID / Payload)</p>
+                    <p className="text-[9px] text-[color:var(--foreground)]/65">Row Entries (ID / Payload)</p>
                     {(!nodeConfigs[selectedNode.id]?.data || nodeConfigs[selectedNode.id].data.length === 0) ? (
                       <p className="text-xs italic text-[color:var(--foreground)]/50">No records found.</p>
                     ) : (
-                      <div className="space-y-1">
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
                         {nodeConfigs[selectedNode.id].data.map((item: any, idx: number) => (
-                          <div key={idx} className="flex gap-2 items-center">
+                          <div key={idx} className="flex gap-1.5 items-center">
                             <input
                               type="text"
                               value={item.key}
-                              placeholder="PK (e.g. doe)"
+                              placeholder="PK"
                               onChange={(e) => {
                                 const nextList = [...nodeConfigs[selectedNode.id].data];
                                 nextList[idx].key = e.target.value;
                                 updateNodeConfig(selectedNode.id, { data: nextList });
                               }}
-                              className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none font-mono"
+                              className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono"
                             />
                             <input
                               type="text"
                               value={item.val}
-                              placeholder="Record summary"
+                              placeholder="Summary"
                               onChange={(e) => {
                                 const nextList = [...nodeConfigs[selectedNode.id].data];
                                 nextList[idx].val = e.target.value;
                                 updateNodeConfig(selectedNode.id, { data: nextList });
                               }}
-                              className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none"
+                              className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none"
                             />
                             <button
                               onClick={() => {
@@ -1998,7 +1906,7 @@ export default function WorkspacePage() {
                     }}
                     className="w-full rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
                   >
-                    + Add DB Row Record
+                    + Add DB Row
                   </button>
                 </div>
               )}
@@ -2006,9 +1914,9 @@ export default function WorkspacePage() {
               {/* Server Specific Configuration */}
               {selectedNode.data.type === "server" && (
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold text-emerald-400">Server Capacity</p>
+                  <p className="text-xs font-semibold text-emerald-400 font-mono">Server Capacity</p>
                   <div>
-                    <label className="text-[10px] text-[color:var(--foreground)]/60 block mb-1">Max Connections Capacity</label>
+                    <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">Connections Capacity</label>
                     <input
                       type="number"
                       value={nodeConfigs[selectedNode.id]?.capacity ?? 100}
@@ -2022,7 +1930,7 @@ export default function WorkspacePage() {
               {/* Storage bucket configuration */}
               {selectedNode.data.type === "storage" && (
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold text-yellow-400">Storage Buckets</p>
+                  <p className="text-xs font-semibold text-yellow-400 font-mono">Storage Buckets</p>
                   <div className="space-y-1">
                     {nodeConfigs[selectedNode.id]?.buckets?.map((b: string, idx: number) => (
                       <div key={idx} className="flex gap-2 items-center">
@@ -2057,98 +1965,108 @@ export default function WorkspacePage() {
               </button>
 
             </div>
-          ) : (
-            <div className="p-8 flex flex-col items-center justify-center text-center flex-1">
-              <span className="text-4xl mb-3">🔍</span>
-              <p className="text-xs font-semibold text-[color:var(--foreground)]">No Node Selected</p>
-              <p className="text-[11px] text-[color:var(--foreground)]/50 mt-1 max-w-[180px]">
-                Click on any node in the canvas to view or modify its database records, routing, and capacities.
-              </p>
-            </div>
-          )}
-        </aside>
-
-      </section>
-
-      {/* Playback & Debug Log Panel - Resizable exactly like scenarios detail page */}
-      <div
-        style={{ height: debugEnabled && simulationFrames.length > 0 ? `${panelHeight}px` : "auto" }}
-        className="flex flex-col border-t border-[var(--border)] bg-[var(--surface)]/30 transition-all duration-150 backdrop-blur overflow-hidden shrink-0 z-20"
-      >
-        {/* Resize Handler bar */}
-        {debugEnabled && simulationFrames.length > 0 && (
-          <div
-            onMouseDown={() => setIsDragging(true)}
-            className="h-1 w-full cursor-row-resize bg-[var(--border)] hover:bg-violet-500/60 transition"
-            title="Drag to resize debugger"
-          />
+          </aside>
         )}
 
-        <motion.section
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.2, delay: 0.1 }}
-          className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 py-3"
-        >
-          <div className="mx-auto flex w-full max-w-7xl flex-col gap-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="overflow-x-auto">
-                <Controls
-                  isPlaying={isPlaying}
-                  onPlayToggle={() => {
-                    if (simulationFrames.length === 0) {
-                      handleStartSimulation();
-                    } else {
-                      setIsPlaying((prev) => !prev);
-                    }
-                  }}
-                  onPrev={goToPreviousFrame}
-                  onNext={goToNextFrame}
-                  onReset={resetPlayback}
-                  debugEnabled={debugEnabled}
-                  onDebugToggle={() => setDebugEnabled((prev) => !prev)}
-                  speed={speed}
-                  onSpeedChange={setSpeed}
+        {/* Floating Bottom Timeline & Playback Panel */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 w-[92%] max-w-4xl rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-xl shadow-2xl p-4 flex flex-col gap-3 transition-all duration-300">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex-1 overflow-x-auto min-w-0">
+              <Controls
+                isPlaying={isPlaying}
+                onPlayToggle={() => {
+                  if (simulationFrames.length === 0) {
+                    handleStartSimulation();
+                  } else {
+                    setIsPlaying((prev) => !prev);
+                  }
+                }}
+                onPrev={goToPreviousFrame}
+                onNext={goToNextFrame}
+                onReset={resetPlayback}
+                debugEnabled={debugEnabled}
+                onDebugToggle={() => setDebugEnabled((prev) => !prev)}
+                speed={speed}
+                onSpeedChange={setSpeed}
+                theme={theme}
+              />
+            </div>
+            
+            <div className="flex items-center gap-1.5 sm:gap-2 self-end md:self-auto shrink-0">
+              <label 
+                title="Hide response/return packets flowing back"
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-violet-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+              >
+                <input
+                  type="checkbox"
+                  checked={hideResponse}
+                  onChange={() => setHideResponse((prev) => !prev)}
+                  className="accent-violet-500 cursor-pointer"
+                />
+                <span className="group-hover:text-violet-300">Hide Response</span>
+              </label>
+
+              <label 
+                title="Show parallel requests simultaneously"
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-blue-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+              >
+                <input
+                  type="checkbox"
+                  checked={parallelResponse}
+                  onChange={() => setParallelResponse((prev) => !prev)}
+                  className="accent-violet-500 cursor-pointer"
+                />
+                <span className="group-hover:text-blue-300">Parallel</span>
+              </label>
+
+              <label 
+                title="Show detailed logs panel under graph"
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-emerald-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+              >
+                <input
+                  type="checkbox"
+                  checked={debugEnabled}
+                  onChange={() => setDebugEnabled((prev) => !prev)}
+                  className="accent-violet-500 cursor-pointer"
+                />
+                <span className="group-hover:text-emerald-300">Debug logs</span>
+              </label>
+            </div>
+          </div>
+
+          <Timeline
+            frameIndex={frameIndex}
+            frameGroups={frameGroups}
+            onSeek={(idx) => {
+              setIsPlaying(false);
+              setFrameIndex(idx);
+            }}
+            theme={theme}
+          />
+
+          {debugEnabled && simulationFrames.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="min-h-0 max-h-48 overflow-y-auto"
+            >
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 p-3 mt-1 shadow-inner">
+                <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/50 mb-2">
+                  Simulation Debug Console
+                </p>
+                <DebugPanel
+                  currentFrames={accumulatedFrames}
+                  frameIndex={frameIndex}
                   theme={theme}
                 />
               </div>
-            </div>
+            </motion.div>
+          )}
+        </div>
 
-            <Timeline
-              frameIndex={frameIndex}
-              frameGroups={frameGroups}
-              onSeek={(idx) => {
-                setIsPlaying(false);
-                setFrameIndex(idx);
-              }}
-              theme={theme}
-            />
-
-            {debugEnabled && simulationFrames.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-                className="min-h-0 flex-1 overflow-y-auto"
-              >
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)]/50 p-3 mt-1">
-                  <p className="text-xs uppercase tracking-widest text-[color:var(--foreground)]/50 mb-3">
-                    Frame {frameIndex + 1} Debug Details
-                  </p>
-                  <DebugPanel
-                    currentFrames={accumulatedFrames}
-                    frameIndex={frameIndex}
-                    theme={theme}
-                  />
-                </div>
-              </motion.div>
-            )}
-          </div>
-        </motion.section>
       </div>
-
-    </div>
-  </main>
-);
+    </main>
+  );
 }

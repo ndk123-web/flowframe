@@ -1199,6 +1199,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
         onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
         showHomeLink
         badgeText="Simulator"
+        alwaysGlass={true}
       />
       <div className="flex h-[calc(100vh-70px)] flex-col overflow-x-hidden" data-resizable-container>
         {/* Top Bar */}
@@ -1297,7 +1298,15 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             <GraphCanvas
               nodes={styledNodes}
               edges={animatedEdges}
-              onNodeSelect={setSelectedNodeId}
+              onNodeSelect={(nodeId) => {
+                setSelectedNodeId(nodeId);
+                const clickedNode = nodes.find((n) => n.id === nodeId);
+                const label = typeof clickedNode?.data?.label === "string" ? clickedNode.data.label : nodeId;
+                if (getNodeRole(label) === "client") {
+                  setFrameIndex(0);
+                  setIsPlaying(true);
+                }
+              }}
               theme={theme}
             />
           </motion.div>
