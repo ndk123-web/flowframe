@@ -35,6 +35,8 @@ type Frame = {
   redisKeysSnapshot?: string[];
   payloadSummary?: string;
   signedUrl?: string;
+  storageBucket?: string;
+  storageFileName?: string;
 };
 
 type ScenarioRunOptions = {

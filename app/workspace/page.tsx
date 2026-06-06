@@ -176,7 +176,8 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
         lookupKey: "rohan",
         valetKeyFlow: false,
         fileName: "file.png",
-        isThereFileToUpload: true,
+        isThereFileToUpload: false,
+        targetBucket: "media-uploads",
       };
     case "api-gateway":
       return {
@@ -693,7 +694,228 @@ export default function WorkspacePage() {
   // Floating Panel Visibility States
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+
+
   const uid = useMemo(() => new ShortUniqueId({ length: 8 }), []);
+
+  // Build model state mappings & Run Simulation
+  const handleStartSimulation = useCallback((
+    targetClientId?: string,
+    overrideNodes?: Node[],
+    overrideEdges?: Edge[],
+    overrideConfigs?: Record<string, any>
+  ) => {
+    const activeNodes = overrideNodes || nodes;
+    const activeEdges = overrideEdges || edges;
+    const activeConfigs = overrideConfigs || nodeConfigs;
+
+    // 1. Detect Clients
+    const clientNodes = activeNodes.filter((n) => n.data.type === "client");
+    if (clientNodes.length === 0) {
+      setValidationWarning("Please add at least one Client node to the canvas.");
+      return;
+    }
+
+    const clientToRun = targetClientId
+      ? clientNodes.find((n) => n.id === targetClientId)
+      : clientNodes[0];
+
+    if (!clientToRun) {
+      setValidationWarning("Valid Client not found.");
+      return;
+    }
+
+    const clientId = clientToRun.id;
+    setValidationWarning(null);
+
+    // 2. Initialize simulation components
+    const graph = new GraphManager("dynamic-graph");
+    const registry = new NodeRegistry("dynamic-registry");
+    const ipv4Instance = new Ipv4Generator();
+    const rrStrategy = new RoundRobinStrategy();
+
+    // 3. Register nodes
+    activeNodes.forEach((n) => {
+      const type = n.data.type as ComponentType;
+      const labelStr = (n.data.label as string) || "";
+      const config = activeConfigs[n.id] || createDefaultConfig(type, n.id, labelStr);
+
+      let modelInstance: any;
+
+      switch (type) {
+        case "client":
+          modelInstance = new ClientModel(n.id, labelStr);
+          break;
+        case "load-balancer":
+          modelInstance = new LoadBalancerModel(n.id, labelStr, rrStrategy);
+          break;
+        case "server":
+          modelInstance = new ServerModel(n.id, labelStr);
+          if (typeof config.capacity === "number") {
+            modelInstance.capacity = config.capacity;
+          }
+          break;
+        case "redis":
+          modelInstance = new RedisModel(n.id, labelStr);
+          if (Array.isArray(config.data)) {
+            config.data.forEach((item: any) => {
+              if (item.key) modelInstance.addData(item.key, item.val);
+            });
+          }
+          break;
+        case "postgres":
+          modelInstance = new PostgresModel(n.id, labelStr);
+          if (Array.isArray(config.data)) {
+            config.data.forEach((item: any) => {
+              if (item.key) {
+                modelInstance.addRecord(config.table || "users", item.key, item.val);
+              }
+            });
+          }
+          break;
+        case "api-gateway":
+          modelInstance = new ApiGatewayModel(n.id, labelStr);
+          modelInstance.strategy = config.strategy || "ROUND_ROBIN";
+          if (config.routes) {
+            modelInstance.setRoutes(config.routes);
+          }
+
+          // Dynamic routing node target registration
+          const connectedServers = activeEdges
+            .filter((e) => {
+              const isSourceGateway = e.source === n.id;
+              const isTargetGateway = e.target === n.id;
+              if (isSourceGateway) {
+                const targetNode = activeNodes.find((node) => node.id === e.target);
+                return targetNode?.data.type === "server";
+              }
+              if (isTargetGateway) {
+                const sourceNode = activeNodes.find((node) => node.id === e.source);
+                return sourceNode?.data.type === "server";
+              }
+              return false;
+            })
+            .map((e) => (e.source === n.id ? e.target : e.source));
+
+          const serviceMapping = config.serviceMapping || {};
+          const serviceGroups: Record<string, string[]> = {};
+          const routesList = config.routes || {};
+          const serviceOptions = Array.from(new Set(Object.values(routesList)));
+
+          connectedServers.forEach((serverId) => {
+            const serverNode = activeNodes.find((node) => node.id === serverId);
+            const serverLabel = String(serverNode?.data.label || serverId);
+            let serviceName = serviceMapping[serverId];
+
+            if (!serviceName) {
+              const labelLower = serverLabel.toLowerCase();
+              if (labelLower.includes("user")) {
+                serviceName = "USER_SERVICE";
+              } else if (labelLower.includes("post")) {
+                serviceName = "POST_SERVICE";
+              } else {
+                serviceName = serviceOptions[0] || "DEFAULT_SERVICE";
+              }
+            }
+
+            if (serviceName !== "UNASSIGNED") {
+              if (!serviceGroups[serviceName]) {
+                serviceGroups[serviceName] = [];
+              }
+              serviceGroups[serviceName].push(serverId);
+            }
+          });
+
+          // Register service groups with gateway
+          for (const serviceName in serviceGroups) {
+            modelInstance.setServiceNodes(serviceName, serviceGroups[serviceName]);
+          }
+          break;
+        case "storage":
+          modelInstance = new StorageModel(n.id, labelStr);
+          if (Array.isArray(config.buckets)) {
+            config.buckets.forEach((b: string) => modelInstance.addBucket(b));
+          }
+          break;
+      }
+
+      if (modelInstance) {
+        graph.addNode(n.id, labelStr);
+        registry.register(n.id, modelInstance);
+      }
+    });
+
+    // 4. Register edges
+    activeEdges.forEach((edge) => {
+      const sourceNode = activeNodes.find((n) => n.id === edge.source);
+      const targetNode = activeNodes.find((n) => n.id === edge.target);
+      if (sourceNode && targetNode) {
+        graph.addEdge(edge.source, edge.target);
+        
+        // Bidirectional routing fallback for gateway -> server in graph
+        if (sourceNode.data.type === "server" && targetNode.data.type === "api-gateway") {
+          graph.addEdge(edge.target, edge.source);
+        }
+      }
+    });
+
+    // 5. Check cycles or validations
+    const hasCycle = graph.detectCycle(registry);
+    if (hasCycle) {
+      setValidationWarning("Warning: Cycle detected in graph! Simulation may behave unexpectedly or hang.");
+    }
+
+    // 6. Run sequential request queries
+    const clientLabelStr = (clientToRun.data.label as string) || "";
+    const clientConfig = activeConfigs[clientId] || createDefaultConfig("client", clientId, clientLabelStr);
+    
+    const allFrames: any[] = [];
+    
+    const clientRequests = clientConfig.requests || [
+      {
+        endpoint: clientConfig.endpoint || "/api/v1/posts",
+        lookupKey: clientConfig.lookupKey || "rohan",
+        fileName: clientConfig.fileName || "file.png",
+        isThereFileToUpload: clientConfig.isThereFileToUpload !== false,
+      }
+    ];
+
+    try {
+      for (let i = 0; i < clientRequests.length; i++) {
+        const sourceIp = ipv4Instance.getRandomIpv4();
+        const reqItem = clientRequests[i];
+
+        const payload: any = {
+          valetKeyFlow: clientConfig.valetKeyFlow,
+          lookupKey: reqItem.lookupKey,
+          fileName: reqItem.fileName,
+          isThereFileToUpload: reqItem.isThereFileToUpload,
+          endpoint: reqItem.endpoint,
+          targetBucket: reqItem.targetBucket,
+        };
+
+        const simulation = new SimulationManager(graph, registry, payload, sourceIp);
+        simulation.runSimulation(clientId);
+
+        const runFrames = (simulation.getFrames() as any[]).map((frame) => ({
+          ...frame,
+          sourceIp,
+          payloadSummary: frame.payloadSummary || `lookupKey=${reqItem.lookupKey}`,
+        }));
+
+        allFrames.push({
+          runIndex: i,
+          frames: runFrames,
+        });
+      }
+
+      setRawSimulationFrames(allFrames);
+      setFrameIndex(0);
+      setIsPlaying(true);
+    } catch (err: any) {
+      setValidationWarning(`Simulation Error: ${err.message || err}`);
+    }
+  }, [nodes, nodeConfigs, edges]);
 
   // Quick Load Template
   const loadTemplate = useCallback((templateKey: keyof typeof TEMPLATES) => {
@@ -702,26 +924,29 @@ export default function WorkspacePage() {
     // Choose connection colors dynamically based on theme (handled in animatedEdges)
     const defaultInactiveStroke = "#475569";
 
-    setNodes(
-      template.nodes.map((n) => ({
-        ...n,
-        style: {
-          borderRadius: "8px",
-        },
-      }))
-    );
-    setEdges(
-      template.edges.map((e) => ({
-        ...e,
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#60a5fa" },
-        style: { stroke: defaultInactiveStroke, strokeWidth: 1.8 },
-      }))
-    );
+    const templateNodes = template.nodes.map((n) => ({
+      ...n,
+      style: {
+        borderRadius: "8px",
+      },
+    }));
+    setNodes(templateNodes);
+
+    const templateEdges = template.edges.map((e) => ({
+      ...e,
+      markerEnd: { type: MarkerType.ArrowClosed, color: "#60a5fa" },
+      style: { stroke: defaultInactiveStroke, strokeWidth: 1.8 },
+    }));
+    setEdges(templateEdges);
 
     // Seed configurations
     const configs: Record<string, any> = {};
     template.nodes.forEach((n) => {
-      configs[n.id] = createDefaultConfig(n.data.type as ComponentType, n.id, n.data.label);
+      const defaultConfig = createDefaultConfig(n.data.type as ComponentType, n.id, n.data.label);
+      if (templateKey === "valetKey" && n.data.type === "client") {
+        defaultConfig.valetKeyFlow = true;
+      }
+      configs[n.id] = defaultConfig;
     });
     setNodeConfigs(configs);
 
@@ -731,7 +956,10 @@ export default function WorkspacePage() {
     setFrameIndex(0);
     setValidationWarning(null);
     setSelectedNodeId(null);
-  }, [setNodes, setEdges]);
+
+    // Synchronously start simulation for the loaded template
+    handleStartSimulation("client-1", templateNodes, templateEdges, configs);
+  }, [setNodes, setEdges, handleStartSimulation]);
 
   // Load default template once on mount only!
   useEffect(() => {
@@ -799,215 +1027,6 @@ export default function WorkspacePage() {
         ...updatedFields,
       },
     }));
-  };
-
-  // Build model state mappings & Run Simulation
-  const handleStartSimulation = (targetClientId?: string) => {
-    // 1. Detect Clients
-    const clientNodes = nodes.filter((n) => n.data.type === "client");
-    if (clientNodes.length === 0) {
-      setValidationWarning("Please add at least one Client node to the canvas.");
-      return;
-    }
-
-    const clientToRun = targetClientId
-      ? clientNodes.find((n) => n.id === targetClientId)
-      : clientNodes[0];
-
-    if (!clientToRun) {
-      setValidationWarning("Valid Client not found.");
-      return;
-    }
-
-    const clientId = clientToRun.id;
-    setValidationWarning(null);
-
-    // 2. Initialize simulation components
-    const graph = new GraphManager("dynamic-graph");
-    const registry = new NodeRegistry("dynamic-registry");
-    const ipv4Instance = new Ipv4Generator();
-    const rrStrategy = new RoundRobinStrategy();
-
-    // 3. Register nodes
-    nodes.forEach((n) => {
-      const type = n.data.type as ComponentType;
-      const labelStr = (n.data.label as string) || "";
-      const config = nodeConfigs[n.id] || createDefaultConfig(type, n.id, labelStr);
-
-      let modelInstance: any;
-
-      switch (type) {
-        case "client":
-          modelInstance = new ClientModel(n.id, labelStr);
-          break;
-        case "load-balancer":
-          modelInstance = new LoadBalancerModel(n.id, labelStr, rrStrategy);
-          break;
-        case "server":
-          modelInstance = new ServerModel(n.id, labelStr);
-          if (typeof config.capacity === "number") {
-            modelInstance.capacity = config.capacity;
-          }
-          break;
-        case "redis":
-          modelInstance = new RedisModel(n.id, labelStr);
-          if (Array.isArray(config.data)) {
-            config.data.forEach((item: any) => {
-              if (item.key) modelInstance.addData(item.key, item.val);
-            });
-          }
-          break;
-        case "postgres":
-          modelInstance = new PostgresModel(n.id, labelStr);
-          if (Array.isArray(config.data)) {
-            config.data.forEach((item: any) => {
-              if (item.key) {
-                modelInstance.addRecord(config.table || "users", item.key, item.val);
-              }
-            });
-          }
-          break;
-        case "api-gateway":
-          modelInstance = new ApiGatewayModel(n.id, labelStr);
-          modelInstance.strategy = config.strategy || "ROUND_ROBIN";
-          if (config.routes) {
-            modelInstance.setRoutes(config.routes);
-          }
-
-          // Dynamic routing node target registration
-          const connectedServers = edges
-            .filter((e) => {
-              const isSourceGateway = e.source === n.id;
-              const isTargetGateway = e.target === n.id;
-              if (isSourceGateway) {
-                const targetNode = nodes.find((node) => node.id === e.target);
-                return targetNode?.data.type === "server";
-              }
-              if (isTargetGateway) {
-                const sourceNode = nodes.find((node) => node.id === e.source);
-                return sourceNode?.data.type === "server";
-              }
-              return false;
-            })
-            .map((e) => (e.source === n.id ? e.target : e.source));
-
-          const serviceMapping = config.serviceMapping || {};
-          const serviceGroups: Record<string, string[]> = {};
-          const routesList = config.routes || {};
-          const serviceOptions = Array.from(new Set(Object.values(routesList)));
-
-          connectedServers.forEach((serverId) => {
-            const serverNode = nodes.find((node) => node.id === serverId);
-            const serverLabel = String(serverNode?.data.label || serverId);
-            let serviceName = serviceMapping[serverId];
-
-            if (!serviceName) {
-              const labelLower = serverLabel.toLowerCase();
-              if (labelLower.includes("user")) {
-                serviceName = "USER_SERVICE";
-              } else if (labelLower.includes("post")) {
-                serviceName = "POST_SERVICE";
-              } else {
-                serviceName = serviceOptions[0] || "DEFAULT_SERVICE";
-              }
-            }
-
-            if (serviceName !== "UNASSIGNED") {
-              if (!serviceGroups[serviceName]) {
-                serviceGroups[serviceName] = [];
-              }
-              serviceGroups[serviceName].push(serverId);
-            }
-          });
-
-          // Register service groups with gateway
-          for (const serviceName in serviceGroups) {
-            modelInstance.setServiceNodes(serviceName, serviceGroups[serviceName]);
-          }
-          break;
-        case "storage":
-          modelInstance = new StorageModel(n.id, labelStr);
-          if (Array.isArray(config.buckets)) {
-            config.buckets.forEach((b: string) => modelInstance.addBucket(b));
-          }
-          break;
-      }
-
-      if (modelInstance) {
-        graph.addNode(n.id, labelStr);
-        registry.register(n.id, modelInstance);
-      }
-    });
-
-    // 4. Register edges
-    edges.forEach((edge) => {
-      const sourceNode = nodes.find((n) => n.id === edge.source);
-      const targetNode = nodes.find((n) => n.id === edge.target);
-      if (sourceNode && targetNode) {
-        graph.addEdge(edge.source, edge.target);
-        
-        // Bidirectional routing fallback for gateway -> server in graph
-        if (sourceNode.data.type === "server" && targetNode.data.type === "api-gateway") {
-          graph.addEdge(edge.target, edge.source);
-        }
-      }
-    });
-
-    // 5. Check cycles or validations
-    const hasCycle = graph.detectCycle(registry);
-    if (hasCycle) {
-      setValidationWarning("Warning: Cycle detected in graph! Simulation may behave unexpectedly or hang.");
-    }
-
-    // 6. Run sequential request queries
-    const clientLabelStr = (clientToRun.data.label as string) || "";
-    const clientConfig = nodeConfigs[clientId] || createDefaultConfig("client", clientId, clientLabelStr);
-    
-    const allFrames: any[] = [];
-    
-    const clientRequests = clientConfig.requests || [
-      {
-        endpoint: clientConfig.endpoint || "/api/v1/posts",
-        lookupKey: clientConfig.lookupKey || "rohan",
-        fileName: clientConfig.fileName || "file.png",
-        isThereFileToUpload: clientConfig.isThereFileToUpload !== false,
-      }
-    ];
-
-    try {
-      for (let i = 0; i < clientRequests.length; i++) {
-        const sourceIp = ipv4Instance.getRandomIpv4();
-        const reqItem = clientRequests[i];
-
-        const payload: any = {
-          valetKeyFlow: clientConfig.valetKeyFlow,
-          lookupKey: reqItem.lookupKey,
-          fileName: reqItem.fileName,
-          isThereFileToUpload: reqItem.isThereFileToUpload,
-          endpoint: reqItem.endpoint,
-        };
-
-        const simulation = new SimulationManager(graph, registry, payload, sourceIp);
-        simulation.runSimulation(clientId);
-
-        const runFrames = (simulation.getFrames() as any[]).map((frame) => ({
-          ...frame,
-          sourceIp,
-          payloadSummary: frame.payloadSummary || `lookupKey=${reqItem.lookupKey}`,
-        }));
-
-        allFrames.push({
-          runIndex: i,
-          frames: runFrames,
-        });
-      }
-
-      setRawSimulationFrames(allFrames);
-      setFrameIndex(0);
-      setIsPlaying(true);
-    } catch (err: any) {
-      setValidationWarning(`Simulation Error: ${err.message || err}`);
-    }
   };
 
   // Dynamically calculate and sort frames based on parallelResponse and hideResponse states!
@@ -1078,6 +1097,65 @@ export default function WorkspacePage() {
     }
     return acc;
   }, [frameGroups, frameIndex]);
+
+  // Dynamically calculate storage files at the current frame index!
+  const storageFilesByBucket = useMemo(() => {
+    const filesMap: Record<string, Record<string, Array<{ name: string; info: any }>>> = {};
+
+    // 1. Initialize empty buckets for all storage nodes
+    nodes.forEach((n) => {
+      if (n.data.type === "storage") {
+        const config = nodeConfigs[n.id] || {};
+        const buckets = config.buckets || ["media-uploads"];
+        const filesByBucket: Record<string, Array<{ name: string; info: any }>> = {};
+        buckets.forEach((b: string) => {
+          filesByBucket[b] = [];
+        });
+        filesMap[n.id] = filesByBucket;
+      }
+    });
+
+    // 2. Replay all accumulated frames to add files at their actual trigger timestamps
+    accumulatedFrames.forEach((frame) => {
+      // Find if this frame involves a storage node
+      const fromNode = nodes.find((n) => n.id === frame.from);
+      const toNode = nodes.find((n) => n.id === frame.to);
+
+      let storageId: string | null = null;
+      if (fromNode?.data.type === "storage") {
+        storageId = fromNode.id;
+      } else if (toNode?.data.type === "storage") {
+        storageId = toNode.id;
+      }
+
+      if (storageId && frame.storageBucket && frame.storageFileName) {
+        const bucketMap = filesMap[storageId];
+        if (bucketMap) {
+          // Ensure the bucket list exists
+          if (!bucketMap[frame.storageBucket]) {
+            bucketMap[frame.storageBucket] = [];
+          }
+
+          // Check if file is already added in this bucket for this storage node
+          const fileExists = bucketMap[frame.storageBucket].some(
+            (f) => f.name === frame.storageFileName
+          );
+
+          if (!fileExists) {
+            bucketMap[frame.storageBucket].push({
+              name: frame.storageFileName,
+              info: {
+                sourceIp: frame.sourceIp,
+                requestId: frame.requestId,
+              },
+            });
+          }
+        }
+      }
+    });
+
+    return filesMap;
+  }, [nodes, nodeConfigs, accumulatedFrames]);
 
   // Playback timer loop
   useEffect(() => {
@@ -1196,7 +1274,7 @@ export default function WorkspacePage() {
         handleStartSimulation(node.id);
       }
     },
-    [nodes, nodeConfigs, edges, parallelResponse, hideResponse]
+    [handleStartSimulation]
   );
 
   // Playback control helpers
@@ -1530,19 +1608,35 @@ export default function WorkspacePage() {
                               </div>
                             </div>
                           ) : (
-                            <div className="space-y-1">
-                              <div>
-                                <label className="text-[8px] text-[color:var(--foreground)]/50 block">Upload File</label>
-                                <input
-                                  type="text"
-                                  value={req.fileName}
-                                  onChange={(e) => {
-                                    const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
-                                    currentRequests[idx].fileName = e.target.value;
-                                    updateNodeConfig(selectedNode.id, { requests: currentRequests });
-                                  }}
-                                  className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500"
-                                />
+                            <div className="space-y-1.5">
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <div>
+                                  <label className="text-[8px] text-[color:var(--foreground)]/50 block">Upload File</label>
+                                  <input
+                                    type="text"
+                                    value={req.fileName}
+                                    onChange={(e) => {
+                                      const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
+                                      currentRequests[idx].fileName = e.target.value;
+                                      updateNodeConfig(selectedNode.id, { requests: currentRequests });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[8px] text-[color:var(--foreground)]/50 block">Target Bucket</label>
+                                  <input
+                                    type="text"
+                                    value={req.targetBucket || "media-uploads"}
+                                    onChange={(e) => {
+                                      const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
+                                      currentRequests[idx].targetBucket = e.target.value;
+                                      updateNodeConfig(selectedNode.id, { requests: currentRequests });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500"
+                                    placeholder="media-uploads"
+                                  />
+                                </div>
                               </div>
                               <label className="flex items-center gap-1 text-[9px] text-[color:var(--foreground)]/80 cursor-pointer">
                                 <input
@@ -1571,6 +1665,7 @@ export default function WorkspacePage() {
                             lookupKey: nodeConfigs[selectedNode.id]?.lookupKey || "rohan",
                             fileName: nodeConfigs[selectedNode.id]?.fileName || "file.png",
                             isThereFileToUpload: nodeConfigs[selectedNode.id]?.isThereFileToUpload !== false,
+                            targetBucket: nodeConfigs[selectedNode.id]?.targetBucket || "media-uploads",
                           }
                         ];
                         const nextRequests = [
@@ -1580,6 +1675,7 @@ export default function WorkspacePage() {
                             lookupKey: `key-${currentRequests.length + 1}`,
                             fileName: `file-${currentRequests.length + 1}.png`,
                             isThereFileToUpload: true,
+                            targetBucket: "media-uploads",
                           }
                         ];
                         updateNodeConfig(selectedNode.id, { requests: nextRequests });
@@ -1929,23 +2025,115 @@ export default function WorkspacePage() {
 
               {/* Storage bucket configuration */}
               {selectedNode.data.type === "storage" && (
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold text-yellow-400 font-mono">Storage Buckets</p>
-                  <div className="space-y-1">
-                    {nodeConfigs[selectedNode.id]?.buckets?.map((b: string, idx: number) => (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-yellow-400 font-mono">Storage Buckets</p>
+                    <button
+                      onClick={() => {
+                        const currentBuckets = nodeConfigs[selectedNode.id]?.buckets || ["media-uploads"];
+                        const nextBuckets = [...currentBuckets, `bucket-${currentBuckets.length + 1}`];
+                        updateNodeConfig(selectedNode.id, { buckets: nextBuckets });
+                      }}
+                      className="rounded bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 px-2 py-1 text-[10px] font-bold transition cursor-pointer"
+                    >
+                      + Add Bucket
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
+                    {(nodeConfigs[selectedNode.id]?.buckets || ["media-uploads"]).map((b: string, idx: number) => (
                       <div key={idx} className="flex gap-2 items-center">
                         <input
                           type="text"
                           value={b}
                           onChange={(e) => {
-                            const nextList = [...nodeConfigs[selectedNode.id].buckets];
+                            const nextList = [...(nodeConfigs[selectedNode.id]?.buckets || ["media-uploads"])];
                             nextList[idx] = e.target.value;
                             updateNodeConfig(selectedNode.id, { buckets: nextList });
                           }}
-                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none font-mono"
+                          className="flex-1 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none font-mono focus:border-yellow-500"
                         />
+                        <button
+                          onClick={() => {
+                            const currentBuckets = nodeConfigs[selectedNode.id]?.buckets || ["media-uploads"];
+                            if (currentBuckets.length <= 1) return;
+                            const nextBuckets = currentBuckets.filter((_: any, i: number) => i !== idx);
+                            updateNodeConfig(selectedNode.id, { buckets: nextBuckets });
+                          }}
+                          className="text-rose-500 hover:text-rose-600 text-xs font-bold px-2 cursor-pointer"
+                          title="Delete Bucket"
+                        >
+                          ×
+                        </button>
                       </div>
                     ))}
+                  </div>
+
+                  <div className="h-px bg-[var(--border)]/70" />
+
+                  {/* Uploaded Files Section */}
+                  <div>
+                    <p className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 mb-2">
+                      Live Uploaded Files
+                    </p>
+                    {(() => {
+                      const filesMap = storageFilesByBucket[selectedNode.id] || {};
+                      const buckets = nodeConfigs[selectedNode.id]?.buckets || ["media-uploads"];
+                      const allFiles = Object.values(filesMap).flat();
+
+                      if (allFiles.length === 0) {
+                        return (
+                          <div className="text-xs text-[color:var(--foreground)]/50 italic bg-[var(--surface)]/30 rounded-lg p-3 border border-[var(--border)]/50">
+                            No files uploaded. Run client simulation to upload.
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-3 max-h-60 overflow-y-auto pr-1 scrollbar-thin">
+                          {buckets.map((bucketName: string) => {
+                            const filesInBucket = filesMap[bucketName] || [];
+                            return (
+                              <div key={bucketName} className="border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50 space-y-1.5">
+                                <div className="flex items-center justify-between border-b border-[var(--border)]/45 pb-1">
+                                  <span className="text-[10px] font-bold text-yellow-500 font-mono">
+                                    📁 {bucketName}
+                                  </span>
+                                  <span className="text-[9px] text-[color:var(--foreground)]/55 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-semibold">
+                                    {filesInBucket.length} file{filesInBucket.length !== 1 ? "s" : ""}
+                                  </span>
+                                </div>
+
+                                {filesInBucket.length === 0 ? (
+                                  <p className="text-[10px] italic text-[color:var(--foreground)]/45">Empty bucket</p>
+                                ) : (
+                                  <div className="space-y-1">
+                                    {filesInBucket.map((fileObj: any, fileIdx: number) => {
+                                      const fileName = typeof fileObj === "string" ? fileObj : fileObj.name;
+                                      const info = typeof fileObj === "string" ? null : fileObj.info;
+
+                                      return (
+                                        <div key={fileIdx} className="text-[11px] bg-[var(--surface)] p-1.5 rounded border border-[var(--border)]/35 font-mono flex flex-col gap-0.5">
+                                          <div className="flex justify-between items-center text-xs font-semibold text-[color:var(--foreground)]/80">
+                                            <span>📄 {fileName}</span>
+                                          </div>
+                                          {info && (
+                                            <div className="text-[9px] text-[color:var(--foreground)]/50 mt-0.5 flex flex-col gap-0.5 border-t border-[var(--border)]/20 pt-1">
+                                              {info.sourceIp && <span>IP: {info.sourceIp}</span>}
+                                              {info.requestId && <span className="truncate">Req: {info.requestId}</span>}
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
