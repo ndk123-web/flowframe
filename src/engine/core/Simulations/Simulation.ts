@@ -123,6 +123,9 @@ class SimulationManager {
         if (request?.context?.dbMiss) {
           return "SERVER_RESPONSE_ERROR";
         }
+        if (request?.context?.valetKeyFlow) {
+          return "SERVER_RETURN_VALET_KEY";
+        }
         return "SERVER_SEND_RESPONSE";
       case "LOAD_BALANCER":
         return "LOAD_BALANCER_SEND_RESPONSE";
@@ -131,6 +134,12 @@ class SimulationManager {
       case "POSTGRES":
         return "POSTGRES_RETURN_DATA";
       case "STORAGE":
+        if (request?.context?.valetKeyFlow) {
+          if (request?.context?.uploadCompleted) {
+            return "STORAGE_UPLOAD_SUCCESS";
+          }
+          return "STORAGE_REJECT_MISSING_VALET_KEY";
+        }
         return "STORAGE_RETURN_URL";
       default:
         return "RESPONSE_BACKTRACK";
@@ -190,6 +199,11 @@ class SimulationManager {
       this.payloadForRequest.fileName.length > 0
         ? this.payloadForRequest.fileName
         : "upload.bin";
+    request.context.targetBucket =
+      typeof this.payloadForRequest?.targetBucket === "string" &&
+      this.payloadForRequest.targetBucket.length > 0
+        ? this.payloadForRequest.targetBucket
+        : "media-uploads";
      
     // set the traversal path to the current node id 
     const traversalPath: NodeId[] = [currentNodeId];
@@ -205,26 +219,46 @@ class SimulationManager {
       // if request is backward and the traversal path is less than 2, then break the loop because we can't go backward anymore
       // minimum must be 2 because we need to have at least 2 nodes in the traversal path to go backward 
       if (request.direction === "backward") {
+        if (
+          request.context.valetKeyFlow &&
+          traversalPath.length === 1 &&
+          this.getNodeKind(currentNodeId) === "CLIENT" &&
+          request.context.signedUrlIssued &&
+          !request.context.uploadCompleted
+        ) {
+          request.direction = "forward";
+          continue;
+        }
+
         if (traversalPath.length < 2) {
           break;
         }
         
-        // if request is backward and the traversal path is greater than 2, then 
         const responseFrom = traversalPath[traversalPath.length - 1];
         const responseTo = traversalPath[traversalPath.length - 2];
 
-        // push the frame to the frames array 
+        const extraPayload: Partial<Frame> = {};
+        const kind = this.getNodeKind(responseFrom);
+        if (kind === "SERVER" || kind === "STORAGE") {
+          extraPayload.payloadSummary = request.context.responsePayloadSummary;
+          extraPayload.signedUrl = typeof request.context.signedUrl === "string" ? request.context.signedUrl : undefined;
+          
+          if (kind === "STORAGE" && request.context.uploadCompleted) {
+            extraPayload.storageBucket = request.context.targetBucket || "media-uploads";
+            extraPayload.storageFileName = request.context.fileName;
+          }
+        }
+
         this.pushFrame(
           request,
           responseFrom,
           responseTo,
           this.getResponseAction(responseFrom, request),
+          extraPayload,
         );
         
-        // pop the last node because we have processed the last node in the traversal path
         traversalPath.pop();
 
-        // set the current node id to the last node in the traversal path
         currentNodeId = responseTo;
         continue;
       }
@@ -233,7 +267,6 @@ class SimulationManager {
       if (!nodeInstance) {
         break;
       }
-
 
       // get the next nodes from the graph manager
       const nextNodes = this.graph.getNextNodes(currentNodeId);
@@ -252,16 +285,17 @@ class SimulationManager {
           // 1) first hop -> Server for signed URL
           // 2) second hop -> Storage using signed URL
           if (request.context.valetKeyFlow) {
-            const serverNodeId = nextNodes.find(
-              (nodeId) => this.getNodeKind(nodeId) === "SERVER",
-            );
+            const entrypointNodeId = nextNodes.find((nodeId) => {
+              const kind = this.getNodeKind(nodeId);
+              return kind === "SERVER" || kind === "LOAD_BALANCER" || kind === "API_GATEWAY";
+            });
             const storageNodeId = nextNodes.find(
               (nodeId) => this.getNodeKind(nodeId) === "STORAGE",
             );
 
             const shouldRequestSignedUrl = !request.context.signedUrlIssued;
             const targetNodeId = shouldRequestSignedUrl
-              ? serverNodeId
+              ? entrypointNodeId
               : storageNodeId;
 
             if (!targetNodeId) {
@@ -367,19 +401,6 @@ class SimulationManager {
           // Valet-key server behavior:
           // Server generates signed URL and returns it to previous Client.
           if (request.context.valetKeyFlow) {
-            if (traversalPath.length < 2) {
-              request.direction = "backward";
-              break;
-            }
-
-            const previousNodeId = traversalPath[traversalPath.length - 2];
-            const previousNodeKind = this.getNodeKind(previousNodeId);
-
-            if (previousNodeKind !== "CLIENT") {
-              request.direction = "backward";
-              break;
-            }
-
             const fileName = String(request.context.fileName ?? "upload.bin");
             const signedUrl =
               `https://storage.example/upload/${fileName}` +
@@ -387,22 +408,9 @@ class SimulationManager {
 
             request.context.signedUrl = signedUrl;
             request.context.signedUrlIssued = true;
+            request.context.responsePayloadSummary = `ttl=120s file=${fileName}`;
 
-            this.pushFrame(
-              request,
-              currentNodeId,
-              previousNodeId,
-              "SERVER_RETURN_VALET_KEY",
-              {
-                signedUrl,
-                payloadSummary: `ttl=120s file=${fileName}`,
-              },
-            );
-
-            traversalPath.pop();
-            request.currentNodeId = previousNodeId;
-            currentNodeId = previousNodeId;
-            request.direction = "forward";
+            request.direction = "backward";
             break;
           }
 
@@ -613,61 +621,36 @@ class SimulationManager {
           // Valet-key storage behavior:
           // Storage receives direct upload from Client and confirms upload.
           if (request.context.valetKeyFlow) {
-            if (traversalPath.length < 2) {
-              return;
-            }
-
             const storageInstance = nodeInstance as StorageModel;
-            const previousNodeId = traversalPath[traversalPath.length - 2];
             const fileName = String(request.context.fileName ?? "upload.bin");
+            const bucketsList = Array.from(storageInstance.data.keys());
+            const targetBucket = request.context.targetBucket || bucketsList[0] || "media-uploads";
 
-            if (!request.context.signedUrlIssued) {
-              this.pushFrame(
-                request,
-                currentNodeId,
-                previousNodeId,
-                "STORAGE_REJECT_MISSING_VALET_KEY",
-                {
-                  payloadSummary: `file=${fileName}`,
-                },
-              );
-            } else {
+            if (request.context.signedUrlIssued) {
               storageInstance.addFileIntoBucket(
-                "media-uploads",
+                targetBucket,
                 fileName,
                 {
                   requestId: request.id,
                   sourceIp: request.ipAddress,
                 },
               );
-
-              this.pushFrame(
-                request,
-                currentNodeId,
-                previousNodeId,
-                "STORAGE_UPLOAD_SUCCESS",
-                {
-                  signedUrl:
-                    typeof request.context.signedUrl === "string"
-                      ? request.context.signedUrl
-                      : undefined,
-                  payloadSummary: `uploaded file=${fileName} at signedUrl=${request.context.signedUrl ?? "missing"}`,
-                },
-              );
               request.context.uploadCompleted = true;
+              request.context.responsePayloadSummary = `uploaded file=${fileName} at signedUrl=${request.context.signedUrl ?? "missing"} bucket=${targetBucket}`;
+            } else {
+              request.context.responsePayloadSummary = `file=${fileName} bucket=${targetBucket}`;
             }
 
             request.direction = "backward";
-            traversalPath.pop();
-            request.currentNodeId = previousNodeId;
-            currentNodeId = previousNodeId;
             break;
           }
           
           const storageInstance = nodeInstance as StorageModel;
+          const file = request.context.isThereFileToUpload ? (request.context.filesToUpload?.[0] || request.context.fileName) : undefined;
           
-          const file = request.context.isThereFileToUpload ? request.context.filesToUpload?.[0] : undefined;
-          
+          const bucketsList = Array.from(storageInstance.data.keys());
+          const targetBucket = request.context.targetBucket || bucketsList[0] || "media-uploads";
+
           if (file === undefined) {
             this.pushFrame(
               request,
@@ -679,7 +662,7 @@ class SimulationManager {
             break;
           }
 
-          const signedUrl: string = storageInstance.addFileIntoBucket("media-uploads", file, "file-content-placeholder");
+          const signedUrl: string = storageInstance.addFileIntoBucket(targetBucket, file, "file-content-placeholder");
           
           // send the signed url back to client and then client will use that signed url to upload the file directly to storage
           this.pushFrame(
@@ -689,6 +672,8 @@ class SimulationManager {
             "STORAGE_RETURN_SIGNED_URL",
             {
               signedUrl,
+              storageBucket: targetBucket,
+              storageFileName: typeof file === "string" ? file : "upload.bin"
             }
           )
 

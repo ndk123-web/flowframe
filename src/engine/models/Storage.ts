@@ -34,8 +34,11 @@ class StorageModel implements NodeInstance {
      * @returns true if file is added successfully, false otherwise
      */
     addFileIntoBucket(bucketName: string, fileName: string, fileContent: any): string {
-        const bucket = this.data.get(bucketName) || {};
-        bucket[fileName] = fileContent || fileName
+        if (!this.data.has(bucketName)) {
+            this.data.set(bucketName, {});
+        }
+        const bucket = this.data.get(bucketName)!;
+        bucket[fileName] = fileContent || fileName;
         
         const signedUrl = `https://storage.example/upload/${fileName}?token=signed-url-for-${fileName}`;
         return signedUrl;
