@@ -32,6 +32,8 @@ import RedisModel from "@/engine/models/Redis";
 import PostgresModel from "@/engine/models/Postgres";
 import ApiGatewayModel from "@/engine/models/ApiGateway";
 import StorageModel from "@/engine/models/Storage";
+import DnsModel from "@/engine/models/Dns";
+import CdnModel from "@/engine/models/Cdn";
 import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
 import Ipv4Generator from "@/utils/generateRandomIp";
 import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
@@ -49,7 +51,9 @@ type ComponentType =
   | "server"
   | "redis"
   | "postgres"
-  | "storage";
+  | "storage"
+  | "dns"
+  | "cdn";
 
 interface ComponentMetadata {
   type: ComponentType;
@@ -66,6 +70,20 @@ const COMPONENTS_LIBRARY: ComponentMetadata[] = [
     icon: "💻",
     description: "Generates requests (GET/POST/uploads) to route through the network.",
     colorClass: "border-l-violet-500 shadow-violet-500/10 text-violet-400",
+  },
+  {
+    type: "dns",
+    label: "DNS Server",
+    icon: "🌐",
+    description: "Resolves domain names (like ndkdev.me) to target node IDs or IP addresses.",
+    colorClass: "border-l-indigo-500 shadow-indigo-500/10 text-indigo-400",
+  },
+  {
+    type: "cdn",
+    label: "CDN Server",
+    icon: "🌍",
+    description: "Distributed edge server that caches files near users to speed up asset delivery.",
+    colorClass: "border-l-teal-500 shadow-teal-500/10 text-teal-400",
   },
   {
     type: "api-gateway",
@@ -215,6 +233,19 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
       return {
         buckets: ["media-uploads"],
       };
+    case "dns":
+      return {
+        domains: {
+          "ndkdev.me": {
+            "www": { to: "", ip: "192.168.1.1", typeOfRecord: "A" }
+          }
+        }
+      };
+    case "cdn":
+      return {
+        originId: "",
+        cache: [],
+      };
     default:
       return {};
   }
@@ -230,6 +261,8 @@ function CustomNode({ id, data, selected }: any) {
     redis: "border-l-amber-500 shadow-amber-500/10",
     postgres: "border-l-cyan-500 shadow-cyan-500/10",
     storage: "border-l-yellow-500 shadow-yellow-500/10",
+    dns: "border-l-indigo-500 shadow-indigo-500/10",
+    cdn: "border-l-teal-500 shadow-teal-500/10",
   };
 
   const icons: any = {
@@ -240,6 +273,8 @@ function CustomNode({ id, data, selected }: any) {
     redis: "💾",
     postgres: "🗄️",
     storage: "☁️",
+    dns: "🌐",
+    cdn: "🌍",
   };
 
   const colorClass = typeColors[data.type] || "border-l-slate-400";
@@ -693,8 +728,99 @@ export default function WorkspacePage() {
 
   // Floating Panel Visibility States
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(true);
 
+  // Redesigned Sidebar Accordions & Search states
+  const [isTemplatesExpanded, setIsTemplatesExpanded] = useState(true);
+  const [isComponentsExpanded, setIsComponentsExpanded] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
+  // Movable / Resizable / Mobile sidebar states
+  const [isSidebarFloating, setIsSidebarFloating] = useState(false);
+  const [sidebarPosition, setSidebarPosition] = useState({ x: 16, y: 16 });
+  const [sidebarWidth, setSidebarWidth] = useState(288);
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+  const [isDraggingSidebar, setIsDraggingSidebar] = useState(false);
+  const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
+
+  // Hover popover states to avoid overflow clip
+  const [hoveredComponent, setHoveredComponent] = useState<ComponentMetadata | null>(null);
+  const [hoverTooltipX, setHoverTooltipX] = useState(0);
+  const [hoverTooltipY, setHoverTooltipY] = useState(0);
+
+  const dragStartOffset = useRef({ x: 0, y: 0 });
+
+  const handleHeaderMouseDown = (e: React.MouseEvent) => {
+    if (!isSidebarFloating) return;
+    if ((e.target as HTMLElement).closest("button, input, select")) return;
+
+    setIsDraggingSidebar(true);
+    dragStartOffset.current = {
+      x: e.clientX - sidebarPosition.x,
+      y: e.clientY - sidebarPosition.y,
+    };
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    if (!isDraggingSidebar) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newX = e.clientX - dragStartOffset.current.x;
+      const newY = e.clientY - dragStartOffset.current.y;
+      
+      const maxX = window.innerWidth - 300;
+      const maxY = window.innerHeight - 200;
+
+      setSidebarPosition({
+        x: Math.max(10, Math.min(newX, maxX)),
+        y: Math.max(10, Math.min(newY, maxY)),
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingSidebar(false);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDraggingSidebar]);
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingSidebar(true);
+  };
+
+  useEffect(() => {
+    if (!isResizingSidebar) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = e.clientX;
+      setSidebarWidth(Math.max(240, Math.min(newWidth, 480)));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingSidebar(false);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizingSidebar]);
+
+  const filteredComponents = useMemo(() => {
+    return COMPONENTS_LIBRARY.filter((item) =>
+      item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.type.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery]);
 
   const uid = useMemo(() => new ShortUniqueId({ length: 8 }), []);
 
@@ -837,6 +963,36 @@ export default function WorkspacePage() {
             config.buckets.forEach((b: string) => modelInstance.addBucket(b));
           }
           break;
+        case "dns":
+          modelInstance = new DnsModel(n.id, labelStr);
+          if (config.domains) {
+            Object.entries(config.domains).forEach(([domain, subdomains]: [string, any]) => {
+              modelInstance.addDomain(domain);
+              if (subdomains && typeof subdomains === "object") {
+                Object.entries(subdomains).forEach(([sub, subData]: [string, any]) => {
+                  if (subData && typeof subData === "object") {
+                    modelInstance.addSubDomain(
+                      domain,
+                      sub,
+                      subData.to || "",
+                      subData.ip || "",
+                      subData.typeOfRecord || "A"
+                    );
+                  }
+                });
+              }
+            });
+          }
+          break;
+        case "cdn":
+          modelInstance = new CdnModel(n.id, labelStr);
+          if (config.originId) {
+            modelInstance.setOriginId(config.originId);
+          }
+          if (Array.isArray(config.cache)) {
+            config.cache.forEach((item: string) => modelInstance.cacheData(item));
+          }
+          break;
       }
 
       if (modelInstance) {
@@ -961,9 +1117,9 @@ export default function WorkspacePage() {
     handleStartSimulation("client-1", templateNodes, templateEdges, configs);
   }, [setNodes, setEdges, handleStartSimulation]);
 
-  // Load default template once on mount only!
+  // Open template selection picker modal on load
   useEffect(() => {
-    loadTemplate("cacheAside");
+    setShowWelcomeModal(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1347,149 +1503,267 @@ export default function WorkspacePage() {
         alwaysGlass={true}
       />
 
-      {/* Modern Full-Screen Canvas Workspace with Floating UI Panels */}
-      <div className="flex-1 w-full min-h-0 relative overflow-hidden" data-resizable-container>
-        
-        {/* Full-Screen React Flow Canvas */}
-        <div className="absolute inset-0 z-0 h-full w-full">
-          <ReactFlow
-            nodes={styledNodes}
-            edges={animatedEdges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            nodeTypes={nodeTypes}
-            edgeTypes={edgeTypes}
-            onNodeClick={onNodeClick}
-            fitView
-            fitViewOptions={{ padding: 0.15 }}
-            style={{ width: "100%", height: "100%" }}
-          >
-            <Background variant={BackgroundVariant.Dots} gap={16} size={0.7} color="rgba(148,163,184,0.15)" />
-          </ReactFlow>
-        </div>
+      {/* Modern Full-Screen Canvas Workspace with Side-by-Side Shapes Sidebar */}
+      <div className="flex-1 w-full min-h-0 flex flex-row relative overflow-hidden" data-resizable-container>
 
-        {/* Floating Warning Message */}
-        {validationWarning && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4">
-            <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 backdrop-blur-xl px-4 py-3 text-xs text-amber-300 flex items-center justify-between shadow-lg">
-              <span>⚠️ {validationWarning}</span>
-              <button onClick={() => setValidationWarning(null)} className="text-amber-400 font-bold ml-2 text-base hover:text-amber-300">×</button>
+        {/* Draw.io / Miro-Style Left Shapes Sidebar */}
+        <aside
+          className={`flex flex-col z-10 shrink-0 h-full overflow-hidden transition-all duration-300 relative border-r border-[var(--border)] bg-[var(--surface)] ${
+            isSidebarFloating 
+              ? "absolute rounded-2xl shadow-2xl border" 
+              : "relative"
+          } ${
+            "max-md:fixed max-md:top-0 max-md:left-0 max-md:z-30 max-md:w-72 max-md:h-full max-md:shadow-2xl max-md:transition-transform max-md:duration-300"
+          } ${
+            isSidebarOpenMobile ? "max-md:translate-x-0" : "max-md:-translate-x-full"
+          }`}
+          style={{
+            width: isSidebarFloating ? 288 : sidebarWidth,
+            left: isSidebarFloating ? sidebarPosition.x : undefined,
+            top: isSidebarFloating ? sidebarPosition.y : undefined,
+            height: isSidebarFloating ? "calc(100vh - 160px)" : "100%",
+          }}
+        >
+          {/* Resize Handle (only active in docked mode on desktop) */}
+          {!isSidebarFloating && (
+            <div
+              onMouseDown={handleResizeMouseDown}
+              className="absolute right-0 top-0 bottom-0 w-1 hover:w-2 bg-transparent hover:bg-violet-500/30 cursor-col-resize transition-all z-20 max-md:hidden"
+            />
+          )}
+
+          {/* Sidebar Title & Search Shape */}
+          <div 
+            className={`p-3 border-b border-[var(--border)] flex flex-col gap-2 shrink-0 bg-[var(--surface)] ${
+              isSidebarFloating ? "cursor-grab active:cursor-grabbing select-none" : ""
+            }`}
+            onMouseDown={handleHeaderMouseDown}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">Shape Library</h2>
+              <div className="flex items-center gap-1.5">
+                {/* Dock / Float Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarFloating(!isSidebarFloating)}
+                  className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer"
+                  title={isSidebarFloating ? "Dock Sidebar" : "Float Sidebar"}
+                >
+                  {isSidebarFloating ? "📌 Dock" : "✈️ Float"}
+                </button>
+                {/* Mobile Close Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarOpenMobile(false)}
+                  className="md:hidden rounded-full hover:bg-[var(--surface-muted)] text-xs font-bold h-6 w-6 flex items-center justify-center border border-[var(--border)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] cursor-pointer"
+                  title="Close Sidebar"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-xs text-[color:var(--foreground)]/40">
+                🔍
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Type / to search shapes..."
+                className="w-full pl-8 pr-7 py-1.5 bg-[var(--surface-muted)]/70 hover:bg-[var(--surface-muted)] focus:bg-[var(--surface)] text-xs text-[color:var(--foreground)] placeholder-[color:var(--foreground)]/40 border border-[var(--border)] rounded-lg outline-none focus:border-violet-500/80 transition-all duration-150"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-xs text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)] font-bold cursor-pointer"
+                >
+                  ×
+                </button>
+              )}
             </div>
           </div>
-        )}
 
-        {/* Floating Component Library & Quick Templates (Left Column) */}
-        <aside 
-          className={`absolute top-4 left-4 z-10 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-xl shadow-2xl flex flex-col max-h-[calc(100vh-160px)] transition-all duration-300 ${
-            isSidebarCollapsed ? "w-12 h-12 overflow-hidden p-0" : "w-80 p-4"
-          }`}
-        >
-          {isSidebarCollapsed ? (
-            <button
-              onClick={() => setIsSidebarCollapsed(false)}
-              className="h-12 w-12 flex items-center justify-center text-xl hover:bg-[var(--surface-muted)] rounded-2xl transition cursor-pointer"
-              title="Expand Component Library"
-            >
-              📚
-            </button>
-          ) : (
-            <div className="flex flex-col h-full min-h-0">
-              <div className="flex items-center justify-between shrink-0 pb-2 border-b border-[var(--border)]">
-                <div>
-                  <h2 className="text-sm font-bold tracking-tight text-[color:var(--foreground)]">Component Library</h2>
-                  <p className="text-[10px] text-[color:var(--foreground)]/50">Add elements to your distributed design.</p>
+          {/* Collapsible Accordion Lists */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-2">
+            
+            {/* 1. Templates Section */}
+            <div className="space-y-1">
+              <button
+                type="button"
+                onClick={() => setIsTemplatesExpanded(!isTemplatesExpanded)}
+                className="w-full flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)] transition duration-150 text-left font-semibold cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`text-[8px] text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isTemplatesExpanded ? "rotate-90" : "rotate-0"}`}>
+                    ▶
+                  </span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
+                    Templates
+                  </span>
                 </div>
-                <button
-                  onClick={() => setIsSidebarCollapsed(true)}
-                  className="text-xs text-[color:var(--foreground)]/45 hover:text-[color:var(--foreground)] h-6 w-6 rounded-full hover:bg-[var(--surface-muted)] flex items-center justify-center font-bold transition cursor-pointer"
-                  title="Collapse Library"
-                >
-                  ◀
-                </button>
-              </div>
+                <span className="text-[9px] text-[color:var(--foreground)]/40 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-mono">
+                  4
+                </span>
+              </button>
 
-              {/* Quick Templates */}
-              <div className="py-3 border-b border-[var(--border)]/70 shrink-0">
-                <p className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45 mb-2">
-                  Quick Templates
-                </p>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <button
-                    onClick={() => loadTemplate("cacheAside")}
-                    className="text-left text-[11px] p-2 rounded-xl border border-[var(--border)] hover:border-violet-500/50 bg-[var(--surface)]/50 font-semibold transition cursor-pointer hover:bg-[var(--surface-muted)]"
-                  >
-                    💾 Cache Aside
-                  </button>
-                  <button
-                    onClick={() => loadTemplate("loadBalancing")}
-                    className="text-left text-[11px] p-2 rounded-xl border border-[var(--border)] hover:border-violet-500/50 bg-[var(--surface)]/50 font-semibold transition cursor-pointer hover:bg-[var(--surface-muted)]"
-                  >
-                    ⚖️ Load Balance
-                  </button>
-                  <button
-                    onClick={() => loadTemplate("valetKey")}
-                    className="text-left text-[11px] p-2 rounded-xl border border-[var(--border)] hover:border-violet-500/50 bg-[var(--surface)]/50 font-semibold transition cursor-pointer hover:bg-[var(--surface-muted)]"
-                  >
-                    🔑 Valet Key
-                  </button>
-                  <button
-                    onClick={() => loadTemplate("apiGateway")}
-                    className="text-left text-[11px] p-2 rounded-xl border border-[var(--border)] hover:border-violet-500/50 bg-[var(--surface)]/50 font-semibold transition cursor-pointer hover:bg-[var(--surface-muted)]"
-                  >
-                    🚪 API Gateway
-                  </button>
+              {isTemplatesExpanded && (
+                <div className="grid grid-cols-2 gap-2 p-1">
+                  {Object.entries({
+                    cacheAside: { label: "Cache Aside", icon: "💾", description: "Write/read path caching strategy prioritizing low latency using Redis Cache and Postgres DB.", color: "hover:border-violet-500/40 text-violet-400" },
+                    loadBalancing: { label: "Load Balancer", icon: "⚖️", description: "Distribute client requests across multiple backend web server nodes using Round Robin routing.", color: "hover:border-blue-500/40 text-blue-400" },
+                    valetKey: { label: "Valet Key", icon: "🔑", description: "Clients fetch secure signed URLs from server, then upload files directly to Cloud Storage.", color: "hover:border-yellow-500/40 text-yellow-400" },
+                    apiGateway: { label: "API Gateway", icon: "🚪", description: "Central entry point routes requests dynamically to Post or User services based on path prefixes.", color: "hover:border-fuchsia-500/40 text-fuchsia-400" },
+                  }).map(([key, value]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => loadTemplate(key as any)}
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setHoveredComponent({
+                          type: key as any,
+                          label: value.label,
+                          icon: value.icon,
+                          description: value.description,
+                          colorClass: "",
+                        });
+                        setHoverTooltipX(rect.right + 12);
+                        setHoverTooltipY(rect.top + rect.height / 2);
+                      }}
+                      onMouseLeave={() => setHoveredComponent(null)}
+                      className={`flex flex-col items-center justify-center p-2 rounded-xl border border-[var(--border)]/70 bg-[var(--surface)]/40 ${value.color} hover:bg-[var(--surface)]/80 transition duration-150 text-center cursor-pointer group shadow-sm`}
+                    >
+                      <span className="text-xl group-hover:scale-110 transition duration-150">{value.icon}</span>
+                      <span className="text-[9px] font-bold text-[color:var(--foreground)]/65 mt-1 truncate max-w-full">
+                        {value.label}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-              </div>
+              )}
+            </div>
 
-              {/* Scrollable list content */}
-              <div className="flex-1 overflow-y-auto py-3 space-y-2.5 scrollbar-thin">
-                <p className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45">
-                  Components
-                </p>
+            <div className="h-px bg-[var(--border)]/40" />
 
-                {COMPONENTS_LIBRARY.map((item) => (
-                  <div
-                    key={item.type}
-                    className="group border border-[var(--border)]/70 rounded-xl bg-[var(--surface)]/40 p-2.5 hover:bg-[var(--surface)]/80 hover:border-violet-500/35 transition duration-150"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">{item.icon}</span>
-                        <span className="text-xs font-bold">{item.label}</span>
-                      </div>
-                      <button
-                        onClick={() => addComponent(item.type)}
-                        className="rounded-lg bg-gradient-to-r from-violet-500/80 to-violet-600/80 text-white px-2.5 py-1 text-[10px] font-bold hover:from-violet-500 hover:to-violet-600 shadow-sm transition cursor-pointer"
-                      >
-                        + Add
-                      </button>
+            {/* 2. Components Section */}
+            <div className="space-y-1">
+              <button
+                type="button"
+                onClick={() => setIsComponentsExpanded(!isComponentsExpanded)}
+                className="w-full flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)] transition duration-150 text-left font-semibold cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`text-[8px] text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isComponentsExpanded ? "rotate-90" : "rotate-0"}`}>
+                    ▶
+                  </span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
+                    Shapes & Components
+                  </span>
+                </div>
+                <span className="text-[9px] text-[color:var(--foreground)]/40 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-mono">
+                  {filteredComponents.length}
+                </span>
+              </button>
+
+              {isComponentsExpanded && (
+                <div className="grid grid-cols-3 gap-2 p-1">
+                  {filteredComponents.map((item) => (
+                    <button
+                      key={item.type}
+                      type="button"
+                      onClick={() => addComponent(item.type)}
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setHoveredComponent(item);
+                        setHoverTooltipX(rect.right + 12);
+                        setHoverTooltipY(rect.top + rect.height / 2);
+                      }}
+                      onMouseLeave={() => setHoveredComponent(null)}
+                      className="aspect-square rounded-xl border border-[var(--border)] bg-[var(--surface)]/30 hover:bg-[var(--surface)] hover:border-violet-500/50 flex flex-col items-center justify-center transition duration-150 cursor-pointer group relative shadow-sm"
+                    >
+                      <span className="text-2xl group-hover:scale-110 transition duration-150">{item.icon}</span>
+                      <span className="text-[8px] font-bold text-[color:var(--foreground)]/50 mt-1 truncate max-w-full px-1">
+                        {item.label}
+                      </span>
+                    </button>
+                  ))}
+                  {filteredComponents.length === 0 && (
+                    <div className="col-span-3 text-center py-6 text-xs text-[color:var(--foreground)]/40">
+                      No matching components
                     </div>
-                    <p className="text-[10px] text-[color:var(--foreground)]/65 mt-1 leading-normal">
-                      {item.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
+                  )}
+                </div>
+              )}
+            </div>
 
-              <div className="pt-2 border-t border-[var(--border)] bg-[var(--surface)]/40 flex items-center justify-between shrink-0">
-                <button
-                  onClick={handleClearCanvas}
-                  className="text-xs font-semibold text-rose-500 dark:text-rose-400 hover:underline cursor-pointer"
-                >
-                  Clear Canvas 🗑️
-                </button>
-                <p className="text-[9px] text-[color:var(--foreground)]/40">
-                  Connect handles to link
-                </p>
+          </div>
+
+          {/* Sidebar Footer Controls */}
+          <div className="p-3 border-t border-[var(--border)] bg-[var(--surface)]/45 flex flex-col gap-2 shrink-0 bg-[var(--surface)]">
+            <button
+              type="button"
+              onClick={() => setShowWelcomeModal(true)}
+              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-[var(--border)] bg-[var(--surface)]/85 hover:bg-[var(--surface-muted)] text-[11px] font-semibold text-[color:var(--foreground)]/75 transition cursor-pointer"
+            >
+              <span>📁</span>
+              <span>Open Templates Picker</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleClearCanvas}
+              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 hover:border-rose-500/40 text-rose-500 dark:text-rose-400 text-[11px] font-semibold transition cursor-pointer"
+            >
+              <span>🗑️</span>
+              <span>Clear Canvas</span>
+            </button>
+          </div>
+        </aside>
+
+        {/* Right Canvas Area (Fills the rest of screen) */}
+        <div className="flex-1 h-full min-w-0 relative z-0">
+          {/* Mobile Sidebar Hamburger Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpenMobile(true)}
+            className="md:hidden absolute top-4 left-4 z-20 bg-[var(--surface)] border border-[var(--border)] p-2.5 rounded-xl shadow-lg hover:bg-[var(--surface-muted)] cursor-pointer flex items-center justify-center text-sm font-bold"
+            title="Open Shapes Library"
+          >
+            ☰
+          </button>
+          {/* Full-Screen React Flow Canvas */}
+          <div className="absolute inset-0 z-0 h-full w-full">
+            <ReactFlow
+              nodes={styledNodes}
+              edges={animatedEdges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              onNodeClick={onNodeClick}
+              fitView
+              fitViewOptions={{ padding: 0.15 }}
+              style={{ width: "100%", height: "100%" }}
+            >
+              <Background variant={BackgroundVariant.Dots} gap={16} size={0.7} color="rgba(148,163,184,0.15)" />
+            </ReactFlow>
+          </div>
+
+          {/* Floating Warning Message */}
+          {validationWarning && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4">
+              <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 backdrop-blur-xl px-4 py-3 text-xs text-amber-300 flex items-center justify-between shadow-lg">
+                <span>⚠️ {validationWarning}</span>
+                <button onClick={() => setValidationWarning(null)} className="text-amber-400 font-bold ml-2 text-base hover:text-amber-300">×</button>
               </div>
             </div>
           )}
-        </aside>
 
         {/* Floating Inspector Panel (Right Column) */}
         {selectedNode && (
-          <aside className="absolute top-4 right-4 z-10 w-80 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-xl shadow-2xl flex flex-col max-h-[calc(100vh-160px)] transition-all duration-300 overflow-y-auto scrollbar-thin">
+          <aside className="absolute md:top-4 md:right-4 md:bottom-auto md:left-auto max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:w-full max-md:rounded-t-3xl max-md:rounded-b-none max-md:max-h-[50vh] z-20 w-80 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-xl shadow-2xl flex flex-col max-h-[calc(100vh-160px)] transition-all duration-300 overflow-y-auto scrollbar-thin">
             <div className="p-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]/50">
               <div>
                 <h2 className="text-sm font-bold tracking-tight text-[color:var(--foreground)]">Node Inspector</h2>
@@ -1974,17 +2248,17 @@ export default function WorkspacePage() {
                               value={item.val}
                               placeholder="Summary"
                               onChange={(e) => {
-                                const nextList = [...nodeConfigs[selectedNode.id].data];
-                                nextList[idx].val = e.target.value;
-                                updateNodeConfig(selectedNode.id, { data: nextList });
-                              }}
+                                  const nextList = [...nodeConfigs[selectedNode.id].data];
+                                  nextList[idx].val = e.target.value;
+                                  updateNodeConfig(selectedNode.id, { data: nextList });
+                                }}
                               className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none"
                             />
                             <button
                               onClick={() => {
-                                const nextList = nodeConfigs[selectedNode.id].data.filter((_: any, i: number) => i !== idx);
-                                updateNodeConfig(selectedNode.id, { data: nextList });
-                              }}
+                                  const nextList = nodeConfigs[selectedNode.id].data.filter((_: any, i: number) => i !== idx);
+                                  updateNodeConfig(selectedNode.id, { data: nextList });
+                                }}
                               className="text-red-500 hover:text-red-600 text-xs px-1 cursor-pointer"
                             >
                               ×
@@ -2004,6 +2278,240 @@ export default function WorkspacePage() {
                   >
                     + Add DB Row
                   </button>
+                </div>
+              )}
+
+              {/* DNS Configuration */}
+              {selectedNode.data.type === "dns" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-indigo-400 font-mono">DNS Domain Rules</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const domains = nodeConfigs[selectedNode.id]?.domains || {};
+                        const newDomain = prompt("Enter domain name (e.g., ndkdev.me):");
+                        if (newDomain) {
+                          updateNodeConfig(selectedNode.id, {
+                            domains: {
+                              ...domains,
+                              [newDomain]: {},
+                            },
+                          });
+                        }
+                      }}
+                      className="rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 px-2 py-1 text-[10px] font-bold transition cursor-pointer"
+                    >
+                      + Add Domain
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1 scrollbar-thin">
+                    {Object.entries(nodeConfigs[selectedNode.id]?.domains || {}).map(([domain, subdomains]: [string, any], domIdx) => (
+                      <div key={domIdx} className="border border-[var(--border)] rounded-lg p-2 bg-[var(--surface)]/50 space-y-2 relative group/dom">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextDomains = { ...nodeConfigs[selectedNode.id].domains };
+                            delete nextDomains[domain];
+                            updateNodeConfig(selectedNode.id, { domains: nextDomains });
+                          }}
+                          className="absolute top-1.5 right-2 text-rose-500 hover:text-rose-600 text-[9px] font-bold cursor-pointer opacity-40 group-hover/dom:opacity-100 transition"
+                          title="Delete Domain"
+                        >
+                          Delete ×
+                        </button>
+
+                        <p className="text-[10px] font-bold text-indigo-400 font-mono">🌐 {domain}</p>
+
+                        <div className="space-y-2 pl-1.5 border-l border-[var(--border)]">
+                          {Object.entries(subdomains || {}).map(([sub, subData]: [string, any], subIdx) => (
+                            <div key={subIdx} className="bg-[var(--surface)] p-2 rounded border border-[var(--border)]/45 space-y-1.5 relative group/sub">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nextDomains = { ...nodeConfigs[selectedNode.id].domains };
+                                  const nextSubs = { ...nextDomains[domain] };
+                                  delete nextSubs[sub];
+                                  nextDomains[domain] = nextSubs;
+                                  updateNodeConfig(selectedNode.id, { domains: nextDomains });
+                                }}
+                                className="absolute top-1 right-1 text-rose-500 hover:text-rose-600 text-xs font-bold cursor-pointer opacity-30 group-hover/sub:opacity-100 transition"
+                                title="Delete Record"
+                              >
+                                ×
+                              </button>
+
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <div>
+                                  <label className="text-[8px] text-[color:var(--foreground)]/50 block">Subdomain</label>
+                                  <input
+                                    type="text"
+                                    value={sub}
+                                    onChange={(e) => {
+                                      const nextDomains = { ...nodeConfigs[selectedNode.id].domains };
+                                      const nextSubs = { ...nextDomains[domain] };
+                                      const valObj = nextSubs[sub];
+                                      delete nextSubs[sub];
+                                      nextSubs[e.target.value] = valObj;
+                                      nextDomains[domain] = nextSubs;
+                                      updateNodeConfig(selectedNode.id, { domains: nextDomains });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-mono outline-none"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[8px] text-[color:var(--foreground)]/50 block">Record Type</label>
+                                  <select
+                                    value={subData.typeOfRecord || "A"}
+                                    onChange={(e) => {
+                                      const nextDomains = { ...nodeConfigs[selectedNode.id].domains };
+                                      nextDomains[domain][sub].typeOfRecord = e.target.value;
+                                      updateNodeConfig(selectedNode.id, { domains: nextDomains });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5 text-[10px] outline-none cursor-pointer"
+                                  >
+                                    {["A", "AAAA", "CNAME", "MX", "PTR", "SOA", "SRV", "TXT", "ANY"].map((t) => (
+                                      <option key={t} value={t}>{t}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <div>
+                                  <label className="text-[8px] text-[color:var(--foreground)]/50 block">Target Node</label>
+                                  <select
+                                    value={subData.to || ""}
+                                    onChange={(e) => {
+                                      const nextDomains = { ...nodeConfigs[selectedNode.id].domains };
+                                      nextDomains[domain][sub].to = e.target.value;
+                                      updateNodeConfig(selectedNode.id, { domains: nextDomains });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5 text-[10px] outline-none cursor-pointer"
+                                  >
+                                    <option value="">-- Target Node --</option>
+                                    {nodes.map((n) => (
+                                      <option key={n.id} value={n.id}>{String(n.data.label || n.id)}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[8px] text-[color:var(--foreground)]/50 block">IP Address</label>
+                                  <input
+                                    type="text"
+                                    value={subData.ip || ""}
+                                    onChange={(e) => {
+                                      const nextDomains = { ...nodeConfigs[selectedNode.id].domains };
+                                      nextDomains[domain][sub].ip = e.target.value;
+                                      updateNodeConfig(selectedNode.id, { domains: nextDomains });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-mono outline-none"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nextDomains = { ...nodeConfigs[selectedNode.id].domains };
+                              const subCount = Object.keys(subdomains || {}).length;
+                              nextDomains[domain][`subdomain${subCount + 1}`] = {
+                                to: "",
+                                ip: "192.168.1.1",
+                                typeOfRecord: "A"
+                              };
+                              updateNodeConfig(selectedNode.id, { domains: nextDomains });
+                            }}
+                            className="w-full py-1 text-center border border-dashed border-[var(--border)] hover:bg-[var(--surface)] text-[9px] font-bold text-indigo-400/80 rounded transition cursor-pointer"
+                          >
+                            + Add Record Rule
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {Object.keys(nodeConfigs[selectedNode.id]?.domains || {}).length === 0 && (
+                      <p className="text-xs italic text-[color:var(--foreground)]/50">No domains added yet. Click Add Domain above.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* CDN Configuration */}
+              {selectedNode.data.type === "cdn" && (
+                <div className="space-y-4">
+                  <p className="text-xs font-semibold text-teal-400 font-mono">CDN Settings</p>
+                  
+                  <div>
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                      Origin Server / Storage
+                    </label>
+                    <select
+                      value={nodeConfigs[selectedNode.id]?.originId ?? ""}
+                      onChange={(e) => updateNodeConfig(selectedNode.id, { originId: e.target.value })}
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="">-- Select Origin --</option>
+                      {nodes
+                        .filter((n) => n.id !== selectedNode.id && (n.data.type === "server" || n.data.type === "storage"))
+                        .map((n) => (
+                          <option key={n.id} value={n.id}>
+                            {String(n.data.label || n.id)} ({String(n.data.type || "")})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div className="h-px bg-[var(--border)]/70" />
+
+                  <div>
+                    <p className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 mb-2">
+                      Cached Keys (Static Content)
+                    </p>
+                    {(!nodeConfigs[selectedNode.id]?.cache || nodeConfigs[selectedNode.id].cache.length === 0) ? (
+                      <p className="text-xs italic text-[color:var(--foreground)]/50">CDN Cache is empty.</p>
+                    ) : (
+                      <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1 scrollbar-thin">
+                        {(nodeConfigs[selectedNode.id]?.cache || []).map((item: string, idx: number) => (
+                          <div key={idx} className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              value={item}
+                              placeholder="Cache Key (e.g. file.png)"
+                              onChange={(e) => {
+                                const nextCache = [...nodeConfigs[selectedNode.id].cache];
+                                nextCache[idx] = e.target.value;
+                                updateNodeConfig(selectedNode.id, { cache: nextCache });
+                              }}
+                              className="flex-1 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none font-mono focus:border-teal-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextCache = nodeConfigs[selectedNode.id].cache.filter((_: any, i: number) => i !== idx);
+                                updateNodeConfig(selectedNode.id, { cache: nextCache });
+                              }}
+                              className="text-rose-500 hover:text-rose-600 text-xs px-1 cursor-pointer font-bold"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const prevCache = nodeConfigs[selectedNode.id]?.cache ?? [];
+                        updateNodeConfig(selectedNode.id, { cache: [...prevCache, ""] });
+                      }}
+                      className="w-full mt-2 rounded-lg border border-[var(--border)] py-1 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
+                    >
+                      + Add Cache Item
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -2157,7 +2665,7 @@ export default function WorkspacePage() {
         )}
 
         {/* Floating Bottom Timeline & Playback Panel */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 w-[92%] max-w-4xl rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-xl shadow-2xl p-4 flex flex-col gap-3 transition-all duration-300">
+        <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-10 w-[92%] max-w-4xl rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-xl shadow-2xl p-4 flex flex-col gap-3 transition-all duration-300 ${selectedNode ? "max-md:hidden" : ""}`}>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex-1 overflow-x-auto min-w-0">
               <Controls
@@ -2254,7 +2762,156 @@ export default function WorkspacePage() {
           )}
         </div>
 
+        </div>
+
+        {/* Welcome Modal & Template Picker Dialog */}
+        {showWelcomeModal && (
+          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-md z-40 flex items-center justify-center p-4">
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto z-50 relative flex flex-col gap-5">
+              <button
+                type="button"
+                onClick={() => setShowWelcomeModal(false)}
+                className="absolute top-4 right-4 text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] h-8 w-8 rounded-full flex items-center justify-center font-bold transition cursor-pointer"
+                title="Close"
+              >
+                ×
+              </button>
+
+              <div className="text-center">
+                <span className="text-4xl">💻</span>
+                <h1 className="text-xl font-bold tracking-tight text-[color:var(--foreground)] mt-2">
+                  Welcome to FlowFrame Sandbox
+                </h1>
+                <p className="text-xs text-[color:var(--foreground)]/60 mt-1">
+                  Design, simulate, and observe distributed system patterns in real-time.
+                </p>
+              </div>
+
+              <div className="h-px bg-[var(--border)]/70 w-full" />
+
+              <div className="space-y-2">
+                <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45">
+                  Select an Architecture Template to Start:
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loadTemplate("cacheAside");
+                      setShowWelcomeModal(false);
+                    }}
+                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-violet-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">💾</span>
+                      <span className="font-bold text-xs group-hover:text-violet-400 transition">Cache Aside</span>
+                    </div>
+                    <p className="text-[10px] text-[color:var(--foreground)]/50 mt-1.5 leading-normal">
+                      Write/read path caching strategy prioritizing low latency using Redis Cache and Postgres DB.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loadTemplate("loadBalancing");
+                      setShowWelcomeModal(false);
+                    }}
+                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-blue-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">⚖️</span>
+                      <span className="font-bold text-xs group-hover:text-blue-400 transition">Load Balancing</span>
+                    </div>
+                    <p className="text-[10px] text-[color:var(--foreground)]/50 mt-1.5 leading-normal">
+                      Distribute client requests across multiple backend web server nodes using Round Robin routing.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loadTemplate("valetKey");
+                      setShowWelcomeModal(false);
+                    }}
+                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-yellow-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🔑</span>
+                      <span className="font-bold text-xs group-hover:text-yellow-400 transition">Valet Key</span>
+                    </div>
+                    <p className="text-[10px] text-[color:var(--foreground)]/50 mt-1.5 leading-normal">
+                      Clients fetch secure signed URLs from server, then upload files directly to Cloud Storage.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loadTemplate("apiGateway");
+                      setShowWelcomeModal(false);
+                    }}
+                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-fuchsia-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🚪</span>
+                      <span className="font-bold text-xs group-hover:text-fuchsia-400 transition">API Gateway</span>
+                    </div>
+                    <p className="text-[10px] text-[color:var(--foreground)]/50 mt-1.5 leading-normal">
+                      Central entry point routes requests dynamically to Post or User services based on path prefixes.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              <div className="h-px bg-[var(--border)]/70 w-full" />
+
+              <div className="flex justify-between items-center">
+                <p className="text-[10px] text-[color:var(--foreground)]/40">
+                  Or design your own custom architecture.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowWelcomeModal(false)}
+                  className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 hover:bg-[var(--surface-muted)] text-xs font-semibold px-4 py-2 transition cursor-pointer"
+                >
+                  Start with Blank Canvas →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
+
+      {/* Mobile Sidebar Backdrop Overlay */}
+      {isSidebarOpenMobile && (
+        <div 
+          className="md:hidden fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-20"
+          onClick={() => setIsSidebarOpenMobile(false)}
+        />
+      )}
+
+      {/* Modern Hover Tooltip Popover (Floats at page level, non-clipping) */}
+      {hoveredComponent && (
+        <div
+          className="fixed z-50 w-56 p-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md shadow-2xl pointer-events-none text-left"
+          style={{
+            left: `${hoverTooltipX}px`,
+            top: `${hoverTooltipY}px`,
+            transform: "translateY(-50%)",
+          }}
+        >
+          <p className="text-xs font-bold text-violet-400">{hoveredComponent.label}</p>
+          <p className="text-[10px] text-[color:var(--foreground)]/75 mt-1 leading-normal">
+            {hoveredComponent.description}
+          </p>
+          <p className="text-[9px] text-violet-300/60 mt-1.5 font-bold uppercase tracking-wider">
+            Click to Add +
+          </p>
+        </div>
+      )}
     </main>
   );
 }
