@@ -754,6 +754,20 @@ function getFormattedLogText(frame: Frame) {
     };
   }
 
+  if (normAction.includes("ENDPOINT_NOT_FOUND")) {
+    return {
+      text: `${flow} | 404 Not Found - ${frame.payloadSummary || "Endpoint Not Found"}`,
+      type: "warn"
+    };
+  }
+
+  if (normAction.includes("METHOD_NOT_ALLOWED")) {
+    return {
+      text: `${flow} | 405 Method Not Allowed - ${frame.payloadSummary || "Method Not Allowed"}`,
+      type: "warn"
+    };
+  }
+
   if (normAction.includes("SEND_RESPONSE") || normAction.includes("RETURN_DATA")) {
     const payloadStr = frame.payloadSummary && frame.payloadSummary !== "{}" ? ` - Payload: ${frame.payloadSummary}` : "";
     return {

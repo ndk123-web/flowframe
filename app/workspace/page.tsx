@@ -191,11 +191,22 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
     case "client":
       return {
         endpoint: "/api/v1/posts",
+        method: "GET",
         lookupKey: "rohan",
         valetKeyFlow: false,
         fileName: "file.png",
         isThereFileToUpload: false,
         targetBucket: "media-uploads",
+        requests: [
+          {
+            endpoint: "/api/v1/posts",
+            method: "GET",
+            lookupKey: "rohan",
+            fileName: "file.png",
+            isThereFileToUpload: false,
+            targetBucket: "media-uploads",
+          }
+        ]
       };
     case "api-gateway":
       return {
@@ -212,6 +223,11 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
     case "server":
       return {
         capacity: 100,
+        endpoints: {
+          "api/v1/posts": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          "api/v1/users": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          "api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+        },
       };
     case "redis":
       return {
@@ -602,6 +618,20 @@ function getFormattedLogText(frame: any) {
     };
   }
 
+  if (normAction.includes("ENDPOINT_NOT_FOUND")) {
+    return {
+      text: `${flow} | 404 Not Found - ${frame.payloadSummary || "Endpoint Not Found"}`,
+      type: "warn"
+    };
+  }
+
+  if (normAction.includes("METHOD_NOT_ALLOWED")) {
+    return {
+      text: `${flow} | 405 Method Not Allowed - ${frame.payloadSummary || "Method Not Allowed"}`,
+      type: "warn"
+    };
+  }
+
   if (normAction.includes("SEND_RESPONSE") || normAction.includes("RETURN_DATA")) {
     const payloadStr = frame.payloadSummary && frame.payloadSummary !== "{}" ? ` - Payload: ${frame.payloadSummary}` : "";
     return {
@@ -880,6 +910,9 @@ export default function WorkspacePage() {
           if (typeof config.capacity === "number") {
             modelInstance.capacity = config.capacity;
           }
+          if (config.endpoints) {
+            modelInstance.endpoints = { ...config.endpoints };
+          }
           break;
         case "redis":
           modelInstance = new RedisModel(n.id, labelStr);
@@ -1030,6 +1063,7 @@ export default function WorkspacePage() {
     const clientRequests = clientConfig.requests || [
       {
         endpoint: clientConfig.endpoint || "/api/v1/posts",
+        method: clientConfig.method || "GET",
         lookupKey: clientConfig.lookupKey || "rohan",
         fileName: clientConfig.fileName || "file.png",
         isThereFileToUpload: clientConfig.isThereFileToUpload !== false,
@@ -1047,6 +1081,7 @@ export default function WorkspacePage() {
           fileName: reqItem.fileName,
           isThereFileToUpload: reqItem.isThereFileToUpload,
           endpoint: reqItem.endpoint,
+          method: reqItem.method || "GET",
           targetBucket: reqItem.targetBucket,
         };
 
@@ -1824,6 +1859,7 @@ export default function WorkspacePage() {
                       {(nodeConfigs[selectedNode.id]?.requests || [
                         {
                           endpoint: nodeConfigs[selectedNode.id]?.endpoint || "/api/v1/posts",
+                          method: nodeConfigs[selectedNode.id]?.method || "GET",
                           lookupKey: nodeConfigs[selectedNode.id]?.lookupKey || "rohan",
                           fileName: nodeConfigs[selectedNode.id]?.fileName || "file.png",
                           isThereFileToUpload: nodeConfigs[selectedNode.id]?.isThereFileToUpload !== false,
@@ -1835,6 +1871,7 @@ export default function WorkspacePage() {
                               const currentRequests = nodeConfigs[selectedNode.id]?.requests || [
                                 {
                                   endpoint: nodeConfigs[selectedNode.id]?.endpoint || "/api/v1/posts",
+                                  method: nodeConfigs[selectedNode.id]?.method || "GET",
                                   lookupKey: nodeConfigs[selectedNode.id]?.lookupKey || "rohan",
                                   fileName: nodeConfigs[selectedNode.id]?.fileName || "file.png",
                                   isThereFileToUpload: nodeConfigs[selectedNode.id]?.isThereFileToUpload !== false,
@@ -1853,19 +1890,39 @@ export default function WorkspacePage() {
                           <p className="text-[9px] font-bold text-violet-400">Request #{idx + 1}</p>
 
                           {!nodeConfigs[selectedNode.id]?.valetKeyFlow ? (
-                            <div className="grid grid-cols-2 gap-1.5">
-                              <div>
-                                <label className="text-[8px] text-[color:var(--foreground)]/50 block">Path</label>
-                                <input
-                                  type="text"
-                                  value={req.endpoint}
-                                  onChange={(e) => {
-                                    const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
-                                    currentRequests[idx].endpoint = e.target.value;
-                                    updateNodeConfig(selectedNode.id, { requests: currentRequests });
-                                  }}
-                                  className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500"
-                                />
+                            <div className="space-y-1.5">
+                              <div className="flex gap-1.5">
+                                <div className="w-[70px] shrink-0">
+                                  <label className="text-[8px] text-[color:var(--foreground)]/50 block">Method</label>
+                                  <select
+                                    value={req.method || "GET"}
+                                    onChange={(e) => {
+                                      const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
+                                      currentRequests[idx].method = e.target.value;
+                                      updateNodeConfig(selectedNode.id, { requests: currentRequests });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5 text-xs font-mono outline-none focus:border-violet-500 cursor-pointer"
+                                  >
+                                    <option value="GET">GET</option>
+                                    <option value="POST">POST</option>
+                                    <option value="PUT">PUT</option>
+                                    <option value="DELETE">DELETE</option>
+                                    <option value="PATCH">PATCH</option>
+                                  </select>
+                                </div>
+                                <div className="flex-1">
+                                  <label className="text-[8px] text-[color:var(--foreground)]/50 block">Path</label>
+                                  <input
+                                    type="text"
+                                    value={req.endpoint}
+                                    onChange={(e) => {
+                                      const currentRequests = [...(nodeConfigs[selectedNode.id]?.requests || [req])];
+                                      currentRequests[idx].endpoint = e.target.value;
+                                      updateNodeConfig(selectedNode.id, { requests: currentRequests });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500"
+                                  />
+                                </div>
                               </div>
                               <div>
                                 <label className="text-[8px] text-[color:var(--foreground)]/50 block">Key</label>
@@ -2518,7 +2575,7 @@ export default function WorkspacePage() {
               {/* Server Specific Configuration */}
               {selectedNode.data.type === "server" && (
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold text-emerald-400 font-mono">Server Capacity</p>
+                  <p className="text-xs font-semibold text-emerald-400 font-mono">Server Settings</p>
                   <div>
                     <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">Connections Capacity</label>
                     <input
@@ -2527,6 +2584,106 @@ export default function WorkspacePage() {
                       onChange={(e) => updateNodeConfig(selectedNode.id, { capacity: Number(e.target.value) })}
                       className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500"
                     />
+                  </div>
+
+                  <div className="h-px bg-[var(--border)]/70 my-2" />
+                  
+                  <div>
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                      Exposed Endpoints
+                    </label>
+                    <div className="space-y-3 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
+                      {Object.entries(nodeConfigs[selectedNode.id]?.endpoints || {}).map(([path, methods]: [string, any], idx) => {
+                        const allHttpMethods = ["GET", "POST", "PUT", "DELETE", "PATCH"];
+                        return (
+                          <div key={idx} className="border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50 space-y-2 relative group/ep">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextEndpoints = { ...(nodeConfigs[selectedNode.id]?.endpoints || {}) };
+                                delete nextEndpoints[path];
+                                updateNodeConfig(selectedNode.id, { endpoints: nextEndpoints });
+                              }}
+                              className="absolute top-1.5 right-1.5 text-rose-500 hover:text-rose-600 text-xs font-bold px-1 cursor-pointer opacity-40 group-hover/ep:opacity-100 transition"
+                              title="Delete Endpoint"
+                            >
+                              ×
+                            </button>
+                            
+                            <div>
+                              <label className="text-[8px] text-[color:var(--foreground)]/50 block mb-0.5">Route Path</label>
+                              <input
+                                type="text"
+                                value={path}
+                                placeholder="api/v1/resource"
+                                onChange={(e) => {
+                                  const endpoints = (nodeConfigs[selectedNode.id]?.endpoints || {}) as Record<string, any>;
+                                  const nextEndpoints: Record<string, any> = {};
+                                  for (const [k, v] of Object.entries(endpoints)) {
+                                    if (k === path) {
+                                      nextEndpoints[e.target.value] = v;
+                                    } else {
+                                      nextEndpoints[k] = v;
+                                    }
+                                  }
+                                  updateNodeConfig(selectedNode.id, { endpoints: nextEndpoints });
+                                }}
+                                className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-[8px] text-[color:var(--foreground)]/50 block mb-1">Allowed Methods</label>
+                              <div className="flex flex-wrap gap-1">
+                                {allHttpMethods.map((m) => {
+                                  const isSelected = (methods || []).includes(m);
+                                  return (
+                                    <button
+                                      key={m}
+                                      type="button"
+                                      onClick={() => {
+                                        const nextEndpoints = { ...(nodeConfigs[selectedNode.id]?.endpoints || {}) };
+                                        const currentMethods = nextEndpoints[path] || [];
+                                        let updatedMethods: any[];
+                                        if (isSelected) {
+                                          updatedMethods = currentMethods.filter((item: string) => item !== m);
+                                        } else {
+                                          updatedMethods = [...currentMethods, m];
+                                        }
+                                        nextEndpoints[path] = updatedMethods;
+                                        updateNodeConfig(selectedNode.id, { endpoints: nextEndpoints });
+                                      }}
+                                      className={`text-[8px] px-1.5 py-0.5 rounded font-mono font-bold transition cursor-pointer border ${
+                                        isSelected
+                                          ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                                          : "bg-[var(--surface-muted)] border-[var(--border)] text-[color:var(--foreground)]/55 hover:border-[var(--border)]/80 hover:text-[color:var(--foreground)]"
+                                      }`}
+                                    >
+                                      {m}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const endpoints = nodeConfigs[selectedNode.id]?.endpoints || {};
+                        const nextEndpoints = {
+                          ...endpoints,
+                          [`api/v1/endpoint-${Object.keys(endpoints).length + 1}`]: ["GET"],
+                        };
+                        updateNodeConfig(selectedNode.id, { endpoints: nextEndpoints });
+                      }}
+                      className="w-full mt-2 rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
+                    >
+                      + Add Endpoint Rule
+                    </button>
                   </div>
                 </div>
               )}

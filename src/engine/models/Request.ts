@@ -1,6 +1,7 @@
 import type { NodeId } from "../types";
 import { NodeInstance } from "../contracts";
 import Ipv4Generator from "@/utils/generateRandomIp";
+type HTTP_VALID_METHODS = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
 class RequestManager implements NodeInstance {
   id: string;
@@ -14,6 +15,7 @@ class RequestManager implements NodeInstance {
   context: { [key: string]: any } = {};
   ipAddress: string;
   endpoint: string = "";
+  method: HTTP_VALID_METHODS = "GET";
 
   constructor(
     id: string,

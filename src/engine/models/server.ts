@@ -35,6 +35,24 @@ class ServerModel implements NodeInstance {
   completeRequest() {
     this.load--;
   }
+
+  addEndPoint(endpoint: string, methods: HTTP_VALID_METHODS[]) {
+    this.endpoints[endpoint] = methods;
+  }
+
+  removeEndPoint(endpoint: string) {
+    delete this.endpoints[endpoint];
+  }
+
+  // check if the request is valid
+  isValidRequest(request: RequestManager) {
+    const endpoint = request.endpoint;
+    const method = request.method;
+    if (this.endpoints[endpoint]) {
+      return this.endpoints[endpoint].includes(method);
+    }
+    return false;
+  }
 }
 
 export default ServerModel;
