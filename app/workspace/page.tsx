@@ -40,6 +40,7 @@ import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 
 // Header
 import SiteHeader from "@/components/SiteHeader";
+import { ComponentIcon } from "@/components/ComponentIcons";
 
 type Theme = "light" | "dark";
 
@@ -281,20 +282,7 @@ function CustomNode({ id, data, selected }: any) {
     cdn: "border-l-teal-500 shadow-teal-500/10",
   };
 
-  const icons: any = {
-    client: "💻",
-    "api-gateway": "🚪",
-    "load-balancer": "⚖️",
-    server: "🖥️",
-    redis: "💾",
-    postgres: "🗄️",
-    storage: "☁️",
-    dns: "🌐",
-    cdn: "🌍",
-  };
-
   const colorClass = typeColors[data.type] || "border-l-slate-400";
-  const icon = icons[data.type] || "⚙️";
 
   // Flow rules
   const hasTarget = data.type !== "client";
@@ -316,7 +304,7 @@ function CustomNode({ id, data, selected }: any) {
       )}
 
       <div className="flex items-center gap-2">
-        <span className="text-xl">{icon}</span>
+        <ComponentIcon type={data.type} className="w-5 h-5 shrink-0" />
         <div className="leading-tight">
           <p className="text-[9px] font-semibold uppercase tracking-wider text-[color:var(--foreground)]/45">
             {data.type}
@@ -615,6 +603,20 @@ function getFormattedLogText(frame: any) {
     return {
       text: `${flow} | DB Write - Key: "${frame.lookupKey || 'N/A'}"${payloadStr}`,
       type: "info"
+    };
+  }
+
+  if (normAction.includes("RESPONSE_ERROR")) {
+    const payloadStr = frame.payloadSummary && frame.payloadSummary !== "{}" ? ` - Payload: ${frame.payloadSummary}` : "";
+    let statusText = "404 Not Found";
+    if (normAction.includes("_405")) {
+      statusText = "405 Method Not Allowed";
+    } else if (normAction.includes("_500")) {
+      statusText = "500 Internal Server Error";
+    }
+    return {
+      text: `${flow} | Respond - Status: ${statusText}${payloadStr}`,
+      type: "warn"
     };
   }
 
@@ -1718,7 +1720,7 @@ export default function WorkspacePage() {
                       onMouseLeave={() => setHoveredComponent(null)}
                       className="aspect-square rounded-xl border border-[var(--border)] bg-[var(--surface)]/30 hover:bg-[var(--surface)] hover:border-violet-500/50 flex flex-col items-center justify-center transition duration-150 cursor-pointer group relative shadow-sm"
                     >
-                      <span className="text-2xl group-hover:scale-110 transition duration-150">{item.icon}</span>
+                      <ComponentIcon type={item.type} className="w-6 h-6 group-hover:scale-110 transition duration-150 text-[color:var(--foreground)]/65 group-hover:text-violet-400" />
                       <span className="text-[8px] font-bold text-[color:var(--foreground)]/50 mt-1 truncate max-w-full px-1">
                         {item.label}
                       </span>
@@ -2157,8 +2159,9 @@ export default function WorkspacePage() {
                             return (
                               <div key={serverId} className="flex flex-col gap-1 border-b border-[var(--border)]/35 pb-2 last:border-b-0 last:pb-0">
                                 <div className="flex items-center justify-between gap-1">
-                                  <span className="text-[10px] font-medium text-[color:var(--foreground)]/70 truncate">
-                                    🖥️ {serverLabel}
+                                  <span className="text-[10px] font-medium text-[color:var(--foreground)]/70 truncate flex items-center gap-1.5">
+                                    <ComponentIcon type="server" className="w-3.5 h-3.5" />
+                                    {serverLabel}
                                   </span>
                                   {!isConnected && (
                                     <span className="text-[8px] text-amber-500 font-semibold bg-amber-500/10 px-1 rounded">
@@ -2935,7 +2938,7 @@ export default function WorkspacePage() {
               </button>
 
               <div className="text-center">
-                <span className="text-4xl">💻</span>
+                <ComponentIcon type="client" className="w-10 h-10 mx-auto text-violet-400" />
                 <h1 className="text-xl font-bold tracking-tight text-[color:var(--foreground)] mt-2">
                   Welcome to FlowFrame Sandbox
                 </h1>

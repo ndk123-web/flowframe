@@ -30,7 +30,7 @@ function shouldKeepFrame(hideResponse: boolean, frame: Frame) {
 }
 
 function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
-  const { hideResponse, parallelResponse } = options;
+  const { hideResponse, parallelResponse, nodeConfigs } = options;
   const graph = new GraphManager("graph-cache");
   const registry = new NodeRegistry("registry-cache");
   const ipv4Instance = new Ipv4Generator();
@@ -44,15 +44,6 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
   const clientName = "Client 1";
   const clientInstance = new ClientModel(clientId, clientName);
 
-  const redisTestCases = ["rohan", "doe", "invalid-user"];
-
-  // add some data for redis cache, we will use the same data for postgres database to simulate cache hit and cache miss scenarios
-  clientInstance.addDataToPassToNextNode("redis", [
-    { rohan: "cached data for rohan" },
-    { john: "cached data for john" },
-    { doe: "cached data for doe" },
-  ]);
-
   const serverId = "server-1";
   const serverName = "Server 1";
   const serverInstance = new ServerModel(serverId, serverName);
@@ -60,14 +51,51 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
   const redisId = "redis1";
   const redisName = "Redis Cache";
   const redisInstance = new RedisModel(redisId, redisName);
-  redisInstance.addData("rohan", "cached data for rohan");
-  redisInstance.addData("john", "cached data for john");
 
   const postgresId = "postgres1";
   const postgresName = "Postgres Database";
   const postgresInstance = new PostgresModel(postgresId, postgresName);
-  postgresInstance.addRecord("users", "doe", "db data for doe");
-  postgresInstance.addRecord("users", "john", "db data for john");
+
+  // Apply node configs
+  const clientConfig = nodeConfigs?.[clientId];
+  const serverConfig = nodeConfigs?.[serverId];
+  const redisConfig = nodeConfigs?.[redisId];
+  const postgresConfig = nodeConfigs?.[postgresId];
+
+  // Configure Server capacity and endpoints
+  if (serverConfig) {
+    if (typeof serverConfig.capacity === "number") serverInstance.capacity = serverConfig.capacity;
+    if (serverConfig.endpoints) serverInstance.endpoints = { ...serverConfig.endpoints };
+  } else {
+    serverInstance.endpoints = {
+      "api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"]
+    };
+  }
+
+  // Populate Redis Model
+  if (redisConfig && Array.isArray(redisConfig.data)) {
+    redisInstance.data.clear();
+    redisConfig.data.forEach((item: any) => {
+      if (item.key) redisInstance.addData(item.key, item.val);
+    });
+  } else {
+    redisInstance.addData("rohan", "cached data for rohan");
+    redisInstance.addData("john", "cached data for john");
+  }
+
+  // Populate Postgres Model
+  const dbTableName = postgresConfig?.table || "users";
+  if (postgresConfig && Array.isArray(postgresConfig.data)) {
+    postgresInstance.data.clear();
+    postgresConfig.data.forEach((item: any) => {
+      if (item.key) {
+        postgresInstance.addRecord(dbTableName, item.key, item.val);
+      }
+    });
+  } else {
+    postgresInstance.addRecord("users", "doe", "db data for doe");
+    postgresInstance.addRecord("users", "john", "db data for john");
+  }
 
   /**
    * Snapshot of the data in Redis into the redisStoreSnapshot object
@@ -82,7 +110,7 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
   /**
    * Snapshot of the data in Postgres into the postgresStoreSnapshot object
    */
-  const usersDb = postgresInstance.data.get("users") as
+  const usersDb = postgresInstance.data.get(dbTableName) as
     | Map<string, unknown>
     | undefined;
   const postgresStoreSnapshot: Record<string, string> = Object.fromEntries(
@@ -120,46 +148,32 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
 
   let globalTimestampOffset = 0;
 
-  for (let i = 0; i < 3; i++) {
-    /**
-     * each loop iteration i % 3 then (0-2) means first 0 then 1 then 2 index of testcases
-     */
-    const lookupKey = redisTestCases[i % redisTestCases.length];
+  const clientRequests = clientConfig?.requests || [
+    { endpoint: "/api/v1/getData", lookupKey: "rohan", method: "GET" },
+    { endpoint: "/api/v1/getData", lookupKey: "john", method: "GET" },
+    { endpoint: "/api/v1/getData", lookupKey: "doe", method: "GET" }
+  ];
 
-    /**
-     * get the random source ip for client request
-     */
+  const redisTestCases = clientRequests.map((r: any) => r.lookupKey || "rohan");
+
+  for (let i = 0; i < clientRequests.length; i++) {
+    const req = clientRequests[i];
+    const lookupKey = req.lookupKey || "rohan";
     const sourceIp = ipv4Instance.getRandomIpv4() as string;
 
-    /**
-     * create a new simulation manager
-     * with data lookupkey and test cases for redis if needed in future
-     */
     const simulation = new SimulationManager(
       graph,
       registry,
       {
         lookupKey,
-        testCasesForRedis: {
-          data: redisTestCases,
-        },
+        endpoint: req.endpoint || "/api/v1/getData",
+        method: req.method || "GET",
       },
       sourceIp,
     );
 
-    /**
-     * run the simulation from client node and create for i = 0,1,2 it stores the frames for each simulation in frames
-     */
     simulation.runSimulation(clientId);
-    console.log(
-      "frames for simulation with lookupKey",
-      lookupKey,
-      simulation.getFrames(),
-    );
 
-    /**
-     * for each simulation frames for i request, runFrames will be the
-     */
     const runFrames = (simulation.getFrames() as Frame[]).map((frame) => ({
       ...frame,
       timestamp: parallelResponse
@@ -167,9 +181,8 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
         : frame.timestamp + globalTimestampOffset,
       sourceIp,
       lookupKey,
-      payloadSummary: `lookupKey=${lookupKey}`,
+      payloadSummary: `${req.method || "GET"} ${req.endpoint || "/api/v1/getData"}${req.lookupKey ? ` | lookupKey=${req.lookupKey}` : ""}`,
     }));
-    console.log("runFrames for lookupKey", lookupKey, runFrames);
 
     const firstFrame = runFrames[0];
     if (firstFrame) {
@@ -180,14 +193,8 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
       });
     }
 
-    /**
-     * store each frames for each simulation in allFrames which will be used later to merge and sort frames based on timestamp for final rendering of the scenario
-     */
     allFrames.push(...runFrames);
 
-    /**
-     * for non parallel response we will add the timestamp offset to make sure the frames are rendered one after another based on the order of simulations we ran, for parallel response we will keep the original timestamps and later merge and sort them based on timestamp to simulate parallel execution of requests
-     */
     if (!parallelResponse) {
       globalTimestampOffset += (simulation.getFrames() as Frame[]).length;
     }

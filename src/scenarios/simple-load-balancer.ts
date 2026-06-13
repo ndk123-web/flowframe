@@ -10,6 +10,9 @@ import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
 import Ipv4Generator from "@/utils/generateRandomIp";
 import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 
+import RandomLoadStrategy from "@/engine/core/Strategy/RandomLoadStrategy";
+import IPHashStrategy from "@/engine/core/Strategy/IPHashStrategy";
+
 function shouldKeepFrame(hideResponse: boolean, frame: Frame) {
   if (!hideResponse) {
     return true;
@@ -34,26 +37,64 @@ function shouldKeepFrame(hideResponse: boolean, frame: Frame) {
 export function createSimpleLoadBalancerSimulationBundle(
   options: ScenarioRunOptions,
 ): SimBundle {
-  const { hideResponse, parallelResponse } = options;
+  const { hideResponse, parallelResponse, nodeConfigs } = options;
 
-  // create the graph, registry, ipv4 generator, strategy
-  const graph = new GraphManager("graph-1");
-  const registry = new NodeRegistry("registry-1");
-  const ipv4Instance = new Ipv4Generator();
-  const strategy = new RoundRobinStrategy();
-
-  // create the nodes and edges
+  // create the nodes and edges IDs
   const clientId = "client-1";
   const lbId = "lb-1";
   const s1Id = "server-1";
   const s2Id = "server-2";
   const s3Id = "server-3";
 
+  // create the graph, registry, ipv4 generator
+  const graph = new GraphManager("graph-1");
+  const registry = new NodeRegistry("registry-1");
+  const ipv4Instance = new Ipv4Generator();
+
+  // Instantiate LB strategy from config
+  const lbConfig = nodeConfigs?.[lbId];
+  let strategy = new RoundRobinStrategy();
+  if (lbConfig?.strategy === "RANDOM") {
+    strategy = new RandomLoadStrategy(lbId, "Random Strategy") as any;
+  } else if (lbConfig?.strategy === "IP_HASH") {
+    strategy = new IPHashStrategy(lbId, "IP Hash Strategy") as any;
+  }
+
   const client = new ClientModel(clientId, "Client");
   const lb = new LoadBalancerModel(lbId, "LoadBalancer", strategy);
   const s1 = new ServerModel(s1Id, "Server 1");
   const s2 = new ServerModel(s2Id, "Server 2");
   const s3 = new ServerModel(s3Id, "Server 3");
+
+  // Apply server configurations
+  const s1Config = nodeConfigs?.[s1Id];
+  const s2Config = nodeConfigs?.[s2Id];
+  const s3Config = nodeConfigs?.[s3Id];
+
+  if (s1Config) {
+    if (typeof s1Config.capacity === "number") s1.capacity = s1Config.capacity;
+    if (s1Config.endpoints) s1.endpoints = { ...s1Config.endpoints };
+  } else {
+    s1.endpoints = {
+      "api/v1/posts": ["GET", "POST", "PUT", "DELETE", "PATCH"]
+    };
+  }
+  if (s2Config) {
+    if (typeof s2Config.capacity === "number") s2.capacity = s2Config.capacity;
+    if (s2Config.endpoints) s2.endpoints = { ...s2Config.endpoints };
+  } else {
+    s2.endpoints = {
+      "api/v1/posts": ["GET", "POST", "PUT", "DELETE", "PATCH"]
+    };
+  }
+  if (s3Config) {
+    if (typeof s3Config.capacity === "number") s3.capacity = s3Config.capacity;
+    if (s3Config.endpoints) s3.endpoints = { ...s3Config.endpoints };
+  } else {
+    s3.endpoints = {
+      "api/v1/posts": ["GET", "POST", "PUT", "DELETE", "PATCH"]
+    };
+  }
 
   graph.addNode(clientId, "Client");
   graph.addNode(lbId, "LoadBalancer");
@@ -75,25 +116,30 @@ export function createSimpleLoadBalancerSimulationBundle(
 
   // This will the actual frame 
   const allFrames: Frame[] = [];
-
   
   const requestInputs: Array<{ requestId?: string; sourceIp?: string; lookupKey?: string }> = [];
   
   let globalTimestampOffset = 0;
 
-  /**
-   * @step1 - generate random ip for the CLient For each request
-   * @step2 - create object of simulation and add graph, egdes, registry, ip to that
-   * @step3 - runframes() will handle timestamp of each frame (parallelResponse / single response)
-   * @step4 - if generated frames has length > 0 then get the first frame
-   * @step5 - add all the frames that are generated currently push into global `allFrame`
-   */
-  for (let i = 0; i < 3; i++) {
+  // Run customized requests if configured, fallback to 3 defaults
+  const clientConfig = nodeConfigs?.[clientId];
+  const clientRequests = clientConfig?.requests || [
+    { endpoint: "/api/v1/posts", method: "GET" },
+    { endpoint: "/api/v1/posts", method: "GET" },
+    { endpoint: "/api/v1/posts", method: "GET" }
+  ];
+
+  for (let i = 0; i < clientRequests.length; i++) {
+    const req = clientRequests[i];
     const sourceIp = ipv4Instance.getRandomIpv4() as string;
     const simulation = new SimulationManager(
       graph,
       registry,
-      {},
+      {
+        endpoint: req.endpoint,
+        method: req.method,
+        lookupKey: req.lookupKey,
+      },
       sourceIp,
     );
     simulation.runSimulation(clientId);
@@ -104,7 +150,7 @@ export function createSimpleLoadBalancerSimulationBundle(
         ? frame.timestamp
         : frame.timestamp + globalTimestampOffset,
       sourceIp,
-      payloadSummary: "{}",
+      payloadSummary: `${req.method} ${req.endpoint}${req.lookupKey ? ` | lookupKey=${req.lookupKey}` : ""}`,
     }));
 
     // for the first frame, add the request input to the request inputs array because we will need to show it in the UI (each request will have a unique request id)
@@ -113,9 +159,9 @@ export function createSimpleLoadBalancerSimulationBundle(
       requestInputs.push({
         requestId: firstFrame.requestId,
         sourceIp,
+        lookupKey: req.lookupKey,
       });
     }
-
     
     allFrames.push(...runFrames);
 

@@ -20,3 +20,5 @@ class IPHashStrategy implements LoadBalancingConfig {
     return serverIds[index];
   }
 }
+
+export default IPHashStrategy

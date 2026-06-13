@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import ArchDiagram from "@/components/ArchDiagram";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
+import { ComponentIcon } from "@/components/ComponentIcons";
 import { GraphManager } from "@/engine/core/Graph/graph";
 import { NodeRegistry } from "@/engine/core/Graph/nodeResgistry";
 import { SimulationManager } from "@/engine/core/Simulations/Simulation";
@@ -328,18 +329,7 @@ function CustomNode({ id, data, selected }: any) {
     storage: "border-l-yellow-500 shadow-yellow-500/10",
   };
 
-  const icons: any = {
-    client: "💻",
-    "api-gateway": "🚪",
-    "load-balancer": "⚖️",
-    server: "🖥️",
-    redis: "💾",
-    postgres: "🗄️",
-    storage: "☁️",
-  };
-
   const colorClass = typeColors[data.type] || "border-l-slate-400";
-  const icon = icons[data.type] || "⚙️";
 
   const hasTarget = data.type !== "client";
   const hasSource = data.type !== "redis" && data.type !== "postgres" && data.type !== "storage";
@@ -359,7 +349,7 @@ function CustomNode({ id, data, selected }: any) {
       )}
 
       <div className="flex items-center gap-2">
-        <span className="text-xl">{icon}</span>
+        <ComponentIcon type={data.type} className="w-5 h-5 shrink-0" />
         <div className="leading-tight">
           <p className="text-[9px] font-semibold uppercase tracking-wider text-[color:var(--foreground)]/45">
             {data.type}
@@ -925,7 +915,7 @@ function ScenariosShowcase() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {scenarios.map((s, i) => (
              <Reveal key={s.title} delay={i * 0.1}>
-              <div className={`group flex h-full cursor-pointer flex-col justify-between rounded-[2rem] border border-[var(--border)]/50 bg-gradient-to-br ${s.color} p-8 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)]`}>
+              <div className={`group relative flex h-full cursor-pointer flex-col justify-between rounded-[2rem] border border-[var(--border)]/50 bg-gradient-to-br ${s.color} p-8 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)]`}>
                 <div>
                   <div className="mb-6 text-4xl drop-shadow-md transition-transform group-hover:scale-110 group-hover:rotate-6 origin-bottom-left">{s.icon}</div>
                   <h3 className="mb-3 text-xl font-bold text-[color:var(--foreground)]">{s.title}</h3>
