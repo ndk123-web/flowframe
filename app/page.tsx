@@ -794,12 +794,16 @@ function CTA() {
 export default function Home() {
   const router = useRouter();
 
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "dark";
+  const [theme, setTheme] = useState<Theme>("dark");
+
+  useEffect(() => {
     const s = window.localStorage.getItem("flowframe-theme") as Theme | null;
-    if (s === "light" || s === "dark") return s;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  });
+    if (s === "light" || s === "dark") {
+      setTheme(s);
+    } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+      setTheme("light");
+    }
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);

@@ -10,11 +10,16 @@ import { motion } from "framer-motion";
 type Theme = "light" | "dark";
 
 export default function LearnOverviewPage() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "dark";
+  const [theme, setTheme] = useState<Theme>("dark");
+
+  useEffect(() => {
     const saved = window.localStorage.getItem("flowframe-theme") as Theme | null;
-    return saved === "light" || saved === "dark" ? saved : "dark";
-  });
+    if (saved === "light" || saved === "dark") {
+      setTheme(saved);
+    } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+      setTheme("light");
+    }
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
