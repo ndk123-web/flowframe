@@ -216,20 +216,16 @@ function ScenarioCardState({ scenario, index }: { scenario: ScenarioCard; index:
 }
 
 export default function ScenariosPage() {
-	const [theme, setTheme] = useState<Theme>(() => {
-		if (typeof window === "undefined") {
-			return "dark";
-		}
+	const [theme, setTheme] = useState<Theme>("dark");
 
+	useEffect(() => {
 		const saved = window.localStorage.getItem("flowframe-theme") as Theme | null;
 		if (saved === "light" || saved === "dark") {
-			return saved;
+			setTheme(saved);
+		} else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+			setTheme("light");
 		}
-
-		return window.matchMedia("(prefers-color-scheme: dark)").matches
-			? "dark"
-			: "light";
-	});
+	}, []);
 
 	useEffect(() => {
 		document.documentElement.setAttribute("data-theme", theme);

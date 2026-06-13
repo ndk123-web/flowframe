@@ -1603,11 +1603,7 @@ function renderMarkdown(text: string) {
 export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
   const { topicId } = use(params);
 
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "dark";
-    const saved = window.localStorage.getItem("flowframe-theme") as Theme | null;
-    return saved === "light" || saved === "dark" ? saved : "dark";
-  });
+  const [theme, setTheme] = useState<Theme>("dark");
 
   const [hideResponse, setHideResponse] = useState(false);
   const [parallelResponse, setParallelResponse] = useState(false);
@@ -1773,6 +1769,19 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
 
   useEffect(() => {
     setIsMounted(true);
+    
+    // Theme initialization
+    const saved = window.localStorage.getItem("flowframe-theme") as Theme | null;
+    if (saved === "light" || saved === "dark") {
+      setTheme(saved);
+    } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+      setTheme("light");
+    }
+
+    // showDocs initialization
+    if (window.innerWidth < 1024) {
+      setShowDocs(false);
+    }
   }, []);
 
   const { frames, nodes, edges, debug } = useMemo(
@@ -2031,7 +2040,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
   }
 
   return (
-    <main className="min-h-screen h-screen flex flex-col bg-[var(--background)] text-[color:var(--foreground)] overflow-hidden">
+    <main className="min-h-screen h-[100dvh] flex flex-col bg-[var(--background)] text-[color:var(--foreground)] overflow-hidden">
       <SiteHeader
         theme={theme}
         onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
@@ -2056,32 +2065,34 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
 
       {/* Main Split Screen Area */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative" data-resizable-container>
-        
+
         {/* Left Side: Documentation Column */}
         {showDocs && (
-          <section className={`w-full border-b lg:border-b-0 lg:border-r border-[var(--border)] bg-[var(--background)] flex flex-col overflow-hidden h-[40vh] lg:h-auto shrink-0 ${showCanvas ? "lg:w-[520px] xl:w-[560px]" : "flex-1"}`}>
+          <section className={`w-full border-b lg:border-b-0 lg:border-r border-[var(--border)] bg-[var(--background)] flex flex-col overflow-hidden
+            ${showCanvas
+              ? "h-[calc(100%-48px)] lg:h-auto lg:w-[520px] xl:w-[560px] shrink-0"
+              : "flex-1"
+            }`}>
             {/* Guide Header */}
-            <div className="p-4 border-b border-[var(--border)] shrink-0 bg-[var(--surface)]/20 flex items-start justify-between">
-              <div>
+            <div className="p-3 sm:p-4 border-b border-[var(--border)] shrink-0 bg-[var(--surface)]/20 flex items-start justify-between">
+              <div className="min-w-0">
                 <Link href="/learn" className="text-[11px] font-medium text-violet-400 hover:text-violet-300 transition-colors uppercase tracking-widest font-mono">
                   ← Academy
                 </Link>
-                <h1 className="text-xl font-bold text-[color:var(--foreground)] mt-2 tracking-tight leading-snug">
+                <h1 className="text-lg sm:text-xl font-bold text-[color:var(--foreground)] mt-1.5 tracking-tight leading-snug">
                   {topic.title}
                 </h1>
-                <p className="text-sm text-[color:var(--foreground)]/55 mt-1 leading-normal">
+                <p className="text-xs sm:text-sm text-[color:var(--foreground)]/55 mt-1 leading-normal">
                   {topic.subtitle}
                 </p>
               </div>
 
-              <div className="flex items-center gap-1.5 ml-4 shrink-0">
+              {/* Panel toggle buttons — desktop only */}
+              <div className="hidden lg:flex items-center gap-1.5 ml-4 shrink-0">
                 {!showCanvas ? (
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowDocs(true);
-                      setShowCanvas(true);
-                    }}
+                    onClick={() => { setShowDocs(true); setShowCanvas(true); }}
                     className="text-[10px] font-bold tracking-wide font-mono px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] transition cursor-pointer shadow-sm"
                   >
                     Split View
@@ -2090,12 +2101,8 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                   <>
                     <button
                       type="button"
-                      onClick={() => {
-                        setShowDocs(false);
-                        setInspectorVisible(false);
-                      }}
+                      onClick={() => { setShowDocs(false); setInspectorVisible(false); }}
                       className="text-[10px] font-bold tracking-wide font-mono px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-violet-500/10 hover:text-violet-400 text-[color:var(--foreground)]/70 transition cursor-pointer shadow-sm whitespace-nowrap"
-                      title="Focus Simulator (Hides Docs & Inspector)"
                     >
                       Focus Simulator
                     </button>
@@ -2103,7 +2110,6 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                       type="button"
                       onClick={() => setShowCanvas(false)}
                       className="text-[10px] font-bold tracking-wide font-mono px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] transition cursor-pointer shadow-sm whitespace-nowrap"
-                      title="Focus Docs (Hides Simulator)"
                     >
                       Focus Docs
                     </button>
@@ -2114,7 +2120,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
 
             {/* Guide Content Scroll Area */}
             <div className="flex-1 overflow-y-auto scrollbar-thin">
-              <div className="px-7 py-6 max-w-[600px] mx-auto space-y-2">
+              <div className="px-4 sm:px-7 py-4 sm:py-6 max-w-[600px] mx-auto space-y-2">
               {topic.sections.map((section: LearnSection) => (
                 <div key={section.id} className="space-y-3">
                   {renderMarkdown(section.content)}
@@ -2150,16 +2156,13 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
           </section>
         )}
 
-        {/* Floating Toggle Tabs when panels are hidden */}
+        {/* Floating toggle buttons — desktop only (useless on mobile) */}
         {!showDocs && (
           <button
             type="button"
             onClick={() => setShowDocs(true)}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-gradient-to-b from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-r-2xl border-y border-r border-violet-400/30 px-3 py-5 shadow-2xl hover:translate-x-0.5 transition-all font-bold font-mono text-[11px] cursor-pointer flex flex-col items-center gap-1.5 select-none"
-            style={{ 
-              writingMode: "vertical-lr",
-              letterSpacing: "0.1em"
-            }}
+            className="hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-gradient-to-b from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-r-2xl border-y border-r border-violet-400/30 px-3 py-5 shadow-2xl hover:translate-x-0.5 transition-all font-bold font-mono text-[11px] cursor-pointer flex-col items-center gap-1.5 select-none"
+            style={{ writingMode: "vertical-lr", letterSpacing: "0.1em" }}
           >
             SHOW DOCS
           </button>
@@ -2169,11 +2172,8 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
           <button
             type="button"
             onClick={() => setShowCanvas(true)}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-gradient-to-b from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-l-2xl border-y border-l border-blue-400/30 px-3 py-5 shadow-2xl hover:-translate-x-0.5 transition-all font-bold font-mono text-[11px] cursor-pointer flex flex-col items-center gap-1.5 select-none"
-            style={{ 
-              writingMode: "vertical-lr",
-              letterSpacing: "0.1em"
-            }}
+            className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-gradient-to-b from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-l-2xl border-y border-l border-blue-400/30 px-3 py-5 shadow-2xl hover:-translate-x-0.5 transition-all font-bold font-mono text-[11px] cursor-pointer flex-col items-center gap-1.5 select-none"
+            style={{ writingMode: "vertical-lr", letterSpacing: "0.1em" }}
           >
             SHOW CANVAS
           </button>
@@ -2181,69 +2181,45 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
 
         {/* Right Side: Graph Simulator Canvas */}
         {showCanvas && (
-          <section className="flex-1 flex flex-col min-h-0 relative h-[60vh] lg:h-auto">
-            {/* Top Bar for Graph Status */}
-            <div className="absolute top-3 left-3 z-20 flex gap-2 flex-wrap max-w-[80%]">
+          <section className="flex-1 flex flex-col min-h-0 relative">
+            {/* Top Bar for Graph Status — desktop only (hidden on mobile to avoid clutter) */}
+            <div className="absolute top-3 left-3 z-20 hidden sm:flex gap-2 flex-wrap max-w-[80%]">
               {!showDocs ? (
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowDocs(true);
-                    setShowCanvas(true);
-                  }}
+                  onClick={() => { setShowDocs(true); setShowCanvas(true); }}
                   className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2.5 py-1 text-xs text-[color:var(--foreground)] shadow hover:border-violet-500/40 transition cursor-pointer select-none font-bold font-mono"
-                  title="Show split view"
                 >
-                  Split View 💻
+                  Split View
                 </button>
               ) : (
                 <>
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowDocs(false);
-                      setInspectorVisible(false);
-                    }}
+                    onClick={() => { setShowDocs(false); setInspectorVisible(false); }}
                     className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2.5 py-1 text-xs text-[color:var(--foreground)] shadow hover:border-violet-500/40 transition cursor-pointer select-none font-bold font-mono"
-                    title="Focus Simulator (Hides Docs & Inspector)"
                   >
-                    Focus Simulator 🖥️
+                    Focus Simulator
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowCanvas(false)}
                     className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2.5 py-1 text-xs text-[color:var(--foreground)] shadow hover:border-blue-500/40 transition cursor-pointer select-none font-bold font-mono"
-                    title="Focus Docs (Hides Simulator)"
                   >
-                    Focus Docs 📖
+                    Focus Docs
                   </button>
                 </>
               )}
               <label className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2.5 py-1 text-xs text-[color:var(--foreground)] shadow hover:border-violet-500/40 transition cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={hideResponse}
-                  onChange={() => setHideResponse(!hideResponse)}
-                  className="accent-violet-500 cursor-pointer"
-                />
+                <input type="checkbox" checked={hideResponse} onChange={() => setHideResponse(!hideResponse)} className="accent-violet-500 cursor-pointer" />
                 <span>Hide Response</span>
               </label>
               <label className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2.5 py-1 text-xs text-[color:var(--foreground)] shadow hover:border-blue-500/40 transition cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={parallelResponse}
-                  onChange={() => setParallelResponse(!parallelResponse)}
-                  className="accent-violet-500 cursor-pointer"
-                />
+                <input type="checkbox" checked={parallelResponse} onChange={() => setParallelResponse(!parallelResponse)} className="accent-violet-500 cursor-pointer" />
                 <span>Parallel</span>
               </label>
               <label className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2.5 py-1 text-xs text-[color:var(--foreground)] shadow hover:border-emerald-500/40 transition cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={debugEnabled}
-                  onChange={() => setDebugEnabled(!debugEnabled)}
-                  className="accent-violet-500 cursor-pointer"
-                />
+                <input type="checkbox" checked={debugEnabled} onChange={() => setDebugEnabled(!debugEnabled)} className="accent-violet-500 cursor-pointer" />
                 <span>Logs</span>
               </label>
             </div>
@@ -2268,19 +2244,26 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                 theme={theme}
               />
 
-              {/* Embedded Floating Inspector Panel inside Canvas */}
+              {/* Inspector Panel — right drawer on desktop, bottom sheet on mobile */}
               {inspectorVisible && selectedNode && (
-                <div className="absolute top-14 right-3 bottom-3 z-20 w-72 pointer-events-auto shadow-2xl rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xl flex flex-col overflow-hidden">
-                  <div className="flex justify-end p-2 bg-[var(--surface-muted)] border-b border-[var(--border)] shrink-0">
+                <div className="
+                  absolute z-20 pointer-events-auto shadow-2xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xl flex flex-col overflow-hidden
+                  bottom-0 left-0 right-0 max-h-[45vh] rounded-t-2xl
+                  sm:top-14 sm:bottom-3 sm:left-auto sm:right-3 sm:w-72 sm:rounded-2xl
+                ">
+                  <div className="flex justify-between items-center p-2 bg-[var(--surface-muted)] border-b border-[var(--border)] shrink-0">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--foreground)]/50 font-mono pl-1">
+                      {String(selectedNode.data?.label || selectedNode.id)}
+                    </p>
                     <button
                       type="button"
                       onClick={() => setInspectorVisible(false)}
                       className="text-[10px] font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded transition cursor-pointer"
                     >
-                      ✕ Hide Inspector
+                      ✕ Close
                     </button>
                   </div>
-                  <div className="flex-1 overflow-hidden">
+                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                     <NodeInspectorPanel
                       selectedNode={selectedNode}
                       currentFrames={currentFrames}
@@ -2298,7 +2281,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
               )}
 
               {/* Reopen Inspector Button */}
-              {!inspectorVisible && selectedNode && (
+              {/* {!inspectorVisible && selectedNode && (
                 <button
                   type="button"
                   onClick={() => setInspectorVisible(true)}
@@ -2306,7 +2289,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                 >
                   Inspect: {String(selectedNode.data?.label || selectedNode.id)}
                 </button>
-              )}
+              )} */}
             </div>
 
             {/* Sticky Timeline / Controls at Bottom */}
@@ -2345,6 +2328,35 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
             </div>
           </section>
         )}
+      </div>
+
+      {/* Mobile bottom tab bar: Docs | Sim — only on < lg screens */}
+      <div className="lg:hidden shrink-0 flex border-t border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur">
+        <button
+          type="button"
+          onClick={() => { setShowDocs(true); setShowCanvas(false); }}
+          className={`flex-1 py-3 text-xs font-bold transition flex items-center justify-center gap-2 ${
+            showDocs && !showCanvas
+              ? "text-violet-400 border-t-2 border-violet-500 bg-violet-500/5"
+              : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]"
+          }`}
+        >
+          <span className="text-base">&#9776;</span>
+          Docs
+        </button>
+        <div className="w-px bg-[var(--border)]" />
+        <button
+          type="button"
+          onClick={() => { setShowDocs(false); setShowCanvas(true); }}
+          className={`flex-1 py-3 text-xs font-bold transition flex items-center justify-center gap-2 ${
+            showCanvas && !showDocs
+              ? "text-violet-400 border-t-2 border-violet-500 bg-violet-500/5"
+              : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]"
+          }`}
+        >
+          <span className="text-base">&#9654;</span>
+          Simulator
+        </button>
       </div>
     </main>
   );

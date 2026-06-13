@@ -724,15 +724,16 @@ const edgeTypes = {
 
 // The actual workspace content — extracted so useReactFlow() hook works
 function WorkspaceInner() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "dark";
+  const [theme, setTheme] = useState<Theme>("dark");
+
+  useEffect(() => {
     const saved = window.localStorage.getItem("flowframe-theme") as Theme | null;
-    return saved === "light" || saved === "dark"
-      ? saved
-      : window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  });
+    if (saved === "light" || saved === "dark") {
+      setTheme(saved);
+    } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+      setTheme("light");
+    }
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -1577,7 +1578,7 @@ function WorkspaceInner() {
   };
 
   return (
-    <main className="relative min-h-screen h-screen overflow-hidden flex flex-col bg-[var(--background)]">
+    <main className="relative min-h-[100dvh] h-[100dvh] overflow-hidden flex flex-col bg-[var(--background)]">
       <div className="pointer-events-none absolute inset-0 -z-10 technical-grid opacity-35" />
 
       <SiteHeader
@@ -1872,9 +1873,14 @@ function WorkspaceInner() {
             </div>
           )}
 
-        {/* Floating Inspector Panel (Right Column) */}
-        {selectedNode && (
-          <aside className="absolute md:top-4 md:right-4 md:bottom-auto md:left-auto max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:w-full max-md:rounded-t-3xl max-md:rounded-b-none max-md:max-h-[50vh] z-20 w-80 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-xl shadow-2xl flex flex-col max-h-[calc(100vh-160px)] transition-all duration-300 overflow-y-auto scrollbar-thin">
+          {/* Floating Inspector Panel — bottom sheet on mobile, right side on desktop */}
+          {selectedNode && (
+            <aside className="
+              absolute z-20
+              bottom-0 left-0 right-0 max-h-[50vh] rounded-t-3xl rounded-b-none
+              md:bottom-auto md:top-4 md:right-4 md:left-auto md:w-80 md:rounded-2xl md:max-h-[calc(100vh-160px)]
+              border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xl shadow-2xl flex flex-col overflow-y-auto scrollbar-thin transition-all duration-300
+            ">
             <div className="p-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]/50">
               <div>
                 <h2 className="text-sm font-bold tracking-tight text-[color:var(--foreground)]">Node Inspector</h2>

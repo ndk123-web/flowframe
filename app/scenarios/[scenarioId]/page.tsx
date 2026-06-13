@@ -1539,20 +1539,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
   const { scenarioId } = use(params);
 
 
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") {
-      return "dark";
-    }
-
-    const saved = window.localStorage.getItem("flowframe-theme") as Theme | null;
-    if (saved === "light" || saved === "dark") {
-      return saved;
-    }
-
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  });
+  const [theme, setTheme] = useState<Theme>("dark");
 
   const [hideResponse, setHideResponse] = useState(false);
   const [parallelResponse, setParallelResponse] = useState(false);
@@ -1705,6 +1692,12 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
 
   useEffect(() => {
     setIsMounted(true);
+    const saved = window.localStorage.getItem("flowframe-theme") as Theme | null;
+    if (saved === "light" || saved === "dark") {
+      setTheme(saved);
+    } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+      setTheme("light");
+    }
   }, []);
 
   const { frames, nodes, edges, debug } = useMemo(
@@ -1971,76 +1964,60 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
         badgeText="Simulator"
         alwaysGlass={true}
       />
-      <div className="flex h-[calc(100vh-70px)] flex-col overflow-x-hidden" data-resizable-container>
-        {/* Top Bar */}
-        <header className="border-b border-[var(--border)] bg-[var(--surface)]/50 px-4 py-3 backdrop-blur overflow-x-auto">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 flex-wrap sm:gap-4 md:flex-nowrap">
-            <div className="flex items-center gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--foreground)]">{scenarioId}</p>
-                <p className="text-[11px] text-[color:var(--foreground)]/50">Simulation</p>
-              </div>
+      <div className="flex h-[calc(100dvh-56px)] sm:h-[calc(100vh-70px)] flex-col overflow-x-hidden" data-resizable-container>
+        {/* Top Bar — compact on mobile */}
+        <header className="border-b border-[var(--border)] bg-[var(--surface)]/50 px-3 sm:px-4 py-2 sm:py-3 backdrop-blur">
+          <div className="flex items-center justify-between gap-2">
+            {/* Left: scenario name */}
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--foreground)] truncate">{scenarioId}</p>
+              <p className="hidden sm:block text-[11px] text-[color:var(--foreground)]/50">Simulation</p>
             </div>
 
-            <div className="flex items-center gap-1 sm:gap-2 flex-wrap md:flex-nowrap">
-              <label 
+            {/* Right: controls */}
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              {/* Checkboxes — icon-only on mobile */}
+              <label
                 title="Hide the response/return packets flowing back from servers"
-                className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 sm:px-2.5 sm:py-1.5 text-xs text-[color:var(--foreground)] transition hover:border-violet-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+                className="flex cursor-pointer items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-violet-500/50 group"
               >
-                <input
-                  type="checkbox"
-                  checked={hideResponse}
-                  onChange={() => setHideResponse((prev) => !prev)}
-                  className="accent-violet-500"
-                />
-                <span className="hidden sm:inline group-hover:text-violet-300">Hide Response</span>
-                <span className="sm:hidden text-[10px]">↔</span>
+                <input type="checkbox" checked={hideResponse} onChange={() => setHideResponse((prev) => !prev)} className="accent-violet-500 cursor-pointer w-3 h-3" />
+                <span className="hidden sm:inline group-hover:text-violet-300 whitespace-nowrap">Hide Response</span>
+                <span className="sm:hidden font-mono text-[10px]">↔</span>
               </label>
 
-              <label 
+              <label
                 title="Show parallel request and response flows simultaneously"
-                className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 sm:px-2.5 sm:py-1.5 text-xs text-[color:var(--foreground)] transition hover:border-blue-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+                className="flex cursor-pointer items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-blue-500/50 group"
               >
-                <input
-                  type="checkbox"
-                  checked={parallelResponse}
-                  onChange={() => setParallelResponse((prev) => !prev)}
-                  className="accent-violet-500"
-                />
+                <input type="checkbox" checked={parallelResponse} onChange={() => setParallelResponse((prev) => !prev)} className="accent-violet-500 cursor-pointer w-3 h-3" />
                 <span className="hidden sm:inline group-hover:text-blue-300">Parallel</span>
-                <span className="sm:hidden text-[10px]">∥</span>
+                <span className="sm:hidden font-mono text-[10px]">∥</span>
               </label>
 
-              <label 
+              <label
                 title="Show detailed frame-by-frame debug information below the graph"
-                className="flex cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 sm:px-2.5 sm:py-1.5 text-xs text-[color:var(--foreground)] transition hover:border-emerald-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+                className="flex cursor-pointer items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-emerald-500/50 group"
               >
-                <input
-                  type="checkbox"
-                  checked={debugEnabled}
-                  onChange={() => setDebugEnabled((prev) => !prev)}
-                  className="accent-violet-500"
-                />
+                <input type="checkbox" checked={debugEnabled} onChange={() => setDebugEnabled((prev) => !prev)} className="accent-violet-500 cursor-pointer w-3 h-3" />
                 <span className="hidden sm:inline group-hover:text-emerald-300">Debug</span>
-                <span className="sm:hidden text-[10px]">dbg</span>
+                <span className="sm:hidden font-mono text-[10px]">dbg</span>
               </label>
 
-              <div className="h-6 w-px bg-[var(--border)] hidden md:block" />
+              <div className="h-4 w-px bg-[var(--border)] hidden sm:block" />
 
-              <div className="flex items-center gap-1 sm:gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 sm:px-3 py-1 sm:py-1.5 text-xs whitespace-nowrap">
-                <span className={`h-2 w-2 rounded-full ${isPlaying ? "bg-emerald-400" : "bg-[color:var(--foreground)]/30"}`} />
-                <span className="text-[color:var(--foreground)]/70 hidden sm:inline">
-                  {isPlaying ? "Playing" : frameGroups.length > 0 ? "Paused" : "Idle"}
-                </span>
-                <span className="ml-0 sm:ml-1 text-[color:var(--foreground)]/50 text-[10px] sm:text-xs">
+              {/* Status indicator */}
+              <div className="flex items-center gap-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs whitespace-nowrap">
+                <span className={`h-1.5 w-1.5 rounded-full ${isPlaying ? "bg-emerald-400 animate-pulse" : "bg-[color:var(--foreground)]/30"}`} />
+                <span className="text-[color:var(--foreground)]/50 text-[10px]">
                   {frameIndex + 1}/{frameGroups.length || 0}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Info Section - Show what each control does */}
-          <div className="mt-3 hidden sm:grid grid-cols-3 gap-3 text-[11px] text-[color:var(--foreground)]/60 border-t border-[var(--border)]/30 pt-3">
+          {/* Info grid — desktop only */}
+          <div className="mt-2 hidden sm:grid grid-cols-3 gap-3 text-[11px] text-[color:var(--foreground)]/60 border-t border-[var(--border)]/30 pt-2">
             <div className="flex items-start gap-2">
               <span className="text-violet-400 font-mono">↔</span>
               <span><strong>Hide Response:</strong> Toggle response packets from servers</span>
@@ -2103,22 +2080,23 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             />
           </motion.div>
 
-          {/* Mobile Inspector Toggle Button */}
+          {/* Mobile Inspector Toggle — touch-friendly */}
           <button
             onClick={() => setInspectorVisible(!inspectorVisible)}
-            className="lg:hidden px-4 py-2 text-xs font-medium border-t border-[var(--border)] bg-[var(--surface)]/50 hover:bg-[var(--surface)] transition text-[color:var(--foreground)]/70"
+            className="lg:hidden flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold border-t border-[var(--border)] bg-[var(--surface)]/60 hover:bg-[var(--surface)] transition text-[color:var(--foreground)]/70 w-full"
           >
-            {inspectorVisible ? "Hide Inspector" : "Show Inspector"}
+            <span className={`h-1.5 w-1.5 rounded-full ${inspectorVisible ? "bg-violet-400" : "bg-[color:var(--foreground)]/30"}`} />
+            {inspectorVisible ? "Hide Inspector" : "Inspect Node"}
           </button>
 
-          {/* Mobile Inspector Drawer */}
+          {/* Mobile Inspector Drawer — limited height so canvas stays visible */}
           {inspectorVisible && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="lg:hidden w-full max-h-60 overflow-y-auto border-t border-[var(--border)] bg-[var(--surface)]/30"
+              className="lg:hidden w-full max-h-52 overflow-y-auto border-t border-[var(--border)] bg-[var(--surface)]/30"
             >
               <NodeInspectorPanel
                 selectedNode={selectedNode}
@@ -2174,8 +2152,9 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                 />
                 </div>
               </div>
-              <p className={`text-[11px] ${theme === "dark" ? "text-slate-500" : "text-slate-600"}`}>
-                Space: Play/Pause | ←→: Prev/Next | R: Reset
+              {/* Keyboard hint — desktop only */}
+              <p className={`hidden sm:block text-[11px] ${theme === "dark" ? "text-slate-500" : "text-slate-600"}`}>
+                Space: Play/Pause | ←→: Prev/Next
               </p>
 
               <Timeline
