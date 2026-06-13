@@ -379,7 +379,7 @@ class SimulationManager {
           const lbInstance = nodeInstance as LoadBalancerModel;
           
           // used Default Round Robin Strategy By Load Balancer Model
-          const selectedNodeId = lbInstance.runLoadBalancer(nextNodes);
+          const selectedNodeId = lbInstance.runLoadBalancer(nextNodes, request.ipAddress);
           if (!selectedNodeId) {
             request.direction = "backward";
             break;
