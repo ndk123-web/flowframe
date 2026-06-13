@@ -14,8 +14,8 @@ class LoadBalancerModel implements NodeInstance {
     this.strategy = strategy;
   }
 
-  runLoadBalancer(serverIds: any[]) {
-    return this.strategy.selectServer(serverIds);
+  runLoadBalancer(serverIds: any[], clientIp?: string) {
+    return this.strategy.selectServer(serverIds, clientIp);
   }
 }
 

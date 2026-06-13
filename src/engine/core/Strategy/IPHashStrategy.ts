@@ -9,11 +9,12 @@ class IPHashStrategy implements LoadBalancingConfig {
     this.name = name;
   }
 
-  selectServer(serverIds: any[], clientIp: string): any {
+  selectServer(serverIds: any[], clientIp?: string): any {
+    const ip = clientIp || "0.0.0.0";
     let hash = 0;
-    for (let i = 0; i < clientIp.length; i++) {
+    for (let i = 0; i < ip.length; i++) {
       // here >>> 0 is used to convert the result to an unsigned 32-bit integer
-      hash = (hash * 31 + clientIp.charCodeAt(i)) >>> 0;
+      hash = (hash * 31 + ip.charCodeAt(i)) >>> 0;
     }
 
     const index = hash % serverIds.length;
