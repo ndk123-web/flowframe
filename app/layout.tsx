@@ -30,6 +30,9 @@ export const metadata: Metadata = {
     shortcut: "/logo/flow-frame-light.png",
     apple: "/logo/flow-frame-light.png",
   },
+  verification: {
+    google: "wGPEG09WnWZRHgiShZe_c3bTAi9hh8dr7JsLqIXb0Fg",
+  },
 };
 
 export default function RootLayout({
