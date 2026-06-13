@@ -1,0 +1,15 @@
+# Pricing — FlowFrame
+
+FlowFrame is a 100% free, client-side interactive distributed systems simulator. There are no paid tiers, no subscription requirements, and no locked features.
+
+## Pricing Tiers
+
+### Community Edition
+- Price: $0/month (Free Forever)
+- Host Type: Local client-side execution
+- Limits: Unlimited custom architectures, infinite request frame simulations
+- Features Included:
+  - Full canvas builder with drag-and-drop / click-to-add
+  - Node inspector to edit node configurations and inspect states
+  - All 4 pre-configured learning scenarios and visual guides
+  - Local state persistence
