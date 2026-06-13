@@ -977,7 +977,7 @@ export default function Home() {
           <div>
             <AnimatedBadge />
             <h1 className="mt-6 max-w-xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">
-              <span className="bg-gradient-to-r from-blue-500 to-violet-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-500 to-violet-600 bg-clip-text text-transparent">
                 FlowFrame
               </span>
             </h1>
@@ -1003,6 +1003,15 @@ export default function Home() {
                 }}
               >
                 Interactive Sandbox 🛠️
+              </button>
+              <button
+                type="button"
+                className="rounded-2xl border-2 border-green-500/35 bg-gradient-to-r from-green-500/10 to-teal-500/10 px-8 py-4 text-sm font-bold backdrop-blur transition-all hover:border-green-500/60 hover:scale-105 active:scale-95 text-green-400"
+                onClick={() => {
+                  router.push("/learn");
+                }}
+              >
+                Start Learning 📚
               </button>
             </div>
           </div>
@@ -1039,15 +1048,7 @@ export default function Home() {
                 >
                   Launch Simulator →
                 </button>
-                <button
-                  type="button"
-                  className="rounded-xl border border-white/40 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition backdrop-blur hover:bg-white/20 hover:scale-105 active:scale-95"
-                  onClick={() => {
-                    window.open("https://github.com/ndk123-web/flow-frame", "_blank")
-                  }}
-                >
-                  View on GitHub ↗
-                </button>
+
               </div>
             </div>
           </div>
