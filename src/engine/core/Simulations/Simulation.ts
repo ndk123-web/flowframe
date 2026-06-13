@@ -166,15 +166,21 @@ class SimulationManager {
       this.ipv4, // ipv4 address of the request
     );
 
-    // set the task to "GET_DATA" 
-    request.task = "GET_DATA";
-
-    // Optional endpoint comes from scenario payload for API Gateway routing.
-    const explicitEndpoint = this.payloadForRequest?.endpoint;
-    if (typeof explicitEndpoint === "string" && explicitEndpoint.length > 0) {
-      request.endpoint = explicitEndpoint;
-      request.task = `GET ${explicitEndpoint}`;
+    // Set method and endpoint from payload if provided, defaulting to GET and /api/v1/getData
+    if (typeof this.payloadForRequest?.endpoint === "string" && this.payloadForRequest.endpoint.length > 0) {
+      request.endpoint = this.payloadForRequest.endpoint;
+    } else {
+      request.endpoint = "/api/v1/getData";
     }
+
+    if (typeof this.payloadForRequest?.method === "string" && this.payloadForRequest.method.length > 0) {
+      request.method = this.payloadForRequest.method as any;
+    } else {
+      request.method = "GET";
+    }
+
+    // set the task to "METHOD ENDPOINT"
+    request.task = `${request.method} ${request.endpoint}`;
 
     // deterministic lookup key selection for cache scenarios.
     const explicitLookupKey = this.payloadForRequest?.lookupKey;
@@ -396,6 +402,55 @@ class SimulationManager {
           if (!serverInstance.canAccepthRequest()) {
             this.pushFrame(request, currentNodeId, "", "SERVER_REJECT_REQUEST");
             return;
+          }
+
+          // Check endpoint and method validity (only for non-valetKey flows)
+          if (!request.context.valetKeyFlow) {
+            const normalizePath = (p: string) => p.replace(/^\/+|\/+$/g, "");
+            const reqEndpoint = normalizePath(request.endpoint || "");
+            const reqMethod = request.method;
+
+            // Find matching endpoint
+            const matchingEndpointKey = Object.keys(serverInstance.endpoints || {}).find(
+              (ep) => normalizePath(ep) === reqEndpoint
+            );
+
+            if (!matchingEndpointKey) {
+              const previousNodeId = traversalPath[traversalPath.length - 2] ?? currentNodeId;
+              this.pushFrame(
+                request,
+                currentNodeId,
+                previousNodeId,
+                "SERVER_ENDPOINT_NOT_FOUND",
+                {
+                  payloadSummary: `404 Not Found: ${reqMethod} ${request.endpoint}`,
+                }
+              );
+              traversalPath.pop();
+              request.currentNodeId = previousNodeId;
+              currentNodeId = previousNodeId;
+              request.direction = "backward";
+              break;
+            }
+
+            const allowedMethods = serverInstance.endpoints[matchingEndpointKey] || [];
+            if (!allowedMethods.includes(reqMethod)) {
+              const previousNodeId = traversalPath[traversalPath.length - 2] ?? currentNodeId;
+              this.pushFrame(
+                request,
+                currentNodeId,
+                previousNodeId,
+                "SERVER_METHOD_NOT_ALLOWED",
+                {
+                  payloadSummary: `405 Method Not Allowed: ${reqMethod} ${request.endpoint}`,
+                }
+              );
+              traversalPath.pop();
+              request.currentNodeId = previousNodeId;
+              currentNodeId = previousNodeId;
+              request.direction = "backward";
+              break;
+            }
           }
 
           // Valet-key server behavior:
