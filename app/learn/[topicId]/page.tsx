@@ -573,7 +573,7 @@ function NodeInspectorPanel({
           {nodeConfigs && nodeConfigs[selectedNode.id] && (
             <div className={`rounded-xl border border-violet-500/25 bg-violet-500/5 p-3.5 space-y-3 shadow-inner`}>
               <p className={`text-[10px] uppercase tracking-widest text-violet-400 font-bold font-mono`}>
-                ⚙️ Configure Node
+                Configure
               </p>
 
               {role === "client" && (
@@ -836,8 +836,8 @@ function NodeInspectorPanel({
 
                         return (
                           <div key={serverId} className="flex flex-col gap-1 border-b border-[var(--border)]/35 pb-2 last:border-b-0 last:pb-0">
-                            <span className="text-[10px] font-medium text-[color:var(--foreground)]/70 flex items-center gap-1.5">
-                              🖥️ {serverLabel}
+                            <span className="text-[10px] font-mono flex items-center gap-1.5 text-[color:var(--foreground)]/70">
+                              {serverLabel}
                             </span>
                             <select
                               value={currentVal}
@@ -1520,7 +1520,7 @@ function parseInlineMarkdown(text: string) {
 
     if (type === "**") {
       parts.push(
-        <strong key={key++} className="font-extrabold text-[color:var(--foreground)]">
+        <strong key={key++} className="font-bold text-[color:var(--foreground)]">
           {content}
         </strong>
       );
@@ -1528,7 +1528,7 @@ function parseInlineMarkdown(text: string) {
       parts.push(
         <code
           key={key++}
-          className="bg-[var(--surface-muted)] text-[10px] font-mono px-1.5 py-0.5 rounded border border-[var(--border)] text-violet-400 font-bold"
+          className="bg-[var(--surface-muted)] text-[0.9em] font-mono px-1 py-0.5 rounded border border-[var(--border)] text-violet-400"
         >
           {content}
         </code>
@@ -1553,7 +1553,7 @@ function renderMarkdown(text: string) {
       return (
         <h3
           key={idx}
-          className="text-xs font-bold uppercase tracking-wider text-violet-400 mt-6 mb-2 font-mono"
+          className="text-[0.9em] font-bold uppercase tracking-wider text-violet-500 mt-6 mb-2 font-mono"
         >
           {trimmed.slice(4)}
         </h3>
@@ -1563,7 +1563,7 @@ function renderMarkdown(text: string) {
       return (
         <h2
           key={idx}
-          className="text-sm font-bold uppercase tracking-wider text-[color:var(--foreground)] mt-8 mb-3 border-b border-[var(--border)]/45 pb-1 font-mono"
+          className="text-[1.1em] font-bold uppercase tracking-wider text-[color:var(--foreground)] mt-8 mb-3 border-b border-[var(--border)]/60 pb-2 font-mono"
         >
           {trimmed.slice(3)}
         </h2>
@@ -1571,7 +1571,7 @@ function renderMarkdown(text: string) {
     }
     if (trimmed.startsWith("# ")) {
       return (
-        <h1 key={idx} className="text-lg font-black text-[color:var(--foreground)] mt-8 mb-4">
+        <h1 key={idx} className="text-[1.3em] font-extrabold text-[color:var(--foreground)] mt-8 mb-4 tracking-tight">
           {trimmed.slice(2)}
         </h1>
       );
@@ -1580,20 +1580,20 @@ function renderMarkdown(text: string) {
       return (
         <li
           key={idx}
-          className="ml-4 list-disc text-xs text-[color:var(--foreground)]/70 leading-relaxed mb-1"
+          className="ml-4 list-disc text-[0.95em] text-[color:var(--foreground)]/80 leading-relaxed mb-2"
         >
           {parseInlineMarkdown(trimmed.slice(2))}
         </li>
       );
     }
     if (trimmed === "---") {
-      return <hr key={idx} className="my-6 border-[var(--border)]/45" />;
+      return <hr key={idx} className="my-6 border-[var(--border)]/60" />;
     }
     if (trimmed === "") {
       return <div key={idx} className="h-2" />;
     }
     return (
-      <p key={idx} className="text-xs text-[color:var(--foreground)]/70 leading-relaxed mb-3">
+      <p key={idx} className="text-[0.95em] text-[color:var(--foreground)]/80 leading-relaxed mb-4">
         {parseInlineMarkdown(line)}
       </p>
     );
@@ -2049,7 +2049,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
             exit={{ opacity: 0, y: -20, x: "-50%" }}
             className="absolute top-20 left-1/2 z-50 rounded-xl border border-violet-500/50 bg-slate-950/90 px-4 py-2.5 text-xs text-violet-300 font-mono font-bold flex items-center gap-2 shadow-2xl backdrop-blur"
           >
-            <span>⚡</span> {notification}
+            {notification}
           </motion.div>
         )}
       </AnimatePresence>
@@ -2059,17 +2059,17 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
         
         {/* Left Side: Documentation Column */}
         {showDocs && (
-          <section className={`w-full border-b lg:border-b-0 lg:border-r border-[var(--border)] bg-[var(--surface)]/10 flex flex-col overflow-hidden h-[40vh] lg:h-auto shrink-0 ${showCanvas ? "lg:w-[460px] xl:w-[500px]" : "flex-1"}`}>
+          <section className={`w-full border-b lg:border-b-0 lg:border-r border-[var(--border)] bg-[var(--background)] flex flex-col overflow-hidden h-[40vh] lg:h-auto shrink-0 ${showCanvas ? "lg:w-[520px] xl:w-[560px]" : "flex-1"}`}>
             {/* Guide Header */}
             <div className="p-4 border-b border-[var(--border)] shrink-0 bg-[var(--surface)]/20 flex items-start justify-between">
               <div>
-                <Link href="/learn" className="text-[11px] font-bold text-violet-400 hover:text-violet-300 transition-colors uppercase tracking-wider font-mono">
-                  ← Back to Academy
+                <Link href="/learn" className="text-[11px] font-medium text-violet-400 hover:text-violet-300 transition-colors uppercase tracking-widest font-mono">
+                  ← Academy
                 </Link>
-                <h1 className="text-lg font-extrabold text-[color:var(--foreground)] mt-2">
+                <h1 className="text-xl font-bold text-[color:var(--foreground)] mt-2 tracking-tight leading-snug">
                   {topic.title}
                 </h1>
-                <p className="text-[11px] text-[color:var(--foreground)]/50 mt-0.5">
+                <p className="text-sm text-[color:var(--foreground)]/55 mt-1 leading-normal">
                   {topic.subtitle}
                 </p>
               </div>
@@ -2084,7 +2084,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                     }}
                     className="text-[10px] font-bold tracking-wide font-mono px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] transition cursor-pointer shadow-sm"
                   >
-                    Split View 💻
+                    Split View
                   </button>
                 ) : (
                   <>
@@ -2097,7 +2097,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                       className="text-[10px] font-bold tracking-wide font-mono px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-violet-500/10 hover:text-violet-400 text-[color:var(--foreground)]/70 transition cursor-pointer shadow-sm whitespace-nowrap"
                       title="Focus Simulator (Hides Docs & Inspector)"
                     >
-                      Focus Simulator 🖥️
+                      Focus Simulator
                     </button>
                     <button
                       type="button"
@@ -2105,7 +2105,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                       className="text-[10px] font-bold tracking-wide font-mono px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] transition cursor-pointer shadow-sm whitespace-nowrap"
                       title="Focus Docs (Hides Simulator)"
                     >
-                      Focus Docs 📖
+                      Focus Docs
                     </button>
                   </>
                 )}
@@ -2113,7 +2113,8 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
             </div>
 
             {/* Guide Content Scroll Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin">
+            <div className="flex-1 overflow-y-auto scrollbar-thin">
+              <div className="px-7 py-6 max-w-[600px] mx-auto space-y-2">
               {topic.sections.map((section: LearnSection) => (
                 <div key={section.id} className="space-y-3">
                   {renderMarkdown(section.content)}
@@ -2129,7 +2130,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                         >
                           <div className="flex items-center justify-between">
                             <h4 className="text-xs font-bold text-violet-400 font-mono group-hover:text-violet-300">
-                              ⚡ {cp.title}
+                              {cp.title}
                             </h4>
                             <span className="text-[9px] font-mono uppercase bg-violet-500/10 text-violet-400 border border-violet-500/20 px-1.5 py-0.5 rounded group-hover:bg-violet-500/25 group-hover:text-violet-300 transition select-none">
                               Load
@@ -2144,6 +2145,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                   )}
                 </div>
               ))}
+              </div>
             </div>
           </section>
         )}
@@ -2159,7 +2161,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
               letterSpacing: "0.1em"
             }}
           >
-            📖 SHOW DOCS ➔
+            SHOW DOCS
           </button>
         )}
 
@@ -2173,7 +2175,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
               letterSpacing: "0.1em"
             }}
           >
-            🖥️ SHOW CANVAS ➔
+            SHOW CANVAS
           </button>
         )}
 
@@ -2302,7 +2304,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                   onClick={() => setInspectorVisible(true)}
                   className="absolute bottom-24 right-3 z-20 flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] px-3 py-1.5 text-xs text-violet-400 font-bold shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer font-mono"
                 >
-                  ⚙️ Inspect Node ({String(selectedNode.data?.label || selectedNode.id)})
+                  Inspect: {String(selectedNode.data?.label || selectedNode.id)}
                 </button>
               )}
             </div>

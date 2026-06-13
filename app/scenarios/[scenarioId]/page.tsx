@@ -605,7 +605,7 @@ function NodeInspectorPanel({
           {nodeConfigs && nodeConfigs[selectedNode.id] && (
             <div className={`rounded-xl border border-violet-500/25 bg-violet-500/5 p-3.5 space-y-3 shadow-inner`}>
               <p className={`text-[10px] uppercase tracking-widest text-violet-400 font-bold font-mono`}>
-                ⚙️ Configure Node
+                Configure
               </p>
 
               {role === "client" && (
@@ -868,8 +868,8 @@ function NodeInspectorPanel({
 
                         return (
                           <div key={serverId} className="flex flex-col gap-1 border-b border-[var(--border)]/35 pb-2 last:border-b-0 last:pb-0">
-                            <span className="text-[10px] font-medium text-[color:var(--foreground)]/70 flex items-center gap-1.5">
-                              🖥️ {serverLabel}
+                            <span className="text-[10px] font-mono text-[color:var(--foreground)]/70 flex items-center">
+                              {serverLabel}
                             </span>
                             <select
                               value={currentVal}
@@ -1994,7 +1994,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                   className="accent-violet-500"
                 />
                 <span className="hidden sm:inline group-hover:text-violet-300">Hide Response</span>
-                <span className="sm:hidden text-[10px]">↔️</span>
+                <span className="sm:hidden text-[10px]">↔</span>
               </label>
 
               <label 
@@ -2008,7 +2008,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                   className="accent-violet-500"
                 />
                 <span className="hidden sm:inline group-hover:text-blue-300">Parallel</span>
-                <span className="sm:hidden text-[10px]">⚡</span>
+                <span className="sm:hidden text-[10px]">∥</span>
               </label>
 
               <label 
@@ -2022,7 +2022,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                   className="accent-violet-500"
                 />
                 <span className="hidden sm:inline group-hover:text-emerald-300">Debug</span>
-                <span className="sm:hidden text-[10px]">🐛</span>
+                <span className="sm:hidden text-[10px]">dbg</span>
               </label>
 
               <div className="h-6 w-px bg-[var(--border)] hidden md:block" />
@@ -2042,15 +2042,15 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
           {/* Info Section - Show what each control does */}
           <div className="mt-3 hidden sm:grid grid-cols-3 gap-3 text-[11px] text-[color:var(--foreground)]/60 border-t border-[var(--border)]/30 pt-3">
             <div className="flex items-start gap-2">
-              <span className="text-violet-400">↔️</span>
+              <span className="text-violet-400 font-mono">↔</span>
               <span><strong>Hide Response:</strong> Toggle response packets from servers</span>
             </div>
             <div className="flex items-start gap-2">
-              <span className="text-blue-400">⚡</span>
+              <span className="text-blue-400 font-mono">∥</span>
               <span><strong>Parallel:</strong> Show simultaneous request-response flows</span>
             </div>
             <div className="flex items-start gap-2">
-              <span className="text-emerald-400">🐛</span>
+              <span className="text-emerald-400 font-mono">&gt;_</span>
               <span><strong>Debug:</strong> Open detailed frame inspection panel</span>
             </div>
           </div>
