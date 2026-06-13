@@ -45,11 +45,13 @@ class ApiGatewayModel implements NodeInstance {
    * @returns nextNodeId of the service (server)
    */
   runGateway(request: RequestManager): string {
-    const endpoint = request.endpoint;
+    const normalizePath = (p: string) => p.replace(/^\/+|\/+$/g, "");
+    const reqEndpoint = normalizePath(request.endpoint || "");
 
     for (const route in this.routes) {
       const serviceName = this.routes[route];
-      if (endpoint.startsWith(route) && this.services[serviceName]) {
+      const normRoute = normalizePath(route);
+      if (reqEndpoint.startsWith(normRoute) && this.services[serviceName]) {
         switch (this.strategy) {
           case "ROUND_ROBIN": {
             return this.roundRobinStrategy(serviceName);
