@@ -44,7 +44,7 @@ class ApiGatewayModel implements NodeInstance {
   /**
    * @returns nextNodeId of the service (server)
    */
-  runGateway(request: RequestManager): string {
+  runGateway(request: RequestManager, registry?: any): string {
     const normalizePath = (p: string) => p.replace(/^\/+|\/+$/g, "");
     const reqEndpoint = normalizePath(request.endpoint || "");
 
@@ -54,22 +54,39 @@ class ApiGatewayModel implements NodeInstance {
       if (reqEndpoint.startsWith(normRoute) && this.services[serviceName]) {
         switch (this.strategy) {
           case "ROUND_ROBIN": {
-            return this.roundRobinStrategy(serviceName);
+            return this.roundRobinStrategy(serviceName, registry);
           }
           case "RANDOM": {
-            return this.randomStrategy(serviceName);
+            return this.randomStrategy(serviceName, registry);
           }
           case "IP_HASH": {
-            return this.iphashStrategy(request.ipAddress, serviceName);
+            return this.iphashStrategy(request.ipAddress, serviceName, registry);
           }
           case "LEAST_CONNECTIONS": {
-            return this.leastConnectionsStrategy(serviceName);
+            return this.leastConnectionsStrategy(serviceName, registry);
           }
         }
       }
     }
 
     return "";
+  }
+
+  getHealthyServers(serviceName: string, registry?: any): string[] {
+    const servers = this.services[serviceName] || [];
+    if (!registry) {
+      return servers;
+    }
+    return servers.filter((serverId) => {
+      const inst = registry.getInstance(serverId);
+      if (inst && (inst.type === "SERVER" || inst.type === "Server")) {
+        const serverInst = inst as any;
+        return typeof serverInst.canAccepthRequest === "function"
+          ? serverInst.canAccepthRequest()
+          : true;
+      }
+      return true;
+    });
   }
 
   /**
@@ -94,10 +111,10 @@ class ApiGatewayModel implements NodeInstance {
    * @param serviceName it takes name of service
    * @returns nodeIds where it should be send
    */
-  roundRobinStrategy(serviceName: string) {
-    const servers = this.services[serviceName];
+  roundRobinStrategy(serviceName: string, registry?: any) {
+    const servers = this.getHealthyServers(serviceName, registry);
     if (!servers || servers.length === 0) {
-      throw new Error(`No servers available for service: ${serviceName}`);
+      throw new Error(`503 Service Unavailable: No healthy servers available for service ${serviceName}`);
     }
 
     const pointer = this.pointersByService[serviceName] ?? 0;
@@ -107,10 +124,10 @@ class ApiGatewayModel implements NodeInstance {
     return server;
   }
 
-  iphashStrategy(clientIp: string, serviceName: string) {
-    const servers = this.services[serviceName];
+  iphashStrategy(clientIp: string, serviceName: string, registry?: any) {
+    const servers = this.getHealthyServers(serviceName, registry);
     if (!servers || servers.length === 0) {
-      throw new Error(`No servers available for service: ${serviceName}`);
+      throw new Error(`503 Service Unavailable: No healthy servers available for service ${serviceName}`);
     }
 
     const hash = this.hashIp(clientIp);
@@ -118,25 +135,23 @@ class ApiGatewayModel implements NodeInstance {
     return servers[serverIndex];
   }
 
-  randomStrategy(serviceName: string) {
-    const servers = this.services[serviceName];
+  randomStrategy(serviceName: string, registry?: any) {
+    const servers = this.getHealthyServers(serviceName, registry);
 
     if (!servers || servers.length === 0) {
-      throw new Error(`No servers available for service: ${serviceName}`);
+      throw new Error(`503 Service Unavailable: No healthy servers available for service ${serviceName}`);
     }
     const randomIndex = Math.floor(Math.random() * servers.length);
     return servers[randomIndex];
   }
 
-  leastConnectionsStrategy(serviceName: string) {
-    //
-    const servers = this.services[serviceName];
+  leastConnectionsStrategy(serviceName: string, registry?: any) {
+    const servers = this.getHealthyServers(serviceName, registry);
 
     if (!servers || servers.length === 0) {
-      throw new Error(`No servers available for service: ${serviceName}`);
+      throw new Error(`503 Service Unavailable: No healthy servers available for service ${serviceName}`);
     }
 
-    // For simplicity, we will just return the first server in the list. In a real implementation, you would need to track the number of active connections to each server and return the one with the least connections.
     return servers[0];
   }
 

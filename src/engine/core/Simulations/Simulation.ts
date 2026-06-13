@@ -378,9 +378,33 @@ class SimulationManager {
           // get instance of LoadBalancer
           const lbInstance = nodeInstance as LoadBalancerModel;
           
+          // Filter out servers that are overloaded / capacity = 0
+          const healthyNodes = nextNodes.filter((nodeId) => {
+            const inst = this.registry.getInstance(nodeId);
+            if (inst && (inst.type === "SERVER" || inst.type === "Server")) {
+              const serverInst = inst as ServerModel;
+              return serverInst.canAccepthRequest();
+            }
+            return true;
+          });
+
           // used Default Round Robin Strategy By Load Balancer Model
-          const selectedNodeId = lbInstance.runLoadBalancer(nextNodes, request.ipAddress);
-          if (!selectedNodeId) {
+          const selectedNodeId = lbInstance.runLoadBalancer(healthyNodes, request.ipAddress);
+          if (!selectedNodeId || selectedNodeId === -1) {
+            const previousNodeId = traversalPath[traversalPath.length - 2] ?? currentNodeId;
+            this.pushFrame(
+              request,
+              currentNodeId,
+              previousNodeId,
+              "LOAD_BALANCER_REJECT_REQUEST",
+              {
+                payloadSummary: "503 Service Unavailable: No healthy servers available",
+              }
+            );
+            request.context.serverErrorStatus = "503";
+            traversalPath.pop();
+            request.currentNodeId = previousNodeId;
+            currentNodeId = previousNodeId;
             request.direction = "backward";
             break;
           }
@@ -635,7 +659,7 @@ class SimulationManager {
           }
 
           try {
-            const selectedNodeId = apiGatewayInstance.runGateway(request);
+            const selectedNodeId = apiGatewayInstance.runGateway(request, this.registry);
             if (!selectedNodeId || !nextNodes.includes(selectedNodeId)) {
               this.pushFrame(
                 request,
@@ -661,14 +685,19 @@ class SimulationManager {
             request.currentNodeId = selectedNodeId;
             traversalPath.push(selectedNodeId);
             currentNodeId = selectedNodeId;
-          } catch (_error) {
+          } catch (err: any) {
+            const errorMsg = err?.message || "";
+            const is503 = errorMsg.includes("503");
             this.pushFrame(
               request,
               currentNodeId,
               previousNodeId,
-              "API_GATEWAY_ROUTE_ERROR",
+              is503 ? "API_GATEWAY_SERVICE_UNAVAILABLE" : "API_GATEWAY_ROUTE_ERROR",
+              {
+                payloadSummary: is503 ? "503 Service Unavailable: All backend servers down" : "500 Internal Server Error",
+              }
             );
-            request.context.serverErrorStatus = "500";
+            request.context.serverErrorStatus = is503 ? "503" : "500";
             traversalPath.pop();
             request.currentNodeId = previousNodeId;
             currentNodeId = previousNodeId;
