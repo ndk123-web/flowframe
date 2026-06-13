@@ -42,6 +42,7 @@ type Frame = {
 type ScenarioRunOptions = {
   hideResponse: boolean;
   parallelResponse: boolean;
+  nodeConfigs?: Record<string, any>;
 };
 
 type SimDebug = {

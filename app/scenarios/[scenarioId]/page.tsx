@@ -19,6 +19,7 @@ import type { SimDebug, ScenarioRunOptions } from "@/engine/types";
 import { ALL_SCENARIOS } from "@/scenarios/all";
 import Link from "next/link";
 import SiteHeader from "@/components/SiteHeader";
+import { ComponentIcon } from "@/components/ComponentIcons";
 
 type Frame = {
   requestId: string;
@@ -313,18 +314,7 @@ function CustomNode({ id, data, selected }: any) {
     storage: "border-l-yellow-500 shadow-yellow-500/10",
   };
 
-  const icons: any = {
-    client: "💻",
-    "api-gateway": "🚪",
-    "load-balancer": "⚖️",
-    server: "🖥️",
-    redis: "💾",
-    postgres: "🗄️",
-    storage: "☁️",
-  };
-
   const colorClass = typeColors[data.type] || "border-l-slate-400";
-  const icon = icons[data.type] || "⚙️";
 
   const hasTarget = data.type !== "client";
   const hasSource = data.type !== "redis" && data.type !== "postgres" && data.type !== "storage";
@@ -345,7 +335,7 @@ function CustomNode({ id, data, selected }: any) {
       )}
 
       <div className="flex items-center gap-2">
-        <span className="text-xl">{icon}</span>
+        <ComponentIcon type={data.type} className="w-5 h-5 shrink-0" />
         <div className="leading-tight">
           <p className="text-[9px] font-semibold uppercase tracking-wider text-[color:var(--foreground)]/45">
             {data.type}
@@ -553,6 +543,11 @@ function NodeInspectorPanel({
   postgresStoreEntries,
   storageStoreEntries,
   theme,
+  nodeConfigs,
+  updateNodeConfig,
+  nodes,
+  edges,
+  scenarioId,
 }: {
   selectedNode: Node | null;
   currentFrames: Frame[];
@@ -560,6 +555,11 @@ function NodeInspectorPanel({
   postgresStoreEntries: Array<[string, unknown]>;
   storageStoreEntries: Array<[string, { [key: string]: unknown }]>;
   theme: Theme;
+  nodeConfigs: Record<string, any>;
+  updateNodeConfig: (nodeId: string, updatedFields: Record<string, any>) => void;
+  nodes: Node[];
+  edges: Edge[];
+  scenarioId: string;
 }) {
   const bgColor = theme === "dark" ? "bg-slate-950" : "bg-white";
   const textColor = theme === "dark" ? "text-slate-400" : "text-slate-600";
@@ -600,6 +600,594 @@ function NodeInspectorPanel({
 
       <div className="flex-1 overflow-y-auto">
         <div className="space-y-3 px-4 py-3">
+
+          {/* Node Config Options */}
+          {nodeConfigs && nodeConfigs[selectedNode.id] && (
+            <div className={`rounded-xl border border-violet-500/25 bg-violet-500/5 p-3.5 space-y-3 shadow-inner`}>
+              <p className={`text-[10px] uppercase tracking-widest text-violet-400 font-bold font-mono`}>
+                ⚙️ Configure Node
+              </p>
+
+              {role === "client" && (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold text-[color:var(--foreground)]/55 uppercase font-mono">Requests List</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentReqs = nodeConfigs[selectedNode.id]?.requests || [];
+                          const nextReqs = [
+                            ...currentReqs,
+                            {
+                              endpoint: "/api/v1/posts",
+                              method: "GET",
+                              lookupKey: "rohan",
+                              fileName: "file.png",
+                              isThereFileToUpload: false,
+                              targetBucket: "media-uploads",
+                            }
+                          ];
+                          updateNodeConfig(selectedNode.id, { requests: nextReqs });
+                        }}
+                        className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                    <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
+                      {(nodeConfigs[selectedNode.id]?.requests || []).map((req: any, idx: number) => (
+                        <div key={idx} className="bg-[var(--surface-muted)] p-2 rounded-lg border border-[var(--border)] relative group/req space-y-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentReqs = nodeConfigs[selectedNode.id]?.requests || [];
+                              const nextReqs = currentReqs.filter((_: any, i: number) => i !== idx);
+                              updateNodeConfig(selectedNode.id, { requests: nextReqs });
+                            }}
+                            className="absolute top-1 right-1.5 text-rose-500 hover:text-rose-600 text-xs font-bold cursor-pointer"
+                            title="Remove Request"
+                          >
+                            ×
+                          </button>
+                          <div className="text-[10px] font-bold text-violet-400">Request #{idx + 1}</div>
+                          
+                          {scenarioId === "simple-valet-key" ? (
+                            <div className="grid grid-cols-2 gap-1.5">
+                              <div>
+                                <label className="text-[8px] text-[color:var(--foreground)]/50 block">File Name</label>
+                                <input
+                                  type="text"
+                                  value={req.fileName || "upload.bin"}
+                                  onChange={(e) => {
+                                    const nextReqs = [...nodeConfigs[selectedNode.id].requests];
+                                    nextReqs[idx].fileName = e.target.value;
+                                    updateNodeConfig(selectedNode.id, { requests: nextReqs });
+                                  }}
+                                  className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] outline-none font-mono text-xs"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[8px] text-[color:var(--foreground)]/50 block">Bucket</label>
+                                <input
+                                  type="text"
+                                  value={req.targetBucket || "media-uploads"}
+                                  onChange={(e) => {
+                                    const nextReqs = [...nodeConfigs[selectedNode.id].requests];
+                                    nextReqs[idx].targetBucket = e.target.value;
+                                    updateNodeConfig(selectedNode.id, { requests: nextReqs });
+                                  }}
+                                  className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] outline-none font-mono text-xs"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <div>
+                                  <label className="text-[8px] text-[color:var(--foreground)]/50 block">Method</label>
+                                  <select
+                                    value={req.method || "GET"}
+                                    onChange={(e) => {
+                                      const nextReqs = [...nodeConfigs[selectedNode.id].requests];
+                                      nextReqs[idx].method = e.target.value;
+                                      updateNodeConfig(selectedNode.id, { requests: nextReqs });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5 text-[10px] outline-none cursor-pointer"
+                                  >
+                                    <option value="GET">GET</option>
+                                    <option value="POST">POST</option>
+                                    <option value="PUT">PUT</option>
+                                    <option value="DELETE">DELETE</option>
+                                    <option value="PATCH">PATCH</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[8px] text-[color:var(--foreground)]/50 block">Lookup Key</label>
+                                  <input
+                                    type="text"
+                                    value={req.lookupKey || ""}
+                                    placeholder="e.g. rohan"
+                                    onChange={(e) => {
+                                      const nextReqs = [...nodeConfigs[selectedNode.id].requests];
+                                      nextReqs[idx].lookupKey = e.target.value;
+                                      updateNodeConfig(selectedNode.id, { requests: nextReqs });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] outline-none font-mono text-xs"
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-[8px] text-[color:var(--foreground)]/50 block">Endpoint Path</label>
+                                <input
+                                  type="text"
+                                  value={req.endpoint || ""}
+                                  placeholder="/api/v1/resource"
+                                  onChange={(e) => {
+                                    const nextReqs = [...nodeConfigs[selectedNode.id].requests];
+                                    nextReqs[idx].endpoint = e.target.value;
+                                    updateNodeConfig(selectedNode.id, { requests: nextReqs });
+                                  }}
+                                  className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] outline-none font-mono text-xs"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {role === "load-balancer" && (
+                <div className="space-y-2">
+                  <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                    Load Balancing Strategy
+                  </label>
+                  <select
+                    value={nodeConfigs[selectedNode.id]?.strategy ?? "ROUND_ROBIN"}
+                    onChange={(e) => updateNodeConfig(selectedNode.id, { strategy: e.target.value })}
+                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none cursor-pointer focus:border-blue-500"
+                  >
+                    <option value="ROUND_ROBIN">Round Robin</option>
+                    <option value="RANDOM">Random Dispatch</option>
+                    <option value="IP_HASH">IP Address Hash</option>
+                  </select>
+                </div>
+              )}
+
+              {role === "api-gateway" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                      Load Balance Strategy
+                    </label>
+                    <select
+                      value={nodeConfigs[selectedNode.id]?.strategy ?? "ROUND_ROBIN"}
+                      onChange={(e) => updateNodeConfig(selectedNode.id, { strategy: e.target.value })}
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none cursor-pointer focus:border-violet-500"
+                    >
+                      <option value="ROUND_ROBIN">Round Robin</option>
+                      <option value="RANDOM">Random Dispatch</option>
+                      <option value="IP_HASH">IP Address Hash</option>
+                    </select>
+                  </div>
+
+                  <div className="h-px bg-[var(--border)]/70" />
+
+                  {/* Route Rules */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55">
+                        Route Rules
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const routes = nodeConfigs[selectedNode.id]?.routes || {};
+                          const nextRoutes = {
+                            ...routes,
+                            [`/api/v1/route-${Object.keys(routes).length + 1}`]: `NEW_SERVICE`,
+                          };
+                          updateNodeConfig(selectedNode.id, { routes: nextRoutes });
+                        }}
+                        className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer"
+                      >
+                        + Add Rule
+                      </button>
+                    </div>
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1 scrollbar-thin">
+                      {Object.entries(nodeConfigs[selectedNode.id]?.routes || {}).map(([path, svc]: [string, any], idx) => (
+                        <div key={idx} className="flex gap-1.5 items-center">
+                          <input
+                            type="text"
+                            value={path}
+                            placeholder="Path prefix"
+                            onChange={(e) => {
+                              const routes = (nodeConfigs[selectedNode.id]?.routes || {}) as Record<string, string>;
+                              const nextRoutes: Record<string, string> = {};
+                              for (const [k, v] of Object.entries(routes)) {
+                                if (k === path) {
+                                  nextRoutes[e.target.value] = svc as string;
+                                } else {
+                                  nextRoutes[k] = v;
+                                }
+                              }
+                              updateNodeConfig(selectedNode.id, { routes: nextRoutes });
+                            }}
+                            className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono text-xs"
+                          />
+                          <input
+                            type="text"
+                            value={svc}
+                            placeholder="Service name"
+                            onChange={(e) => {
+                              const nextRoutes = { ...(nodeConfigs[selectedNode.id]?.routes || {}) };
+                              nextRoutes[path] = e.target.value;
+                              updateNodeConfig(selectedNode.id, { routes: nextRoutes });
+                            }}
+                            className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono text-xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nextRoutes = { ...(nodeConfigs[selectedNode.id]?.routes || {}) };
+                              delete nextRoutes[path];
+                              updateNodeConfig(selectedNode.id, { routes: nextRoutes });
+                            }}
+                            className="text-rose-500 hover:text-rose-600 text-xs px-1 cursor-pointer font-bold"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-[var(--border)]/70" />
+
+                  {/* Service Pools Mapping */}
+                  <div>
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                      Service Pools Mapping
+                    </label>
+                    <div className="space-y-2 border border-[var(--border)] rounded-lg p-2 bg-[var(--surface)]/50">
+                      {nodes.filter((n) => n.id.includes("server")).map((serverNode) => {
+                        const serverId = serverNode.id;
+                        const serverLabel = String(serverNode.data?.label || serverId);
+                        const serviceMapping = nodeConfigs[selectedNode.id]?.serviceMapping || {};
+                        const routes = nodeConfigs[selectedNode.id]?.routes || {};
+                        const serviceOptions = Array.from(new Set(Object.values(routes)));
+
+                        let currentVal = serviceMapping[serverId];
+                        if (!currentVal) {
+                          if (serverId.includes("server-1")) currentVal = "USER_SERVICE";
+                          else currentVal = "POST_SERVICE";
+                        }
+
+                        return (
+                          <div key={serverId} className="flex flex-col gap-1 border-b border-[var(--border)]/35 pb-2 last:border-b-0 last:pb-0">
+                            <span className="text-[10px] font-medium text-[color:var(--foreground)]/70 flex items-center gap-1.5">
+                              🖥️ {serverLabel}
+                            </span>
+                            <select
+                              value={currentVal}
+                              onChange={(e) => {
+                                const nextMapping = {
+                                  ...(nodeConfigs[selectedNode.id]?.serviceMapping || {}),
+                                  [serverId]: e.target.value,
+                                };
+                                updateNodeConfig(selectedNode.id, { serviceMapping: nextMapping });
+                              }}
+                              className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1 text-xs outline-none cursor-pointer"
+                            >
+                              {serviceOptions.map((opt: any) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                              <option value="UNASSIGNED">Unassigned</option>
+                            </select>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {role === "server" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">Connections Capacity</label>
+                    <input
+                      type="number"
+                      value={nodeConfigs[selectedNode.id]?.capacity ?? 100}
+                      onChange={(e) => updateNodeConfig(selectedNode.id, { capacity: Number(e.target.value) })}
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500"
+                    />
+                  </div>
+
+                  <div className="h-px bg-[var(--border)]/70 my-2" />
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55">
+                        Exposed Endpoints
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const endpoints = nodeConfigs[selectedNode.id]?.endpoints || {};
+                          const nextEndpoints = {
+                            ...endpoints,
+                            [`api/v1/endpoint-${Object.keys(endpoints).length + 1}`]: ["GET"],
+                          };
+                          updateNodeConfig(selectedNode.id, { endpoints: nextEndpoints });
+                        }}
+                        className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer"
+                      >
+                        + Add Endpoint
+                      </button>
+                    </div>
+
+                    <div className="space-y-3 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
+                      {Object.entries(nodeConfigs[selectedNode.id]?.endpoints || {}).map(([path, methods]: [string, any], idx) => {
+                        const allHttpMethods = ["GET", "POST", "PUT", "DELETE", "PATCH"];
+                        return (
+                          <div key={idx} className="border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50 space-y-2 relative group/ep">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextEndpoints = { ...(nodeConfigs[selectedNode.id]?.endpoints || {}) };
+                                delete nextEndpoints[path];
+                                updateNodeConfig(selectedNode.id, { endpoints: nextEndpoints });
+                              }}
+                              className="absolute top-1.5 right-1.5 text-rose-500 hover:text-rose-600 text-xs font-bold px-1 cursor-pointer opacity-50 hover:opacity-100 transition"
+                              title="Delete Endpoint"
+                            >
+                              ×
+                            </button>
+                            
+                            <div>
+                              <label className="text-[8px] text-[color:var(--foreground)]/50 block mb-0.5">Route Path</label>
+                              <input
+                                type="text"
+                                value={path}
+                                placeholder="api/v1/resource"
+                                onChange={(e) => {
+                                  const endpoints = (nodeConfigs[selectedNode.id]?.endpoints || {}) as Record<string, any>;
+                                  const nextEndpoints: Record<string, any> = {};
+                                  for (const [k, v] of Object.entries(endpoints)) {
+                                    if (k === path) {
+                                      nextEndpoints[e.target.value] = v;
+                                    } else {
+                                      nextEndpoints[k] = v;
+                                    }
+                                  }
+                                  updateNodeConfig(selectedNode.id, { endpoints: nextEndpoints });
+                                }}
+                                className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500 text-xs"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-[8px] text-[color:var(--foreground)]/50 block mb-1">Allowed Methods</label>
+                              <div className="flex flex-wrap gap-1">
+                                {allHttpMethods.map((m) => {
+                                  const isSelected = (methods || []).includes(m);
+                                  return (
+                                    <button
+                                      key={m}
+                                      type="button"
+                                      onClick={() => {
+                                        const nextEndpoints = { ...(nodeConfigs[selectedNode.id]?.endpoints || {}) };
+                                        const currentMethods = nextEndpoints[path] || [];
+                                        let updatedMethods: any[];
+                                        if (isSelected) {
+                                          updatedMethods = currentMethods.filter((item: string) => item !== m);
+                                        } else {
+                                          updatedMethods = [...currentMethods, m];
+                                        }
+                                        nextEndpoints[path] = updatedMethods;
+                                        updateNodeConfig(selectedNode.id, { endpoints: nextEndpoints });
+                                      }}
+                                      className={`text-[8px] px-1.5 py-0.5 rounded font-mono font-bold transition cursor-pointer border ${
+                                        isSelected
+                                          ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                                          : "bg-[var(--surface-muted)] border-[var(--border)] text-[color:var(--foreground)]/55 hover:border-[var(--border)]/80 hover:text-[color:var(--foreground)]"
+                                      }`}
+                                    >
+                                      {m}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {role === "redis" && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] text-[color:var(--foreground)]/65 font-bold uppercase font-mono">Cached Pairs</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const prevList = nodeConfigs[selectedNode.id]?.data ?? [];
+                        updateNodeConfig(selectedNode.id, { data: [...prevList, { key: "", val: "" }] });
+                      }}
+                      className="text-[9px] bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded transition cursor-pointer"
+                    >
+                      + Add Key
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
+                    {(nodeConfigs[selectedNode.id]?.data || []).map((item: any, idx: number) => (
+                      <div key={idx} className="flex gap-1.5 items-center">
+                        <input
+                          type="text"
+                          value={item.key}
+                          placeholder="Key"
+                          onChange={(e) => {
+                              const nextList = [...nodeConfigs[selectedNode.id].data];
+                              nextList[idx].key = e.target.value;
+                              updateNodeConfig(selectedNode.id, { data: nextList });
+                            }}
+                          className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono text-xs"
+                        />
+                        <input
+                          type="text"
+                          value={item.val}
+                          placeholder="Value"
+                          onChange={(e) => {
+                              const nextList = [...nodeConfigs[selectedNode.id].data];
+                              nextList[idx].val = e.target.value;
+                              updateNodeConfig(selectedNode.id, { data: nextList });
+                            }}
+                          className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                              const nextList = nodeConfigs[selectedNode.id].data.filter((_: any, i: number) => i !== idx);
+                              updateNodeConfig(selectedNode.id, { data: nextList });
+                            }}
+                          className="text-red-500 hover:text-red-600 text-xs px-1 cursor-pointer font-bold font-mono"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {role === "postgres" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">Table Name</label>
+                    <input
+                      type="text"
+                      value={nodeConfigs[selectedNode.id]?.table ?? "users"}
+                      onChange={(e) => updateNodeConfig(selectedNode.id, { table: e.target.value })}
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-mono outline-none focus:border-violet-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] text-[color:var(--foreground)]/65 font-bold uppercase font-mono">Row Entries</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const prevList = nodeConfigs[selectedNode.id]?.data ?? [];
+                        updateNodeConfig(selectedNode.id, { data: [...prevList, { key: "", val: "" }] });
+                      }}
+                      className="text-[9px] bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 font-bold px-2 py-0.5 rounded transition cursor-pointer"
+                    >
+                      + Add Row
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
+                    {(nodeConfigs[selectedNode.id]?.data || []).map((item: any, idx: number) => (
+                      <div key={idx} className="flex gap-1.5 items-center">
+                        <input
+                          type="text"
+                          value={item.key}
+                          placeholder="PK"
+                          onChange={(e) => {
+                            const nextList = [...nodeConfigs[selectedNode.id].data];
+                            nextList[idx].key = e.target.value;
+                            updateNodeConfig(selectedNode.id, { data: nextList });
+                          }}
+                          className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono text-xs"
+                        />
+                        <input
+                          type="text"
+                          value={item.val}
+                          placeholder="Value"
+                          onChange={(e) => {
+                              const nextList = [...nodeConfigs[selectedNode.id].data];
+                              nextList[idx].val = e.target.value;
+                              updateNodeConfig(selectedNode.id, { data: nextList });
+                            }}
+                          className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                              const nextList = nodeConfigs[selectedNode.id].data.filter((_: any, i: number) => i !== idx);
+                              updateNodeConfig(selectedNode.id, { data: nextList });
+                            }}
+                          className="text-red-500 hover:text-red-600 text-xs px-1 cursor-pointer font-bold font-mono"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {role === "storage" && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] text-[color:var(--foreground)]/65 font-bold uppercase font-mono">Buckets</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentBuckets = nodeConfigs[selectedNode.id]?.buckets || ["media-uploads"];
+                        const nextBuckets = [...currentBuckets, `bucket-${currentBuckets.length + 1}`];
+                        updateNodeConfig(selectedNode.id, { buckets: nextBuckets });
+                      }}
+                      className="text-[9px] bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 font-bold px-2 py-0.5 rounded transition cursor-pointer"
+                    >
+                      + Add Bucket
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
+                    {(nodeConfigs[selectedNode.id]?.buckets || ["media-uploads"]).map((b: string, idx: number) => (
+                      <div key={idx} className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          value={b}
+                          onChange={(e) => {
+                            const nextList = [...(nodeConfigs[selectedNode.id]?.buckets || ["media-uploads"])];
+                            nextList[idx] = e.target.value;
+                            updateNodeConfig(selectedNode.id, { buckets: nextList });
+                          }}
+                          className="flex-1 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none font-mono focus:border-yellow-500 text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentBuckets = nodeConfigs[selectedNode.id]?.buckets || ["media-uploads"];
+                            if (currentBuckets.length <= 1) return;
+                            const nextBuckets = currentBuckets.filter((_: any, i: number) => i !== idx);
+                            updateNodeConfig(selectedNode.id, { buckets: nextBuckets });
+                          }}
+                          className="text-rose-500 hover:text-rose-600 text-xs font-bold px-2 cursor-pointer font-mono"
+                          title="Delete Bucket"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {role === "redis" && (
             <div className={`rounded-md border ${cardBorder} ${cardBg} p-3`}>
               <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Redis Store</p>
@@ -748,8 +1336,14 @@ function getFormattedLogText(frame: Frame) {
 
   if (normAction.includes("RESPONSE_ERROR")) {
     const payloadStr = frame.payloadSummary && frame.payloadSummary !== "{}" ? ` - Payload: ${frame.payloadSummary}` : "";
+    let statusText = "404 Not Found";
+    if (normAction.includes("_405")) {
+      statusText = "405 Method Not Allowed";
+    } else if (normAction.includes("_500")) {
+      statusText = "500 Internal Server Error";
+    }
     return {
-      text: `${flow} | Respond - Status: 404 Not Found${payloadStr}`,
+      text: `${flow} | Respond - Status: ${statusText}${payloadStr}`,
       type: "warn"
     };
   }
@@ -873,6 +1467,73 @@ function generateFrames(options: ScenarioRunOptions, scenarioId: string): SimBun
 
   return createSimulationBundle(options);
 }
+function createDefaultConfig(type: string, id: string, label: string) {
+  switch (type) {
+    case "client":
+      return {
+        endpoint: "/api/v1/posts",
+        method: "GET",
+        lookupKey: "rohan",
+        valetKeyFlow: false,
+        fileName: "file.png",
+        isThereFileToUpload: false,
+        targetBucket: "media-uploads",
+        requests: [
+          {
+            endpoint: "/api/v1/posts",
+            method: "GET",
+            lookupKey: "rohan",
+            fileName: "file.png",
+            isThereFileToUpload: false,
+            targetBucket: "media-uploads",
+          }
+        ]
+      } as any;
+    case "api-gateway":
+      return {
+        strategy: "ROUND_ROBIN",
+        routes: {
+          "/api/v1/posts": "POST_SERVICE",
+          "/api/v1/users": "USER_SERVICE",
+        },
+      };
+    case "load-balancer":
+      return {
+        strategy: "ROUND_ROBIN",
+      };
+    case "server":
+      return {
+        capacity: 100,
+        endpoints: {
+          "api/v1/posts": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          "api/v1/users": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          "api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+        },
+      };
+    case "redis":
+      return {
+        data: [
+          { key: "rohan", val: "cached data for rohan" },
+          { key: "john", val: "cached data for john" },
+        ],
+      };
+    case "postgres":
+      return {
+        table: "users",
+        data: [
+          { key: "doe", val: "db data for doe" },
+          { key: "john", val: "db data for john" },
+          { key: "rohan", val: "db data for rohan" },
+        ],
+      };
+    case "storage":
+      return {
+        buckets: ["media-uploads"],
+      };
+    default:
+      return {};
+  }
+}
 
 export default function ScenarioPage({ params }: ScenarioPropsPage) {
   const { scenarioId } = use(params);
@@ -904,6 +1565,100 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [debugEnabled, setDebugEnabled] = useState(false);
   const [inspectorVisible, setInspectorVisible] = useState(false);
+
+  const [nodeConfigs, setNodeConfigs] = useState<Record<string, any>>({});
+
+  const updateNodeConfig = (nodeId: string, updatedFields: Record<string, any>) => {
+    setNodeConfigs((prev) => ({
+      ...prev,
+      [nodeId]: {
+        ...prev[nodeId],
+        ...updatedFields,
+      },
+    }));
+  };
+
+  useEffect(() => {
+    if (!scenarioId) return;
+
+    // Run generateFrames with empty configs to fetch default nodes
+    const initialBundle = generateFrames(
+      {
+        hideResponse: false,
+        parallelResponse: false,
+      },
+      scenarioId,
+    );
+
+    const initialConfigs: Record<string, any> = {};
+    initialBundle.nodes.forEach((n) => {
+      const label = typeof n.data?.label === "string" ? n.data.label : n.id;
+      const role = getNodeRole(label);
+      const defaultConfig = createDefaultConfig(role, n.id, label);
+
+      if (scenarioId === "simple-valet-key") {
+        if (role === "client") {
+          defaultConfig.requests = [
+            { fileName: "avatar-1.png", targetBucket: "media-uploads" },
+            { fileName: "invoice-2026.pdf", targetBucket: "media-uploads" },
+            { fileName: "portfolio-banner.jpg", targetBucket: "media-uploads" }
+          ];
+        }
+      } else if (scenarioId === "simple-api-gateway") {
+        if (role === "client") {
+          defaultConfig.requests = [
+            { endpoint: "/api/v1/posts/list", lookupKey: "bob", method: "GET" },
+            { endpoint: "/api/v1/users/profile", lookupKey: "john", method: "GET" },
+            { endpoint: "/api/v1/posts/list", lookupKey: "john", method: "GET" }
+          ];
+        } else if (role === "server") {
+          if (n.id === "server-1-id") {
+            defaultConfig.endpoints = {
+              "api/v1/users/profile": ["GET", "POST", "PUT", "DELETE", "PATCH"]
+            };
+          } else if (n.id === "server-2-id" || n.id === "server-3-id") {
+            defaultConfig.endpoints = {
+              "api/v1/posts/list": ["GET", "POST", "PUT", "DELETE", "PATCH"]
+            };
+          }
+        }
+      } else if (scenarioId === "simple-load-balancer") {
+        if (role === "client") {
+          defaultConfig.requests = [
+            { endpoint: "/api/v1/posts", method: "GET" },
+            { endpoint: "/api/v1/posts", method: "GET" },
+            { endpoint: "/api/v1/posts", method: "GET" }
+          ];
+        } else if (role === "server") {
+          defaultConfig.endpoints = {
+            "api/v1/posts": ["GET", "POST", "PUT", "DELETE", "PATCH"]
+          };
+        }
+      } else if (scenarioId === "simple-cache") {
+        if (role === "client") {
+          defaultConfig.requests = [
+            { endpoint: "/api/v1/getData", lookupKey: "rohan", method: "GET" },
+            { endpoint: "/api/v1/getData", lookupKey: "john", method: "GET" },
+            { endpoint: "/api/v1/getData", lookupKey: "doe", method: "GET" }
+          ];
+        } else if (role === "server") {
+          defaultConfig.endpoints = {
+            "api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"]
+          };
+        }
+      }
+      initialConfigs[n.id] = defaultConfig;
+    });
+
+    setNodeConfigs(initialConfigs);
+  }, [scenarioId]);
+
+  useEffect(() => {
+    if (Object.keys(nodeConfigs).length > 0) {
+      setFrameIndex(0);
+      setIsPlaying(true);
+    }
+  }, [nodeConfigs]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -954,11 +1709,12 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
 
   const { frames, nodes, edges, debug } = useMemo(
     () =>
-      isMounted
+      isMounted && Object.keys(nodeConfigs).length > 0
         ? generateFrames(
             {
               hideResponse,
               parallelResponse,
+              nodeConfigs,
             },
             scenarioId,
           )
@@ -967,7 +1723,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             nodes: [],
             edges: [],
           },
-    [hideResponse, parallelResponse, scenarioId, isMounted],
+    [hideResponse, parallelResponse, scenarioId, isMounted, nodeConfigs],
   );
 
   const frameGroups = useMemo(() => {
@@ -1339,6 +2095,11 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
               postgresStoreEntries={postgresStoreEntries}
               storageStoreEntries={storageStoreEntries}
               theme={theme}
+              nodeConfigs={nodeConfigs}
+              updateNodeConfig={updateNodeConfig}
+              nodes={nodes}
+              edges={edges}
+              scenarioId={scenarioId}
             />
           </motion.div>
 
@@ -1366,6 +2127,11 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                 postgresStoreEntries={postgresStoreEntries}
                 storageStoreEntries={storageStoreEntries}
                 theme={theme}
+                nodeConfigs={nodeConfigs}
+                updateNodeConfig={updateNodeConfig}
+                nodes={nodes}
+                edges={edges}
+                scenarioId={scenarioId}
               />
             </motion.div>
           )}

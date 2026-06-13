@@ -29,7 +29,7 @@ function shouldKeepFrame(hideResponse: boolean, frame: Frame) {
 function createSimpleValetKeySimulationBundle(
     options: ScenarioRunOptions,
 ): SimBundle {
-    const { hideResponse, parallelResponse } = options;
+    const { hideResponse, parallelResponse, nodeConfigs } = options;
 
     const graph = new GraphManager("graph-valet-key");
     const registry = new NodeRegistry("registry-valet-key");
@@ -42,12 +42,34 @@ function createSimpleValetKeySimulationBundle(
     const client = new ClientModel(clientId, "Client");
     const server = new ServerModel(serverId, "Upload Service");
     const storage = new StorageModel(storageId, "Cloud Storage");
-    storage.addBucket("media-uploads");
+
+    // Apply node configs
+    const clientConfig = nodeConfigs?.[clientId];
+    const serverConfig = nodeConfigs?.[serverId];
+    const storageConfig = nodeConfigs?.[storageId];
+
+    // Configure Server capacity and endpoints
+    if (serverConfig) {
+      if (typeof serverConfig.capacity === "number") server.capacity = serverConfig.capacity;
+      if (serverConfig.endpoints) server.endpoints = { ...serverConfig.endpoints };
+    } else {
+      server.endpoints = {
+        "api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"]
+      };
+    }
+
+    // Populate Storage Model buckets
+    if (storageConfig && Array.isArray(storageConfig.buckets)) {
+      storage.data.clear();
+      storageConfig.buckets.forEach((b: string) => storage.addBucket(b));
+    } else {
+      storage.addBucket("media-uploads");
+    }
     
-        // Snapshot initial empty buckets once, before upload simulations mutate storage.
-        const storageInitialStore = JSON.parse(
-            JSON.stringify(storage.getAllBuckets()),
-        ) as Record<string, { [key: string]: unknown }>;
+    // Snapshot initial empty buckets once, before upload simulations mutate storage.
+    const storageInitialStore = JSON.parse(
+        JSON.stringify(storage.getAllBuckets()),
+    ) as Record<string, { [key: string]: unknown }>;
 
     graph.addNode(clientId, "Client");
     graph.addNode(serverId, "Upload Service");
@@ -61,10 +83,11 @@ function createSimpleValetKeySimulationBundle(
     registry.register(serverId, server);
     registry.register(storageId, storage);
 
-    const testFiles = [
-        "avatar-1.png",
-        "invoice-2026.pdf",
-        "portfolio-banner.jpg",
+    // Client requests config
+    const clientRequests = clientConfig?.requests || [
+      { fileName: "avatar-1.png", targetBucket: "media-uploads" },
+      { fileName: "invoice-2026.pdf", targetBucket: "media-uploads" },
+      { fileName: "portfolio-banner.jpg", targetBucket: "media-uploads" }
     ];
 
     const allFrames: Frame[] = [];
@@ -76,15 +99,19 @@ function createSimpleValetKeySimulationBundle(
 
     let globalTimestampOffset = 0;
 
-    for (let i = 0; i < testFiles.length; i++) {
-        const fileName = testFiles[i];
+    for (let i = 0; i < clientRequests.length; i++) {
+        const req = clientRequests[i];
+        const fileName = req.fileName || "upload.bin";
+        const targetBucket = req.targetBucket || "media-uploads";
         const sourceIp = ipv4Instance.getRandomIpv4() as string;
+        
         const simulation = new SimulationManager(
             graph,
             registry,
             {
                 valetKeyFlow: true,
                 fileName,
+                targetBucket,
             },
             sourceIp,
         );

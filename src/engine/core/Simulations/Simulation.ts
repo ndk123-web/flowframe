@@ -128,8 +128,14 @@ class SimulationManager {
         }
         return "SERVER_SEND_RESPONSE";
       case "LOAD_BALANCER":
+        if (request?.context?.serverErrorStatus) {
+          return `LOAD_BALANCER_RESPONSE_ERROR_${request.context.serverErrorStatus}`;
+        }
         return "LOAD_BALANCER_SEND_RESPONSE";
       case "API_GATEWAY":
+        if (request?.context?.serverErrorStatus) {
+          return `API_GATEWAY_RESPONSE_ERROR_${request.context.serverErrorStatus}`;
+        }
         return "API_GATEWAY_SEND_RESPONSE";
       case "POSTGRES":
         return "POSTGRES_RETURN_DATA";
@@ -253,6 +259,8 @@ class SimulationManager {
             extraPayload.storageBucket = request.context.targetBucket || "media-uploads";
             extraPayload.storageFileName = request.context.fileName;
           }
+        } else if ((kind === "API_GATEWAY" || kind === "LOAD_BALANCER") && request.context.serverErrorStatus) {
+          extraPayload.payloadSummary = request.task || request.endpoint;
         }
 
         this.pushFrame(
@@ -426,6 +434,7 @@ class SimulationManager {
                   payloadSummary: `404 Not Found: ${reqMethod} ${request.endpoint}`,
                 }
               );
+              request.context.serverErrorStatus = "404";
               traversalPath.pop();
               request.currentNodeId = previousNodeId;
               currentNodeId = previousNodeId;
@@ -445,6 +454,7 @@ class SimulationManager {
                   payloadSummary: `405 Method Not Allowed: ${reqMethod} ${request.endpoint}`,
                 }
               );
+              request.context.serverErrorStatus = "405";
               traversalPath.pop();
               request.currentNodeId = previousNodeId;
               currentNodeId = previousNodeId;
@@ -616,6 +626,7 @@ class SimulationManager {
               previousNodeId,
               "API_GATEWAY_EMPTY_ROUTE_REJECT",
             );
+            request.context.serverErrorStatus = "404";
             traversalPath.pop();
             request.currentNodeId = previousNodeId;
             currentNodeId = previousNodeId;
@@ -632,6 +643,7 @@ class SimulationManager {
                 previousNodeId,
                 "API_GATEWAY_ROUTE_NOT_FOUND",
               );
+              request.context.serverErrorStatus = "404";
               traversalPath.pop();
               request.currentNodeId = previousNodeId;
               currentNodeId = previousNodeId;
@@ -656,6 +668,7 @@ class SimulationManager {
               previousNodeId,
               "API_GATEWAY_ROUTE_ERROR",
             );
+            request.context.serverErrorStatus = "500";
             traversalPath.pop();
             request.currentNodeId = previousNodeId;
             currentNodeId = previousNodeId;
