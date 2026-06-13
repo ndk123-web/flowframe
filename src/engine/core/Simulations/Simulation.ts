@@ -424,11 +424,8 @@ class SimulationManager {
             (nodeId) => this.getNodeKind(nodeId) === "POSTGRES",
           );
 
-
-          // important one (if it is then awaitingDbLookup search in postgres)
-          if (request.context.awaitingDbLookup && postgresNodeId) {
-
-            // add current to postgres
+          // 1. If we are awaiting DB lookup (cache miss) OR there is no Redis but Postgres is connected, forward to Postgres:
+          if (postgresNodeId && (request.context.awaitingDbLookup || !redisNodeId)) {
             this.pushFrame(
               request,
               currentNodeId,
@@ -436,7 +433,7 @@ class SimulationManager {
               "SERVER_FORWARD_REQUEST_TO_POSTGRES",
             );
 
-            // rollback to false once we used 
+            // Reset the flag if it was set
             request.context.awaitingDbLookup = false;
             request.currentNodeId = postgresNodeId;
             traversalPath.push(postgresNodeId);
@@ -445,8 +442,8 @@ class SimulationManager {
           }
 
           /**
-           * if the request has not done redis lookup and there is a redis then go to redis bro
-           * because our system prioritize cache over the database
+           * 2. If the request has not done redis lookup and there is a redis then go to redis
+           * because our system prioritizes cache over the database
            */
           if (!request.context.redisLookupDone && redisNodeId) {
             
@@ -458,7 +455,7 @@ class SimulationManager {
               "SERVER_FORWARD_REQUEST_TO_REDIS",
             );
 
-            // set redisLookUpDone to true so that redis will process the key 
+            // set redisLookupDone to true so that redis will process the key 
             request.context.redisLookupDone = true;
 
             // change current to redisNodeId
