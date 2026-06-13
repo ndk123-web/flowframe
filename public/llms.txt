@@ -1,0 +1,23 @@
+# FlowFrame
+
+Interactive distributed system simulator. Design custom architectures, define individual node behaviors, and visualize distributed request flow frame-by-frame in real-time.
+
+## Core Features
+- **Interactive Sandbox Workspace**: Create custom architectures using drag-and-drop or click palette nodes. Supports clients, servers, load balancers, Redis caches, Postgres databases, and API gateways.
+- **Visual Frame-by-Frame Animations**: Real-time canvas simulation showing request/response pathing, parallel routing, network hops, and error states.
+- **Node Inspector**: Configure properties (e.g. databases, cache limits, gateway rules) and inspect component state (like Redis key-values or Postgres SQL rows) for each frame.
+- **Step-by-Step Learning Guides**: Dynamic walkthroughs explaining distributed system behaviors: load balancers (round-robin + health checks), cache-aside workflows (hits vs misses), API gateways (routing + headers), and valet key direct storage uploads.
+
+## Sitemap
+- Homepage: /
+- Sandbox Workspace: /workspace
+- Scenario Catalog Library: /scenarios
+  - Load Balancer: /scenarios/simple-load-balancer
+  - Redis + Postgres Caching: /scenarios/simple-cache
+  - API Gateway Routing: /scenarios/simple-api-gateway
+  - Valet Key Direct Upload: /scenarios/simple-valet-key
+- Learning Walkthroughs: /learn
+  - Load Balancers: /learn/load-balancers
+  - Cache-Aside Caching: /learn/cache-aside
+  - API Gateways: /learn/api-gateways
+  - Valet Key Pattern: /learn/valet-key
