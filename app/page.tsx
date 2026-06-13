@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef } from "react";
-import ArchDiagram from "@/components/ArchDiagram";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
 import { ComponentIcon } from "@/components/ComponentIcons";
@@ -32,178 +31,155 @@ import Link from "next/link";
 
 type Theme = "light" | "dark";
 
-// CSS Animations
+// ─── CSS ─────────────────────────────────────────────────────────────────────
 const animationStyles = `
-  @keyframes fadeInBlur {
-    from {
-      opacity: 0;
-      transform: translateY(32px);
-      filter: blur(4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-      filter: blur(0px);
-    }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(28px); filter: blur(4px); }
+    to   { opacity: 1; transform: translateY(0);    filter: blur(0);   }
+  }
+  @keyframes slideLeft {
+    from { opacity: 0; transform: translateX(-18px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes slideRight {
+    from { opacity: 0; transform: translateX(18px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes pulseRing {
+    0%   { transform: scale(1);   opacity: 0.8; }
+    100% { transform: scale(1.9); opacity: 0;   }
+  }
+  @keyframes gradShift {
+    0%   { background-position: 0%   50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0%   50%; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px);   }
+    50%       { transform: translateY(-8px);  }
+  }
+  @keyframes tickerScroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  @keyframes orbit {
+    from { transform: rotate(0deg)   translateX(38px) rotate(0deg); }
+    to   { transform: rotate(360deg) translateX(38px) rotate(-360deg); }
   }
 
-  @keyframes fadeInScale {
-    from {
-      opacity: 0;
-      transform: scale(0.8) translateY(-20px);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1) translateY(0);
-    }
+  .fade-up   { animation: fadeUp   0.7s cubic-bezier(.22,1,.36,1) forwards; }
+  .slide-l   { animation: slideLeft  0.6s cubic-bezier(.22,1,.36,1) forwards; }
+  .slide-r   { animation: slideRight 0.6s cubic-bezier(.22,1,.36,1) forwards; }
+  .float-anim { animation: float 4s ease-in-out infinite; }
+
+  .grad-text {
+    background: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #60a5fa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
-  @keyframes breatheScale {
-    0%, 100% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.2);
-    }
+  .ticker-wrap {
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .ticker-track {
+    display: inline-flex;
+    animation: tickerScroll 22s linear infinite;
   }
 
-  @keyframes slideInLeft {
-    from {
-      opacity: 0;
-      transform: translateX(-20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
+  .v1-badge {
+    background: linear-gradient(135deg, rgba(99,102,241,.15), rgba(139,92,246,.15));
+    border: 1px solid rgba(139,92,246,.35);
   }
 
-  @keyframes slideInRight {
-    from {
-      opacity: 0;
-      transform: translateX(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
+  .card-glow:hover {
+    box-shadow: 0 0 0 1px rgba(139,92,246,.3), 0 20px 60px -20px rgba(139,92,246,.25);
   }
 
-  @keyframes slideHover {
-    0%, 100% {
-      transform: translateX(0);
-    }
-    50% {
-      transform: translateX(4px);
-    }
+  .btn-primary {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    box-shadow: 0 8px 32px -8px rgba(99,102,241,.5);
+    transition: all .2s ease;
+  }
+  .btn-primary:hover {
+    box-shadow: 0 14px 40px -8px rgba(99,102,241,.65);
+    transform: translateY(-1px) scale(1.02);
+  }
+  .btn-primary:active { transform: scale(.97); }
+
+  .btn-outline {
+    border: 1.5px solid rgba(139,92,246,.35);
+    transition: all .2s ease;
+  }
+  .btn-outline:hover {
+    border-color: rgba(139,92,246,.7);
+    background: rgba(139,92,246,.08);
+    transform: translateY(-1px);
   }
 
-  @keyframes packetSlide {
-    0% { left: 0%; opacity: 0; }
-    20% { opacity: 1; transform: scale(1.2); }
-    80% { opacity: 1; transform: scale(1); }
-    100% { left: 100%; opacity: 0; transform: scale(0.8); }
+  .scene-card {
+    transition: all .25s ease;
+  }
+  .scene-card:hover {
+    transform: translateY(-4px);
   }
 
-  .animate-packet-slide {
-    animation: packetSlide 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  /* ping ring for active nodes */
+  .ping-ring::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    animation: pulseRing 1.2s ease-out infinite;
   }
 
-  @keyframes underlineExpand {
-    from {
-      width: 0;
-    }
-    to {
-      width: 100%;
-    }
+  /* subtle grid bg */
+  .dot-grid {
+    background-image: radial-gradient(rgba(148,163,184,.12) 1px, transparent 1px);
+    background-size: 28px 28px;
   }
 
-  @keyframes gradientShift {
-    0% {
-      background-position: 0% 0%;
-    }
-    100% {
-      background-position: 100% 100%;
-    }
-  }
-
-  @keyframes playIconPulse {
-    0%, 100% {
-      transform: translateX(0);
-    }
-    50% {
-      transform: translateX(4px);
-    }
-  }
-
-  .animate-fade-in-blur {
-    animation: fadeInBlur 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  }
-
-  .animate-fade-in-scale {
-    animation: fadeInScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  }
-
-  .animate-breathe {
-    animation: breatheScale 2s infinite;
-  }
-
-  .animate-slide-in-left {
-    animation: slideInLeft 0.6s ease-out forwards;
-  }
-
-  .animate-slide-in-right {
-    animation: slideInRight 0.6s ease-out forwards;
-  }
-
-  .animate-play-icon {
-    animation: playIconPulse 3s infinite;
-  }
-
-  .animate-underline {
-    animation: underlineExpand 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  }
-
-  .animate-gradient-shift {
-    animation: gradientShift 20s linear infinite;
-  }
-
-  .hover\:animate-slide-x:hover {
-    animation: slideHover 0.3s ease-out forwards;
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 0 2px rgba(52,211,153,.25);
+    animation: pulseRing 2s ease infinite;
+    display: inline-block;
   }
 `;
 
+// ─── Intersection Reveal ──────────────────────────────────────────────────────
 function Reveal({
   children,
   delay = 0,
+  className = "",
 }: {
   children: React.ReactNode;
   delay?: number;
+  className?: string;
 }) {
-  const [isVisible, setIsVisible] = useState(false);
-  const [ref, setRef] = useState<HTMLDivElement | null>(null);
+  const [vis, setVis] = useState(false);
+  const [el, setEl] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!ref) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.unobserve(ref);
-        }
-      },
-      { threshold: 0.1 }
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVis(true); obs.unobserve(el); } },
+      { threshold: 0.08 }
     );
-
-    observer.observe(ref);
-    return () => observer.disconnect();
-  }, [ref]);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [el]);
 
   return (
     <div
-      ref={setRef}
-      className={isVisible ? "animate-fade-in-blur" : "opacity-0"}
+      ref={setEl}
+      className={`${className} ${vis ? "fade-up" : "opacity-0"}`}
       style={{ animationDelay: `${delay}s` }}
     >
       {children}
@@ -211,523 +187,330 @@ function Reveal({
   );
 }
 
-function AnimatedBadge() {
-  return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border)]/50 bg-gradient-to-r from-violet-500/10 to-blue-500/10 px-3 py-1.5 text-xs uppercase tracking-[0.2em] text-[color:var(--foreground)]/80 backdrop-blur border-violet-500/20">
-      <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-r from-violet-400 to-blue-400" />
-      Distributed System Simulator
-    </div>
-  );
-}
-
-function packetColor(isReverseMotion: boolean) {
-  return isReverseMotion ? "#f59e0b" : "#8b5cf6";
-}
-
+// ─── Packet Edge (same logic, cleaned up) ────────────────────────────────────
 function PacketEdge(props: EdgeProps) {
-  const {
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-    style,
-    markerEnd,
-    data,
-  } = props;
+  const { sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, markerEnd, data } = props;
+  const [edgePath] = getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, borderRadius: 10 });
 
-  const [edgePath] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-    borderRadius: 10,
-  });
-
-  const isActive = Boolean(data?.active);
-  const duration = Number(data?.packetDuration ?? 1.8);
-  const isReverseMotion = Boolean(data?.reverseMotion);
-  const count = Math.max(1, Math.min(Number(data?.packetCount ?? 1), 4));
-  const frameIndex = Number(data?.frameIndex ?? 0);
-
-  const animateRefs = useRef<Array<any>>([]);
+  const isActive       = Boolean(data?.active);
+  const duration       = Number(data?.packetDuration ?? 1.8);
+  const isReverse      = Boolean(data?.reverseMotion);
+  const count          = Math.max(1, Math.min(Number(data?.packetCount ?? 1), 4));
+  const frameIndex     = Number(data?.frameIndex ?? 0);
+  const animRefs       = useRef<any[]>([]);
 
   useEffect(() => {
-    if (isActive) {
-      animateRefs.current.forEach((ref, index) => {
-        if (ref) {
-          try {
-            if (typeof ref.beginElementAt === "function") {
-              ref.beginElementAt(index * 0.12);
-            } else if (typeof ref.beginElement === "function") {
-              ref.beginElement();
-            }
-          } catch (e) {
-            console.error("Error starting SMIL animation:", e);
-          }
-        }
-      });
-    }
+    if (!isActive) return;
+    animRefs.current.forEach((r, i) => {
+      if (!r) return;
+      try { r.beginElementAt?.(i * 0.12) ?? r.beginElement?.(); } catch {}
+    });
   }, [isActive, frameIndex]);
+
+  const col = isReverse ? "#f59e0b" : "#8b5cf6";
 
   return (
     <>
-      <BaseEdge
-        path={edgePath}
-        markerEnd={markerEnd}
-        style={{
-          ...style,
-          strokeOpacity: isActive ? 0.95 : 0.28,
-          transition: "stroke-opacity 150ms ease",
-        }}
-      />
-      {isActive &&
-        Array.from({ length: count }).map((_, index) => (
-          <circle
-            key={`${props.id}-${index}-${edgePath}-${frameIndex}`}
-            r={4.5 - index * 0.5}
-            fill={packetColor(isReverseMotion)}
-            cx="0"
-            cy="0"
-            style={{
-              filter: isReverseMotion
-                ? "drop-shadow(0 0 5px rgba(245,158,11,0.85))"
-                : "drop-shadow(0 0 5px rgba(139,92,246,0.85))",
-              opacity: Math.max(0.45, 0.9 - index * 0.15),
-            }}
-          >
-            <animateMotion
-              ref={(el) => {
-                animateRefs.current[index] = el;
-              }}
-              dur={`${duration}s`}
-              repeatCount={data?.isPlaying ? "1" : "indefinite"}
-              fill="freeze"
-              begin={`${index * 0.12}s`}
-              path={edgePath}
-              keyPoints={isReverseMotion ? "1;0" : "0;1"}
-              keyTimes="0;1"
-              calcMode="linear"
-            />
-          </circle>
-        ))}
+      <BaseEdge path={edgePath} markerEnd={markerEnd}
+        style={{ ...style, strokeOpacity: isActive ? 0.9 : 0.2, transition: "stroke-opacity 150ms" }} />
+      {isActive && Array.from({ length: count }).map((_, i) => (
+        <circle key={`${props.id}-${i}-${frameIndex}`} r={4.5 - i * 0.5} fill={col} cx="0" cy="0"
+          style={{ filter: `drop-shadow(0 0 5px ${col}cc)`, opacity: Math.max(0.4, 0.9 - i * 0.15) }}>
+          <animateMotion ref={el => { animRefs.current[i] = el; }} dur={`${duration}s`}
+            repeatCount="indefinite" fill="freeze" begin={`${i * 0.12}s`} path={edgePath}
+            keyPoints={isReverse ? "1;0" : "0;1"} keyTimes="0;1" calcMode="linear" />
+        </circle>
+      ))}
     </>
   );
 }
 
-function CustomNode({ id, data, selected }: any) {
-  const typeColors: any = {
-    client: "border-l-violet-500 shadow-violet-500/10",
-    "api-gateway": "border-l-fuchsia-500 shadow-fuchsia-500/10",
-    "load-balancer": "border-l-blue-500 shadow-blue-500/10",
-    server: "border-l-emerald-500 shadow-emerald-500/10",
-    redis: "border-l-amber-500 shadow-amber-500/10",
-    postgres: "border-l-cyan-500 shadow-cyan-500/10",
-    storage: "border-l-yellow-500 shadow-yellow-500/10",
+// ─── Custom Node for Hero diagram ─────────────────────────────────────────────
+function HeroNode({ data }: any) {
+  const border: Record<string, string> = {
+    client: "#8b5cf6", "load-balancer": "#3b82f6", server: "#10b981",
   };
-
-  const colorClass = typeColors[data.type] || "border-l-slate-400";
-
-  const hasTarget = data.type !== "client";
-  const hasSource = data.type !== "redis" && data.type !== "postgres" && data.type !== "storage";
+  const isActive = Boolean(data.isActive);
+  const col = border[data.type] || "#64748b";
 
   return (
     <div
-      className={`relative rounded-xl border border-[var(--border)] border-l-4 bg-[var(--surface)] px-4 py-3 shadow-md transition-all duration-300 ${colorClass} ${
-        selected ? "ring-2 ring-violet-500 scale-105" : "hover:border-[var(--border)]/80"
-      } min-w-[145px]`}
+      className="relative flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold backdrop-blur"
+      style={{
+        background: "var(--surface)",
+        border: `1.5px solid ${isActive ? col : "rgba(148,163,184,.25)"}`,
+        boxShadow: isActive ? `0 0 18px -4px ${col}99` : "none",
+        minWidth: 130,
+        transition: "all .15s ease",
+      }}
     >
-      {hasTarget && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          style={{ background: "#8b5cf6", width: 8, height: 8 }}
-        />
+      {data.type !== "client" && (
+        <Handle type="target" position={Position.Left}
+          style={{ background: col, width: 7, height: 7, border: "none" }} />
       )}
-
-      <div className="flex items-center gap-2">
-        <ComponentIcon type={data.type} className="w-5 h-5 shrink-0" />
-        <div className="leading-tight">
-          <p className="text-[9px] font-semibold uppercase tracking-wider text-[color:var(--foreground)]/45">
-            {data.type}
-          </p>
-          <p className="text-xs font-bold text-[color:var(--foreground)] truncate max-w-[100px]">{data.label}</p>
-        </div>
+      <ComponentIcon type={data.type} className="w-4 h-4 shrink-0" />
+      <div className="leading-tight">
+        <p className="text-[9px] font-semibold uppercase tracking-wider opacity-40">{data.type}</p>
+        <p className="text-[11px] font-bold truncate max-w-[90px]" style={{ color: "var(--foreground)" }}>{data.label}</p>
       </div>
-
-      {data.isActive && (
-        <span className="absolute -top-1 -right-1 flex h-3 w-3">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
+      {isActive && (
+        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: col }} />
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ background: col }} />
         </span>
       )}
-
-      {hasSource && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          style={{ background: "#8b5cf6", width: 8, height: 8 }}
-        />
+      {data.type !== "server" && (
+        <Handle type="source" position={Position.Right}
+          style={{ background: col, width: 7, height: 7, border: "none" }} />
       )}
     </div>
   );
 }
 
-const nodeTypes = {
-  customNode: CustomNode,
-};
+const NODE_TYPES = { heroNode: HeroNode };
 
-function HeroArchitecture() {
+// ─── Hero Live Sim ─────────────────────────────────────────────────────────────
+function HeroSim() {
   const [frameIndex, setFrameIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [speed, setSpeed] = useState(1);
-  const [simData, setSimData] = useState<any>(null);
+  const [isPlaying, setIsPlaying]   = useState(false); // starts paused
+  const [simData, setSimData]       = useState<any>(null);
+  const [hasStarted, setHasStarted] = useState(false);
 
-  // Generate simulation on mount
+  useEffect(() => { setSimData(buildSim()); }, []);
+
+  // Auto-advance when playing
   useEffect(() => {
-    const data = buildSimulation();
-    setSimData(data);
-  }, []);
+    if (!isPlaying || !simData) return;
+    const total = simData.frames.length || 1;
+    const id = setInterval(() => {
+      setFrameIndex(p => {
+        if (p >= total - 1) {
+          setIsPlaying(false);
+          return p;
+        }
+        return p + 1;
+      });
+    }, 900);
+    return () => clearInterval(id);
+  }, [isPlaying, simData]);
+
+  const handleNodeClick = (_: any, node: any) => {
+    if (node.id === simData?.ids?.cId) {
+      // clicking Client → restart simulation
+      setFrameIndex(0);
+      setIsPlaying(true);
+      setHasStarted(true);
+    }
+  };
 
   const nodes = useMemo<Node[]>(() => {
-    if (!simData) {
-      return [];
-    }
-
-    const currentFrame = simData.frames?.[frameIndex];
-    const isNodeActive = (id: string) => {
-      if (!currentFrame) return false;
-      return currentFrame.from === id || currentFrame.to === id;
-    };
-
+    if (!simData) return [];
+    const f = simData.frames[frameIndex];
+    const active = (id: string) => f?.from === id || f?.to === id;
+    const { cId, lbId, s1, s2, s3 } = simData.ids;
     return [
-      {
-        id: simData.meta.clientId,
-        type: "customNode",
-        data: { label: "Client Browser", type: "client", isActive: isNodeActive(simData.meta.clientId) },
-        position: { x: 40, y: 190 },
-        sourcePosition: Position.Right,
-        targetPosition: Position.Left,
-        style: undefined,
-      },
-      {
-        id: simData.meta.lbId,
-        type: "customNode",
-        data: { label: "Load Balancer", type: "load-balancer", isActive: isNodeActive(simData.meta.lbId) },
-        position: { x: 260, y: 190 },
-        sourcePosition: Position.Right,
-        targetPosition: Position.Left,
-        style: undefined,
-      },
-      {
-        id: simData.meta.s1Id,
-        type: "customNode",
-        data: { label: "Web Server 1", type: "server", isActive: isNodeActive(simData.meta.s1Id) },
-        position: { x: 500, y: 40 },
-        sourcePosition: Position.Right,
-        targetPosition: Position.Left,
-        style: undefined,
-      },
-      {
-        id: simData.meta.s2Id,
-        type: "customNode",
-        data: { label: "Web Server 2", type: "server", isActive: isNodeActive(simData.meta.s2Id) },
-        position: { x: 500, y: 190 },
-        sourcePosition: Position.Right,
-        targetPosition: Position.Left,
-        style: undefined,
-      },
-      {
-        id: simData.meta.s3Id,
-        type: "customNode",
-        data: { label: "Web Server 3", type: "server", isActive: isNodeActive(simData.meta.s3Id) },
-        position: { x: 500, y: 340 },
-        sourcePosition: Position.Right,
-        targetPosition: Position.Left,
-        style: undefined,
-      },
+      { id: cId,  type: "heroNode", position: { x: 20,  y: 165 }, data: { label: "Client",       type: "client",        isActive: active(cId)  }, sourcePosition: Position.Right, targetPosition: Position.Left },
+      { id: lbId, type: "heroNode", position: { x: 230, y: 165 }, data: { label: "Load Balancer", type: "load-balancer", isActive: active(lbId) }, sourcePosition: Position.Right, targetPosition: Position.Left },
+      { id: s1,   type: "heroNode", position: { x: 450, y: 30  }, data: { label: "Web Server 1",  type: "server",        isActive: active(s1)   }, sourcePosition: Position.Right, targetPosition: Position.Left },
+      { id: s2,   type: "heroNode", position: { x: 450, y: 165 }, data: { label: "Web Server 2",  type: "server",        isActive: active(s2)   }, sourcePosition: Position.Right, targetPosition: Position.Left },
+      { id: s3,   type: "heroNode", position: { x: 450, y: 300 }, data: { label: "Web Server 3",  type: "server",        isActive: active(s3)   }, sourcePosition: Position.Right, targetPosition: Position.Left },
     ];
   }, [simData, frameIndex]);
 
   const edges = useMemo<Edge[]>(() => {
-    if (!simData) {
-      return [];
+    if (!simData) return [];
+    const { cId, lbId, s1, s2, s3 } = simData.ids;
+    const f = simData.frames[frameIndex];
+    const BASE = new Set([`${cId}->${lbId}`, `${lbId}->${s1}`, `${lbId}->${s2}`, `${lbId}->${s3}`]);
+    const activeMap = new Map<string, boolean>();
+    if (f?.from && f?.to) {
+      const d = `${f.from}->${f.to}`, r = `${f.to}->${f.from}`;
+      if (BASE.has(d)) activeMap.set(d, false);
+      else if (BASE.has(r)) activeMap.set(r, true);
     }
-
-    const inactiveStroke = "rgba(148, 163, 184, 0.35)";
-    const currentFrame = simData.frames?.[frameIndex];
-    const edgeState = new Map<string, { reverseMotion: boolean }>();
-
-    if (currentFrame?.from && currentFrame?.to) {
-      const directEdgeId = `${currentFrame.from}->${currentFrame.to}`;
-      const reverseEdgeId = `${currentFrame.to}->${currentFrame.from}`;
-      const baseEdgeIds = new Set([
-        `${simData.meta.clientId}->${simData.meta.lbId}`,
-        `${simData.meta.lbId}->${simData.meta.s1Id}`,
-        `${simData.meta.lbId}->${simData.meta.s2Id}`,
-        `${simData.meta.lbId}->${simData.meta.s3Id}`,
-      ]);
-
-      const hasDirect = baseEdgeIds.has(directEdgeId);
-      const hasReverse = baseEdgeIds.has(reverseEdgeId);
-      const resolvedEdgeId = hasDirect
-        ? directEdgeId
-        : hasReverse
-          ? reverseEdgeId
-          : directEdgeId;
-
-      if (baseEdgeIds.has(resolvedEdgeId)) {
-        edgeState.set(resolvedEdgeId, { reverseMotion: !hasDirect && hasReverse });
-      }
-    }
-
-    const baseEdges: Edge[] = [
-      {
-        id: `${simData.meta.clientId}->${simData.meta.lbId}`,
-        source: simData.meta.clientId,
-        target: simData.meta.lbId,
-        type: "packet",
-      },
-      {
-        id: `${simData.meta.lbId}->${simData.meta.s1Id}`,
-        source: simData.meta.lbId,
-        target: simData.meta.s1Id,
-        type: "packet",
-      },
-      {
-        id: `${simData.meta.lbId}->${simData.meta.s2Id}`,
-        source: simData.meta.lbId,
-        target: simData.meta.s2Id,
-        type: "packet",
-      },
-      {
-        id: `${simData.meta.lbId}->${simData.meta.s3Id}`,
-        source: simData.meta.lbId,
-        target: simData.meta.s3Id,
-        type: "packet",
-      },
-    ];
-
-    return baseEdges.map((edge) => {
-      const active = edgeState.has(edge.id);
-      const reverseMotion = edgeState.get(edge.id)?.reverseMotion ?? false;
+    return [
+      { id: `${cId}->${lbId}`, source: cId,  target: lbId, type: "packet" },
+      { id: `${lbId}->${s1}`,  source: lbId, target: s1,   type: "packet" },
+      { id: `${lbId}->${s2}`,  source: lbId, target: s2,   type: "packet" },
+      { id: `${lbId}->${s3}`,  source: lbId, target: s3,   type: "packet" },
+    ].map(e => {
+      const rev = activeMap.get(e.id);
+      const isAct = activeMap.has(e.id);
       return {
-        ...edge,
-        data: {
-          active,
-          reverseMotion,
-          packetDuration: 1 / speed,
-          isPlaying,
-          frameIndex,
-          packetCount: active ? 1 : 0,
-        },
-        style: {
-          stroke: active ? packetColor(reverseMotion) : inactiveStroke,
-          strokeWidth: active ? 2.2 : 1.5,
-          transition: "all 0.2s ease",
-        },
+        ...e,
+        data: { active: isAct, reverseMotion: rev ?? false, packetDuration: 0.9, frameIndex, packetCount: isAct ? 1 : 0 },
+        style: { stroke: isAct ? (rev ? "#f59e0b" : "#8b5cf6") : "rgba(148,163,184,.2)", strokeWidth: isAct ? 2 : 1.5, transition: "all .15s ease" },
       };
     });
-  }, [frameIndex, simData, speed, isPlaying]);
-
-  // Auto-play animation
-  useEffect(() => {
-    if (!isPlaying || !simData) return;
-    const baseIntervalMs = 1000;
-    const intervalMs = baseIntervalMs / speed;
-    const interval = setInterval(() => {
-      setFrameIndex((prev) => (prev + 1) % (simData.frames.length || 1));
-    }, intervalMs);
-    return () => clearInterval(interval);
-  }, [isPlaying, simData, speed]);
+  }, [simData, frameIndex]);
 
   if (!simData || nodes.length === 0) return null;
 
-  return (
-    <div className="relative h-[260px] w-full overflow-hidden rounded-2xl border border-[var(--border)]/50 bg-[var(--surface-muted)]/40 p-2 shadow-[0_25px_80px_-40px_var(--glow)] backdrop-blur sm:h-[320px] sm:p-4 lg:h-[360px]">
-      <div
-        className="absolute inset-0 opacity-30"
-        style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg%20width=%2780%27%20height=%2780%27%20viewBox=%270%200%2080%2080%27%20xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cg%20fill=%27none%27%20fill-rule=%27evenodd%27%3E%3Cg%20fill=%27%23888888%27%20fill-opacity=%270.1%27%3E%3Cpath%20d=%27M0%200h80v80H0z%27/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')", backgroundSize: "80px 80px" }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-blue-500/5" />
+  const { frames } = simData;
+  const cur = frames[frameIndex];
+  const total = frames.length;
 
-      {/* ReactFlow Container with Zoom/Pan Controls */}
-      <div className="relative z-10 h-full w-full">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          edgeTypes={{ packet: PacketEdge }}
-          fitView
-          fitViewOptions={{ padding: 0.2 }}
-          attributionPosition="bottom-right"
-          nodesDraggable={false}
-          nodesConnectable={false}
-          elementsSelectable={false}
-          panOnDrag={true}
-          zoomOnScroll={true}
-          zoomOnPinch={true}
-          style={{ 
-            background: "transparent",
-            width: "100%",
-            height: "100%"
-          }}
-        >
-          <Background
-            variant={BackgroundVariant.Dots}
-            gap={12}
-            size={0.5}
-            color="rgba(148, 163, 184, 0.1)"
-          />
+  return (
+    <div className="relative w-full overflow-hidden rounded-2xl border border-[var(--border)]/40 bg-[var(--surface-muted)]/30 backdrop-blur"
+      style={{ height: 400 }}>
+      {/* glow blobs */}
+      <div className="pointer-events-none absolute -top-12 -right-12 h-56 w-56 rounded-full bg-violet-500/10 blur-[60px]" />
+      <div className="pointer-events-none absolute -bottom-8 -left-8 h-40 w-40 rounded-full bg-blue-500/10 blur-[50px]" />
+
+      {/* initial state hint */}
+      {!hasStarted && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+          <div className="flex flex-col items-center gap-2 rounded-2xl border border-violet-500/25 bg-[var(--surface)]/90 px-6 py-4 backdrop-blur-sm shadow-xl">
+            <span className="text-2xl">▶</span>
+            <p className="text-xs font-semibold text-violet-400">Click the <b>"Client"</b> node to start</p>
+          </div>
+        </div>
+      )}
+
+      <div className="relative z-10 h-full">
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={NODE_TYPES} edgeTypes={{ packet: PacketEdge }}
+          fitView fitViewOptions={{ padding: 0.22 }} nodesDraggable={false} nodesConnectable={false}
+          elementsSelectable={false} panOnDrag zoomOnScroll zoomOnPinch
+          onNodeClick={handleNodeClick}
+          style={{ background: "transparent", width: "100%", height: "100%" }}>
+          <Background variant={BackgroundVariant.Dots} gap={20} size={0.6} color="rgba(148,163,184,.08)" />
         </ReactFlow>
       </div>
 
-      {/* Help Text */}
-      <div className="pointer-events-none absolute right-2 top-2 z-20 hidden text-xs text-[color:var(--foreground)]/50 sm:block">
-        <div className="text-center leading-snug">
-          <div>🖱️ Drag to pan</div>
-          <div>🔍 Scroll to zoom</div>
+      {/* bottom status bar */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 flex items-center justify-between gap-3
+        border-t border-[var(--border)]/30 bg-[var(--surface)]/85 px-4 py-2.5 backdrop-blur-sm text-xs">
+        <div className="flex items-center gap-2.5">
+          <button onClick={() => { setIsPlaying(p => !p); setHasStarted(true); }}
+            className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-500/15 text-violet-400 hover:bg-violet-500/25 transition text-[11px]">
+            {isPlaying ? "⏸" : "▶"}
+          </button>
+          <button onClick={() => { setFrameIndex(0); setIsPlaying(false); setHasStarted(false); }}
+            className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)]/50 text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition font-mono">Reset</button>
+          <span className="text-[color:var(--foreground)]/40">Frame {frameIndex + 1}/{total}</span>
+          <input type="range" min={0} max={Math.max(total - 1, 0)} value={frameIndex}
+            onChange={e => { setFrameIndex(+e.target.value); setIsPlaying(false); setHasStarted(+e.target.value > 0); }}
+            className="h-0.5 w-20 accent-violet-500" />
         </div>
-      </div>
-
-      {/* Control Bar */}
-      <div className="absolute bottom-2 left-2 right-2 z-20 flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border)]/50 bg-[var(--surface)]/90 px-2 py-2 backdrop-blur-sm sm:bottom-4 sm:left-4 sm:right-auto sm:flex-nowrap sm:px-3">
-        <button
-          onClick={() => setIsPlaying(!isPlaying)}
-          className="rounded px-2 py-1 text-xs font-medium hover:bg-[var(--surface)]/50 transition"
-          title={isPlaying ? "Pause" : "Play"}
-        >
-          {isPlaying ? "⏸" : "▶"}
-        </button>
-        <span className="text-[11px] text-[color:var(--foreground)]/70 sm:text-xs">
-          Frame {frameIndex + 1}/{simData.frames.length}
-        </span>
-        <input
-          type="range"
-          min="0"
-          max={Math.max(simData.frames.length - 1, 0)}
-          value={frameIndex}
-          onChange={(e) => {
-            setFrameIndex(Number(e.target.value));
-            setIsPlaying(false);
-          }}
-          className="h-1 min-w-0 flex-1 accent-violet-500 sm:w-32 sm:flex-none"
-        />
-        <input
-          type="range"
-          min="0.5"
-          max="2"
-          step="0.25"
-          value={speed}
-          onChange={(e) => setSpeed(Number(e.target.value))}
-          className="h-1 w-16 accent-blue-500 sm:w-20"
-          title="Playback speed"
-        />
-        <span className="text-[11px] text-[color:var(--foreground)]/70 sm:text-xs">{speed.toFixed(2)}x</span>
+        {hasStarted && cur && (
+          <div className="hidden sm:flex items-center gap-2 font-mono text-[10px] text-[color:var(--foreground)]/50">
+            <span className="status-dot" />
+            <span className="truncate max-w-[180px]">{cur.from} → {cur.to}</span>
+          </div>
+        )}
+        {!hasStarted && (
+          <span className="text-[10px] text-violet-400/70 font-medium hidden sm:block">Click Client node to start</span>
+        )}
+        <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-widest text-violet-400 bg-violet-500/10">{isPlaying ? "RUNNING" : "READY"}</span>
       </div>
     </div>
   );
 }
 
-function buildSimulation() {
-  const uid = new ShortUniqueId({ length: 10 });
-  const graph = new GraphManager(uid.rnd(10));
-  const registry = new NodeRegistry(uid.rnd(10));
-  const ipv4Instance = new Ipv4Generator();
-  const strategy = new RoundRobinStrategy();
+function buildSim() {
+  const uid = new ShortUniqueId({ length: 6 });
+  const graph = new GraphManager(uid.rnd(6));
+  const registry = new NodeRegistry(uid.rnd(6));
+  const ipv4 = new Ipv4Generator();
 
-  const lbId = "lb-1";
-  const s1Id = "server-1";
-  const s2Id = "server-2";
-  const s3Id = "server-3";
-  const clientId = "client-1";
+  const ids = { cId: "c-1", lbId: "lb-1", s1: "s-1", s2: "s-2", s3: "s-3" };
+  const { cId, lbId, s1, s2, s3 } = ids;
 
-  const lb     = new LoadBalancerModel(lbId, "LoadBalancer", strategy);
-  const s1     = new ServerModel(s1Id, "Server 1");
-  const s2     = new ServerModel(s2Id, "Server 2");
-  const s3     = new ServerModel(s3Id, "Server 3");
-  const client = new ClientModel(clientId, "Client");
-
-  graph.addNode(lbId, "LoadBalancer");
-  graph.addNode(s1Id, "Server 1");
-  graph.addNode(s2Id, "Server 2");
-  graph.addNode(s3Id, "Server 3");
-  graph.addNode(clientId, "Client");
-
-  graph.addEdge(clientId, lbId);
-  graph.addEdge(lbId, s1Id);
-  graph.addEdge(lbId, s2Id);
-  graph.addEdge(lbId, s3Id);
-
+  const lb = new LoadBalancerModel(lbId, "LB", new RoundRobinStrategy());
+  registry.register(cId,  new ClientModel(cId, "Client"));
   registry.register(lbId, lb);
-  registry.register(s1Id, s1);
-  registry.register(s2Id, s2);
-  registry.register(s3Id, s3);
-  registry.register(clientId, client);
+  registry.register(s1,   new ServerModel(s1, "S1"));
+  registry.register(s2,   new ServerModel(s2, "S2"));
+  registry.register(s3,   new ServerModel(s3, "S3"));
+
+  [cId, lbId, s1, s2, s3].forEach(id => graph.addNode(id, id));
+  graph.addEdge(cId, lbId); graph.addEdge(lbId, s1); graph.addEdge(lbId, s2); graph.addEdge(lbId, s3);
 
   const allFrames: any[] = [];
-  
-  for (let i = 0; i < 3; i++) {
-    const sourceIp = ipv4Instance.getRandomIpv4() as string;
-    const simulation = new SimulationManager(
-      graph,
-      registry,
-      {},
-      sourceIp,
-    );
-    simulation.runSimulation(clientId);
-
-    const runFrames = (simulation.getFrames() as any[]).map((frame) => ({
-      ...frame,
-      sourceIp,
-      payloadSummary: "{}",
-    }));
-
-    allFrames.push(...runFrames);
+  for (let i = 0; i < 4; i++) {
+    const ip = ipv4.getRandomIpv4() as string;
+    const sim = new SimulationManager(graph, registry, {}, ip);
+    sim.runSimulation(cId);
+    allFrames.push(...(sim.getFrames() as any[]).map(f => ({ ...f, ip })));
   }
-
-  return {
-    frames: allFrames,
-    meta: { lbId, s1Id, s2Id, s3Id, clientId },
-  };
+  return { frames: allFrames, ids };
 }
 
-// ===== HOW IT WORKS SECTION =====
-function HowItWorks() {
-  const steps = [
-    { num: "01", title: "Choose a Scenario", description: "Select from predefined distributed system patterns like load balancing, caching, or rate limiting.", icon: "🎯" },
-    { num: "02", title: "Watch the Flow", description: "See requests travel through your architecture in real-time. Understand bottlenecks and latencies.", icon: "🌊" },
-    { num: "03", title: "Inspect State", description: "Pause the simulation at any frame. Check Redis cache, Postgres data, or server loads instantly.", icon: "🔍" },
+// ─── Ticker bar ──────────────────────────────────────────────────────────────
+function Ticker() {
+  const items = [
+    "⚖️  Load Balancing — Round Robin · IP Hash · Least-Conn",
+    "🗄️  Cache-Aside — Redis hit/miss · DB fallback · TTL eviction",
+    "🚪  API Gateway — Path routing · Rate limiting · Service pools",
+    "🔑  Valet Key — Token issuance · Direct cloud-storage upload",
+    "🛠️  Custom Sandbox — Build & test any topology",
+    "📚  Interactive Docs — Learn by running live simulations",
+  ];
+  const all = [...items, ...items]; // duplicate for seamless loop
+  return (
+    <div className="ticker-wrap border-y border-[var(--border)]/30 bg-[var(--surface-muted)]/20 py-2.5 text-[11px] font-medium text-[color:var(--foreground)]/50">
+      <div className="ticker-track">
+        {all.map((t, i) => (
+          <span key={i} className="mx-8 shrink-0">{t}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── What It Does section ─────────────────────────────────────────────────────
+function WhatItDoes() {
+  const points = [
+    {
+      icon: "⚡",
+      color: "#6366f1",
+      title: "Run real simulations",
+      body: "The engine actually runs your distributed system. Requests hop from Client → Load Balancer → Server → Redis → Postgres — not just drawn arrows.",
+    },
+    {
+      icon: "🎞️",
+      color: "#8b5cf6",
+      title: "Frame-by-frame playback",
+      body: "Every request hop becomes a playback frame. Pause at any moment, scrub backwards, or fast-forward. See exactly what happened and why.",
+    },
+    {
+      icon: "🔬",
+      color: "#06b6d4",
+      title: "Inspect node state",
+      body: "Open any node's inspector. See Redis key snapshots, server load, capacity, request queues — all updating live as the simulation runs.",
+    },
+    {
+      icon: "📚",
+      color: "#10b981",
+      title: "Learn as you simulate",
+      body: "Each concept has a guided doc page with a live sim embedded. Read the theory, trigger the failure, watch the recovery — all on one screen.",
+    },
   ];
 
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-6 py-24">
-        <div className="mb-20 text-center animate-fade-in-blur">
-          <h2 className="mb-6 text-4xl font-bold tracking-tight md:text-5xl">
-            How FlowFrame Works
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="mb-14 text-center">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[.18em] text-violet-400">What makes it different</p>
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "var(--foreground)" }}>
+            Not a diagram tool.<br />A running system.
           </h2>
-          <p className="mx-auto max-w-2xl text-lg text-[color:var(--foreground)]/70">
-            A visual, interactive approach to mastering complex backend architectures.
+          <p className="mx-auto mt-4 max-w-xl text-base" style={{ color: "var(--foreground)", opacity: 0.6 }}>
+            Most system design tools let you draw boxes and arrows. FlowFrame actually runs the logic, captures every hop, and plays it back so you can see what's happening inside.
           </p>
         </div>
 
-        <div className="relative grid gap-12 md:grid-cols-3">
-          <div className="absolute top-12 left-10 hidden h-0.5 w-[calc(100%-5rem)] bg-gradient-to-r from-transparent via-[var(--border)] to-transparent md:block" />
-
-          {steps.map((step, index) => (
-            <Reveal key={step.num} delay={index * 0.15}>
-              <div className="group relative z-10 mx-auto flex flex-col items-center text-center">
-                <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-3xl bg-[var(--surface)] border-2 border-[var(--border)] shadow-xl transition-all duration-300 group-hover:scale-110 group-hover:border-violet-500/50 group-hover:shadow-[0_0_40px_rgba(139,92,246,0.2)]">
-                  <span className="text-4xl">{step.icon}</span>
+        <div className="grid gap-5 sm:grid-cols-2">
+          {points.map((p, i) => (
+            <Reveal key={p.title} delay={i * 0.1}>
+              <div className="card-glow group flex gap-5 rounded-2xl border border-[var(--border)]/40 bg-[var(--surface)]/40 p-7 backdrop-blur transition-all duration-300">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl"
+                  style={{ background: `${p.color}18`, border: `1px solid ${p.color}30` }}>
+                  {p.icon}
                 </div>
-                <div className="rounded-3xl border border-[var(--border)]/50 bg-[var(--surface)]/40 p-8 backdrop-blur-sm transition-all duration-300 group-hover:bg-[var(--surface)]/80 hover:border-violet-500/30">
-                  <div className="mb-3 text-xs font-bold tracking-widest text-violet-400">STEP {step.num}</div>
-                  <h3 className="mb-4 text-2xl font-bold text-[color:var(--foreground)]">{step.title}</h3>
-                  <p className="text-base leading-relaxed text-[color:var(--foreground)]/70">{step.description}</p>
+                <div>
+                  <h3 className="mb-2 text-base font-bold" style={{ color: "var(--foreground)" }}>{p.title}</h3>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.6 }}>{p.body}</p>
                 </div>
               </div>
             </Reveal>
@@ -738,198 +521,103 @@ function HowItWorks() {
   );
 }
 
-
-// ===== MOCK SYSTEM DASHBOARD FOR BENTO GRID =====
-function MockSystemDashboard() {
-  const [logs, setLogs] = useState<Array<{ time: string; text: string; type: string }>>([
-    { time: "13:40:01", text: "GET /api/v1/posts - Cache Hit - 4ms", type: "success" },
-    { time: "13:40:04", text: "POST /api/v1/users - DB Write - 42ms", type: "info" },
-    { time: "13:40:08", text: "GET /api/v1/users - Cache Miss -> DB Read - 22ms", type: "warn" },
-  ]);
-
-  useEffect(() => {
-    const templates = [
-      { text: "GET /api/v1/posts - Cache Hit - 3ms", type: "success" },
-      { text: "GET /api/v1/users - Cache Hit - 2ms", type: "success" },
-      { text: "POST /api/v1/comments - DB Write - 35ms", type: "info" },
-      { text: "GET /api/v1/comments - Cache Miss -> DB Read - 28ms", type: "warn" },
-      { text: "UPLOAD /api/v1/media - Bucket Upload - 156ms", type: "info" },
-      { text: "GET /api/v1/auth - Token Validate - 5ms", type: "success" },
-      { text: "PUT /api/v1/users/rohan - Cache Invalidate - 8ms", type: "info" },
-      { text: "GET /api/v1/search - Redis Cache Hit - 1ms", type: "success" },
-    ];
-
-    const interval = setInterval(() => {
-      const date = new Date();
-      const timeStr = date.toTimeString().split(" ")[0];
-      const template = templates[Math.floor(Math.random() * templates.length)];
-      setLogs((prev) => {
-        const next = [...prev, { time: timeStr, text: template.text, type: template.type }];
-        if (next.length > 5) {
-          return next.slice(next.length - 5);
-        }
-        return next;
-      });
-    }, 2500);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div className="relative mt-4 h-64 w-full overflow-hidden rounded-2xl border border-[var(--border)]/50 bg-[var(--surface-muted)]/30 p-4 font-mono text-xs shadow-inner flex flex-col md:flex-row gap-4">
-      {/* Metrics Section */}
-      <div className="flex flex-col justify-between gap-3 md:w-1/3 border-b md:border-b-0 md:border-r border-[var(--border)]/40 pb-3 md:pb-0 md:pr-4">
-        <div>
-          <span className="text-[10px] uppercase tracking-wider text-[color:var(--foreground)]/50">System Load</span>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-bold text-violet-400">99.98%</span>
-            <span className="text-[9px] text-emerald-400">Uptime</span>
-          </div>
-        </div>
-        <div>
-          <span className="text-[10px] uppercase tracking-wider text-[color:var(--foreground)]/50">Avg Latency</span>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-bold text-blue-400">14.2ms</span>
-            <span className="text-[9px] text-blue-400">P95</span>
-          </div>
-        </div>
-        <div>
-          <span className="text-[10px] uppercase tracking-wider text-[color:var(--foreground)]/50">Cache Efficiency</span>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-bold text-emerald-400">84.6%</span>
-            <span className="text-[9px] text-emerald-400">Hit Rate</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Terminal Logs Section */}
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="flex items-center justify-between pb-2 mb-2 border-b border-[var(--border)]/30">
-          <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[9px] uppercase tracking-wider text-[color:var(--foreground)]/70">Simulation Logs</span>
-          </div>
-          <span className="text-[8px] text-[color:var(--foreground)]/30">STREAM ACTIVE</span>
-        </div>
-        
-        <div className="flex-1 flex flex-col justify-end gap-1.5 overflow-hidden">
-          {logs.map((log, idx) => {
-            const colors: Record<string, string> = {
-              success: "text-emerald-400",
-              info: "text-blue-400",
-              warn: "text-amber-400",
-            };
-            return (
-              <div key={idx} className="flex gap-2 items-start text-[11px] animate-fade-in-blur">
-                <span className="text-[color:var(--foreground)]/35 select-none">{log.time}</span>
-                <span className="text-violet-400 font-bold select-none">&gt;</span>
-                <span className={`${colors[log.type] || "text-[color:var(--foreground)]/80"} break-all truncate`}>
-                  {log.text}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ===== MODERN BENTO GRID FEATURES =====
-function FeaturesBentoGrid() {
-  return (
-    <Reveal>
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <div className="mb-14 animate-fade-in-blur md:w-2/3">
-          <h2 className="mb-6 text-4xl font-bold tracking-tight md:text-5xl">
-            Powerful Simulation Engine
-          </h2>
-          <p className="text-lg text-[color:var(--foreground)]/70">
-            Explore concepts that are usually hidden behind terminal logs and metrics dashboards.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:grid-rows-2">
-          <div className="md:col-span-2 md:row-span-2 group relative overflow-hidden rounded-[2.5rem] border border-[var(--border)]/50 bg-[var(--surface)]/30 p-10 transition-all hover:bg-[var(--surface)]/50 hover:border-blue-500/30">
-            <div className="absolute right-0 top-0 -mr-20 -mt-20 h-80 w-80 rounded-full bg-blue-500/10 blur-[80px] transition-all group-hover:bg-blue-500/20" />
-            <div className="relative z-10 flex h-full flex-col justify-between">
-              <div className="mb-10">
-                <span className="mb-6 inline-block rounded-2xl bg-blue-500/20 p-4 text-3xl">⚡</span>
-                <h3 className="mb-4 text-3xl font-bold tracking-tight">Real-time Visualization</h3>
-                <p className="max-w-md text-lg leading-relaxed text-[color:var(--foreground)]/70">
-                  Watch packets travel across your network. See exactly how load balancers distribute traffic and how databases handle concurrent requests in real-time.
-                </p>
-              </div>
-              <MockSystemDashboard />
-            </div>
-          </div>
-
-          <div className="group relative overflow-hidden rounded-[2.5rem] border border-[var(--border)]/50 bg-[var(--surface)]/30 p-8 transition-all hover:bg-[var(--surface)]/50 hover:border-violet-500/30">
-            <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-violet-500/10 blur-[50px] transition-all group-hover:bg-violet-500/20" />
-            <div className="relative z-10">
-               <span className="mb-5 inline-block rounded-2xl bg-violet-500/20 p-3 text-2xl">💾</span>
-               <h3 className="mb-3 text-xl font-bold">State Inspection</h3>
-               <p className="text-base leading-relaxed text-[color:var(--foreground)]/70">
-                 Pause the timeline. Inspect Redis memory limits, Postgres connections, and queue lengths globally.
-               </p>
-            </div>
-          </div>
-
-          <div className="group relative overflow-hidden rounded-[2.5rem] border border-[var(--border)]/50 bg-[var(--surface)]/30 p-8 transition-all hover:bg-[var(--surface)]/50 hover:border-emerald-500/30">
-            <div className="absolute bottom-0 left-0 h-40 w-40 rounded-full bg-emerald-500/10 blur-[50px] transition-all group-hover:bg-emerald-500/20" />
-            <div className="relative z-10">
-               <span className="mb-5 inline-block rounded-2xl bg-emerald-500/20 p-3 text-2xl">🎮</span>
-               <h3 className="mb-3 text-xl font-bold">Interactive Playback</h3>
-               <p className="text-base leading-relaxed text-[color:var(--foreground)]/70">
-                 Rewind mistakes. Fast-forward simulations. Learn at your own pace with precise timeline controls.
-               </p>
-            </div>
-          </div>
-        </div>
-      </section>
-    </Reveal>
-  );
-}
-
-// ===== WHAT YOU CAN BUILD / SCENARIOS =====
-function ScenariosShowcase() {
-  const scenarios = [
-    { title: "Load Balancing", desc: "Round-robin, IP Hash, Least Connections", color: "from-blue-500/10 to-cyan-500/5 hover:border-cyan-500/30", icon: "⚖️" },
-    { title: "Caching Layers", desc: "Cache penetration, Redis hit/miss ratios", color: "from-orange-500/10 to-red-500/5 hover:border-orange-500/30", icon: "🚀" },
-    { title: "API Gateway", desc: "Authentication, Rate Limiting, Routing", color: "from-violet-500/10 to-fuchsia-500/5 hover:border-fuchsia-500/30", icon: "🚪" },
-    { title: "Valet Key Pattern", desc: "Direct client-storage access via tokens", color: "from-emerald-500/10 to-teal-500/5 hover:border-emerald-500/30", icon: "🔑" },
+// ─── V1 Scenarios section ─────────────────────────────────────────────────────
+function V1Scenarios() {
+  const router = useRouter();
+  const scenes = [
+    {
+      id: "simple-load-balancer",
+      icon: "⚖️",
+      color: "#3b82f6",
+      accent: "rgba(59,130,246,.12)",
+      label: "Load Balancing",
+      tag: "v1 · Live",
+      desc: "Watch Round Robin and IP Hash distribute requests across 3 servers. Drag capacity to 0 to see failover in action.",
+      chips: ["Round Robin", "IP Hash", "Failover"],
+    },
+    {
+      id: "simple-cache",
+      icon: "🗄️",
+      color: "#f59e0b",
+      accent: "rgba(245,158,11,.12)",
+      label: "Cache-Aside",
+      tag: "v1 · Live",
+      desc: "Three deterministic requests: cache hit, cache miss → DB fallback, and invalid key. See Redis snapshots update frame-by-frame.",
+      chips: ["Redis Hit/Miss", "DB Fallback", "TTL"],
+    },
+    {
+      id: "simple-api-gateway",
+      icon: "🚪",
+      color: "#8b5cf6",
+      accent: "rgba(139,92,246,.12)",
+      label: "API Gateway",
+      tag: "v1 · Live",
+      desc: "Path-based routing with server pools. Set a server's capacity to 0 and watch the gateway return 503 automatically.",
+      chips: ["Path Routing", "Rate Limiting", "503 Failover"],
+    },
+    {
+      id: "simple-valet-key",
+      icon: "🔑",
+      color: "#10b981",
+      accent: "rgba(16,185,129,.12)",
+      label: "Valet Key Pattern",
+      tag: "v1 · Live",
+      desc: "Client requests a signed upload token from the server. Server issues it. Client uploads directly to cloud storage — no proxy.",
+      chips: ["Token Issuance", "Direct Upload", "Cloud Storage"],
+    },
   ];
 
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-6 py-24 border-y border-[var(--border)]/30 bg-[var(--surface-muted)]/10 my-10">
-         <div className="mb-14 text-center animate-fade-in-blur">
-          <h2 className="mb-6 text-4xl font-bold tracking-tight md:text-5xl">
-            Simulate Complex Scenarios
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="mb-12">
+          <div className="flex items-center gap-3 mb-4">
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-violet-400">Supported in v1</p>
+            <span className="v1-badge rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-violet-300">4 SCENARIOS</span>
+          </div>
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "var(--foreground)" }}>
+            Pick a scenario. Hit play.
           </h2>
-          <p className="mx-auto max-w-2xl text-lg text-[color:var(--foreground)]/70">
-            Pre-built architectural patterns ready for exploration.
+          <p className="mt-3 max-w-lg text-base" style={{ color: "var(--foreground)", opacity: 0.6 }}>
+            Each scenario is pre-wired with real engine logic. Just select one and watch the architecture run.
           </p>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {scenarios.map((s, i) => (
-             <Reveal key={s.title} delay={i * 0.1}>
-              <div className={`group relative flex h-full cursor-pointer flex-col justify-between rounded-[2rem] border border-[var(--border)]/50 bg-gradient-to-br ${s.color} p-8 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)]`}>
-                <div>
-                  <div className="mb-6 text-4xl drop-shadow-md transition-transform group-hover:scale-110 group-hover:rotate-6 origin-bottom-left">{s.icon}</div>
-                  <h3 className="mb-3 text-xl font-bold text-[color:var(--foreground)]">{s.title}</h3>
-                  <p className="text-sm leading-relaxed text-[color:var(--foreground)]/70">{s.desc}</p>
+        <div className="grid gap-5 sm:grid-cols-2">
+          {scenes.map((s, i) => (
+            <Reveal key={s.id} delay={i * 0.08}>
+              <div
+                onClick={() => router.push(`/scenarios/${s.id}`)}
+                className="scene-card card-glow group relative cursor-pointer rounded-2xl border border-[var(--border)]/40 p-6 backdrop-blur transition-all"
+                style={{ background: `linear-gradient(135deg, ${s.accent}, transparent)` }}
+              >
+                <div className="mb-4 flex items-start justify-between">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl"
+                    style={{ background: `${s.color}20`, border: `1px solid ${s.color}30` }}>
+                    {s.icon}
+                  </div>
+                  <span className="rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider"
+                    style={{ background: `${s.color}18`, color: s.color }}>
+                    {s.tag}
+                  </span>
                 </div>
-                <div className="mt-8 flex items-center text-sm font-bold text-[color:var(--foreground)]/40 transition-colors group-hover:text-[color:var(--foreground)]" onClick={() => {
-                  // Navigate to scenarios page with no loading
-                }}>
-                  
-                   <Link href="/scenarios" className="absolute inset-0 z-10" ></Link>
-                  Explore Scenario <span className="ml-2 transition-transform group-hover:translate-x-2">→</span>
+                <h3 className="mb-2 text-lg font-bold" style={{ color: "var(--foreground)" }}>{s.label}</h3>
+                <p className="mb-4 text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.6 }}>{s.desc}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {s.chips.map(c => (
+                    <span key={c} className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
+                      style={{ background: `${s.color}12`, color: s.color, border: `1px solid ${s.color}25` }}>
+                      {c}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-5 flex items-center text-xs font-bold transition-all"
+                  style={{ color: s.color, opacity: 0.7 }}>
+                  Open Simulator
+                  <span className="ml-1.5 transition-transform group-hover:translate-x-1">→</span>
                 </div>
               </div>
-             </Reveal>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -937,22 +625,180 @@ function ScenariosShowcase() {
   );
 }
 
+// ─── Learn + Sandbox split section ────────────────────────────────────────────
+function LearnAndSandbox() {
+  const router = useRouter();
+  return (
+    <Reveal>
+      <section className="mx-auto max-w-6xl px-6 py-16">
+        <div className="grid gap-5 md:grid-cols-2">
+          {/* Learn */}
+          <div
+            className="card-glow group relative cursor-pointer overflow-hidden rounded-2xl border border-[var(--border)]/40 p-8 backdrop-blur transition-all"
+            style={{ background: "linear-gradient(135deg, rgba(99,102,241,.08), rgba(139,92,246,.04))" }}
+            onClick={() => router.push("/learn")}
+          >
+            <div className="pointer-events-none absolute -top-10 -right-10 h-48 w-48 rounded-full bg-violet-500/10 blur-[50px]" />
+            <div className="relative z-10">
+              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/15 text-3xl border border-violet-500/20">
+                📚
+              </div>
+              <h3 className="mb-2 text-2xl font-bold" style={{ color: "var(--foreground)" }}>Interactive Docs</h3>
+              <p className="mb-5 text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.6 }}>
+                Guided learning for each distributed system concept — theory on the left, live simulation on the right. Read the explanation, trigger the scenario, watch it run.
+              </p>
+              <div className="flex flex-col gap-2 mb-6">
+                {["Load Balancers", "Cache-Aside", "API Gateways", "Valet Key"].map(t => (
+                  <div key={t} className="flex items-center gap-2 text-sm" style={{ color: "var(--foreground)", opacity: 0.7 }}>
+                    <span className="h-1 w-1 rounded-full bg-violet-400 shrink-0" />
+                    {t}
+                  </div>
+                ))}
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-xl bg-violet-500/15 px-4 py-2 text-sm font-bold text-violet-400 transition group-hover:bg-violet-500/25">
+                Start Learning <span className="transition-transform group-hover:translate-x-1">→</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Sandbox */}
+          <div
+            className="card-glow group relative cursor-pointer overflow-hidden rounded-2xl border border-[var(--border)]/40 p-8 backdrop-blur transition-all"
+            style={{ background: "linear-gradient(135deg, rgba(16,185,129,.08), rgba(6,182,212,.04))" }}
+            onClick={() => router.push("/workspace")}
+          >
+            <div className="pointer-events-none absolute -bottom-10 -right-10 h-48 w-48 rounded-full bg-emerald-500/10 blur-[50px]" />
+            <div className="relative z-10">
+              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-3xl border border-emerald-500/20">
+                🛠️
+              </div>
+              <h3 className="mb-2 text-2xl font-bold" style={{ color: "var(--foreground)" }}>Custom Sandbox</h3>
+              <p className="mb-5 text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.6 }}>
+                Drag & drop any component — Clients, Load Balancers, Servers, Redis, Postgres, API Gateways — and wire up your own topology. Then run it.
+              </p>
+              <div className="flex flex-col gap-2 mb-6">
+                {["Drag & drop canvas", "Custom connections", "Run any topology", "Live inspection"].map(t => (
+                  <div key={t} className="flex items-center gap-2 text-sm" style={{ color: "var(--foreground)", opacity: 0.7 }}>
+                    <span className="h-1 w-1 rounded-full bg-emerald-400 shrink-0" />
+                    {t}
+                  </div>
+                ))}
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/15 px-4 py-2 text-sm font-bold text-emerald-400 transition group-hover:bg-emerald-500/25">
+                Open Sandbox <span className="transition-transform group-hover:translate-x-1">→</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </Reveal>
+  );
+}
+
+// ─── V1 honest section ────────────────────────────────────────────────────────
+function V1Status() {
+  const supported = [
+    "Round Robin load balancing",
+    "IP Hash load balancing",
+    "Capacity-based server failover",
+    "Cache-Aside pattern (Redis)",
+    "Database fallback (Postgres)",
+    "API Gateway path routing",
+    "Valet Key token issuance",
+    "Frame-by-frame playback",
+    "Node state inspector",
+    "Custom sandbox canvas",
+    "Interactive learning docs",
+    "Dark / Light mode",
+  ];
+  const coming = [
+    "More LB strategies (Least Conn, Weighted RR)",
+    "Circuit Breaker & Retry patterns",
+    "Saga / distributed transaction flows",
+    "Message Queue simulations (Kafka, RabbitMQ)",
+    "Multi-region & CDN scenarios",
+    "User-shareable scenario links",
+  ];
+
+  return (
+    <Reveal>
+      <section className="mx-auto max-w-6xl px-6 py-16">
+        <div className="rounded-2xl border border-[var(--border)]/40 p-8 md:p-10 backdrop-blur"
+          style={{ background: "var(--surface-muted)", opacity: 1 }}>
+          <div className="mb-8 flex items-center gap-3">
+            <div className="v1-badge rounded-full px-3 py-1 text-xs font-bold tracking-wider text-violet-300">Version 1.0</div>
+            <p className="text-sm font-semibold" style={{ color: "var(--foreground)", opacity: 0.7 }}>What's supported right now</p>
+          </div>
+          <div className="grid gap-10 md:grid-cols-2">
+            <div>
+              <p className="mb-4 text-xs font-bold uppercase tracking-[.15em] text-emerald-400">✓ Supported</p>
+              <ul className="space-y-2.5">
+                {supported.map(s => (
+                  <li key={s} className="flex items-start gap-2.5 text-sm" style={{ color: "var(--foreground)", opacity: 0.75 }}>
+                    <span className="mt-0.5 h-4 w-4 shrink-0 flex items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400 text-[10px]">✓</span>
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="mb-4 text-xs font-bold uppercase tracking-[.15em] text-amber-400">⏳ Coming next</p>
+              <ul className="space-y-2.5">
+                {coming.map(s => (
+                  <li key={s} className="flex items-start gap-2.5 text-sm" style={{ color: "var(--foreground)", opacity: 0.55 }}>
+                    <span className="mt-0.5 h-4 w-4 shrink-0 flex items-center justify-center rounded-full bg-amber-500/10 text-amber-400 text-[10px]">○</span>
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </Reveal>
+  );
+}
+
+// ─── Final CTA ────────────────────────────────────────────────────────────────
+function CTA() {
+  const router = useRouter();
+  return (
+    <Reveal>
+      <section className="mx-auto max-w-6xl px-6 pb-24 pt-4">
+        <div className="relative overflow-hidden rounded-3xl p-10 text-center md:p-16"
+          style={{ background: "linear-gradient(135deg, #4f46e5cc, #7c3aedcc, #0891b2cc)" }}>
+          <div className="pointer-events-none absolute inset-0 dot-grid opacity-20" />
+          <div className="relative z-10">
+            <h2 className="text-3xl font-bold text-white md:text-4xl">
+              Ready to see your architecture run?
+            </h2>
+            <p className="mx-auto mt-3 max-w-lg text-base text-white/75">
+              Pick a scenario, hit play, and watch every hop of every request — live.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <button onClick={() => router.push("/scenarios")} className="btn-primary rounded-xl px-7 py-3 text-sm font-bold text-white">
+                Launch Simulator →
+              </button>
+              <button onClick={() => router.push("/learn")} className="rounded-xl border border-white/30 bg-white/10 px-7 py-3 text-sm font-bold text-white backdrop-blur hover:bg-white/20 transition">
+                Start Learning
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </Reveal>
+  );
+}
+
+// ─── Root ─────────────────────────────────────────────────────────────────────
 export default function Home() {
   const router = useRouter();
 
   const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") {
-      return "dark";
-    }
-
-    const saved = window.localStorage.getItem("flowframe-theme") as Theme | null;
-    if (saved === "light" || saved === "dark") {
-      return saved;
-    }
-
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
+    if (typeof window === "undefined") return "dark";
+    const s = window.localStorage.getItem("flowframe-theme") as Theme | null;
+    if (s === "light" || s === "dark") return s;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
 
   useEffect(() => {
@@ -961,99 +807,98 @@ export default function Home() {
   }, [theme]);
 
   return (
-    <main className="relative min-h-screen overflow-hidden">
+    <main className="relative min-h-screen overflow-x-hidden" style={{ fontFamily: "var(--font-inter, var(--font-geist-sans), system-ui, sans-serif)" }}>
       <style dangerouslySetInnerHTML={{ __html: animationStyles }} />
-      <div className="pointer-events-none absolute inset-0 -z-10 technical-grid opacity-50" />
-      <div className="pointer-events-none absolute -left-24 top-[-120px] -z-10 h-[340px] w-[340px] rounded-full bg-blue-500/18 blur-[85px]" />
-      <div className="pointer-events-none absolute -right-14 top-[220px] -z-10 h-[320px] w-[320px] rounded-full bg-violet-500/16 blur-[85px]" />
 
-      <SiteHeader
-        theme={theme}
-        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
-      />
+      {/* ambient blobs */}
+      <div className="pointer-events-none fixed inset-0 -z-10 dot-grid opacity-60" />
+      <div className="pointer-events-none fixed -left-32 -top-32 -z-10 h-[500px] w-[500px] rounded-full bg-violet-600/8 blur-[100px]" />
+      <div className="pointer-events-none fixed -right-24 top-1/3 -z-10 h-[400px] w-[400px] rounded-full bg-blue-600/8 blur-[100px]" />
+      <div className="pointer-events-none fixed bottom-0 left-1/3 -z-10 h-[300px] w-[300px] rounded-full bg-cyan-600/6 blur-[80px]" />
 
-      <section className="mx-auto grid w-full max-w-6xl gap-12 px-6 pb-14 pt-4 lg:grid-cols-[1.05fr_1fr] lg:items-center">
-        <Reveal>
-          <div>
-            <AnimatedBadge />
-            <h1 className="mt-6 max-w-xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">
-            <span className="bg-gradient-to-r from-blue-500 to-violet-600 bg-clip-text text-transparent">
-                FlowFrame
-              </span>
+      <SiteHeader theme={theme} onToggleTheme={() => setTheme(p => p === "dark" ? "light" : "dark")} />
+
+      {/* ── HERO ── */}
+      <section className="mx-auto max-w-6xl px-6 pb-10 pt-6">
+        <div className="grid gap-14 lg:grid-cols-[1fr_1.1fr] lg:items-start">
+          {/* left copy */}
+          <div className="slide-l" style={{ animationDelay: ".05s" }}>
+            {/* badge */}
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-violet-500/25 bg-violet-500/8 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[.18em] text-violet-400">
+              <span className="status-dot" />
+              Distributed System Simulator
+            </div>
+
+            <h1 className="text-5xl font-extrabold leading-[1.06] tracking-[-0.02em] md:text-6xl lg:text-[4rem]">
+              <span className="grad-text">FlowFrame</span>
             </h1>
-            <p className="mt-4 max-w-xl text-base text-[color:var(--foreground)]/70 md:text-lg">
-              Distributed Systems Made Visible. Watch your architecture breathe.
+
+            <p className="mt-3 text-xl font-medium" style={{ color: "var(--foreground)", opacity: 0.85 }}>
+              See your backend architecture run.
             </p>
-            <div className="mt-8 flex flex-wrap gap-4">
-              <button
-                type="button"
-                className="group relative inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-violet-600 px-8 py-4 text-sm font-bold text-white shadow-[0_15px_40px_-20px_var(--glow)] transition-all hover:shadow-[0_25px_50px_-20px_var(--glow)] hover:scale-105 active:scale-95"
-                onClick={() => {
-                  router.push("/scenarios");
-                }}
-              >
-                <span>Explore Scenarios</span>
-                <span className="transition-transform group-hover:translate-x-1">→</span>
+            <p className="mt-3 max-w-lg text-base leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.58 }}>
+              FlowFrame simulates distributed system patterns — load balancing, caching, API gateways — and plays them back frame by frame. Not just diagrams. Actual running logic you can pause, inspect, and learn from.
+            </p>
+
+            {/* who it's for */}
+            <div className="mt-5 flex flex-wrap gap-2">
+              {["Engineers", "System Design learners", "Tech interviewees", "Educators"].map(r => (
+                <span key={r} className="rounded-full border border-[var(--border)]/50 bg-[var(--surface)]/60 px-3 py-1 text-xs font-semibold"
+                  style={{ color: "var(--foreground)", opacity: 0.7 }}>
+                  {r}
+                </span>
+              ))}
+            </div>
+
+            {/* CTAs */}
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button onClick={() => router.push("/scenarios")}
+                className="btn-primary rounded-2xl px-7 py-3.5 text-sm font-bold text-white">
+                Explore Scenarios →
               </button>
-              <button
-                type="button"
-                className="rounded-2xl border-2 border-violet-500/35 bg-gradient-to-r from-violet-500/10 to-blue-500/10 px-8 py-4 text-sm font-bold backdrop-blur transition-all hover:border-violet-500/60 hover:scale-105 active:scale-95 text-violet-400"
-                onClick={() => {
-                  router.push("/workspace");
-                }}
-              >
-                Interactive Sandbox 🛠️
+              <button onClick={() => router.push("/learn")}
+                className="btn-outline rounded-2xl px-7 py-3.5 text-sm font-bold"
+                style={{ color: "var(--foreground)", background: "var(--surface)" }}>
+                Start Learning
               </button>
-              <button
-                type="button"
-                className="rounded-2xl border-2 border-green-500/35 bg-gradient-to-r from-green-500/10 to-teal-500/10 px-8 py-4 text-sm font-bold backdrop-blur transition-all hover:border-green-500/60 hover:scale-105 active:scale-95 text-green-400"
-                onClick={() => {
-                  router.push("/learn");
-                }}
-              >
-                Start Learning 📚
+              <button onClick={() => router.push("/workspace")}
+                className="btn-outline rounded-2xl px-7 py-3.5 text-sm font-bold"
+                style={{ color: "var(--foreground)", background: "var(--surface)" }}>
+                Open Sandbox
               </button>
             </div>
-          </div>
-        </Reveal>
 
-        <Reveal>
-          <HeroArchitecture />
-        </Reveal>
+            {/* v1 callout */}
+            <p className="mt-6 text-[11px] font-medium" style={{ color: "var(--foreground)", opacity: 0.38 }}>
+              v1 — 4 scenarios supported · More patterns coming
+            </p>
+          </div>
+
+          {/* right: live sim */}
+          <div className="slide-r" style={{ animationDelay: ".15s" }}>
+            <div className="mb-2 flex items-center justify-between px-1">
+              <span className="text-xs font-semibold" style={{ color: "var(--foreground)", opacity: 0.45 }}>Live simulation preview</span>
+              <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                <span className="status-dot" /> Running
+              </span>
+            </div>
+            <HeroSim />
+            <p className="mt-2 text-center text-[10px]" style={{ color: "var(--foreground)", opacity: 0.3 }}>
+              Round Robin · 3 servers · Real engine output
+            </p>
+          </div>
+        </div>
       </section>
 
-      <HowItWorks />
-      <FeaturesBentoGrid />
-      <ScenariosShowcase />
+      {/* ── TICKER ── */}
+      <Ticker />
 
-      <Reveal>
-        <section className="mx-auto max-w-6xl px-6 py-16">
-          <div className="group relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-blue-600/60 via-blue-500/50 to-violet-600/60 px-6 py-14 text-center shadow-[0_40px_100px_-50px_rgba(59,130,246,0.4)] backdrop-blur transition-all duration-300 hover:shadow-[0_50px_120px_-40px_rgba(59,130,246,0.5)] hover:border-white/20 md:px-12 animate-fade-in-blur">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 animate-gradient-shift" />
-            
-            <div className="relative z-10">
-              <h2 className="text-3xl font-bold tracking-tight text-white transition-all md:text-4xl group-hover:text-blue-100">
-                Start exploring distributed systems visually
-              </h2>
-              <p className="mt-3 text-base text-white/80 transition-colors group-hover:text-white/90">
-                Build intuition about how caches, load balancers, and databases interact.
-              </p>
-              <div className="mt-7 flex flex-wrap items-center justify-center gap-3 animate-fade-in-blur" style={{ animationDelay: "0.3s" }}>
-                <button
-                  type="button"
-                  className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition-all shadow-lg hover:shadow-xl hover:scale-105 active:shadow-md active:scale-95"
-                  onClick={() => {
-                    router.push("/scenarios");
-                  }}
-                >
-                  Launch Simulator →
-                </button>
-
-              </div>
-            </div>
-          </div>
-        </section>
-      </Reveal>
+      {/* ── SECTIONS ── */}
+      <WhatItDoes />
+      <V1Scenarios />
+      <LearnAndSandbox />
+      <V1Status />
+      <CTA />
 
       <SiteFooter />
     </main>

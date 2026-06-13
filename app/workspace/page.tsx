@@ -3,12 +3,14 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   BackgroundVariant,
   BaseEdge,
   getSmoothStepPath,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   addEdge,
   Position,
   MarkerType,
@@ -720,7 +722,8 @@ const edgeTypes = {
   packet: PacketEdge,
 };
 
-export default function WorkspacePage() {
+// The actual workspace content — extracted so useReactFlow() hook works
+function WorkspaceInner() {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window === "undefined") return "dark";
     const saved = window.localStorage.getItem("flowframe-theme") as Theme | null;
@@ -779,6 +782,12 @@ export default function WorkspacePage() {
   const [hoveredComponent, setHoveredComponent] = useState<ComponentMetadata | null>(null);
   const [hoverTooltipX, setHoverTooltipX] = useState(0);
   const [hoverTooltipY, setHoverTooltipY] = useState(0);
+
+  // Drag-and-drop state
+  const [draggingType, setDraggingType] = useState<ComponentType | null>(null);
+  const [isDragOverCanvas, setIsDragOverCanvas] = useState(false);
+
+  const { screenToFlowPosition } = useReactFlow();
 
   const dragStartOffset = useRef({ x: 0, y: 0 });
 
@@ -1160,15 +1169,15 @@ export default function WorkspacePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Add Component to Canvas
-  const addComponent = (type: ComponentType) => {
+  // Add Component to Canvas — used both by click and drag-drop
+  const addComponent = useCallback((type: ComponentType, position?: { x: number; y: number }) => {
     const id = `${type}-${uid.rnd()}`;
     const label = `${COMPONENTS_LIBRARY.find((c) => c.type === type)?.label} ${nodes.filter((n) => n.data.type === type).length + 1}`;
 
     const newNode: Node = {
       id,
       type: "customNode",
-      position: {
+      position: position ?? {
         x: 120 + Math.random() * 250,
         y: 80 + Math.random() * 200,
       },
@@ -1187,6 +1196,46 @@ export default function WorkspacePage() {
       [id]: createDefaultConfig(type, id, label),
     }));
     setSelectedNodeId(id);
+  }, [nodes, uid, setNodes, setNodeConfigs]);
+
+  // Drag from sidebar handlers
+  const handleDragStart = (e: React.DragEvent, type: ComponentType) => {
+    e.dataTransfer.setData("application/flowframe-type", type);
+    e.dataTransfer.effectAllowed = "copy";
+    setDraggingType(type);
+    setHoveredComponent(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingType(null);
+    setIsDragOverCanvas(false);
+  };
+
+  // Drop onto canvas handlers
+  const handleCanvasDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setIsDragOverCanvas(true);
+  };
+
+  const handleCanvasDragLeave = (e: React.DragEvent) => {
+    // Only clear if leaving the canvas wrapper itself
+    if (!e.currentTarget.contains(e.relatedTarget as Element)) {
+      setIsDragOverCanvas(false);
+    }
+  };
+
+  const handleCanvasDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOverCanvas(false);
+    setDraggingType(null);
+
+    const type = e.dataTransfer.getData("application/flowframe-type") as ComponentType;
+    if (!type) return;
+
+    // Convert screen coordinates to canvas-space using ReactFlow's utility
+    const canvasPosition = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    addComponent(type, canvasPosition);
   };
 
   // Connect Edges
@@ -1710,15 +1759,24 @@ export default function WorkspacePage() {
                     <button
                       key={item.type}
                       type="button"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, item.type)}
+                      onDragEnd={handleDragEnd}
                       onClick={() => addComponent(item.type)}
                       onMouseEnter={(e) => {
+                        if (draggingType) return; // don't show tooltip while dragging
                         const rect = e.currentTarget.getBoundingClientRect();
                         setHoveredComponent(item);
                         setHoverTooltipX(rect.right + 12);
                         setHoverTooltipY(rect.top + rect.height / 2);
                       }}
                       onMouseLeave={() => setHoveredComponent(null)}
-                      className="aspect-square rounded-xl border border-[var(--border)] bg-[var(--surface)]/30 hover:bg-[var(--surface)] hover:border-violet-500/50 flex flex-col items-center justify-center transition duration-150 cursor-pointer group relative shadow-sm"
+                      className={`aspect-square rounded-xl border bg-[var(--surface)]/30 hover:bg-[var(--surface)] hover:border-violet-500/50 flex flex-col items-center justify-center transition duration-150 cursor-grab active:cursor-grabbing group relative shadow-sm ${
+                        draggingType === item.type
+                          ? "border-violet-500/60 bg-violet-500/10 scale-95"
+                          : "border-[var(--border)]"
+                      }`}
+                      title={`${item.label} — click to add or drag onto canvas`}
                     >
                       <ComponentIcon type={item.type} className="w-6 h-6 group-hover:scale-110 transition duration-150 text-[color:var(--foreground)]/65 group-hover:text-violet-400" />
                       <span className="text-[8px] font-bold text-[color:var(--foreground)]/50 mt-1 truncate max-w-full px-1">
@@ -1770,7 +1828,23 @@ export default function WorkspacePage() {
             ☰
           </button>
           {/* Full-Screen React Flow Canvas */}
-          <div className="absolute inset-0 z-0 h-full w-full">
+          <div
+            className={`absolute inset-0 z-0 h-full w-full transition-all duration-150 ${
+              isDragOverCanvas ? "ring-2 ring-inset ring-violet-500/50" : ""
+            }`}
+            onDrop={handleCanvasDrop}
+            onDragOver={handleCanvasDragOver}
+            onDragLeave={handleCanvasDragLeave}
+          >
+            {/* Drop overlay hint */}
+            {isDragOverCanvas && (
+              <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+                <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-violet-400/60 bg-violet-500/10 px-8 py-5 backdrop-blur-sm shadow-xl">
+                  <span className="text-3xl">+</span>
+                  <p className="text-sm font-bold text-violet-300">Drop to place node</p>
+                </div>
+              </div>
+            )}
             <ReactFlow
               nodes={styledNodes}
               edges={animatedEdges}
@@ -3068,10 +3142,19 @@ export default function WorkspacePage() {
             {hoveredComponent.description}
           </p>
           <p className="text-[9px] text-violet-300/60 mt-1.5 font-bold uppercase tracking-wider">
-            Click to Add +
+            Click to add · Drag to place
           </p>
         </div>
       )}
     </main>
+  );
+}
+
+// Wrap in ReactFlowProvider so useReactFlow() works inside WorkspaceInner
+export default function WorkspacePage() {
+  return (
+    <ReactFlowProvider>
+      <WorkspaceInner />
+    </ReactFlowProvider>
   );
 }
