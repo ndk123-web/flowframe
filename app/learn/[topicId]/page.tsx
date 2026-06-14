@@ -1505,7 +1505,7 @@ function createDefaultConfig(type: string, id: string, label: string) {
 // Inline Markdown Elements Parser
 function parseInlineMarkdown(text: string) {
   const parts: React.ReactNode[] = [];
-  const pattern = /(\*\*|`)(.*?)\1/g;
+  const pattern = /(\*\*(.*?)\*\*|`(.*?)`|\[([^\]]+)\]\(([^)]+)\))/g;
   let match;
   let lastIndex = 0;
   let key = 0;
@@ -1515,23 +1515,34 @@ function parseInlineMarkdown(text: string) {
       parts.push(text.slice(lastIndex, match.index));
     }
 
-    const type = match[1];
-    const content = match[2];
-
-    if (type === "**") {
+    const fullMatch = match[1];
+    if (fullMatch.startsWith("**")) {
       parts.push(
         <strong key={key++} className="font-bold text-[color:var(--foreground)]">
-          {content}
+          {match[2]}
         </strong>
       );
-    } else if (type === "`") {
+    } else if (fullMatch.startsWith("`")) {
       parts.push(
         <code
           key={key++}
           className="bg-[var(--surface-muted)] text-[0.9em] font-mono px-1 py-0.5 rounded border border-[var(--border)] text-violet-400"
         >
-          {content}
+          {match[3]}
         </code>
+      );
+    } else if (fullMatch.startsWith("[")) {
+      const isExternal = match[5].startsWith("http");
+      parts.push(
+        <Link
+          key={key++}
+          href={match[5]}
+          target={isExternal ? "_blank" : undefined}
+          rel={isExternal ? "noopener noreferrer" : undefined}
+          className="text-violet-400 hover:text-violet-300 underline font-semibold transition-colors duration-150"
+        >
+          {match[4]}
+        </Link>
       );
     }
 
@@ -1547,57 +1558,112 @@ function parseInlineMarkdown(text: string) {
 
 function renderMarkdown(text: string) {
   const lines = text.split("\n");
-  return lines.map((line, idx) => {
+  const elements: React.ReactNode[] = [];
+  let codeBuffer: string[] = [];
+  let inCodeBlock = false;
+  let codeKey = 0;
+
+  lines.forEach((line, idx) => {
     const trimmed = line.trim();
+
+    // Fenced code block
+    if (trimmed.startsWith("```")) {
+      if (inCodeBlock) {
+        elements.push(
+          <pre
+            key={`code-${codeKey++}`}
+            className="my-4 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 font-mono text-xs text-[color:var(--foreground)]/80 overflow-x-auto whitespace-pre-wrap leading-relaxed"
+          >
+            {codeBuffer.join("\n")}
+          </pre>
+        );
+        codeBuffer = [];
+        inCodeBlock = false;
+      } else {
+        inCodeBlock = true;
+      }
+      return;
+    }
+    if (inCodeBlock) {
+      codeBuffer.push(line);
+      return;
+    }
+
+    // Table separator row
+    if (trimmed.startsWith("|") && trimmed.replace(/[-|:\s]/g, "") === "") return;
+
+    // Table row
+    if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+      const cells = trimmed.slice(1, -1).split("|").map((c) => c.trim());
+      elements.push(
+        <tr key={idx} className="border-b border-[var(--border)]/50">
+          {cells.map((cell, ci) => (
+            <td key={ci} className="px-3 py-2 text-xs text-[color:var(--foreground)]/75">
+              {parseInlineMarkdown(cell)}
+            </td>
+          ))}
+        </tr>
+      );
+      return;
+    }
+
     if (trimmed.startsWith("### ")) {
-      return (
-        <h3
-          key={idx}
-          className="text-[0.9em] font-bold uppercase tracking-wider text-violet-500 mt-6 mb-2 font-mono"
-        >
+      elements.push(
+        <h3 key={idx} className="text-[0.85em] font-bold uppercase tracking-wider text-violet-400 mt-6 mb-2 font-mono">
           {trimmed.slice(4)}
         </h3>
       );
+      return;
     }
     if (trimmed.startsWith("## ")) {
-      return (
-        <h2
-          key={idx}
-          className="text-[1.1em] font-bold uppercase tracking-wider text-[color:var(--foreground)] mt-8 mb-3 border-b border-[var(--border)]/60 pb-2 font-mono"
-        >
+      elements.push(
+        <h2 key={idx} className="text-[1.05em] font-bold uppercase tracking-wider text-[color:var(--foreground)] mt-8 mb-3 border-b border-[var(--border)]/60 pb-2 font-mono">
           {trimmed.slice(3)}
         </h2>
       );
+      return;
     }
     if (trimmed.startsWith("# ")) {
-      return (
-        <h1 key={idx} className="text-[1.3em] font-extrabold text-[color:var(--foreground)] mt-8 mb-4 tracking-tight">
+      elements.push(
+        <h1 key={idx} className="text-[1.25em] font-extrabold text-[color:var(--foreground)] mt-8 mb-4 tracking-tight">
           {trimmed.slice(2)}
         </h1>
       );
+      return;
     }
     if (trimmed.startsWith("* ")) {
-      return (
-        <li
-          key={idx}
-          className="ml-4 list-disc text-[0.95em] text-[color:var(--foreground)]/80 leading-relaxed mb-2"
-        >
+      elements.push(
+        <li key={idx} className="ml-5 list-disc text-[0.92em] text-[color:var(--foreground)]/75 leading-relaxed mb-1.5">
           {parseInlineMarkdown(trimmed.slice(2))}
         </li>
       );
+      return;
+    }
+    const numberedMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
+    if (numberedMatch) {
+      elements.push(
+        <li key={idx} className="ml-5 list-decimal text-[0.92em] text-[color:var(--foreground)]/75 leading-relaxed mb-1.5">
+          {parseInlineMarkdown(numberedMatch[2])}
+        </li>
+      );
+      return;
     }
     if (trimmed === "---") {
-      return <hr key={idx} className="my-6 border-[var(--border)]/60" />;
+      elements.push(<hr key={idx} className="my-6 border-[var(--border)]/60" />);
+      return;
     }
     if (trimmed === "") {
-      return <div key={idx} className="h-2" />;
+      elements.push(<div key={idx} className="h-1.5" />);
+      return;
     }
-    return (
-      <p key={idx} className="text-[0.95em] text-[color:var(--foreground)]/80 leading-relaxed mb-4">
+    elements.push(
+      <p key={idx} className="text-[0.92em] text-[color:var(--foreground)]/75 leading-relaxed mb-3">
         {parseInlineMarkdown(line)}
       </p>
     );
   });
+
+  return elements;
 }
 
 export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
@@ -2139,7 +2205,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                               {cp.title}
                             </h4>
                             <span className="text-[9px] font-mono uppercase bg-violet-500/10 text-violet-400 border border-violet-500/20 px-1.5 py-0.5 rounded group-hover:bg-violet-500/25 group-hover:text-violet-300 transition select-none">
-                              Load
+                              Apply
                             </span>
                           </div>
                           <p className="text-[11px] text-[color:var(--foreground)]/60 mt-1 leading-relaxed">
@@ -2151,6 +2217,33 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                   )}
                 </div>
               ))}
+
+              {/* Sandbox CTA — always at the bottom of every guide */}
+              <div className="mt-8 pt-6 border-t border-[var(--border)]/60">
+                <div className="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-5 text-center space-y-3">
+                  <div className="text-2xl">🛠️</div>
+                  <div>
+                    <p className="text-sm font-bold text-[color:var(--foreground)]">Now Try It Yourself!</p>
+                    <p className="text-xs text-[color:var(--foreground)]/55 mt-1 leading-relaxed">
+                      Head to the Interactive Sandbox and build this architecture from scratch — drag, drop, connect, and simulate.
+                    </p>
+                  </div>
+                  <a
+                    href="/workspace"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:shadow-violet-500/30 hover:-translate-y-0.5 transition-all duration-200"
+                  >
+                    Open Interactive Sandbox
+                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" viewBox="0 0 16 16">
+                      <path fillRule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/>
+                      <path fillRule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/>
+                    </svg>
+                  </a>
+                  <p className="text-[10px] text-[color:var(--foreground)]/30 font-mono">Opens in a new tab</p>
+                </div>
+              </div>
+
               </div>
             </div>
           </section>
@@ -2248,8 +2341,8 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
               {inspectorVisible && selectedNode && (
                 <div className="
                   absolute z-20 pointer-events-auto shadow-2xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xl flex flex-col overflow-hidden
-                  bottom-0 left-0 right-0 max-h-[45vh] rounded-t-2xl
-                  sm:top-14 sm:bottom-3 sm:left-auto sm:right-3 sm:w-72 sm:rounded-2xl
+                  bottom-0 left-0 right-0 max-h-[50vh] rounded-t-2xl
+                  sm:top-12 sm:bottom-3 sm:left-auto sm:right-3 sm:w-80 md:w-96 sm:rounded-2xl sm:max-h-[calc(100%-60px)]
                 ">
                   <div className="flex justify-between items-center p-2 bg-[var(--surface-muted)] border-b border-[var(--border)] shrink-0">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--foreground)]/50 font-mono pl-1">

@@ -31,42 +31,75 @@ export const LEARN_TOPICS: LearnTopic[] = [
     scenarioId: "simple-load-balancer",
     sections: [
       {
+        id: "lb-components",
+        title: "1. Components in This Simulation",
+        content: `Before diving in, let's understand each component you'll see on the canvas:
+
+### 💻 Client
+The **Client** is the starting point of every request — think of it as a browser, mobile app, or any user device. It sends [HTTP requests](/learn/glossary/http) (GET, POST, etc.) to the network. In this simulation, the client sends **3 identical GET requests** back to back.
+
+### ⚖️ Load Balancer
+The [Load Balancer](/learn/glossary/load-balancer) sits between the client and your servers. It intercepts every incoming request and decides *which server* should handle it. The client never talks directly to a server — it always goes through the load balancer first.
+
+### 🖥️ Web Servers (×3)
+The three [Web Servers](/learn/glossary/server) are identical backend workers. Each one can independently handle the same requests. The load balancer decides which of them gets each incoming request.
+
+---
+
+**In this diagram:** \`Client → Load Balancer → Server 1 / Server 2 / Server 3\``
+      },
+      {
         id: "lb-intro",
-        title: "1. What is a Load Balancer?",
-        content: `A **Load Balancer (LB)** acts as a traffic cop sitting in front of your web servers. It intercepts all incoming HTTP/HTTPS queries and distributes them across a fleet of backend servers.
+        title: "2. What Does a Load Balancer Do?",
+        content: `A [Load Balancer](/learn/glossary/load-balancer) acts like a traffic manager at a busy intersection. Instead of letting all cars pile onto one road, it spreads them across multiple roads.
 
-### Why do we need it?
-* **High Availability**: If one server crashes, the load balancer routes traffic to the surviving servers seamlessly.
-* **Scalability**: By adding more servers behind the load balancer, your application can handle millions of requests without changing client configurations.
-* **Resource Optimization**: Prevents any single server from becoming a bottleneck by spreading the CPU/Memory load.
+### Why Do We Need It?
 
-In this scenario, we have a **Client** sending parallel requests, a **Load Balancer**, and **3 Web Servers**.`
+Imagine 1,000 users hitting your app at the same time. If they all reach a single server:
+- That server gets overloaded → slowdowns and crashes
+- If that server goes down → your entire app goes down
+
+With a load balancer:
+- **[High Availability](/learn/glossary/high-availability)**: If Server 1 crashes, traffic automatically reroutes to Server 2 and 3 — users don't notice.
+- **Horizontal Scaling**: Need more capacity? Add another server behind the load balancer without changing anything on the client side.
+- **Resource Optimization**: No single server gets overwhelmed — CPU and memory are spread evenly.
+
+### Watch It in Action
+Press **Play** on the simulator to the right. You'll see the client send 3 requests. Watch the animated purple dots (packets) — they should travel to different servers each time.`
       },
       {
         id: "lb-strategies",
-        title: "2. Routing Strategies",
-        content: `Load balancers decide where to route traffic using specific algorithms:
+        title: "3. Routing Strategies",
+        content: `Load balancers use different algorithms to decide where each request goes:
 
-* **Round Robin**: Routes requests sequentially (Server 1 ➔ Server 2 ➔ Server 3 ➔ Server 1). It assumes all servers have equal capacity.
-* **Random**: Dispatches requests completely at random. Useful for testing or when request load is extremely light.
-* **IP Hash**: Computes a hash of the client's IP address (e.g. \`192.168.1.50\`) and maps it to a specific server. This ensures the same client *always* lands on the same server, preserving session/cache persistence.
+### Round Robin *(default in this sim)*
+Routes requests **sequentially**: Request 1 → Server 1, Request 2 → Server 2, Request 3 → Server 3, then back to Server 1. See details under [Load Balancer](/learn/glossary/load-balancer).
+
+**Best for:** Servers with roughly equal capacity.
+
+### IP Hash
+Hashes the client's IP address (e.g., \`192.168.1.50\`) to a specific server. The *same client always hits the same server* — useful when you need session persistence (e.g., shopping carts, login state).
+
+### Least Connections
+Routes each new request to whichever server currently has the *fewest active connections* — great when some requests take much longer than others.
 
 ---
 
 ### Interactive Checkpoints
-Click on the check-points below to configure the simulator instantly and see them in action!`,
+
+Click the buttons below to instantly apply different strategies and re-run the simulation:`,
         checkpoints: [
           {
             id: "cp-lb-rr",
-            title: "Visualize Round Robin Routing",
-            description: "Click here to set the Load Balancer to 'Round Robin' and run the simulation. Watch how each request goes sequentially to Server 1, 2, and 3.",
+            title: "▶ Visualize Round Robin Routing",
+            description: "Click to set the Load Balancer to Round Robin mode. Watch how each of the 3 requests goes to a different server (1→2→3→1...).",
             targetNodeId: "lb-1",
             configPatch: { strategy: "ROUND_ROBIN" }
           },
           {
             id: "cp-lb-iphash",
-            title: "Enforce IP Hash Stickiness",
-            description: "Click here to set the strategy to 'IP Hash'. Run the simulation to see how a client's requests stick to a single server based on their IP hash value.",
+            title: "▶ Try IP Hash Stickiness",
+            description: "Click to switch to IP Hash mode. Notice how all requests from the same client always land on the same server — that's session stickiness.",
             targetNodeId: "lb-1",
             configPatch: { strategy: "IP_HASH" }
           }
@@ -74,14 +107,27 @@ Click on the check-points below to configure the simulator instantly and see the
       },
       {
         id: "lb-failover",
-        title: "3. Handling Server Failovers",
-        content: `In the real world, servers crash or undergo updates. A load balancer uses **health checks** to detect dead nodes. If a server is unhealthy (or has zero capacity), the load balancer skips it and routes requests to active servers.
+        title: "4. Failover: What Happens When a Server Dies?",
+        content: `In the real world, servers crash or go under maintenance. The load balancer constantly runs **health checks** — pinging each server to confirm it's alive. If a server's capacity drops to 0 (or it stops responding), the load balancer skips it.
 
-### Try it Yourself:
-1. Select **Server 1** in the graph canvas.
-2. Under **⚙️ Configure Node**, set its **Connections Capacity** to \`0\`.
-3. Press **Play** or click **Reset** & **Play** to run.
-4. Observe how the load balancer skips **Server 1** entirely and balances traffic only between **Server 2** and **Server 3**!`
+### Try It Yourself
+1. On the canvas, click **Server 1** to select it.
+2. In the **Inspector Panel** (appears on the right), find **Connections Capacity** and set it to \`0\`.
+3. Click **Reset** then **Play** to re-run the simulation.
+4. Watch — the load balancer now skips Server 1 entirely and only routes to **Server 2** and **Server 3**.
+
+This is **automatic failover** in action. No client-side change is needed.
+
+---
+
+### 🛠️ Go Practice in the Sandbox!
+Now that you understand Load Balancers, try building your own from scratch:
+
+1. Open the **Interactive Sandbox** (button below or in the nav bar) — it will open in a new tab.
+2. From the left panel, drag a **Client** onto the canvas.
+3. Drag a **Load Balancer** onto the canvas and draw a connection from Client to it.
+4. Add 2–4 **Web Servers** and connect them all to the Load Balancer.
+5. Click the **Client** node to run the simulation. Watch packets flow!`
       }
     ]
   },
@@ -93,38 +139,89 @@ Click on the check-points below to configure the simulator instantly and see the
     scenarioId: "simple-cache",
     sections: [
       {
-        id: "cache-intro",
-        title: "1. The Cache-Aside Architecture",
-        content: `Reading data from a disk-based SQL database like **Postgres** is relatively slow. To speed up applications, we place an in-memory key-value store like **Redis** in front of it.
+        id: "cache-components",
+        title: "1. Components in This Simulation",
+        content: `Here's what each node in the simulator represents:
 
-Under the **Cache-Aside Pattern**:
-1. The application checks the cache (Redis) first.
-2. **Cache Hit**: If data is found in Redis, return it immediately (low latency, ~1ms).
-3. **Cache Miss**: If not found, read from Postgres, save it back to Redis for subsequent requests, and then return it.`
-      },
-      {
-        id: "cache-miss-hit",
-        title: "2. Visualizing Cache Hits and Misses",
-        content: `Let's watch how the simulation engine handles different keys:
-* **Cache Hit**: Client requests \`john\` or \`rohan\`. Since these are pre-seeded in Redis, the server gets the data instantly and returns, never querying Postgres.
-* **Cache Miss**: Client requests \`doe\`. Since \`doe\` is *not* in Redis but exists in Postgres, the server does a database lookup, gets the record, writes it to Redis, and returns.
+### 💻 Client
+Sends 3 GET requests — each asking for a different user record by key:
+- Request 1 → key: \`rohan\` (exists in Redis)
+- Request 2 → key: \`john\` (exists in Redis)
+- Request 3 → key: \`doe\` (not in Redis, but exists in Postgres)
+
+### 🖥️ Server
+Acts as the application logic layer. It receives requests from the client and decides: *"Should I check cache first, or go straight to the database?"* In the [Cache-Aside Pattern](/learn/glossary/cache-aside), the server **always checks Redis first**.
+
+### 💾 Redis Cache
+An **in-memory key-value store** — blazing fast (~1ms [latency](/learn/glossary/latency)). It stores frequently accessed data in RAM. Think of it as your app's short-term [Cache](/learn/glossary/cache) memory. See details under [Redis](/learn/glossary/redis).
+
+### 🗄️ Postgres Database
+A **disk-based SQL database** — reliable but slower than Redis (~10–100ms [latency](/learn/glossary/latency)). It's the source of truth where all records live permanently. See details under [PostgreSQL](/learn/glossary/postgres).
 
 ---
 
-### Interactive Checkpoints
-Use these buttons to instantly seed cache memory:`,
+**Flow overview:** \`Client → Server → Redis\` (or \`→ Postgres\` on cache miss)`
+      },
+      {
+        id: "cache-intro",
+        title: "2. Why Cache at All?",
+        content: `Reading from a [SQL](/learn/glossary/sql) [database](/learn/glossary/database) on every single request is *slow* — it involves disk I/O, query parsing, and network round trips. Under heavy load, this becomes a bottleneck.
+
+### The Solution: Cache-Aside Pattern
+Instead of always going to Postgres, we put a [Redis](/learn/glossary/redis) cache in front of it:
+
+\`\`\`
+1. Request arrives → Server checks Redis first
+2. CACHE HIT  → Data found in Redis → Return instantly (fast! ~1ms)
+3. CACHE MISS → Data not in Redis → Query Postgres
+               → Get the data → Save it to Redis → Return to client
+\`\`\`
+
+On the **first** request for a key ([cache miss](/learn/glossary/cache)), we pay the cost of a [Postgres](/learn/glossary/postgres) query. On **every subsequent** request for that same key ([cache hit](/learn/glossary/cache)), we skip Postgres entirely. See [TTL](/learn/glossary/ttl) configuration for expirations.
+
+### Real-World Impact
+A popular blog post queried by 10,000 users? With caching, only the **first request** hits Postgres. The other 9,999 get served from Redis at millisecond speed.
+
+Press **Play** to see this unfold — watch which paths the purple packets take.`
+      },
+      {
+        id: "cache-miss-hit",
+        title: "3. Cache Hit vs. Cache Miss",
+        content: `Let's look at what happens with each of the 3 requests in the simulation:
+
+### Request 1 — key: \`rohan\` → **Cache HIT** ✅
+- Server asks Redis: "Do you have \`rohan\`?"
+- Redis says: YES → returns \`"cached data for rohan"\`
+- Server sends response to client. **Postgres is never touched.**
+
+### Request 2 — key: \`john\` → **Cache HIT** ✅
+- Same flow as above. Redis has \`john\` → fast return.
+
+### Request 3 — key: \`doe\` → **Cache MISS** ⚠️
+- Server asks Redis: "Do you have \`doe\`?"
+- Redis says: NO ([cache miss](/learn/glossary/cache))
+- Server queries Postgres: "Find \`doe\` in the users table"
+- Postgres returns \`"db data for doe"\`
+- Server **saves \`doe\` to Redis** (so next time it's a [cache hit](/learn/glossary/cache)!)
+- Server returns response to client
+
+Watch the packet paths — a cache miss shows 2 hops (→ Redis → Postgres), while a hit shows just 1.
+
+---
+
+### Interactive Checkpoints`,
         checkpoints: [
           {
             id: "cp-cache-empty",
-            title: "Clear Redis Cache (Force Cache Misses)",
-            description: "Click here to empty all cached pairs in Redis. Running the simulation now will force the Server to query Postgres for every request, showing cache misses.",
+            title: "▶ Empty Redis Cache (Force All Misses)",
+            description: "Click to clear all cached data from Redis. Now all 3 requests will miss the cache and fall back to Postgres. Watch the longer packet paths.",
             targetNodeId: "redis1",
             configPatch: { data: [] }
           },
           {
             id: "cp-cache-fill",
-            title: "Pre-seed Redis Cache (Force Cache Hits)",
-            description: "Click here to seed rohan, john, and doe in Redis. Run the simulation to see lightning-fast Cache Hits that never hit Postgres.",
+            title: "▶ Pre-seed Cache (Force All Hits)",
+            description: "Click to pre-fill Redis with rohan, john, and doe. All 3 requests will be cache hits — notice how packets never reach Postgres.",
             targetNodeId: "redis1",
             configPatch: {
               data: [
@@ -135,6 +232,23 @@ Use these buttons to instantly seed cache memory:`,
             }
           }
         ]
+      },
+      {
+        id: "cache-sandbox",
+        title: "4. Try It in the Sandbox",
+        content: `Now that you understand cache-aside, build it yourself:
+
+### 🛠️ Step-by-Step in the Sandbox
+1. Open the **Interactive Sandbox** in a new tab (link below).
+2. Add a **Client** node — configure it with a GET request, key: \`myuser\`.
+3. Add a **Server** node — connect Client → Server.
+4. Add a **Redis Cache** node — connect Server → Redis.
+5. Add a **Postgres Database** node — connect Server → Postgres.
+6. In the Redis inspector, add a key: \`myuser\` with a value.
+7. Click the Client node to simulate. Watch it hit Redis first!
+8. Now remove that key from Redis and re-simulate — watch it fall back to Postgres.
+
+That's the [Cache-Aside](/learn/glossary/cache-aside) pattern — fully in your control!`
       }
     ]
   },
@@ -146,33 +260,87 @@ Use these buttons to instantly seed cache memory:`,
     scenarioId: "simple-api-gateway",
     sections: [
       {
-        id: "gw-intro",
-        title: "1. What is an API Gateway?",
-        content: `In microservice architectures, clients (web/mobile apps) shouldn't talk directly to dozens of backend services. Instead, they hit a single entry point called the **API Gateway**.
+        id: "gw-components",
+        title: "1. Components in This Simulation",
+        content: `This is the most complex scenario — let's meet all the players:
 
-The API Gateway is responsible for:
-* **Routing**: Inspecting path prefixes (e.g. \`/api/v1/users\` or \`/api/v1/posts\`) and forwarding request queries to the correct microservice fleet.
-* **Security & Authentication**: Ensuring requests are authenticated before passing them back.
-* **Rate Limiting**: Preventing denial-of-service (DoS) attacks by throttling heavy traffic.
-* **Load Balancing**: Distributing requests across servers inside each microservice pool.`
-      },
-      {
-        id: "gw-routing",
-        title: "2. Prefix Routing & Service Pools",
-        content: `In the diagram, our API Gateway has rules configured:
-* \`/api/v1/posts\` maps to **POST_SERVICE** (balanced across Server 2 and Server 3).
-* \`/api/v1/users\` maps to **USER_SERVICE** (balanced to Server 1).
+### 💻 Client
+Sends 3 different requests — each targeting different API paths:
+- \`GET /api/v1/posts/list\` — a posts query
+- \`GET /api/v1/users/profile\` — a users query
+- \`GET /api/v1/posts/list\` — another posts query
 
-If a client requests an endpoint path that is not defined, or if the destination server doesn't expose it, the gateway handles routing validation and returns ` + "`404 Not Found`" + ` or ` + "`405 Method Not Allowed`" + `.
+### 🚪 API Gateway
+The **single entry point** for all client requests. It looks at the URL path and decides: *"Which backend service should handle this?"* See details under [API Gateway](/learn/glossary/api-gateway).
+
+### 🖥️ Post Server
+Only handles \`/api/v1/posts/*\` [endpoints](/learn/glossary/endpoint). Ignores anything else.
+
+### 🖥️ User Server
+Only handles \`/api/v1/users/*\` [endpoints](/learn/glossary/endpoint). Ignores anything else.
 
 ---
 
-### Interactive Checkpoints:`,
+**Flow:** \`Client → API Gateway → (Post Server or User Server)\`
+
+The gateway reads the path prefix and routes accordingly — like a smart switchboard.`
+      },
+      {
+        id: "gw-intro",
+        title: "2. Why Use an API Gateway?",
+        content: `In a **[microservices architecture](/learn/glossary/microservices)**, you might have dozens of specialized services — a user service, payment service, notification service, etc. Each lives at a different address.
+
+**Without an API Gateway:**
+- The client must know the exact address of every service.
+- When a service moves or scales, every client has to update.
+- Cross-cutting concerns ([authentication](/learn/glossary/authentication), [rate limiting](/learn/glossary/rate-limiting), logging) must be implemented in every service.
+
+**With an API Gateway:**
+- Clients talk to ONE address — the gateway.
+- The gateway handles all routing transparently.
+- [Authentication](/learn/glossary/authentication), [rate limiting](/learn/glossary/rate-limiting), and logging happen in one place.
+
+### What the Gateway Does
+1. **Routing** — Matches path prefixes to backend services.
+2. **Security** — Can validate auth tokens before forwarding requests.
+3. **Rate Limiting** — Prevents any client from flooding the backend.
+4. **[Load Balancing](/learn/glossary/load-balancer)** — Distributes across multiple servers in a service pool.
+
+Press **Play** to watch requests fan out to the correct servers!`
+      },
+      {
+        id: "gw-routing",
+        title: "3. Path Routing Rules",
+        content: `The gateway uses a **routing table** to match incoming paths to backend services:
+
+| Path Prefix | → Service |
+|---|---|
+| \`/api/v1/posts\` | \`POST_SERVICE\` |
+| \`/api/v1/users\` | \`USER_SERVICE\` |
+
+When a request arrives:
+1. Gateway reads the URL path.
+2. Finds the longest matching prefix in the [routing table](/learn/glossary/endpoint).
+3. Forwards the request to the matching service pool.
+4. If no rule matches → returns \`404 Not Found\`. See [Status Codes](/learn/glossary/status-codes).
+5. If the method isn't allowed → returns \`405 Method Not Allowed\`.
+
+### Service Pools
+Each "service" in the gateway is actually a *pool of servers*. In our sim:
+- \`POST_SERVICE\` → Post Server
+- \`USER_SERVICE\` → User Server
+
+If you added more Post Servers and connected them, the gateway would load-balance across all of them.
+
+---
+
+### Interactive Checkpoints`,
+
         checkpoints: [
           {
             id: "cp-gw-badroute",
-            title: "Simulate Wrong Gateway Routing",
-            description: "Click to point all posts routes to USER_SERVICE on Server 1. Watch how the gateway routes post requests to Server 1, causing endpoint mismatches.",
+            title: "▶ Misconfigure Routes (See a 405 Error)",
+            description: "Click to point all posts routes to USER_SERVICE. The User Server only handles /users endpoints, so /posts requests will get Method Not Allowed errors. Watch the error frames!",
             targetNodeId: "apigateway-1-id",
             configPatch: {
               routes: {
@@ -182,6 +350,23 @@ If a client requests an endpoint path that is not defined, or if the destination
             }
           }
         ]
+      },
+      {
+        id: "gw-sandbox",
+        title: "4. Build It in the Sandbox",
+        content: `Create your own API Gateway architecture:
+
+### 🛠️ Step-by-Step
+1. Open the **Interactive Sandbox** in a new tab.
+2. Add a **Client** — set up a request to \`/api/v1/users/me\` with method GET.
+3. Add an **API Gateway** — connect Client → Gateway.
+4. Add a **Server** (rename it "User Server").
+5. Connect Gateway → User Server.
+6. Select the Gateway in the inspector, and add a route rule: \`/api/v1/users\` → \`USER_SERVICE\`.
+7. Assign User Server to the \`USER_SERVICE\` pool.
+8. Click the Client to simulate — watch the gateway route the request correctly!
+
+**Bonus:** Add a second server for a different path and see the gateway route to the right one.`
       }
     ]
   },
@@ -193,39 +378,111 @@ If a client requests an endpoint path that is not defined, or if the destination
     scenarioId: "simple-valet-key",
     sections: [
       {
-        id: "valet-intro",
-        title: "1. The Upload Bottleneck",
-        content: `If clients upload large files (images, PDFs, videos) directly to a backend server, the server's CPU and bandwidth get choked, causing slowdowns for other users.
+        id: "valet-components",
+        title: "1. Components in This Simulation",
+        content: `### 💻 Client
+The user's device that wants to upload a file — like a profile photo (\`avatar-1.png\`) or a PDF.
 
-The **Valet Key Pattern** solves this:
-1. The **Client** requests a temporary "signed upload URL" from the **Server** for a specific file.
-2. The **Server** checks permissions, requests/generates a pre-signed URL (e.g. with AWS S3 credentials) and returns it to the client.
-3. The **Client** uploads the file **directly** to **Cloud Storage** using that URL.
-4. The backend server never has to handle the heavy file bytes!`
-      },
-      {
-        id: "valet-flow",
-        title: "2. Direct Upload vs Server Bypass",
-        content: `In this scenario:
-1. **Request 1**: Client asks Server for a signed URL.
-2. **Backtrack**: Server returns the signed URL containing a secure token.
-3. **Request 2**: Client bypasses the server and sends file bytes directly to Cloud Storage.
-4. **Backtrack**: Cloud Storage records the upload success in the bucket and responds to the Client.
+### 🖥️ Upload Server
+A backend [Web Server](/learn/glossary/server) that **generates secure signed URLs** for specific files. It doesn't receive the file data itself — it only issues permission tokens.
+
+### ☁️ Cloud Storage
+An object storage bucket (like AWS S3 or Google Cloud Storage) that **accepts direct uploads** from clients using [Valet Keys / Signed URLs](/learn/glossary/signed-url). Files land here without ever passing through the server.
 
 ---
 
-### Interactive Checkpoints:`,
+**Flow overview:**
+\`\`\`
+Client → Server: "I want to upload avatar-1.png"
+Server → Client: "Here's a signed URL with a 15-min token"
+Client → Storage: Upload file directly using the signed URL
+Storage → Client: "Upload success! File saved."
+\`\`\``
+      },
+      {
+        id: "valet-intro",
+        title: "2. The Upload Bottleneck Problem",
+        content: `When users upload files, the naive approach is to send them to your backend server first:
+
+\`Client → Server → Storage\`
+
+This creates a massive problem at scale:
+- A 50MB video upload occupies a server thread for seconds.
+- With 1,000 concurrent uploads, your server runs out of memory.
+- Your server's bandwidth gets saturated — other requests slow down.
+
+### The Valet Key Pattern Solves This
+Named after the valet parking model: *you give the valet your car key, but only with limited permissions* (they can park it — not sell it). See [Valet Key / Signed URL](/learn/glossary/signed-url).
+
+**The idea:**
+1. **Client** asks the server for a *temporary, restricted upload token* for a specific file.
+2. **Server** verifies the user's permissions, generates a **pre-signed URL** (e.g. AWS S3 presigned URL), and returns it to the client.
+3. **Client** uploads directly to Cloud Storage using that [signed URL](/learn/glossary/signed-url) — bypassing the server entirely.
+4. **Storage** validates the token and stores the file.
+
+The server never touches the file bytes. Your backend handles only lightweight token generation!`
+      },
+      {
+        id: "valet-flow",
+        title: "3. The 4-Step Upload Flow",
+        content: `In the simulator, you'll see 4 distinct steps (frames):
+
+**Step 1 — Request Permission**
+Client → Server: *"I want to upload \`avatar-1.png\` to the \`media-uploads\` bucket."*
+
+**Step 2 — Receive Signed URL** *(amber/yellow packet = response)*
+Server → Client: Returns a pre-[signed URL](/learn/glossary/signed-url) containing:
+- The bucket name
+- The file name
+- An expiry timestamp (e.g., valid for 15 minutes)
+- A cryptographic signature proving the server authorized it
+
+**Step 3 — Direct Upload**
+Client → Storage: Sends the file bytes directly with the [signed URL](/learn/glossary/signed-url) as a token. The server is completely bypassed.
+
+**Step 4 — Upload Confirmation** *(amber packet = response)*
+Storage → Client: \`"Upload successful. File stored in media-uploads/avatar-1.png"\`
+
+Watch the packet colors — **purple = request going forward**, **amber/yellow = response going backward**.
+
+---
+
+### Interactive Checkpoints`,
         checkpoints: [
           {
             id: "cp-valet-bucket",
-            title: "Add Custom Storage Bucket",
-            description: "Click here to add 'secure-invoices' and 'user-profiles' to Cloud Storage, and update client request targets.",
+            title: "▶ Add More Storage Buckets",
+            description: "Click to add 'secure-invoices' and 'user-profiles' buckets to Cloud Storage. Then update the client to upload to different buckets.",
             targetNodeId: "storage-1",
             configPatch: {
               buckets: ["media-uploads", "secure-invoices", "user-profiles"]
             }
           }
         ]
+      },
+      {
+        id: "valet-sandbox",
+        title: "4. Build It in the Sandbox",
+        content: `Implement the Valet Key pattern from scratch:
+
+### 🛠️ Step-by-Step
+1. Open the **Interactive Sandbox** in a new tab.
+2. Add a **Client** — in the inspector, enable **Valet Key Flow** and set \`fileName: my-photo.jpg\`, \`targetBucket: user-uploads\`.
+3. Add a **Server** (rename it "Upload Server") — connect Client → Server.
+4. Add a **Cloud Storage** node — connect Client → Storage *(direct upload bypass!)*
+5. Select the Storage node and add a bucket named \`user-uploads\`.
+6. Click the Client node to run the simulation.
+7. Watch the 4-step flow: Client → Server → Client → Storage → Client.
+
+After completing, notice that the server only appeared in steps 1–2. The actual file data (step 3) bypassed it completely. **That's the valet key pattern!**
+
+---
+
+### 🎉 You've Finished All Guides!
+Ready to design any system you can imagine? Open the Sandbox and experiment freely. Some ideas to try:
+- Build a full stack with API Gateway + Load Balancer + Cache + DB
+- Add a CDN in front of Storage for faster global delivery
+- Test what happens when you misconfigure routing rules`
       }
     ]
   }
