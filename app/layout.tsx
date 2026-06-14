@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -25,7 +26,10 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/logo/flow-frame-dark.png" },
-      { url: "/logo/flow-frame-dark.png", media: "(prefers-color-scheme: dark)" },
+      {
+        url: "/logo/flow-frame-dark.png",
+        media: "(prefers-color-scheme: dark)",
+      },
     ],
     shortcut: "/logo/flow-frame-light.png",
     apple: "/logo/flow-frame-light.png",
@@ -47,6 +51,8 @@ export default function RootLayout({
       >
         {children}
       </body>
+
+      <GoogleAnalytics gaId="G-DZ9W53N39V" />
     </html>
   );
 }
