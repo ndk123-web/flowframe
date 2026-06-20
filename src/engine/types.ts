@@ -22,6 +22,13 @@ type RequestPath = {
 //   redisKeysSnapshot?: string[];
 // };
 
+type PostgresPoolStatus = {
+  serverId: string;
+  poolSize: number;
+  activeConnections: number;
+  exhausted: boolean;
+};
+
 type Frame = {
   requestId: string;
   requestName?: string;
@@ -37,6 +44,8 @@ type Frame = {
   signedUrl?: string;
   storageBucket?: string;
   storageFileName?: string;
+  /** Present on POSTGRES_POOL_WAIT and POSTGRES_FORWARD_REQUEST frames */
+  postgresPoolStatus?: PostgresPoolStatus;
 };
 
 type ScenarioRunOptions = {
@@ -57,6 +66,8 @@ type SimDebug = {
     sourceIp?: string;
     lookupKey?: string;
   }>;
+  /** Snapshot of each server's connection pool size to Postgres: key=serverId, value=pool size */
+  connectionPoolSnapshot?: Record<string, number>;
 };
 
 type SimBundle = {
@@ -80,4 +91,4 @@ type Event = {
   payloadSummary?: string;
 };
 
-export type { NodeId, RequestPath, Frame, SimBundle, Event, ScenarioRunOptions, SimDebug };
+export type { NodeId, RequestPath, Frame, SimBundle, Event, ScenarioRunOptions, SimDebug, PostgresPoolStatus };

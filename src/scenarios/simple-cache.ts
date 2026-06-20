@@ -66,6 +66,9 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
   if (serverConfig) {
     if (typeof serverConfig.capacity === "number") serverInstance.capacity = serverConfig.capacity;
     if (serverConfig.endpoints) serverInstance.endpoints = { ...serverConfig.endpoints };
+    // Wire up the server's TCP connection pool to Postgres
+    const tcpConns = typeof serverConfig.tcpConnections === "number" ? serverConfig.tcpConnections : 10;
+    serverInstance.addPostgresConnectionPool(tcpConns, postgresInstance);
   } else {
     serverInstance.endpoints = {
       "api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"]
@@ -136,6 +139,9 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
   registry.register(redisId, redisInstance);
   registry.register(postgresId, postgresInstance);
 
+  postgresInstance.activeConnections.clear();
+  postgresInstance.connectionIntervals = [];
+
   /**
    * AllFrames will hold the frames for all simulations we run for the scenario
    */
@@ -168,6 +174,7 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
         lookupKey,
         endpoint: req.endpoint || "/api/v1/getData",
         method: req.method || "GET",
+        parallelResponse,
       },
       sourceIp,
     );
@@ -336,6 +343,10 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
       redisStore: redisStoreSnapshot,
       postgresStore: postgresStoreSnapshot,
       requestInputs,
+      // Snapshot of each server's configured TCP connection pool size to Postgres
+      connectionPoolSnapshot: Object.fromEntries(
+        Array.from(postgresInstance.connectionPools.entries()).map(([k, v]) => [k, v])
+      ),
     },
   };
 }

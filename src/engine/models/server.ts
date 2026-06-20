@@ -1,4 +1,5 @@
 import type { NodeInstance } from "../contracts";
+import PostgresModel from "./Postgres";
 import { RequestManager } from "./Request";
 
 type HTTP_VALID_METHODS = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
@@ -9,6 +10,13 @@ class ServerModel implements NodeInstance {
   load: number = 0;
   capacity: number = 100;
   type: string = "SERVER";
+
+  /**
+   * Number of TCP connections this server has opened to Postgres.
+   * Each server maintains a persistent connection pool to Postgres (keep-alive TCP connections).
+   * When this is 0, no pool limit is enforced (unlimited connections).
+   */
+  postgresConnectionPools: number = 0;
 
   // key is the endpoint, value is the array of valid HTTP methods for that endpoint
   endpoints: { [key: string]: HTTP_VALID_METHODS[] } = {
@@ -52,6 +60,37 @@ class ServerModel implements NodeInstance {
       return this.endpoints[endpoint].includes(method);
     }
     return false;
+  }
+
+  /**
+   * Register a Postgres connection pool for this server.
+   * Records how many TCP connections this server has opened to the given Postgres instance.
+   * This is called during scenario setup to wire the pool sizes.
+   *
+   * @param tcpConnections - Number of TCP connections in the pool (e.g. 5, 10, 20)
+   * @param postgresModel  - The Postgres instance this server is connecting to
+   */
+  addPostgresConnectionPool(
+    tcpConnections: number,
+    postgresModel: PostgresModel,
+  ) {
+    this.postgresConnectionPools = tcpConnections;
+    postgresModel.connectionPools.set(this.id, tcpConnections);
+  }
+
+  // remove all tcpConnections
+  removePostgresConnectionPool(postgresModel: PostgresModel) {
+    this.postgresConnectionPools = 0;
+    postgresModel.connectionPools.delete(this.id);
+    postgresModel.activeConnections.delete(this.id);
+  }
+
+  /**
+   * Returns true if this server has a limited connection pool configured for Postgres.
+   * Used by the simulation to determine if pool-exhaustion logic should be applied.
+   */
+  hasLimitedPostgresPool(): boolean {
+    return this.postgresConnectionPools > 0;
   }
 }
 

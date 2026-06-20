@@ -238,25 +238,15 @@ function PacketEdge(props: EdgeProps) {
   const count = Math.max(1, Math.min(Number(data?.packetCount ?? 1), 4));
   const frameIndex = Number(data?.frameIndex ?? 0);
 
-  const animateRefs = useRef<Array<any>>([]);
-
-  useEffect(() => {
-    if (isActive) {
-      animateRefs.current.forEach((ref, index) => {
-        if (ref) {
-          try {
-            if (typeof ref.beginElementAt === "function") {
-              ref.beginElementAt(index * 0.12);
-            } else if (typeof ref.beginElement === "function") {
-              ref.beginElement();
-            }
-          } catch (e) {
-            console.error("Error starting SMIL animation:", e);
-          }
-        }
-      });
-    }
-  }, [isActive, frameIndex]);
+  const [animationPath] = getSmoothStepPath({
+    sourceX: isReverseMotion ? targetX : sourceX,
+    sourceY: isReverseMotion ? targetY : sourceY,
+    sourcePosition: isReverseMotion ? targetPosition : sourcePosition,
+    targetX: isReverseMotion ? sourceX : targetX,
+    targetY: isReverseMotion ? sourceY : targetY,
+    targetPosition: isReverseMotion ? sourcePosition : targetPosition,
+    borderRadius: 10,
+  });
 
   return (
     <>
@@ -272,7 +262,7 @@ function PacketEdge(props: EdgeProps) {
       {isActive &&
         Array.from({ length: count }).map((_, index) => (
           <circle
-            key={`${props.id}-${index}-${edgePath}-${frameIndex}`}
+            key={`${props.id}-${index}-${animationPath}-${frameIndex}`}
             r={4.5 - index * 0.5}
             fill={packetColor(isReverseMotion)}
             cx="0"
@@ -285,15 +275,12 @@ function PacketEdge(props: EdgeProps) {
             }}
           >
             <animateMotion
-              ref={(el) => {
-                animateRefs.current[index] = el;
-              }}
               dur={`${duration}s`}
-              repeatCount={data?.isPlaying ? "1" : "indefinite"}
+              repeatCount="2"
               fill="freeze"
               begin={`${index * 0.12}s`}
-              path={edgePath}
-              keyPoints={isReverseMotion ? "1;0" : "0;1"}
+              path={animationPath}
+              keyPoints="0;1"
               keyTimes="0;1"
               calcMode="linear"
             />
@@ -314,14 +301,23 @@ function CustomNode({ id, data, selected }: any) {
     storage: "border-l-yellow-500 shadow-yellow-500/10",
   };
 
-  const colorClass = typeColors[data.type] || "border-l-slate-400";
+  let colorClass = typeColors[data.type] || "border-l-slate-400";
+  let borderClass = "border-[var(--border)]";
+
+  if (data.status === "error") {
+    colorClass = "border-l-rose-500 shadow-rose-500/15 bg-rose-500/[0.03]";
+    borderClass = "border-rose-500/50";
+  } else if (data.status === "warning") {
+    colorClass = "border-l-amber-500 shadow-amber-500/15 bg-amber-500/[0.03]";
+    borderClass = "border-amber-500/50";
+  }
 
   const hasTarget = data.type !== "client";
   const hasSource = data.type !== "redis" && data.type !== "postgres" && data.type !== "storage";
 
   return (
     <div
-      className={`relative rounded-xl border border-[var(--border)] border-l-4 bg-[var(--surface)] px-4 py-3 shadow-md transition-all duration-300 ${colorClass} ${
+      className={`relative rounded-xl border border-l-4 bg-[var(--surface)] px-4 py-3 shadow-md transition-all duration-300 ${borderClass} ${colorClass} ${
         selected ? "ring-2 ring-violet-500 scale-105" : "hover:border-[var(--border)]/80"
       } min-w-[145px]`}
     >
@@ -341,13 +337,43 @@ function CustomNode({ id, data, selected }: any) {
             {data.type}
           </p>
           <p className="text-xs font-bold text-[color:var(--foreground)] truncate max-w-[100px]">{data.label}</p>
+          {data.status === "error" && (
+            <p className="text-[9px] font-bold text-rose-400 mt-0.5 animate-pulse flex items-center gap-0.5">
+              <span>⚠️</span> <span className="truncate max-w-[95px]" title={data.statusMessage}>{data.statusMessage || "Error"}</span>
+            </p>
+          )}
+          {data.status === "warning" && (
+            <p className="text-[9px] font-bold text-amber-400 mt-0.5 flex items-center gap-0.5">
+              <span>⚠️</span> <span className="truncate max-w-[95px]" title={data.statusMessage}>{data.statusMessage || "Warning"}</span>
+            </p>
+          )}
         </div>
       </div>
 
-      {data.isActive && (
+      {data.poolInfo && (
+        <div className="mt-2 pt-1.5 border-t border-[var(--border)]/35">
+          <div className="flex justify-between text-[8px] font-bold text-cyan-400">
+            <span>CONNS: {data.poolInfo.activeConnections}/{data.poolInfo.poolSize}</span>
+          </div>
+          <div className="w-full h-1 bg-[var(--surface-muted)] rounded-full mt-1 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${
+                data.poolInfo.exhausted ? "bg-rose-500 animate-pulse" : "bg-cyan-500"
+              }`}
+              style={{ width: `${data.poolInfo.poolSize > 0 ? (data.poolInfo.activeConnections / data.poolInfo.poolSize) * 100 : 0}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {(data.isActive || data.status === "error" || data.status === "warning") && (
         <span className="absolute -top-1 -right-1 flex h-3 w-3">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
+          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+            data.status === "error" ? "bg-rose-400" : data.status === "warning" ? "bg-amber-400" : "bg-violet-400"
+          }`}></span>
+          <span className={`relative inline-flex rounded-full h-3 w-3 ${
+            data.status === "error" ? "bg-rose-500" : data.status === "warning" ? "bg-amber-500" : "bg-violet-500"
+          }`}></span>
         </span>
       )}
 
@@ -372,39 +398,121 @@ function GraphCanvas({
   edges,
   onNodeSelect,
   theme,
+  systemMetrics,
 }: {
   nodes: Node[];
   edges: Edge[];
   onNodeSelect: (nodeId: string) => void;
   theme: Theme;
+  systemMetrics: any;
 }) {
   const bgColor = theme === "dark" ? "#0b0b0c" : "#f8fafc";
   const gridColor = theme === "dark" ? "rgba(100,116,139,0.23)" : "rgba(148,163,184,0.15)";
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      edgeTypes={{ packet: PacketEdge }}
-      fitView
-      fitViewOptions={{ padding: 0.22 }}
-      nodesDraggable
-      nodesConnectable={false}
-      elementsSelectable={false}
-      onNodeClick={(_, node) => onNodeSelect(node.id)}
-      panOnDrag
-      zoomOnScroll
-      zoomOnPinch
-      style={{ background: bgColor }}
-    >
-      <Background
-        variant={BackgroundVariant.Dots}
-        gap={16}
-        size={0.7}
-        color={gridColor}
-      />
-    </ReactFlow>
+    <div className="relative w-full h-full">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        edgeTypes={{ packet: PacketEdge }}
+        fitView
+        fitViewOptions={{ padding: 0.22 }}
+        nodesDraggable
+        nodesConnectable={false}
+        elementsSelectable={false}
+        onNodeClick={(_, node) => onNodeSelect(node.id)}
+        panOnDrag
+        zoomOnScroll
+        zoomOnPinch
+        style={{ background: bgColor }}
+      >
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={16}
+          size={0.7}
+          color={gridColor}
+        />
+      </ReactFlow>
+
+      {/* System Health & Load Monitor Overlay */}
+      {systemMetrics && (
+        <div className="absolute top-4 left-4 z-10 w-72 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md shadow-lg p-3 flex flex-col gap-2.5 font-sans select-none pointer-events-auto">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  systemMetrics.pendingCount > 0 || systemMetrics.errorRequests.length > 0
+                    ? "bg-rose-400"
+                    : "bg-emerald-400"
+                }`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                  systemMetrics.pendingCount > 0 || systemMetrics.errorRequests.length > 0
+                    ? "bg-rose-500"
+                    : "bg-emerald-500"
+                }`}></span>
+              </span>
+              <h3 className="text-[10px] font-bold text-[color:var(--foreground)] tracking-tight uppercase">System Health & Load</h3>
+            </div>
+            <span className="text-[9px] font-mono text-[color:var(--foreground)]/45">t={systemMetrics.currentTick}</span>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-1.5 text-center">
+            <div className="bg-[var(--surface-muted)]/50 p-1.5 rounded-xl border border-[var(--border)]/35">
+              <p className="text-[8px] uppercase font-semibold text-[color:var(--foreground)]/40 tracking-wider">In-Flight Req</p>
+              <p className="text-xs font-bold text-[color:var(--foreground)] mt-0.5">{systemMetrics.activeCount} / {systemMetrics.totalRequests}</p>
+            </div>
+            <div className={`p-1.5 rounded-xl border ${
+              systemMetrics.pendingCount > 0
+                ? "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                : "bg-[var(--surface-muted)]/50 border-[var(--border)]/35 text-[color:var(--foreground)]"
+            }`}>
+              <p className={`text-[8px] uppercase font-semibold tracking-wider ${
+                systemMetrics.pendingCount > 0 ? "text-rose-400/80" : "text-[color:var(--foreground)]/40"
+              }`}>Queue Size</p>
+              <p className="text-xs font-bold mt-0.5">{systemMetrics.pendingCount}</p>
+            </div>
+          </div>
+
+          {systemMetrics.queuedRequests.length > 0 && (
+            <div className="flex flex-col gap-1 rounded-xl bg-rose-500/5 border border-rose-500/15 p-2">
+              <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
+                <span>⏳</span> Bottleneck: Database Wait
+              </p>
+              <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
+                {systemMetrics.queuedRequests.map((req: string, idx: number) => (
+                  <p key={idx} className="text-[9px] font-mono text-rose-300/90 leading-tight">
+                    • {req} queued
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {systemMetrics.errorRequests.length > 0 && (
+            <div className="flex flex-col gap-1 rounded-xl bg-rose-500/10 border border-rose-500/20 p-2">
+              <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
+                <span>❌</span> Failures Detected
+              </p>
+              <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
+                {systemMetrics.errorRequests.map((err: string, idx: number) => (
+                  <p key={idx} className="text-[9px] font-mono text-rose-200/90 leading-tight">
+                    • {err}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {systemMetrics.activeCount > 0 && systemMetrics.queuedRequests.length === 0 && systemMetrics.errorRequests.length === 0 && (
+            <div className="flex items-center gap-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/15 p-1.5 text-emerald-400">
+              <span className="text-xs">⚡</span>
+              <span className="text-[8px] font-bold uppercase tracking-wider">Processing requests smoothly</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -909,6 +1017,26 @@ function NodeInspectorPanel({
                     />
                   </div>
 
+                  <div>
+                    <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
+                      TCP Connections to Postgres
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        max={200}
+                        value={nodeConfigs[selectedNode.id]?.tcpConnections ?? 10}
+                        onChange={(e) => updateNodeConfig(selectedNode.id, { tcpConnections: Number(e.target.value) })}
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-cyan-500"
+                      />
+                      <span className="text-[10px] text-[color:var(--foreground)]/45 shrink-0 font-mono">conns</span>
+                    </div>
+                    <p className="mt-1 text-[9px] text-[color:var(--foreground)]/40 leading-relaxed">
+                      Pool size for parallel Postgres queries. 0 = no connections (blocks queries).
+                    </p>
+                  </div>
+
                   <div className="h-px bg-[var(--border)]/70 my-2" />
 
                   <div>
@@ -1226,6 +1354,54 @@ function NodeInspectorPanel({
             </div>
           )}
 
+          {/* Connection Pool Status — shown on Postgres node when pool frames are present */}
+          {role === "postgres" && (() => {
+            const poolFrames = currentFrames.filter(
+              (f) => f.action === "POSTGRES_POOL_WAIT" || f.action === "POSTGRES_QUERY_HIT" || f.action === "POSTGRES_QUERY_MISS"
+            );
+            const poolMap = new Map<string, { poolSize: number; activeConnections: number; exhausted: boolean }>();
+            for (const f of poolFrames) {
+              const ps = (f as any).postgresPoolStatus;
+              if (ps && ps.serverId && ps.poolSize >= 0) {
+                poolMap.set(ps.serverId, { poolSize: ps.poolSize, activeConnections: ps.activeConnections, exhausted: ps.exhausted });
+              }
+            }
+            if (poolMap.size === 0) return null;
+            return (
+              <div className={`rounded-md border ${theme === "dark" ? "border-cyan-500/25 bg-cyan-500/5" : "border-cyan-400/30 bg-cyan-50"} p-3`}>
+                <p className="text-[10px] uppercase tracking-widest text-cyan-400 font-bold font-mono mb-2.5">
+                  Connection Pool Status
+                </p>
+                <div className="space-y-2.5">
+                  {Array.from(poolMap.entries()).map(([serverId, info]) => {
+                    const pct = info.poolSize > 0 ? Math.round((info.activeConnections / info.poolSize) * 100) : 0;
+                    const barColor = info.exhausted
+                      ? "bg-rose-500"
+                      : pct > 70
+                      ? "bg-amber-400"
+                      : "bg-cyan-400";
+                    return (
+                      <div key={serverId}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`text-[10px] font-mono ${textColor} truncate max-w-[90px]`}>{serverId}</span>
+                          <span className={`text-[10px] font-mono font-bold ${info.exhausted ? "text-rose-400" : "text-cyan-400"}`}>
+                            {info.activeConnections}/{info.poolSize}{info.exhausted ? " 🔴 WAIT" : ""}
+                          </span>
+                        </div>
+                        <div className={`h-1.5 w-full rounded-full ${theme === "dark" ? "bg-slate-800" : "bg-slate-200"} overflow-hidden`}>
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+                            style={{ width: `${Math.max(2, Math.min(pct, 100))}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
           {role === "server" && (
             <div className={`rounded-md border ${cardBorder} ${cardBg} p-3`}>
               <p className={`text-[10px] uppercase tracking-widest ${labelColor}`}>Queue Status</p>
@@ -1378,16 +1554,36 @@ function getFormattedLogText(frame: Frame) {
     };
   }
 
-  if (normAction.includes("POSTGRES_QUERY_HIT")) {
+  if (normAction.includes("POSTGRES_POOL_WAIT")) {
+    const payloadStr = frame.payloadSummary ? ` — ${frame.payloadSummary}` : "";
     return {
-      text: `${flow} | POSTGRES QUERY HIT`,
+      text: `${flow} | ⏳ POSTGRES POOL WAIT${payloadStr}`,
+      type: "error"
+    };
+  }
+
+  if (normAction.includes("POSTGRES_CONNECTION_ERROR")) {
+    const payloadStr = frame.payloadSummary ? ` — ${frame.payloadSummary}` : "";
+    return {
+      text: `${flow} | ❌ POSTGRES CONNECTION ERROR${payloadStr}`,
+      type: "error"
+    };
+  }
+
+  if (normAction.includes("POSTGRES_QUERY_HIT")) {
+    const reqStr = frame.requestName ? ` for ${frame.requestName}` : "";
+    const keyStr = frame.lookupKey ? ` (Key: "${frame.lookupKey}")` : "";
+    return {
+      text: `${flow} | POSTGRES QUERY HIT${reqStr}${keyStr}`,
       type: "success"
     };
   }
 
   if (normAction.includes("POSTGRES_QUERY_MISS")) {
+    const reqStr = frame.requestName ? ` for ${frame.requestName}` : "";
+    const keyStr = frame.lookupKey ? ` (Key: "${frame.lookupKey}")` : "";
     return {
-      text: `${flow} | POSTGRES QUERY MISS`,
+      text: `${flow} | POSTGRES QUERY MISS${reqStr}${keyStr}`,
       type: "warn"
     };
   }
@@ -1809,13 +2005,121 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
     [nodes, selectedNodeId],
   );
 
+  // System Metrics Hook to analyze simulation health in real-time
+  const systemMetrics = useMemo(() => {
+    if (frames.length === 0) return null;
+
+    const currentTick = currentFrameGroup?.timestamp ?? 0;
+    const requestStats = new Map<string, { start: number; end: number; label: string; key: string; isWaiting: boolean; hasError: boolean; errorMsg?: string }>();
+    
+    frames.forEach((f) => {
+      const existing = requestStats.get(f.requestId);
+      const isWait = f.action === "POSTGRES_POOL_WAIT";
+      const isError = f.action === "POSTGRES_CONNECTION_ERROR" || f.action.includes("REJECT") || f.action.includes("RESPONSE_ERROR");
+      
+      if (!existing) {
+        requestStats.set(f.requestId, {
+          start: f.timestamp,
+          end: f.timestamp,
+          label: f.requestName || `Req-${f.requestId.slice(0, 4)}`,
+          key: f.lookupKey || "",
+          isWaiting: isWait,
+          hasError: isError,
+          errorMsg: isError ? f.payloadSummary : undefined
+        });
+      } else {
+        existing.end = Math.max(existing.end, f.timestamp);
+        if (f.timestamp === currentTick) {
+          existing.isWaiting = isWait;
+          if (isError) {
+            existing.hasError = true;
+            existing.errorMsg = f.payloadSummary;
+          }
+        }
+      }
+    });
+
+    let activeCount = 0;
+    let completedCount = 0;
+    let pendingCount = 0;
+    const queuedRequests: string[] = [];
+    const activeRequestsList: string[] = [];
+    const errorRequests: string[] = [];
+
+    requestStats.forEach((stats) => {
+      if (currentTick >= stats.start && currentTick <= stats.end) {
+        activeCount++;
+        activeRequestsList.push(`${stats.label}${stats.key ? ` (Key: ${stats.key})` : ""}`);
+        
+        if (stats.isWaiting) {
+          pendingCount++;
+          queuedRequests.push(`${stats.label}${stats.key ? ` (Key: ${stats.key})` : ""}`);
+        }
+        if (stats.hasError) {
+          errorRequests.push(`${stats.label}: ${stats.errorMsg || "Error occurred"}`);
+        }
+      } else if (currentTick > stats.end) {
+        completedCount++;
+      }
+    });
+
+    return {
+      totalRequests: requestStats.size,
+      activeCount,
+      completedCount,
+      pendingCount,
+      activeRequestsList,
+      queuedRequests,
+      errorRequests,
+      currentTick,
+    };
+  }, [frames, currentFrameGroup]);
+
   const styledNodes = useMemo(
     () =>
       nodes.map((node) => {
         const isSelected = node.id === selectedNodeId;
         const label = typeof node.data?.label === "string" ? node.data.label : node.id;
         const role = getNodeRole(label);
-        const isActive = currentFrames.some((f) => f.from === node.id || f.to === node.id);
+        const activeFrames = currentFrames.filter((f) => f.from === node.id || f.to === node.id);
+        const isActive = activeFrames.length > 0;
+
+        let status: "normal" | "warning" | "error" = "normal";
+        let statusMessage = "";
+        let poolInfo: any = null;
+
+        for (const f of activeFrames) {
+          const normAction = String(f.action || "").toUpperCase();
+
+          if (role === "postgres") {
+            if ((f as any).postgresPoolStatus) {
+              poolInfo = (f as any).postgresPoolStatus;
+            }
+          }
+
+          if (
+            normAction.includes("POOL_WAIT") || 
+            normAction.includes("CONNECTION_ERROR") || 
+            normAction.includes("REJECT") || 
+            normAction.includes("RESPONSE_ERROR")
+          ) {
+            status = "error";
+            statusMessage = f.payloadSummary || "High load / error";
+          } else if (normAction.includes("CACHE_MISS") || normAction.includes("QUERY_MISS")) {
+            if (status !== "error") {
+              status = "warning";
+              statusMessage = normAction.includes("CACHE_MISS") ? "Cache Miss" : "Database Query Miss";
+            }
+          }
+        }
+
+        // If no active frames on Postgres but poolInfo is not populated, grab latest
+        if (role === "postgres" && !poolInfo && currentFrames.length > 0) {
+          const poolFrame = currentFrames.find((f) => (f as any).postgresPoolStatus?.serverId);
+          if (poolFrame) {
+            poolInfo = (poolFrame as any).postgresPoolStatus;
+          }
+        }
 
         return {
           ...node,
@@ -1829,6 +2133,9 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             label,
             type: role,
             isActive,
+            status,
+            statusMessage,
+            poolInfo,
           },
         };
       }),
@@ -2055,6 +2362,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                 }
               }}
               theme={theme}
+              systemMetrics={systemMetrics}
             />
           </motion.div>
 
