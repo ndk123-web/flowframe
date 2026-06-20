@@ -197,15 +197,16 @@ function PacketEdge(props: EdgeProps) {
   const isReverse      = Boolean(data?.reverseMotion);
   const count          = Math.max(1, Math.min(Number(data?.packetCount ?? 1), 4));
   const frameIndex     = Number(data?.frameIndex ?? 0);
-  const animRefs       = useRef<any[]>([]);
 
-  useEffect(() => {
-    if (!isActive) return;
-    animRefs.current.forEach((r, i) => {
-      if (!r) return;
-      try { r.beginElementAt?.(i * 0.12) ?? r.beginElement?.(); } catch {}
-    });
-  }, [isActive, frameIndex]);
+  const [animationPath] = getSmoothStepPath({
+    sourceX: isReverse ? targetX : sourceX,
+    sourceY: isReverse ? targetY : sourceY,
+    sourcePosition: isReverse ? targetPosition : sourcePosition,
+    targetX: isReverse ? sourceX : targetX,
+    targetY: isReverse ? sourceY : targetY,
+    targetPosition: isReverse ? sourcePosition : targetPosition,
+    borderRadius: 10,
+  });
 
   const col = isReverse ? "#f59e0b" : "#8b5cf6";
 
@@ -214,11 +215,11 @@ function PacketEdge(props: EdgeProps) {
       <BaseEdge path={edgePath} markerEnd={markerEnd}
         style={{ ...style, strokeOpacity: isActive ? 0.9 : 0.2, transition: "stroke-opacity 150ms" }} />
       {isActive && Array.from({ length: count }).map((_, i) => (
-        <circle key={`${props.id}-${i}-${frameIndex}`} r={4.5 - i * 0.5} fill={col} cx="0" cy="0"
+        <circle key={`${props.id}-${i}-${animationPath}-${frameIndex}`} r={4.5 - i * 0.5} fill={col} cx="0" cy="0"
           style={{ filter: `drop-shadow(0 0 5px ${col}cc)`, opacity: Math.max(0.4, 0.9 - i * 0.15) }}>
-          <animateMotion ref={el => { animRefs.current[i] = el; }} dur={`${duration}s`}
-            repeatCount="indefinite" fill="freeze" begin={`${i * 0.12}s`} path={edgePath}
-            keyPoints={isReverse ? "1;0" : "0;1"} keyTimes="0;1" calcMode="linear" />
+          <animateMotion dur={`${duration}s`}
+            repeatCount="2" fill="freeze" begin={`${i * 0.12}s`} path={animationPath}
+            keyPoints="0;1" keyTimes="0;1" calcMode="linear" />
         </circle>
       ))}
     </>

@@ -126,6 +126,9 @@ class SimulationManager {
         if (request?.context?.valetKeyFlow) {
           return "SERVER_RETURN_VALET_KEY";
         }
+        if (request?.context?.serverErrorStatus) {
+          return `SERVER_RESPONSE_ERROR_${request.context.serverErrorStatus}`;
+        }
         return "SERVER_SEND_RESPONSE";
       case "LOAD_BALANCER":
         if (request?.context?.serverErrorStatus) {
@@ -609,22 +612,145 @@ class SimulationManager {
           }
 
           const postgresInstance = nodeInstance as PostgresModel;
-          const lookUpKey = request.context.lookupKey as string | undefined;
-          const lookUpData = postgresInstance.getRecord("users", lookUpKey as string); 
 
-          console.log("lookUpData", lookUpData); 
+          // ── Connection Pool Logic ──────────────────────────────────────────
+          // Identify the originating server (the node that sent this request to Postgres).
+          // That is always the node directly before postgres in the traversal path.
+          const originatingServerId = traversalPath[traversalPath.length - 2];
+          const originatingServerInstance = this.registry.getInstance(originatingServerId);
+          const isServer =
+            originatingServerInstance &&
+            this.normalizeNodeType(originatingServerInstance.type) === "SERVER";
+
+          if (isServer) {
+            const parallel = Boolean(this.payloadForRequest?.parallelResponse);
+            const poolSize = postgresInstance.getPoolSize(originatingServerId);
+
+            if (poolSize === 0) {
+              this.pushFrame(
+                request,
+                currentNodeId,
+                originatingServerId,
+                "POSTGRES_CONNECTION_ERROR",
+                {
+                  payloadSummary: `Connection failed: 0 TCP connections open from ${originatingServerId} to Postgres`,
+                  postgresPoolStatus: {
+                    serverId: originatingServerId,
+                    poolSize: 0,
+                    activeConnections: 0,
+                    exhausted: true,
+                  },
+                },
+              );
+              request.context.serverErrorStatus = "500";
+              traversalPath.pop();
+              request.currentNodeId = originatingServerId;
+              currentNodeId = originatingServerId;
+              request.direction = "backward";
+              break;
+            }
+
+            // Wait loop for parallel connections
+            while (postgresInstance.isPoolExhaustedAt(originatingServerId, this.timestamp - 1, parallel)) {
+              const activeConns = postgresInstance.connectionIntervals.filter(
+                (int) => int.serverId === originatingServerId && (this.timestamp - 1) >= int.start && (this.timestamp - 1) < int.end
+              ).length;
+
+              this.pushFrame(
+                request,
+                currentNodeId,
+                currentNodeId, // stays at postgres — it's waiting here
+                "POSTGRES_POOL_WAIT",
+                {
+                  payloadSummary: `Pool exhausted for ${originatingServerId}: ${activeConns}/${poolSize} connections in use — ${request.name} queued`,
+                  postgresPoolStatus: {
+                    serverId: originatingServerId,
+                    poolSize,
+                    activeConnections: activeConns,
+                    exhausted: true,
+                  },
+                },
+              );
+            }
+
+            // Connection is available! Check it out
+            if (parallel) {
+              postgresInstance.connectionIntervals.push({
+                serverId: originatingServerId,
+                requestId: request.id,
+                start: this.timestamp - 1,
+                end: this.timestamp,
+              });
+            } else {
+              // Fallback for sequential
+              const poolExhausted = postgresInstance.isPoolExhausted(originatingServerId);
+              if (poolExhausted) {
+                const activeConns = postgresInstance.getActiveConnections(originatingServerId);
+                this.pushFrame(
+                  request,
+                  currentNodeId,
+                  currentNodeId,
+                  "POSTGRES_POOL_WAIT",
+                  {
+                    payloadSummary: `Pool exhausted for ${originatingServerId}: ${activeConns}/${poolSize} connections in use — ${request.name} queued`,
+                    postgresPoolStatus: {
+                      serverId: originatingServerId,
+                      poolSize,
+                      activeConnections: activeConns,
+                      exhausted: true,
+                    },
+                  },
+                );
+              } else {
+                postgresInstance.acquireConnection(originatingServerId);
+                request.context.acquiredPostgresPoolFor = originatingServerId;
+              }
+            }
+          }
+          // ──────────────────────────────────────────────────────────────────
+
+          const lookUpKey = request.context.lookupKey as string | undefined;
+          const lookUpData = postgresInstance.getRecord("users", lookUpKey as string);
+
+          console.log("lookUpData", lookUpData);
 
           if (lookUpData === null) {
             request.context.dbMiss = true;
           }
 
           const previousNodeId = traversalPath[traversalPath.length - 2];
+
+          // Attach pool status to the query frame so the UI can show it
+          const poolStatusForFrame =
+            isServer
+              ? {
+                  postgresPoolStatus: {
+                    serverId: originatingServerId,
+                    poolSize: postgresInstance.getPoolSize(originatingServerId),
+                    activeConnections: Boolean(this.payloadForRequest?.parallelResponse)
+                      ? postgresInstance.connectionIntervals.filter(
+                          (int) => int.serverId === originatingServerId && (this.timestamp - 1) >= int.start && (this.timestamp - 1) < int.end
+                        ).length
+                      : postgresInstance.getActiveConnections(originatingServerId),
+                    exhausted: false,
+                  },
+                }
+              : {};
+
           this.pushFrame(
             request,
             currentNodeId,
             previousNodeId,
             lookUpData === null ? "POSTGRES_QUERY_MISS" : "POSTGRES_QUERY_HIT",
+            poolStatusForFrame,
           );
+
+          // ── Release the connection slot after the query completes ──────────
+          if (request.context.acquiredPostgresPoolFor) {
+            postgresInstance.releaseConnection(request.context.acquiredPostgresPoolFor);
+            request.context.acquiredPostgresPoolFor = undefined;
+          }
+          // ──────────────────────────────────────────────────────────────────
 
           traversalPath.pop();
           request.currentNodeId = previousNodeId;

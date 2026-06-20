@@ -126,6 +126,8 @@ function createSimpleApiGatewaySimulation(
   if (s1Config) {
     if (typeof s1Config.capacity === "number") server1.capacity = s1Config.capacity;
     if (s1Config.endpoints) server1.endpoints = { ...s1Config.endpoints };
+    const tcpConns1 = typeof s1Config.tcpConnections === "number" ? s1Config.tcpConnections : 10;
+    server1.addPostgresConnectionPool(tcpConns1, postgres);
   } else {
     server1.endpoints = {
       "api/v1/users/profile": ["GET", "POST", "PUT", "DELETE", "PATCH"]
@@ -134,6 +136,8 @@ function createSimpleApiGatewaySimulation(
   if (s2Config) {
     if (typeof s2Config.capacity === "number") server2.capacity = s2Config.capacity;
     if (s2Config.endpoints) server2.endpoints = { ...s2Config.endpoints };
+    const tcpConns2 = typeof s2Config.tcpConnections === "number" ? s2Config.tcpConnections : 10;
+    server2.addPostgresConnectionPool(tcpConns2, postgres);
   } else {
     server2.endpoints = {
       "api/v1/posts/list": ["GET", "POST", "PUT", "DELETE", "PATCH"]
@@ -142,6 +146,8 @@ function createSimpleApiGatewaySimulation(
   if (s3Config) {
     if (typeof s3Config.capacity === "number") server3.capacity = s3Config.capacity;
     if (s3Config.endpoints) server3.endpoints = { ...s3Config.endpoints };
+    const tcpConns3 = typeof s3Config.tcpConnections === "number" ? s3Config.tcpConnections : 10;
+    server3.addPostgresConnectionPool(tcpConns3, postgres);
   } else {
     server3.endpoints = {
       "api/v1/posts/list": ["GET", "POST", "PUT", "DELETE", "PATCH"]
@@ -213,6 +219,9 @@ function createSimpleApiGatewaySimulation(
     apiGateway.setServiceNodes("POST_SERVICE", [server2Id, server3Id]);
   }
 
+  postgres.activeConnections.clear();
+  postgres.connectionIntervals = [];
+
   const allFrames: Frame[] = [];
   const requestInputs: Array<{
     requestId?: string;
@@ -244,6 +253,7 @@ function createSimpleApiGatewaySimulation(
         lookupKey,
         endpoint,
         method: req.method || "GET",
+        parallelResponse,
       },
       sourceIp,
     );
@@ -538,6 +548,10 @@ function createSimpleApiGatewaySimulation(
       redisStore: redisStoreSnapshot,
       postgresStore: postgresStoreSnapshot,
       requestInputs,
+      // Snapshot of each server's configured TCP connection pool size to Postgres
+      connectionPoolSnapshot: Object.fromEntries(
+        Array.from(postgres.connectionPools.entries()).map(([k, v]) => [k, v])
+      ),
     },
   };
 }
