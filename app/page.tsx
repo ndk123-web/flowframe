@@ -875,7 +875,7 @@ export default function Home() {
 
             {/* v1 callout */}
             <p className="mt-6 text-[11px] font-medium" style={{ color: "var(--foreground)", opacity: 0.38 }}>
-              v1 — 4 scenarios supported · More patterns coming
+              v1.0.1 — 4 scenarios supported + Postgres Pools · More patterns coming
             </p>
           </div>
 
@@ -895,6 +895,40 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Featured On Section */}
+      {/* Social Proof */}
+      <div className="mt-1 mb-8 flex flex-wrap items-center justify-center gap-4">
+        <span className="text-sm text-gray-500 dark:text-gray-400">
+          Trusted by developers on
+        </span>
+
+        <a
+          href="https://peerlist.io/ndk18/project/flowframe--distributed-systems-simulator"
+          target="_blank"
+          rel="noreferrer"
+          className="transition-transform hover:scale-105"
+        >
+          <img
+            src={`https://peerlist.io/api/v1/projects/embed/PRJH9OBK9MBOPLMJ8FD6ABOL8LRR6R?showUpvote=false&theme=${theme}`}
+            alt="Peerlist"
+            className="h-12 md:h-14 w-auto"
+          />
+        </a>
+
+        <a
+          href="https://www.producthunt.com/products/flowframe/reviews/new"
+          target="_blank"
+          rel="noreferrer"
+          className="transition-transform hover:scale-105"
+        >
+          <img
+            src={`https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=1247866&theme=${theme}`}
+            alt="Product Hunt"
+            className="h-10 md:h-12 w-auto"
+          />
+        </a>
+      </div>
+              
       {/* ── TICKER ── */}
       <Ticker />
 

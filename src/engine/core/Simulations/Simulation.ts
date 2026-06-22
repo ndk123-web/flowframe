@@ -224,7 +224,7 @@ class SimulationManager {
     const traversalPath: NodeId[] = [currentNodeId];
 
     // set the max steps to 24 
-    const maxSteps = 500;
+    const maxSteps = 10000;
     let steps = 0;
 
     // while the steps are less than the max steps, increment the steps
