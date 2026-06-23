@@ -1040,6 +1040,8 @@ function WorkspaceInner() {
   const [validationWarning, setValidationWarning] = useState<string | null>(
     null,
   );
+  const [showMetrics, setShowMetrics] = useState(true);
+  const [activeReqIdx, setActiveReqIdx] = useState(0);
 
   // Floating Panel Visibility States
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -1730,6 +1732,114 @@ function WorkspaceInner() {
     return acc;
   }, [frameGroups, frameIndex]);
 
+  // System Metrics Hook to analyze simulation health in real-time
+  const systemMetrics = useMemo(() => {
+    if (simulationFrames.length === 0) return null;
+
+    const currentTick = currentFrameGroup?.timestamp ?? 0;
+    const requestStats = new Map<
+      string,
+      {
+        start: number;
+        end: number;
+        label: string;
+        key: string;
+        isWaiting: boolean;
+        hasError: boolean;
+        errorMsg?: string;
+        hasWarning: boolean;
+        warningMsg?: string;
+      }
+    >();
+
+    simulationFrames.forEach((f) => {
+      const existing = requestStats.get(f.requestId);
+      const isWait = f.action === "POSTGRES_POOL_WAIT";
+      const isError =
+        f.action === "POSTGRES_CONNECTION_ERROR" ||
+        f.action.includes("REJECT") ||
+        f.action.includes("RESPONSE_ERROR");
+      const isWarning =
+        f.action.includes("CACHE_MISS") ||
+        f.action.includes("QUERY_MISS");
+
+      if (!existing) {
+        requestStats.set(f.requestId, {
+          start: f.timestamp,
+          end: f.timestamp,
+          label: f.requestName || `Req-${f.requestId.slice(0, 4)}`,
+          key: f.lookupKey || "",
+          isWaiting: isWait,
+          hasError: isError,
+          errorMsg: isError ? f.payloadSummary : undefined,
+          hasWarning: isWarning,
+          warningMsg: isWarning ? (f.action.includes("CACHE_MISS") ? "Cache Miss" : "Query Miss") : undefined,
+        });
+      } else {
+        existing.end = Math.max(existing.end, f.timestamp);
+        if (f.timestamp === currentTick) {
+          existing.isWaiting = isWait;
+          if (isError) {
+            existing.hasError = true;
+            existing.errorMsg = f.payloadSummary;
+          }
+          if (isWarning) {
+            existing.hasWarning = true;
+            existing.warningMsg = f.action.includes("CACHE_MISS") ? "Cache Miss" : "Query Miss";
+          }
+        }
+      }
+    });
+
+    let activeCount = 0;
+    let completedCount = 0;
+    let pendingCount = 0;
+    const queuedRequests: string[] = [];
+    const activeRequestsList: string[] = [];
+    const errorRequests: string[] = [];
+    const warningRequests: string[] = [];
+
+    requestStats.forEach((stats) => {
+      if (currentTick >= stats.start && currentTick <= stats.end) {
+        activeCount++;
+        activeRequestsList.push(
+          `${stats.label}${stats.key ? ` (Key: ${stats.key})` : ""}`,
+        );
+
+        if (stats.isWaiting) {
+          pendingCount++;
+          queuedRequests.push(
+            `${stats.label}${stats.key ? ` (Key: ${stats.key})` : ""}`,
+          );
+        }
+        if (stats.hasError) {
+          errorRequests.push(
+            `${stats.label}: ${stats.errorMsg || "Error occurred"}`,
+          );
+        }
+        if (stats.hasWarning && !stats.hasError) {
+          warningRequests.push(
+            `${stats.label}: ${stats.warningMsg || "Warning occurred"}`,
+          );
+        }
+      } else if (currentTick > stats.end) {
+        completedCount++;
+      }
+    });
+
+    return {
+      totalRequests: requestStats.size,
+      activeCount,
+      completedCount,
+      pendingCount,
+      activeRequestsList,
+      queuedRequests,
+      errorRequests,
+      warningRequests,
+      currentTick,
+    };
+  }, [simulationFrames, currentFrameGroup]);
+
   // Dynamically calculate storage files at the current frame index!
   const storageFilesByBucket = useMemo(() => {
     const filesMap: Record<
@@ -2310,6 +2420,182 @@ function WorkspaceInner() {
                 color="rgba(148,163,184,0.15)"
               />
             </ReactFlow>
+
+            {/* System Health & Load Monitor Overlay */}
+            {systemMetrics && (
+              showMetrics ? (
+                <div className="absolute top-16 left-4 z-10 w-72 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md shadow-lg p-3 flex flex-col gap-2.5 font-sans select-none pointer-events-auto">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-1.5">
+                      <span className="relative flex h-2 w-2">
+                        <span
+                          className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                            systemMetrics.errorRequests.length > 0
+                              ? "bg-rose-400"
+                              : systemMetrics.warningRequests?.length > 0
+                              ? "bg-amber-400"
+                              : "bg-emerald-400"
+                          }`}
+                        ></span>
+                        <span
+                          className={`relative inline-flex rounded-full h-2 w-2 ${
+                            systemMetrics.errorRequests.length > 0
+                              ? "bg-rose-500"
+                              : systemMetrics.warningRequests?.length > 0
+                              ? "bg-amber-500"
+                              : "bg-emerald-500"
+                          }`}
+                        ></span>
+                      </span>
+                      <h3 className="text-[10px] font-bold text-[color:var(--foreground)] tracking-tight uppercase">
+                        System Health & Load
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-mono text-[color:var(--foreground)]/45">
+                        t={systemMetrics.currentTick}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowMetrics(false)}
+                        className="text-xs text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)]/70 transition p-1 hover:bg-[var(--surface-muted)] rounded cursor-pointer leading-none flex items-center justify-center w-5 h-5 border border-transparent"
+                        title="Collapse Overlay"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5 text-center">
+                    <div className="bg-[var(--surface-muted)]/50 p-1.5 rounded-xl border border-[var(--border)]/35">
+                      <p className="text-[8px] uppercase font-semibold text-[color:var(--foreground)]/40 tracking-wider">
+                        In-Flight Req
+                      </p>
+                      <p className="text-xs font-bold text-[color:var(--foreground)] mt-0.5">
+                        {systemMetrics.activeCount} / {systemMetrics.totalRequests}
+                      </p>
+                    </div>
+                    <div
+                      className={`p-1.5 rounded-xl border ${
+                        systemMetrics.pendingCount > 0
+                          ? "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                          : "bg-[var(--surface-muted)]/50 border-[var(--border)]/35 text-[color:var(--foreground)]"
+                      }`}
+                    >
+                      <p
+                        className={`text-[8px] uppercase font-semibold tracking-wider ${
+                          systemMetrics.pendingCount > 0
+                            ? "text-rose-400/80"
+                            : "text-[color:var(--foreground)]/40"
+                        }`}
+                      >
+                        Queue Size
+                      </p>
+                      <p className="text-xs font-bold mt-0.5">
+                        {systemMetrics.pendingCount}
+                      </p>
+                    </div>
+                  </div>
+
+                  {systemMetrics.queuedRequests.length > 0 && (
+                    <div className="flex flex-col gap-1 rounded-xl bg-rose-500/5 border border-rose-500/15 p-2">
+                      <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
+                        <span>⏳</span> Bottleneck: Database Wait
+                      </p>
+                      <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
+                        {systemMetrics.queuedRequests.map(
+                          (req: string, idx: number) => (
+                            <p
+                              key={idx}
+                              className="text-[9px] font-mono text-rose-300/90 leading-tight"
+                            >
+                              • {req} queued
+                            </p>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {systemMetrics.errorRequests.length > 0 && (
+                    <div className="flex flex-col gap-1 rounded-xl bg-rose-500/10 border border-rose-500/20 p-2">
+                      <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
+                        <span>❌</span> Failures Detected
+                      </p>
+                      <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
+                        {systemMetrics.errorRequests.map((err: string, idx: number) => (
+                          <p
+                            key={idx}
+                            className="text-[9px] font-mono text-rose-200/90 leading-tight"
+                          >
+                            • {err}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {systemMetrics.warningRequests && systemMetrics.warningRequests.length > 0 && (
+                    <div className="flex flex-col gap-1 rounded-xl bg-amber-500/10 border border-amber-500/20 p-2">
+                      <p className="text-[8px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1">
+                        <span>⚠️</span> Warnings Detected
+                      </p>
+                      <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
+                        {systemMetrics.warningRequests.map((warn: string, idx: number) => (
+                          <p
+                            key={idx}
+                            className="text-[9px] font-mono text-amber-200/90 leading-tight"
+                          >
+                            • {warn}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {systemMetrics.activeCount > 0 &&
+                    systemMetrics.queuedRequests.length === 0 &&
+                    systemMetrics.errorRequests.length === 0 &&
+                    (!systemMetrics.warningRequests || systemMetrics.warningRequests.length === 0) && (
+                      <div className="flex items-center gap-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/15 p-1.5 text-emerald-400">
+                        <span className="text-xs">⚡</span>
+                        <span className="text-[8px] font-bold uppercase tracking-wider">
+                          Processing requests smoothly
+                        </span>
+                      </div>
+                    )}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowMetrics(true)}
+                  className="absolute top-16 left-4 z-10 rounded-full border border-[var(--border)] bg-[var(--surface)]/90 hover:bg-[var(--surface-muted)] hover:border-[var(--border)]/80 text-[10px] font-bold text-[color:var(--foreground)]/80 transition px-3 py-1.5 flex items-center gap-1.5 shadow-md cursor-pointer pointer-events-auto"
+                  title="Expand Health Overlay"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span
+                      className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                        systemMetrics.errorRequests.length > 0
+                          ? "bg-rose-400"
+                          : systemMetrics.warningRequests?.length > 0
+                          ? "bg-amber-400"
+                          : "bg-emerald-400"
+                      }`}
+                    ></span>
+                    <span
+                      className={`relative inline-flex rounded-full h-2 w-2 ${
+                        systemMetrics.errorRequests.length > 0
+                          ? "bg-rose-500"
+                          : systemMetrics.warningRequests?.length > 0
+                          ? "bg-amber-500"
+                          : "bg-emerald-500"
+                      }`}
+                    ></span>
+                  </span>
+                  <span>⚡ Health & Load</span>
+                </button>
+              )
+            )}
           </div>
 
           {/* Floating Warning Message */}
@@ -2405,263 +2691,231 @@ function WorkspaceInner() {
                     <div className="h-px bg-[var(--border)]/70" />
 
                     <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Simulated Requests
-                      </label>
+                      {(() => {
+                        const requests = nodeConfigs[selectedNode.id]?.requests || [
+                          {
+                            endpoint: nodeConfigs[selectedNode.id]?.endpoint || "/api/v1/posts",
+                            method: nodeConfigs[selectedNode.id]?.method || "GET",
+                            lookupKey: nodeConfigs[selectedNode.id]?.lookupKey || "rohan",
+                            fileName: nodeConfigs[selectedNode.id]?.fileName || "file.png",
+                            isThereFileToUpload: nodeConfigs[selectedNode.id]?.isThereFileToUpload !== false,
+                            targetBucket: nodeConfigs[selectedNode.id]?.targetBucket || "media-uploads",
+                          },
+                        ];
+                        const activeIdx = Math.max(0, Math.min(activeReqIdx, requests.length - 1));
+                        const activeReq = requests[activeIdx];
 
-                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
-                        {(
-                          nodeConfigs[selectedNode.id]?.requests || [
-                            {
-                              endpoint:
-                                nodeConfigs[selectedNode.id]?.endpoint ||
-                                "/api/v1/posts",
-                              method:
-                                nodeConfigs[selectedNode.id]?.method || "GET",
-                              lookupKey:
-                                nodeConfigs[selectedNode.id]?.lookupKey ||
-                                "rohan",
-                              fileName:
-                                nodeConfigs[selectedNode.id]?.fileName ||
-                                "file.png",
-                              isThereFileToUpload:
-                                nodeConfigs[selectedNode.id]
-                                  ?.isThereFileToUpload !== false,
-                            },
-                          ]
-                        ).map((req: any, idx: number) => (
-                          <div
-                            key={idx}
-                            className="border border-[var(--border)] rounded-lg p-2 bg-[var(--surface)]/50 space-y-1.5 relative group/req"
-                          >
-                            <button
-                              onClick={() => {
-                                const currentRequests = nodeConfigs[
-                                  selectedNode.id
-                                ]?.requests || [
-                                  {
-                                    endpoint:
-                                      nodeConfigs[selectedNode.id]?.endpoint ||
-                                      "/api/v1/posts",
-                                    method:
-                                      nodeConfigs[selectedNode.id]?.method ||
-                                      "GET",
-                                    lookupKey:
-                                      nodeConfigs[selectedNode.id]?.lookupKey ||
-                                      "rohan",
-                                    fileName:
-                                      nodeConfigs[selectedNode.id]?.fileName ||
-                                      "file.png",
-                                    isThereFileToUpload:
-                                      nodeConfigs[selectedNode.id]
-                                        ?.isThereFileToUpload !== false,
-                                  },
-                                ];
-                                if (currentRequests.length <= 1) return;
-                                const nextRequests = currentRequests.filter(
-                                  (_: any, i: number) => i !== idx,
-                                );
-                                updateNodeConfig(selectedNode.id, {
-                                  requests: nextRequests,
-                                });
-                              }}
-                              className="absolute top-1 right-1 text-rose-500 hover:text-rose-600 text-xs font-bold px-1 cursor-pointer opacity-40 group-hover/req:opacity-100 transition"
-                              title="Delete Request"
-                            >
-                              ×
-                            </button>
+                        return (
+                          <div className="space-y-3">
+                            {/* Horizontal Tabs */}
+                            <div className="flex flex-wrap gap-1 border-b border-[var(--border)]/50 pb-1 items-center">
+                              {requests.map((_: any, idx: number) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => setActiveReqIdx(idx)}
+                                  className={`text-[10px] px-2.5 py-1 rounded-t-md font-medium transition cursor-pointer border-t border-x ${
+                                    idx === activeIdx
+                                      ? "bg-[var(--surface-muted)] border-[var(--border)] text-violet-400 font-bold -mb-[5px] pb-[5px]"
+                                      : "border-transparent text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]/50"
+                                  }`}
+                                >
+                                  Req #{idx + 1}
+                                </button>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nextReqs = [
+                                    ...requests,
+                                    {
+                                      endpoint: "/api/v1/posts",
+                                      method: "GET",
+                                      lookupKey: `key-${requests.length + 1}`,
+                                      fileName: `file-${requests.length + 1}.png`,
+                                      isThereFileToUpload: true,
+                                      targetBucket: "media-uploads",
+                                    },
+                                  ];
+                                  updateNodeConfig(selectedNode.id, {
+                                    requests: nextReqs,
+                                  });
+                                  setActiveReqIdx(nextReqs.length - 1);
+                                }}
+                                className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer ml-auto"
+                              >
+                                + Add
+                              </button>
+                            </div>
 
-                            <p className="text-[9px] font-bold text-violet-400">
-                              Request #{idx + 1}
-                            </p>
-
-                            {!nodeConfigs[selectedNode.id]?.valetKeyFlow ? (
-                              <div className="space-y-1.5">
-                                <div className="flex gap-1.5">
-                                  <div className="w-[70px] shrink-0">
-                                    <label className="text-[8px] text-[color:var(--foreground)]/50 block">
-                                      Method
-                                    </label>
-                                    <select
-                                      value={req.method || "GET"}
-                                      onChange={(e) => {
-                                        const currentRequests = [
-                                          ...(nodeConfigs[selectedNode.id]
-                                            ?.requests || [req]),
-                                        ];
-                                        currentRequests[idx].method =
-                                          e.target.value;
-                                        updateNodeConfig(selectedNode.id, {
-                                          requests: currentRequests,
-                                        });
-                                      }}
-                                      className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5 text-xs font-mono outline-none focus:border-violet-500 cursor-pointer"
-                                    >
-                                      <option value="GET">GET</option>
-                                      <option value="POST">POST</option>
-                                      <option value="PUT">PUT</option>
-                                      <option value="DELETE">DELETE</option>
-                                      <option value="PATCH">PATCH</option>
-                                    </select>
-                                  </div>
-                                  <div className="flex-1">
-                                    <label className="text-[8px] text-[color:var(--foreground)]/50 block">
-                                      Path
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={req.endpoint}
-                                      onChange={(e) => {
-                                        const currentRequests = [
-                                          ...(nodeConfigs[selectedNode.id]
-                                            ?.requests || [req]),
-                                        ];
-                                        currentRequests[idx].endpoint =
-                                          e.target.value;
-                                        updateNodeConfig(selectedNode.id, {
-                                          requests: currentRequests,
-                                        });
-                                      }}
-                                      className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500"
-                                    />
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="text-[8px] text-[color:var(--foreground)]/50 block">
-                                    Key
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={req.lookupKey}
-                                    onChange={(e) => {
-                                      const currentRequests = [
-                                        ...(nodeConfigs[selectedNode.id]
-                                          ?.requests || [req]),
-                                      ];
-                                      currentRequests[idx].lookupKey =
-                                        e.target.value;
+                            {activeReq ? (
+                              <div className="border border-[var(--border)] rounded-lg p-2 bg-[var(--surface)]/50 space-y-1.5 relative group/req mt-2">
+                                {requests.length > 1 && (
+                                  <button
+                                    onClick={() => {
+                                      const nextRequests = requests.filter(
+                                        (_: any, i: number) => i !== activeIdx,
+                                      );
                                       updateNodeConfig(selectedNode.id, {
-                                        requests: currentRequests,
+                                        requests: nextRequests,
                                       });
+                                      setActiveReqIdx(Math.max(0, activeIdx - 1));
                                     }}
-                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500"
-                                  />
-                                </div>
+                                    className="absolute top-1 right-2 text-rose-500 hover:text-rose-600 text-xs font-bold cursor-pointer"
+                                    title="Delete Request"
+                                  >
+                                    Remove ×
+                                  </button>
+                                )}
+
+                                <p className="text-[9px] font-bold text-violet-400">
+                                  Editing Request #{activeIdx + 1}
+                                </p>
+
+                                {!nodeConfigs[selectedNode.id]?.valetKeyFlow ? (
+                                  <div className="space-y-1.5">
+                                    <div className="flex gap-1.5">
+                                      <div className="w-[70px] shrink-0">
+                                        <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                          Method
+                                        </label>
+                                        <select
+                                          value={activeReq.method || "GET"}
+                                          onChange={(e) => {
+                                            const currentRequests = [...requests];
+                                            currentRequests[activeIdx] = {
+                                              ...currentRequests[activeIdx],
+                                              method: e.target.value,
+                                            };
+                                            updateNodeConfig(selectedNode.id, {
+                                              requests: currentRequests,
+                                            });
+                                          }}
+                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5 text-xs font-mono outline-none focus:border-violet-500 cursor-pointer text-[color:var(--foreground)]"
+                                        >
+                                          <option value="GET">GET</option>
+                                          <option value="POST">POST</option>
+                                          <option value="PUT">PUT</option>
+                                          <option value="DELETE">DELETE</option>
+                                          <option value="PATCH">PATCH</option>
+                                        </select>
+                                      </div>
+                                      <div className="flex-1">
+                                        <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                          Path
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={activeReq.endpoint}
+                                          onChange={(e) => {
+                                            const currentRequests = [...requests];
+                                            currentRequests[activeIdx] = {
+                                              ...currentRequests[activeIdx],
+                                              endpoint: e.target.value,
+                                            };
+                                            updateNodeConfig(selectedNode.id, {
+                                              requests: currentRequests,
+                                            });
+                                          }}
+                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                        Key
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={activeReq.lookupKey}
+                                        onChange={(e) => {
+                                          const currentRequests = [...requests];
+                                          currentRequests[activeIdx] = {
+                                            ...currentRequests[activeIdx],
+                                            lookupKey: e.target.value,
+                                          };
+                                          updateNodeConfig(selectedNode.id, {
+                                            requests: currentRequests,
+                                          });
+                                        }}
+                                        className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
+                                      />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-1.5">
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                      <div>
+                                        <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                          Upload File
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={activeReq.fileName}
+                                          onChange={(e) => {
+                                            const currentRequests = [...requests];
+                                            currentRequests[activeIdx] = {
+                                              ...currentRequests[activeIdx],
+                                              fileName: e.target.value,
+                                            };
+                                            updateNodeConfig(selectedNode.id, {
+                                              requests: currentRequests,
+                                            });
+                                          }}
+                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                          Target Bucket
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={activeReq.targetBucket || "media-uploads"}
+                                          onChange={(e) => {
+                                            const currentRequests = [...requests];
+                                            currentRequests[activeIdx] = {
+                                              ...currentRequests[activeIdx],
+                                              targetBucket: e.target.value,
+                                            };
+                                            updateNodeConfig(selectedNode.id, {
+                                              requests: currentRequests,
+                                            });
+                                          }}
+                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
+                                          placeholder="media-uploads"
+                                        />
+                                      </div>
+                                    </div>
+                                    <label className="flex items-center gap-1 text-[9px] text-[color:var(--foreground)]/80 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={activeReq.isThereFileToUpload}
+                                        onChange={(e) => {
+                                          const currentRequests = [...requests];
+                                          currentRequests[activeIdx] = {
+                                            ...currentRequests[activeIdx],
+                                            isThereFileToUpload: e.target.checked,
+                                          };
+                                          updateNodeConfig(selectedNode.id, {
+                                            requests: currentRequests,
+                                          });
+                                        }}
+                                        className="accent-violet-500"
+                                      />
+                                      <span>Attach File Payload</span>
+                                    </label>
+                                  </div>
+                                )}
                               </div>
                             ) : (
-                              <div className="space-y-1.5">
-                                <div className="grid grid-cols-2 gap-1.5">
-                                  <div>
-                                    <label className="text-[8px] text-[color:var(--foreground)]/50 block">
-                                      Upload File
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={req.fileName}
-                                      onChange={(e) => {
-                                        const currentRequests = [
-                                          ...(nodeConfigs[selectedNode.id]
-                                            ?.requests || [req]),
-                                        ];
-                                        currentRequests[idx].fileName =
-                                          e.target.value;
-                                        updateNodeConfig(selectedNode.id, {
-                                          requests: currentRequests,
-                                        });
-                                      }}
-                                      className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="text-[8px] text-[color:var(--foreground)]/50 block">
-                                      Target Bucket
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={
-                                        req.targetBucket || "media-uploads"
-                                      }
-                                      onChange={(e) => {
-                                        const currentRequests = [
-                                          ...(nodeConfigs[selectedNode.id]
-                                            ?.requests || [req]),
-                                        ];
-                                        currentRequests[idx].targetBucket =
-                                          e.target.value;
-                                        updateNodeConfig(selectedNode.id, {
-                                          requests: currentRequests,
-                                        });
-                                      }}
-                                      className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500"
-                                      placeholder="media-uploads"
-                                    />
-                                  </div>
-                                </div>
-                                <label className="flex items-center gap-1 text-[9px] text-[color:var(--foreground)]/80 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    checked={req.isThereFileToUpload}
-                                    onChange={(e) => {
-                                      const currentRequests = [
-                                        ...(nodeConfigs[selectedNode.id]
-                                          ?.requests || [req]),
-                                      ];
-                                      currentRequests[idx].isThereFileToUpload =
-                                        e.target.checked;
-                                      updateNodeConfig(selectedNode.id, {
-                                        requests: currentRequests,
-                                      });
-                                    }}
-                                    className="accent-violet-500"
-                                  />
-                                  <span>Attach File Payload</span>
-                                </label>
+                              <div className="text-[10px] text-[color:var(--foreground)]/50 italic py-4 text-center">
+                                No requests configured. Click "+ Add" to add one.
                               </div>
                             )}
                           </div>
-                        ))}
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          const currentRequests = nodeConfigs[selectedNode.id]
-                            ?.requests || [
-                            {
-                              endpoint:
-                                nodeConfigs[selectedNode.id]?.endpoint ||
-                                "/api/v1/posts",
-                              lookupKey:
-                                nodeConfigs[selectedNode.id]?.lookupKey ||
-                                "rohan",
-                              fileName:
-                                nodeConfigs[selectedNode.id]?.fileName ||
-                                "file.png",
-                              isThereFileToUpload:
-                                nodeConfigs[selectedNode.id]
-                                  ?.isThereFileToUpload !== false,
-                              targetBucket:
-                                nodeConfigs[selectedNode.id]?.targetBucket ||
-                                "media-uploads",
-                            },
-                          ];
-                          const nextRequests = [
-                            ...currentRequests,
-                            {
-                              endpoint: "/api/v1/posts",
-                              lookupKey: `key-${currentRequests.length + 1}`,
-                              fileName: `file-${currentRequests.length + 1}.png`,
-                              isThereFileToUpload: true,
-                              targetBucket: "media-uploads",
-                            },
-                          ];
-                          updateNodeConfig(selectedNode.id, {
-                            requests: nextRequests,
-                          });
-                        }}
-                        className="w-full mt-2 rounded-lg border border-[var(--border)] py-1 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
-                      >
-                        + Add Request
-                      </button>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
