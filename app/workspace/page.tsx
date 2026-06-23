@@ -956,7 +956,7 @@ function DebugPanel({
   return (
     <div
       ref={containerRef}
-      className="font-mono text-xs space-y-1.5 max-h-40 overflow-y-auto p-1 scroll-smooth"
+      className="font-mono text-xs space-y-1.5 max-h-40 overflow-y-auto p-1 scroll-smooth scrollbar-thin"
     >
       {currentFrames.map((frame, idx) => {
         const formatted = getFormattedLogText(frame);
@@ -1042,6 +1042,10 @@ function WorkspaceInner() {
   );
   const [showMetrics, setShowMetrics] = useState(true);
   const [activeReqIdx, setActiveReqIdx] = useState(0);
+
+  // Terminal Panel height state for bottom docked resizable view
+  const [panelHeight, setPanelHeight] = useState(220);
+  const [isDraggingTerminal, setIsDraggingTerminal] = useState(false);
 
   // Floating Panel Visibility States
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -1138,6 +1142,47 @@ function WorkspaceInner() {
       window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isResizingSidebar]);
+
+  // Terminal Panel height row resize handler (similar to scenarios/ academy pages)
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingTerminal) return;
+
+      const container = document.querySelector(
+        "[data-resizable-container]",
+      ) as HTMLElement;
+      if (!container) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const newHeight = containerRect.bottom - e.clientY;
+
+      // Min height 100px, max 80% of container
+      const minHeight = 100;
+      const maxHeight = containerRect.height * 0.8;
+
+      if (newHeight >= minHeight && newHeight <= maxHeight) {
+        setPanelHeight(newHeight);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingTerminal(false);
+    };
+
+    if (isDraggingTerminal) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "none";
+      document.body.style.cursor = "row-resize";
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "auto";
+      document.body.style.cursor = "auto";
+    };
+  }, [isDraggingTerminal]);
 
   const filteredComponents = useMemo(() => {
     return COMPONENTS_LIBRARY.filter(
@@ -2370,7 +2415,7 @@ function WorkspaceInner() {
         </aside>
 
         {/* Right Canvas Area (Fills the rest of screen) */}
-        <div className="flex-1 h-full min-w-0 relative z-0">
+        <div className="flex-1 h-full min-w-0 flex flex-col relative z-0">
           {/* Mobile Sidebar Hamburger Toggle */}
           <button
             type="button"
@@ -2382,7 +2427,7 @@ function WorkspaceInner() {
           </button>
           {/* Full-Screen React Flow Canvas */}
           <div
-            className={`absolute inset-0 z-0 h-full w-full transition-all duration-150 ${
+            className={`flex-1 min-h-0 relative z-0 w-full transition-all duration-150 ${
               isDragOverCanvas ? "ring-2 ring-inset ring-violet-500/50" : ""
             }`}
             onDrop={handleCanvasDrop}
@@ -4193,115 +4238,127 @@ function WorkspaceInner() {
             </aside>
           )}
 
-          {/* Floating Bottom Timeline & Playback Panel */}
+          {/* Bottom Docked Playback / Timeline Terminal Panel */}
           <div
-            className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-10 w-[92%] max-w-4xl rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-xl shadow-2xl p-4 flex flex-col gap-3 transition-all duration-300 ${selectedNode ? "max-md:hidden" : ""}`}
+            style={{ height: debugEnabled ? `${panelHeight}px` : "auto" }}
+            className={`flex flex-col border-t border-[var(--border)] bg-[var(--surface)]/45 backdrop-blur-xl overflow-hidden shrink-0 z-10 w-full transition-all duration-150 ${selectedNode ? "max-md:hidden" : ""}`}
           >
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div className="flex-1 overflow-x-auto min-w-0">
-                <Controls
-                  isPlaying={isPlaying}
-                  onPlayToggle={() => {
-                    if (simulationFrames.length === 0) {
-                      handleStartSimulation();
-                    } else {
-                      setIsPlaying((prev) => !prev);
-                    }
+            {/* Drag Handle */}
+            {debugEnabled && (
+              <div
+                onMouseDown={() => setIsDraggingTerminal(true)}
+                className="h-1 w-full cursor-row-resize bg-[var(--border)] hover:bg-violet-500/50 transition-colors shrink-0 mb-1"
+                title="Drag to resize terminal panel"
+              />
+            )}
+
+            <div className="p-3 flex-1 flex flex-col gap-3 min-h-0 overflow-y-auto scrollbar-thin">
+              <div className="mx-auto flex w-full max-w-7xl flex-col gap-3">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div className="flex-1 overflow-x-auto min-w-0 scrollbar-thin">
+                    <Controls
+                      isPlaying={isPlaying}
+                      onPlayToggle={() => {
+                        if (simulationFrames.length === 0) {
+                          handleStartSimulation();
+                        } else {
+                          setIsPlaying((prev) => !prev);
+                        }
+                      }}
+                      onPrev={goToPreviousFrame}
+                      onNext={goToNextFrame}
+                      onReset={resetPlayback}
+                      debugEnabled={debugEnabled}
+                      onDebugToggle={() => setDebugEnabled((prev) => !prev)}
+                      speed={speed}
+                      onSpeedChange={setSpeed}
+                      theme={theme}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5 sm:gap-2 self-end md:self-auto shrink-0">
+                    <label
+                      title="Hide response/return packets flowing back"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-violet-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={hideResponse}
+                        onChange={() => setHideResponse((prev) => !prev)}
+                        className="accent-violet-500 cursor-pointer"
+                      />
+                      <span className="group-hover:text-violet-300">
+                        Hide Response
+                      </span>
+                    </label>
+
+                    <label
+                      title="Show parallel requests simultaneously"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-blue-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={parallelResponse}
+                        onChange={() => setParallelResponse((prev) => !prev)}
+                        className="accent-violet-500 cursor-pointer"
+                      />
+                      <span className="group-hover:text-blue-300">Parallel</span>
+                    </label>
+
+                    <label
+                      title="Show detailed logs panel under graph"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-emerald-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={debugEnabled}
+                        onChange={() => setDebugEnabled((prev) => !prev)}
+                        className="accent-violet-500 cursor-pointer"
+                      />
+                      <span className="group-hover:text-emerald-300">
+                        Debug logs
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <Timeline
+                  frameIndex={frameIndex}
+                  frameGroups={frameGroups}
+                  onSeek={(idx) => {
+                    setIsPlaying(false);
+                    setFrameIndex(idx);
                   }}
-                  onPrev={goToPreviousFrame}
-                  onNext={goToNextFrame}
-                  onReset={resetPlayback}
-                  debugEnabled={debugEnabled}
-                  onDebugToggle={() => setDebugEnabled((prev) => !prev)}
-                  speed={speed}
-                  onSpeedChange={setSpeed}
                   theme={theme}
                 />
-              </div>
 
-              <div className="flex items-center gap-1.5 sm:gap-2 self-end md:self-auto shrink-0">
-                <label
-                  title="Hide response/return packets flowing back"
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-violet-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
-                >
-                  <input
-                    type="checkbox"
-                    checked={hideResponse}
-                    onChange={() => setHideResponse((prev) => !prev)}
-                    className="accent-violet-500 cursor-pointer"
-                  />
-                  <span className="group-hover:text-violet-300">
-                    Hide Response
-                  </span>
-                </label>
-
-                <label
-                  title="Show parallel requests simultaneously"
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-blue-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
-                >
-                  <input
-                    type="checkbox"
-                    checked={parallelResponse}
-                    onChange={() => setParallelResponse((prev) => !prev)}
-                    className="accent-violet-500 cursor-pointer"
-                  />
-                  <span className="group-hover:text-blue-300">Parallel</span>
-                </label>
-
-                <label
-                  title="Show detailed logs panel under graph"
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-emerald-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
-                >
-                  <input
-                    type="checkbox"
-                    checked={debugEnabled}
-                    onChange={() => setDebugEnabled((prev) => !prev)}
-                    className="accent-violet-500 cursor-pointer"
-                  />
-                  <span className="group-hover:text-emerald-300">
-                    Debug logs
-                  </span>
-                </label>
+                {debugEnabled && simulationFrames.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="min-h-0 flex-1"
+                  >
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 p-3 mt-1 shadow-inner">
+                      <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/50 mb-2">
+                        Simulation Debug Console
+                      </p>
+                      <DebugPanel
+                        currentFrames={accumulatedFrames}
+                        frameIndex={frameIndex}
+                        theme={theme}
+                      />
+                    </div>
+                  </motion.div>
+                )}
               </div>
             </div>
-
-            <Timeline
-              frameIndex={frameIndex}
-              frameGroups={frameGroups}
-              onSeek={(idx) => {
-                setIsPlaying(false);
-                setFrameIndex(idx);
-              }}
-              theme={theme}
-            />
-
-            {debugEnabled && simulationFrames.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-                className="min-h-0 max-h-48 overflow-y-auto"
-              >
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 p-3 mt-1 shadow-inner">
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/50 mb-2">
-                    Simulation Debug Console
-                  </p>
-                  <DebugPanel
-                    currentFrames={accumulatedFrames}
-                    frameIndex={frameIndex}
-                    theme={theme}
-                  />
-                </div>
-              </motion.div>
-            )}
           </div>
         </div>
 
         {/* Welcome Modal & Template Picker Dialog */}
         {showWelcomeModal && (
           <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-md z-40 flex items-center justify-center p-4">
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto z-50 relative flex flex-col gap-5">
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto scrollbar-thin z-50 relative flex flex-col gap-5">
               <button
                 type="button"
                 onClick={() => setShowWelcomeModal(false)}

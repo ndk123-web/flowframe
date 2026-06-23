@@ -856,15 +856,15 @@ function NodeInspectorPanel({
                       </div>
 
                       {/* Horizontal Tabs */}
-                      <div className="flex flex-wrap gap-1 border-b border-[var(--border)]/50 pb-1 items-center">
+                      <div className="flex items-center gap-1 border-b border-[var(--border)]/50 overflow-x-auto pb-1.5 scrollbar-thin whitespace-nowrap min-w-0">
                         {requests.map((_: any, idx: number) => (
                           <button
                             key={idx}
                             type="button"
                             onClick={() => setActiveReqIdx(idx)}
-                            className={`text-[10px] px-2.5 py-1 rounded-t-md font-medium transition cursor-pointer border-t border-x ${
+                            className={`text-[10px] px-2.5 py-1 rounded-t-md font-medium transition cursor-pointer border-t border-x shrink-0 ${
                               idx === activeIdx
-                                ? "bg-[var(--surface-muted)] border-[var(--border)] text-violet-400 font-bold -mb-[5px] pb-[5px]"
+                                ? "bg-[var(--surface-muted)] border-[var(--border)] text-violet-400 font-bold -mb-[7px] pb-[7px]"
                                 : "border-transparent text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]/50"
                             }`}
                           >
@@ -890,7 +890,7 @@ function NodeInspectorPanel({
                             });
                             setActiveReqIdx(nextReqs.length - 1);
                           }}
-                          className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer ml-auto"
+                          className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer shrink-0 ml-auto"
                         >
                           + Add
                         </button>
