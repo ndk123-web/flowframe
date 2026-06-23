@@ -749,7 +749,7 @@ function Timeline({
         className="w-full accent-violet-500"
       />
 
-      <div className="flex gap-1 overflow-x-auto pb-1">
+      <div className="flex gap-1 overflow-x-auto pb-1 max-h-12 scrollbar-thin">
         {frameGroups.map((group, index) => {
           const isActive = index === frameIndex;
 
@@ -847,7 +847,7 @@ function NodeInspectorPanel({
         <p className={`mt-1 text-xs ${textColor}`}>Type: {role}</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar-thin">
         <div className="space-y-3 px-4 py-3">
           {/* Node Config Options */}
           {nodeConfigs && nodeConfigs[selectedNode.id] && (
@@ -875,15 +875,15 @@ function NodeInspectorPanel({
                       </div>
 
                       {/* Horizontal Tabs */}
-                      <div className="flex flex-wrap gap-1 border-b border-[var(--border)]/50 pb-1 items-center">
+                      <div className="flex items-center gap-1 border-b border-[var(--border)]/50 overflow-x-auto pb-1.5 scrollbar-thin whitespace-nowrap min-w-0">
                         {requests.map((_: any, idx: number) => (
                           <button
                             key={idx}
                             type="button"
                             onClick={() => setActiveReqIdx(idx)}
-                            className={`text-[10px] px-2.5 py-1 rounded-t-md font-medium transition cursor-pointer border-t border-x ${
+                            className={`text-[10px] px-2.5 py-1 rounded-t-md font-medium transition cursor-pointer border-t border-x shrink-0 ${
                               idx === activeIdx
-                                ? "bg-[var(--surface-muted)] border-[var(--border)] text-violet-400 font-bold -mb-[5px] pb-[5px]"
+                                ? "bg-[var(--surface-muted)] border-[var(--border)] text-violet-400 font-bold -mb-[7px] pb-[7px]"
                                 : "border-transparent text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]/50"
                             }`}
                           >
@@ -909,7 +909,7 @@ function NodeInspectorPanel({
                             });
                             setActiveReqIdx(nextReqs.length - 1);
                           }}
-                          className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer ml-auto"
+                          className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer shrink-0 ml-auto"
                         >
                           + Add
                         </button>
@@ -2111,7 +2111,7 @@ function DebugPanel({
   return (
     <div
       ref={containerRef}
-      className="font-mono text-xs space-y-1.5 max-h-64 overflow-y-auto p-1 scroll-smooth"
+      className="font-mono text-xs space-y-1.5 max-h-64 overflow-y-auto p-1 scroll-smooth scrollbar-thin"
     >
       {currentFrames.map((frame, idx) => {
         const formatted = getFormattedLogText(frame);
@@ -3002,7 +3002,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="lg:hidden w-full max-h-52 overflow-y-auto border-t border-[var(--border)] bg-[var(--surface)]/30"
+              className="lg:hidden w-full max-h-52 overflow-y-auto border-t border-[var(--border)] bg-[var(--surface)]/30 scrollbar-thin"
             >
               <NodeInspectorPanel
                 selectedNode={selectedNode}
@@ -3039,11 +3039,11 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2, delay: 0.1 }}
-            className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 py-3"
+            className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 py-3 scrollbar-thin"
           >
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto scrollbar-thin">
                   <Controls
                     isPlaying={isPlaying}
                     onPlayToggle={() => setIsPlaying((prev) => !prev)}
@@ -3081,7 +3081,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="min-h-0 flex-1 overflow-y-auto"
+                  className="min-h-0 flex-1 overflow-y-auto scrollbar-thin"
                 >
                   <div
                     className={`rounded-lg border border-[var(--border)] bg-[var(--surface)]/50 p-3`}
