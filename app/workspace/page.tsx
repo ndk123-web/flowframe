@@ -1033,7 +1033,7 @@ function WorkspaceInner() {
   // Dynamic top-bar configs
   const [hideResponse, setHideResponse] = useState(false);
   const [parallelResponse, setParallelResponse] = useState(false);
-  const [debugEnabled, setDebugEnabled] = useState(false);
+  const [debugEnabled, setDebugEnabled] = useState(true);
 
   // Raw generated simulation frames list
   const [rawSimulationFrames, setRawSimulationFrames] = useState<any[]>([]);
