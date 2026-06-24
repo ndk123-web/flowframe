@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@next/third-parties": "^16.2.9",
+    "@vercel/analytics": "^2.0.1",
     "@xyflow/react": "^12.10.1",
     "framer-motion": "^12.35.1",
     "next": "16.1.6",
