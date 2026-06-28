@@ -15,6 +15,9 @@ import {
   Position,
   MarkerType,
   Handle,
+  NodeResizer,
+  MiniMap,
+  Controls as FlowControls,
   type Node,
   type Edge,
   type EdgeProps,
@@ -42,7 +45,7 @@ import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 
 // Header
 import SiteHeader from "@/components/SiteHeader";
-import { ComponentIcon } from "@/components/ComponentIcons";
+import { ComponentIcon, BrandLogo, CustomDropdown, NODE_FLAVORS, getDefaultFlavor } from "@/components/ComponentIcons";
 
 type Theme = "light" | "dark";
 
@@ -145,7 +148,7 @@ const TEMPLATES = {
       {
         id: "client-1",
         type: "customNode",
-        position: { x: 40, y: 190 },
+        position: { x: 40, y: 220 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "Client", type: "client" },
@@ -153,7 +156,7 @@ const TEMPLATES = {
       {
         id: "lb-1",
         type: "customNode",
-        position: { x: 260, y: 190 },
+        position: { x: 320, y: 220 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "Load Balancer", type: "load-balancer" },
@@ -161,7 +164,7 @@ const TEMPLATES = {
       {
         id: "server-1",
         type: "customNode",
-        position: { x: 500, y: 40 },
+        position: { x: 620, y: 40 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "Server 1", type: "server" },
@@ -169,7 +172,7 @@ const TEMPLATES = {
       {
         id: "server-2",
         type: "customNode",
-        position: { x: 500, y: 190 },
+        position: { x: 620, y: 220 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "Server 2", type: "server" },
@@ -177,7 +180,7 @@ const TEMPLATES = {
       {
         id: "server-3",
         type: "customNode",
-        position: { x: 500, y: 340 },
+        position: { x: 620, y: 400 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "Server 3", type: "server" },
@@ -215,7 +218,7 @@ const TEMPLATES = {
       {
         id: "client-1",
         type: "customNode",
-        position: { x: 40, y: 190 },
+        position: { x: 40, y: 220 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "Client", type: "client" },
@@ -223,7 +226,7 @@ const TEMPLATES = {
       {
         id: "server-1",
         type: "customNode",
-        position: { x: 260, y: 190 },
+        position: { x: 320, y: 220 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "Server", type: "server" },
@@ -231,7 +234,7 @@ const TEMPLATES = {
       {
         id: "redis-1",
         type: "customNode",
-        position: { x: 520, y: 80 },
+        position: { x: 620, y: 80 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "Redis Cache", type: "redis" },
@@ -239,7 +242,7 @@ const TEMPLATES = {
       {
         id: "postgres-1",
         type: "customNode",
-        position: { x: 520, y: 280 },
+        position: { x: 620, y: 340 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "Postgres Database", type: "postgres" },
@@ -271,7 +274,7 @@ const TEMPLATES = {
       {
         id: "client-1",
         type: "customNode",
-        position: { x: 40, y: 190 },
+        position: { x: 40, y: 220 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "Client", type: "client" },
@@ -279,7 +282,7 @@ const TEMPLATES = {
       {
         id: "server-1",
         type: "customNode",
-        position: { x: 300, y: 70 },
+        position: { x: 360, y: 80 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "Upload Server", type: "server" },
@@ -287,7 +290,7 @@ const TEMPLATES = {
       {
         id: "storage-1",
         type: "customNode",
-        position: { x: 300, y: 290 },
+        position: { x: 360, y: 340 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "Cloud Storage", type: "storage" },
@@ -313,7 +316,7 @@ const TEMPLATES = {
       {
         id: "client-1",
         type: "customNode",
-        position: { x: 40, y: 190 },
+        position: { x: 40, y: 220 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "Client", type: "client" },
@@ -321,7 +324,7 @@ const TEMPLATES = {
       {
         id: "gateway-1",
         type: "customNode",
-        position: { x: 260, y: 190 },
+        position: { x: 320, y: 220 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "API Gateway", type: "api-gateway" },
@@ -329,7 +332,7 @@ const TEMPLATES = {
       {
         id: "server-1",
         type: "customNode",
-        position: { x: 500, y: 80 },
+        position: { x: 620, y: 80 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "Post Server", type: "server" },
@@ -337,7 +340,7 @@ const TEMPLATES = {
       {
         id: "server-2",
         type: "customNode",
-        position: { x: 500, y: 280 },
+        position: { x: 620, y: 340 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: { label: "User Server", type: "server" },
@@ -463,7 +466,21 @@ function CustomNode({ id, data, selected }: any) {
     cdn: "border-l-teal-500 shadow-teal-500/10",
   };
 
+  // Category-colored selection ring
+  const selectionRingColors: any = {
+    client: "ring-violet-500/70 shadow-violet-500/25",
+    "api-gateway": "ring-fuchsia-500/70 shadow-fuchsia-500/25",
+    "load-balancer": "ring-blue-500/70 shadow-blue-500/25",
+    server: "ring-emerald-500/70 shadow-emerald-500/25",
+    redis: "ring-amber-500/70 shadow-amber-500/25",
+    postgres: "ring-cyan-500/70 shadow-cyan-500/25",
+    storage: "ring-yellow-500/70 shadow-yellow-500/25",
+    dns: "ring-indigo-500/70 shadow-indigo-500/25",
+    cdn: "ring-teal-500/70 shadow-teal-500/25",
+  };
+
   const colorClass = typeColors[data.type] || "border-l-slate-400";
+  const ringClass = selectionRingColors[data.type] || "ring-violet-500/70 shadow-violet-500/25";
 
   // Flow rules
   const hasTarget = data.type !== "client";
@@ -472,39 +489,71 @@ function CustomNode({ id, data, selected }: any) {
     data.type !== "postgres" &&
     data.type !== "storage";
 
+  // Flavor badge — find the active flavor config for this node type
+  const flavors = NODE_FLAVORS[data.type as string];
+  const activeFlavor = flavors
+    ? (flavors.find((f) => f.id === data.flavor) ?? flavors[0])
+    : null;
+
   return (
     <div
-      className={`relative rounded-xl border border-[var(--border)] border-l-4 bg-[var(--surface)] px-4 py-3 shadow-md transition-all duration-300 ${colorClass} ${
+      className={`relative rounded-xl border border-[var(--border)] border-l-4 bg-[var(--surface)] px-5 py-4 shadow-md transition-all duration-300 w-full h-full flex items-center ${colorClass} ${
         selected
-          ? "ring-2 ring-violet-500 scale-105"
-          : "hover:border-[var(--border)]/80"
-      } min-w-[145px]`}
+          ? `ring-2 ${ringClass} scale-[1.03] shadow-lg`
+          : "hover:border-[var(--border)]/80 hover:shadow-lg"
+      }`}
+      style={{ minWidth: 210 }}
     >
+      {/* Dynamic Node Resizer — visible only when selected */}
+      <NodeResizer
+        isVisible={selected}
+        minWidth={180}
+        minHeight={50}
+        lineStyle={{ borderColor: "rgba(139, 92, 246, 0.35)", borderWidth: 1 }}
+        handleStyle={{
+          width: 8,
+          height: 8,
+          borderRadius: 2,
+          backgroundColor: "#8b5cf6",
+          border: "2px solid rgba(255,255,255,0.3)",
+        }}
+      />
+
       {hasTarget && (
         <Handle
           type="target"
           position={Position.Left}
-          style={{ background: "#8b5cf6", width: 8, height: 8 }}
+          style={{ background: "#8b5cf6", width: 9, height: 9, border: "2px solid rgba(139,92,246,0.3)" }}
           id="left"
         />
       )}
 
-      <div className="flex items-center gap-2">
-        <ComponentIcon type={data.type} className="w-5 h-5 shrink-0" />
-        <div className="leading-tight">
-          <p className="text-[9px] font-semibold uppercase tracking-wider text-[color:var(--foreground)]/45">
-            {data.type}
-          </p>
-          <p className="text-xs font-bold text-[color:var(--foreground)] truncate max-w-[100px]">
-            {data.label}
-          </p>
+      <div className="flex items-center justify-between gap-3 w-full">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <ComponentIcon type={data.type} className="w-6 h-6 shrink-0 text-[color:var(--foreground)]/70" />
+          <div className="leading-tight min-w-0 flex-1">
+            <p className="text-[13px] font-bold text-[color:var(--foreground)] break-words">
+              {data.label}
+            </p>
+            {activeFlavor && (
+              <p className="text-[10.5px] text-[color:var(--foreground)]/50 font-medium break-words">
+                {activeFlavor.shortLabel}
+              </p>
+            )}
+          </div>
         </div>
+
+        {activeFlavor && (
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[color:var(--foreground)]/5 border border-[var(--border)]/50 shrink-0">
+            <BrandLogo id={activeFlavor.id} className="w-6 h-6" />
+          </div>
+        )}
       </div>
 
       {data.isActive && (
-        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+        <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
+          <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-violet-500"></span>
         </span>
       )}
 
@@ -512,7 +561,7 @@ function CustomNode({ id, data, selected }: any) {
         <Handle
           type="source"
           position={Position.Right}
-          style={{ background: "#8b5cf6", width: 8, height: 8 }}
+          style={{ background: "#8b5cf6", width: 9, height: 9, border: "2px solid rgba(139,92,246,0.3)" }}
           id="right"
         />
       )}
@@ -1620,6 +1669,7 @@ function WorkspaceInner() {
           label,
           type,
           isActive: false,
+          flavor: getDefaultFlavor(type),
         },
       };
 
@@ -2078,6 +2128,11 @@ function WorkspaceInner() {
     [handleStartSimulation],
   );
 
+  // Pane click handler to clear selections
+  const onPaneClick = useCallback(() => {
+    setSelectedNodeId(null);
+  }, []);
+
   // Playback control helpers
   const goToPreviousFrame = () => {
     setIsPlaying(false);
@@ -2454,16 +2509,43 @@ function WorkspaceInner() {
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               onNodeClick={onNodeClick}
+              onPaneClick={onPaneClick}
               fitView
-              fitViewOptions={{ padding: 0.15 }}
+              fitViewOptions={{ padding: 0.2 }}
+              snapToGrid
+              snapGrid={[20, 20]}
+              minZoom={0.2}
+              maxZoom={2.5}
               style={{ width: "100%", height: "100%" }}
             >
               <Background
                 variant={BackgroundVariant.Dots}
-                gap={16}
-                size={0.7}
-                color="rgba(148,163,184,0.15)"
+                gap={20}
+                size={0.8}
+                color="rgba(148,163,184,0.18)"
               />
+              {/* <MiniMap
+                nodeStrokeWidth={3}
+                zoomable
+                pannable
+                style={{
+                  backgroundColor: "rgba(15, 23, 42, 0.6)",
+                  border: "1px solid rgba(148, 163, 184, 0.15)",
+                  borderRadius: "12px",
+                  backdropFilter: "blur(8px)",
+                }}
+                maskColor="rgba(0, 0, 0, 0.35)"
+              /> */}
+              {/* <FlowControls
+                showInteractive={false}
+                style={{
+                  borderRadius: "12px",
+                  border: "1px solid rgba(148, 163, 184, 0.15)",
+                  backgroundColor: "rgba(15, 23, 42, 0.7)",
+                  backdropFilter: "blur(8px)",
+                  boxShadow: "0 4px 24px rgba(0,0,0,0.2)",
+                }}
+              /> */}
             </ReactFlow>
 
             {/* System Health & Load Monitor Overlay */}
@@ -2678,7 +2760,10 @@ function WorkspaceInner() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setSelectedNodeId(null)}
+                  onClick={() => {
+                    setSelectedNodeId(null);
+                    setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+                  }}
                   className="text-xs text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] h-6 w-6 rounded-full hover:bg-[var(--surface-muted)] flex items-center justify-center font-bold transition cursor-pointer"
                 >
                   ×
@@ -2694,6 +2779,7 @@ function WorkspaceInner() {
                   <input
                     type="text"
                     value={(selectedNode.data.label as string) || ""}
+                    maxLength={100}
                     onChange={(e) => {
                       const nextVal = e.target.value;
                       setNodes((nds) =>
@@ -2713,6 +2799,27 @@ function WorkspaceInner() {
                 {/* Client specific configuration */}
                 {selectedNode.data.type === "client" && (
                   <div className="space-y-4">
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Client Type
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
+
                     <p className="text-xs font-semibold text-violet-400 font-mono">
                       Client Settings
                     </p>
@@ -2965,12 +3072,81 @@ function WorkspaceInner() {
                   </div>
                 )}
 
+                {/* Load Balancer Configuration */}
+                {selectedNode.data.type === "load-balancer" && (
+                  <div className="space-y-4">
+                    <p className="text-xs font-semibold text-blue-400 font-mono">
+                      Load Balancer Settings
+                    </p>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Provider / Technology
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                        Balancing Strategy
+                      </label>
+                      <select
+                        value={nodeConfigs[selectedNode.id]?.strategy ?? "ROUND_ROBIN"}
+                        onChange={(e) =>
+                          updateNodeConfig(selectedNode.id, { strategy: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500 cursor-pointer text-[color:var(--foreground)]"
+                      >
+                        <option value="ROUND_ROBIN">Round Robin</option>
+                        <option value="RANDOM">Random Dispatch</option>
+                        <option value="IP_HASH">IP Address Hash</option>
+                        <option value="LEAST_CONNECTIONS">Least Connections</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
                 {/* API Gateway Configuration */}
                 {selectedNode.data.type === "api-gateway" && (
                   <div className="space-y-4">
                     <p className="text-xs font-semibold text-fuchsia-400 font-mono">
                       Gateway Settings
                     </p>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Provider / Technology
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
 
                     <div>
                       <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
@@ -3218,6 +3394,27 @@ function WorkspaceInner() {
                       Redis Cache Memory
                     </p>
 
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Provider / Technology
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
+
                     <div className="space-y-1.5">
                       <p className="text-[9px] text-[color:var(--foreground)]/65">
                         Cached Pairs
@@ -3308,6 +3505,27 @@ function WorkspaceInner() {
                     <p className="text-xs font-semibold text-cyan-400 font-mono">
                       Database Records
                     </p>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Provider / Technology
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
 
                     <div>
                       <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
@@ -3522,6 +3740,27 @@ function WorkspaceInner() {
                         + Add Domain
                       </button>
                     </div>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Provider / Technology
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
 
                     <div className="space-y-3 max-h-80 overflow-y-auto pr-1 scrollbar-thin">
                       {Object.entries(
@@ -3747,6 +3986,27 @@ function WorkspaceInner() {
                     </p>
 
                     <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Provider / Technology
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
+
+                    <div>
                       <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
                         Origin Server / Storage
                       </label>
@@ -3854,6 +4114,28 @@ function WorkspaceInner() {
                     <p className="text-xs font-semibold text-emerald-400 font-mono">
                       Server Settings
                     </p>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Runtime / Technology
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
+
                     <div>
                       <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
                         Connections Capacity
