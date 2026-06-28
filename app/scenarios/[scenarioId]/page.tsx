@@ -13,18 +13,13 @@ import {
   getSmoothStepPath,
   Handle,
   Position,
-  NodeResizer,
-  MiniMap,
-  Controls as FlowControls,
-  useNodesState,
-  useEdgesState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { SimDebug, ScenarioRunOptions } from "@/engine/types";
 import { ALL_SCENARIOS } from "@/scenarios/all";
 import Link from "next/link";
 import SiteHeader from "@/components/SiteHeader";
-import { ComponentIcon, BrandLogo, CustomDropdown, NODE_FLAVORS, getDefaultFlavor } from "@/components/ComponentIcons";
+import { ComponentIcon } from "@/components/ComponentIcons";
 
 type Frame = {
   requestId: string;
@@ -304,35 +299,17 @@ function CustomNode({ id, data, selected }: any) {
     redis: "border-l-amber-500 shadow-amber-500/10",
     postgres: "border-l-cyan-500 shadow-cyan-500/10",
     storage: "border-l-yellow-500 shadow-yellow-500/10",
-    dns: "border-l-indigo-500 shadow-indigo-500/10",
-    cdn: "border-l-teal-500 shadow-teal-500/10",
-  };
-
-  // Category-colored selection ring
-  const selectionRingColors: any = {
-    client: "ring-violet-500/70 shadow-violet-500/25",
-    "api-gateway": "ring-fuchsia-500/70 shadow-fuchsia-500/25",
-    "load-balancer": "ring-blue-500/70 shadow-blue-500/25",
-    server: "ring-emerald-500/70 shadow-emerald-500/25",
-    redis: "ring-amber-500/70 shadow-amber-500/25",
-    postgres: "ring-cyan-500/70 shadow-cyan-500/25",
-    storage: "ring-yellow-500/70 shadow-yellow-500/25",
-    dns: "ring-indigo-500/70 shadow-indigo-500/25",
-    cdn: "ring-teal-500/70 shadow-teal-500/25",
   };
 
   let colorClass = typeColors[data.type] || "border-l-slate-400";
   let borderClass = "border-[var(--border)]";
-  let ringClass = selectionRingColors[data.type] || "ring-violet-500/70 shadow-violet-500/25";
 
   if (data.status === "error") {
     colorClass = "border-l-rose-500 shadow-rose-500/15 bg-rose-500/[0.03]";
     borderClass = "border-rose-500/50";
-    ringClass = "ring-rose-500/70 shadow-rose-500/25";
   } else if (data.status === "warning") {
     colorClass = "border-l-amber-500 shadow-amber-500/15 bg-amber-500/[0.03]";
     borderClass = "border-amber-500/50";
-    ringClass = "ring-amber-500/70 shadow-amber-500/25";
   }
 
   const hasTarget = data.type !== "client";
@@ -341,92 +318,60 @@ function CustomNode({ id, data, selected }: any) {
     data.type !== "postgres" &&
     data.type !== "storage";
 
-  // Flavor badge — find the active flavor config for this node type
-  const flavors = NODE_FLAVORS[data.type as string];
-  const activeFlavor = flavors
-    ? (flavors.find((f) => f.id === data.flavor) ?? flavors[0])
-    : null;
-
   return (
     <div
-      className={`relative rounded-xl border border-l-4 bg-[var(--surface)] px-5 py-4 shadow-md transition-all duration-300 w-full h-full flex flex-col justify-center ${borderClass} ${colorClass} ${
+      className={`relative rounded-xl border border-l-4 bg-[var(--surface)] px-4 py-3 shadow-md transition-all duration-300 ${borderClass} ${colorClass} ${
         selected
-          ? `ring-2 ${ringClass} scale-[1.03] shadow-lg`
-          : "hover:border-[var(--border)]/80 hover:shadow-lg"
-      }`}
-      style={{ minWidth: 210 }}
+          ? "ring-2 ring-violet-500 scale-105"
+          : "hover:border-[var(--border)]/80"
+      } min-w-[145px]`}
     >
-      {/* Dynamic Node Resizer — visible only when selected */}
-      <NodeResizer
-        isVisible={selected}
-        minWidth={180}
-        minHeight={50}
-        lineStyle={{ borderColor: "rgba(139, 92, 246, 0.35)", borderWidth: 1 }}
-        handleStyle={{
-          width: 8,
-          height: 8,
-          borderRadius: 2,
-          backgroundColor: "#8b5cf6",
-          border: "2px solid rgba(255,255,255,0.3)",
-        }}
-      />
-
       {hasTarget && (
         <Handle
           type="target"
           position={Position.Left}
-          style={{ background: "#8b5cf6", width: 9, height: 9, border: "2px solid rgba(139,92,246,0.3)" }}
+          style={{ background: "#8b5cf6", width: 8, height: 8 }}
           id="left"
         />
       )}
 
-      <div className="flex items-center justify-between gap-3 w-full">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <ComponentIcon type={data.type} className="w-6 h-6 shrink-0 text-[color:var(--foreground)]/70" />
-          <div className="leading-tight min-w-0 flex-1">
-            <p className="text-[13px] font-bold text-[color:var(--foreground)] break-words">
-              {data.label}
+      <div className="flex items-center gap-2">
+        <ComponentIcon type={data.type} className="w-5 h-5 shrink-0" />
+        <div className="leading-tight">
+          <p className="text-[9px] font-semibold uppercase tracking-wider text-[color:var(--foreground)]/45">
+            {data.type}
+          </p>
+          <p className="text-xs font-bold text-[color:var(--foreground)] truncate max-w-[100px]">
+            {data.label}
+          </p>
+          {data.status === "error" && (
+            <p className="text-[9px] font-bold text-rose-400 mt-0.5 animate-pulse flex items-center gap-0.5">
+              <span>⚠️</span>{" "}
+              <span
+                className="truncate max-w-[95px]"
+                title={data.statusMessage}
+              >
+                {data.statusMessage || "Error"}
+              </span>
             </p>
-            {activeFlavor && (
-              <p className="text-[10.5px] text-[color:var(--foreground)]/50 font-medium break-words">
-                {activeFlavor.shortLabel}
-              </p>
-            )}
-            {data.status === "error" && (
-              <p className="text-[9px] font-bold text-rose-400 mt-0.5 animate-pulse flex items-center gap-0.5">
-                <span>⚠️</span>{" "}
-                <span
-                  className="truncate max-w-[120px]"
-                  title={data.statusMessage}
-                >
-                  {data.statusMessage || "Error"}
-                </span>
-              </p>
-            )}
-            {data.status === "warning" && (
-              <p className="text-[9px] font-bold text-amber-400 mt-0.5 flex items-center gap-0.5">
-                <span>⚠️</span>{" "}
-                <span
-                  className="truncate max-w-[120px]"
-                  title={data.statusMessage}
-                >
-                  {data.statusMessage || "Warning"}
-                </span>
-              </p>
-            )}
-          </div>
+          )}
+          {data.status === "warning" && (
+            <p className="text-[9px] font-bold text-amber-400 mt-0.5 flex items-center gap-0.5">
+              <span>⚠️</span>{" "}
+              <span
+                className="truncate max-w-[95px]"
+                title={data.statusMessage}
+              >
+                {data.statusMessage || "Warning"}
+              </span>
+            </p>
+          )}
         </div>
-
-        {activeFlavor && (
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[color:var(--foreground)]/5 border border-[var(--border)]/50 shrink-0">
-            <BrandLogo id={activeFlavor.id} className="w-6 h-6" />
-          </div>
-        )}
       </div>
 
       {data.poolInfo && (
-        <div className="w-full mt-2 pt-1 border-t border-[var(--border)]/35">
-          <div className="flex justify-between text-[8px] font-bold text-cyan-400 leading-none">
+        <div className="mt-2 pt-1.5 border-t border-[var(--border)]/35">
+          <div className="flex justify-between text-[8px] font-bold text-cyan-400">
             <span>
               CONNS: {data.poolInfo.activeConnections}/{data.poolInfo.poolSize}
             </span>
@@ -449,7 +394,7 @@ function CustomNode({ id, data, selected }: any) {
       {(data.isActive ||
         data.status === "error" ||
         data.status === "warning") && (
-        <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5">
+        <span className="absolute -top-1 -right-1 flex h-3 w-3">
           <span
             className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
               data.status === "error"
@@ -460,7 +405,7 @@ function CustomNode({ id, data, selected }: any) {
             }`}
           ></span>
           <span
-            className={`relative inline-flex rounded-full h-3.5 w-3.5 ${
+            className={`relative inline-flex rounded-full h-3 w-3 ${
               data.status === "error"
                 ? "bg-rose-500"
                 : data.status === "warning"
@@ -475,7 +420,7 @@ function CustomNode({ id, data, selected }: any) {
         <Handle
           type="source"
           position={Position.Right}
-          style={{ background: "#8b5cf6", width: 9, height: 9, border: "2px solid rgba(139,92,246,0.3)" }}
+          style={{ background: "#8b5cf6", width: 8, height: 8 }}
           id="right"
         />
       )}
@@ -490,25 +435,19 @@ const nodeTypes = {
 function GraphCanvas({
   nodes,
   edges,
-  onNodesChange,
-  onEdgesChange,
   onNodeSelect,
-  onDeselect,
   theme,
   systemMetrics,
 }: {
   nodes: Node[];
   edges: Edge[];
-  onNodesChange: any;
-  onEdgesChange: any;
   onNodeSelect: (nodeId: string) => void;
-  onDeselect: () => void;
   theme: Theme;
   systemMetrics: any;
 }) {
   const bgColor = theme === "dark" ? "#0b0b0c" : "#f8fafc";
   const gridColor =
-    theme === "dark" ? "rgba(148, 163, 184, 0.18)" : "rgba(148, 163, 184, 0.15)";
+    theme === "dark" ? "rgba(100,116,139,0.23)" : "rgba(148,163,184,0.15)";
 
   const [showMetrics, setShowMetrics] = useState(true);
 
@@ -517,8 +456,6 @@ function GraphCanvas({
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         edgeTypes={{ packet: PacketEdge }}
         fitView
@@ -527,11 +464,6 @@ function GraphCanvas({
         nodesConnectable={false}
         elementsSelectable={false}
         onNodeClick={(_, node) => onNodeSelect(node.id)}
-        onPaneClick={onDeselect}
-        snapToGrid
-        snapGrid={[20, 20]}
-        minZoom={0.2}
-        maxZoom={2.5}
         panOnDrag
         zoomOnScroll
         zoomOnPinch
@@ -539,32 +471,10 @@ function GraphCanvas({
       >
         <Background
           variant={BackgroundVariant.Dots}
-          gap={20}
-          size={0.8}
+          gap={16}
+          size={0.7}
           color={gridColor}
         />
-        {/* <MiniMap
-          nodeStrokeWidth={3}
-          zoomable
-          pannable
-          style={{
-            backgroundColor: "rgba(15, 23, 42, 0.6)",
-            border: "1px solid rgba(148, 163, 184, 0.15)",
-            borderRadius: "12px",
-            backdropFilter: "blur(8px)",
-          }}
-          maskColor="rgba(0, 0, 0, 0.35)"
-        /> */}
-        {/* <FlowControls
-          showInteractive={false}
-          style={{
-            borderRadius: "12px",
-            border: "1px solid rgba(148, 163, 184, 0.15)",
-            backgroundColor: "rgba(15, 23, 42, 0.7)",
-            backdropFilter: "blur(8px)",
-            boxShadow: "0 4px 24px rgba(0,0,0,0.2)",
-          }}
-        /> */}
       </ReactFlow>
 
       {/* System Health & Load Monitor Overlay */}
@@ -949,22 +859,6 @@ function NodeInspectorPanel({
               >
                 Configure
               </p>
-
-              {NODE_FLAVORS[role] && (
-                <div className="space-y-1">
-                  <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
-                    Technology / Flavor
-                  </label>
-                  <CustomDropdown
-                    type={role}
-                    value={nodeConfigs[selectedNode.id]?.flavor || getDefaultFlavor(role)}
-                    onChange={(flavorId) => {
-                      updateNodeConfig(selectedNode.id, { flavor: flavorId });
-                    }}
-                  />
-                  <div className="h-px bg-[var(--border)]/30 my-2" />
-                </div>
-              )}
 
               {role === "client" && (() => {
                 const requests = nodeConfigs[selectedNode.id]?.requests || [];
@@ -2349,8 +2243,6 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
   const [inspectorVisible, setInspectorVisible] = useState(false);
 
   const [nodeConfigs, setNodeConfigs] = useState<Record<string, any>>({});
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   const updateNodeConfig = (
     nodeId: string,
@@ -2382,7 +2274,6 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
       const label = typeof n.data?.label === "string" ? n.data.label : n.id;
       const role = getNodeRole(label);
       const defaultConfig = createDefaultConfig(role, n.id, label);
-      defaultConfig.flavor = getDefaultFlavor(role);
 
       if (scenarioId === "simple-valet-key") {
         if (role === "client") {
@@ -2516,7 +2407,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
     }
   }, []);
 
-  const { frames, nodes: rawNodes, edges: rawEdges, debug } = useMemo(
+  const { frames, nodes, edges, debug } = useMemo(
     () =>
       isMounted && Object.keys(nodeConfigs).length > 0
         ? generateFrames(
@@ -2534,27 +2425,6 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
           },
     [hideResponse, parallelResponse, scenarioId, isMounted, nodeConfigs],
   );
-
-  // Synchronize React Flow state with computed nodes and edges
-  useEffect(() => {
-    setNodes((currentNodes) => {
-      if (currentNodes.length === 0 || currentNodes.length !== rawNodes.length) {
-        return rawNodes;
-      }
-      return currentNodes.map((currentNode) => {
-        const matchingRaw = rawNodes.find((rn) => rn.id === currentNode.id);
-        if (!matchingRaw) return currentNode;
-        return {
-          ...currentNode,
-          data: matchingRaw.data,
-        };
-      });
-    });
-  }, [rawNodes, setNodes]);
-
-  useEffect(() => {
-    setEdges(rawEdges);
-  }, [rawEdges, setEdges]);
 
   const frameGroups = useMemo(() => {
     const groupedByTimestamp = new Map<number, Frame[]>();
@@ -2813,11 +2683,10 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             status,
             statusMessage,
             poolInfo,
-            flavor: nodeConfigs[node.id]?.flavor || getDefaultFlavor(role),
           },
         };
       }),
-    [nodes, selectedNodeId, currentFrames, nodeConfigs],
+    [nodes, selectedNodeId, currentFrames],
   );
 
   const animatedEdges = useMemo(() => {
@@ -3076,8 +2945,6 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             <GraphCanvas
               nodes={styledNodes}
               edges={animatedEdges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
               onNodeSelect={(nodeId) => {
                 setSelectedNodeId(nodeId);
                 const clickedNode = nodes.find((n) => n.id === nodeId);
@@ -3089,10 +2956,6 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                   setFrameIndex(0);
                   setIsPlaying(true);
                 }
-              }}
-              onDeselect={() => {
-                setSelectedNodeId(null);
-                setInspectorVisible(false);
               }}
               theme={theme}
               systemMetrics={systemMetrics}
