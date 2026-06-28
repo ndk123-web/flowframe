@@ -42,7 +42,7 @@ import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 
 // Header
 import SiteHeader from "@/components/SiteHeader";
-import { ComponentIcon } from "@/components/ComponentIcons";
+import { ComponentIcon, BrandLogo, CustomDropdown, NODE_FLAVORS, getDefaultFlavor } from "@/components/ComponentIcons";
 
 type Theme = "light" | "dark";
 
@@ -472,13 +472,19 @@ function CustomNode({ id, data, selected }: any) {
     data.type !== "postgres" &&
     data.type !== "storage";
 
+  // Flavor badge — find the active flavor config for this node type
+  const flavors = NODE_FLAVORS[data.type as string];
+  const activeFlavor = flavors
+    ? (flavors.find((f) => f.id === data.flavor) ?? flavors[0])
+    : null;
+
   return (
     <div
       className={`relative rounded-xl border border-[var(--border)] border-l-4 bg-[var(--surface)] px-4 py-3 shadow-md transition-all duration-300 ${colorClass} ${
         selected
           ? "ring-2 ring-violet-500 scale-105"
-          : "hover:border-[var(--border)]/80"
-      } min-w-[145px]`}
+          : "hover:border-[var(--border)]/80 hover:shadow-lg"
+      } min-w-[170px]`}
     >
       {hasTarget && (
         <Handle
@@ -489,16 +495,26 @@ function CustomNode({ id, data, selected }: any) {
         />
       )}
 
-      <div className="flex items-center gap-2">
-        <ComponentIcon type={data.type} className="w-5 h-5 shrink-0" />
-        <div className="leading-tight">
-          <p className="text-[9px] font-semibold uppercase tracking-wider text-[color:var(--foreground)]/45">
-            {data.type}
-          </p>
-          <p className="text-xs font-bold text-[color:var(--foreground)] truncate max-w-[100px]">
-            {data.label}
-          </p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <ComponentIcon type={data.type} className="w-5.5 h-5.5 shrink-0 text-[color:var(--foreground)]/70" />
+          <div className="leading-tight min-w-0">
+            <p className="text-xs font-bold text-[color:var(--foreground)] truncate max-w-[90px]">
+              {data.label}
+            </p>
+            {activeFlavor && (
+              <p className="text-[10px] text-[color:var(--foreground)]/50 font-medium truncate max-w-[90px]">
+                {activeFlavor.shortLabel}
+              </p>
+            )}
+          </div>
         </div>
+
+        {activeFlavor && (
+          <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-[color:var(--foreground)]/5 border border-[var(--border)]/50 shrink-0">
+            <BrandLogo id={activeFlavor.id} className="w-5.5 h-5.5" />
+          </div>
+        )}
       </div>
 
       {data.isActive && (
@@ -1620,6 +1636,7 @@ function WorkspaceInner() {
           label,
           type,
           isActive: false,
+          flavor: getDefaultFlavor(type),
         },
       };
 
@@ -2713,6 +2730,27 @@ function WorkspaceInner() {
                 {/* Client specific configuration */}
                 {selectedNode.data.type === "client" && (
                   <div className="space-y-4">
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Client Type
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
+
                     <p className="text-xs font-semibold text-violet-400 font-mono">
                       Client Settings
                     </p>
@@ -2965,12 +3003,81 @@ function WorkspaceInner() {
                   </div>
                 )}
 
+                {/* Load Balancer Configuration */}
+                {selectedNode.data.type === "load-balancer" && (
+                  <div className="space-y-4">
+                    <p className="text-xs font-semibold text-blue-400 font-mono">
+                      Load Balancer Settings
+                    </p>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Provider / Technology
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                        Balancing Strategy
+                      </label>
+                      <select
+                        value={nodeConfigs[selectedNode.id]?.strategy ?? "ROUND_ROBIN"}
+                        onChange={(e) =>
+                          updateNodeConfig(selectedNode.id, { strategy: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500 cursor-pointer text-[color:var(--foreground)]"
+                      >
+                        <option value="ROUND_ROBIN">Round Robin</option>
+                        <option value="RANDOM">Random Dispatch</option>
+                        <option value="IP_HASH">IP Address Hash</option>
+                        <option value="LEAST_CONNECTIONS">Least Connections</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
                 {/* API Gateway Configuration */}
                 {selectedNode.data.type === "api-gateway" && (
                   <div className="space-y-4">
                     <p className="text-xs font-semibold text-fuchsia-400 font-mono">
                       Gateway Settings
                     </p>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Provider / Technology
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
 
                     <div>
                       <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
@@ -3218,6 +3325,27 @@ function WorkspaceInner() {
                       Redis Cache Memory
                     </p>
 
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Provider / Technology
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
+
                     <div className="space-y-1.5">
                       <p className="text-[9px] text-[color:var(--foreground)]/65">
                         Cached Pairs
@@ -3308,6 +3436,27 @@ function WorkspaceInner() {
                     <p className="text-xs font-semibold text-cyan-400 font-mono">
                       Database Records
                     </p>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Provider / Technology
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
 
                     <div>
                       <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
@@ -3522,6 +3671,27 @@ function WorkspaceInner() {
                         + Add Domain
                       </button>
                     </div>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Provider / Technology
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
 
                     <div className="space-y-3 max-h-80 overflow-y-auto pr-1 scrollbar-thin">
                       {Object.entries(
@@ -3747,6 +3917,27 @@ function WorkspaceInner() {
                     </p>
 
                     <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Provider / Technology
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
+
+                    <div>
                       <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
                         Origin Server / Storage
                       </label>
@@ -3854,6 +4045,28 @@ function WorkspaceInner() {
                     <p className="text-xs font-semibold text-emerald-400 font-mono">
                       Server Settings
                     </p>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Runtime / Technology
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
+
                     <div>
                       <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
                         Connections Capacity
