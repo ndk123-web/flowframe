@@ -39,6 +39,7 @@ import ApiGatewayModel from "@/engine/models/ApiGateway";
 import StorageModel from "@/engine/models/Storage";
 import DnsModel from "@/engine/models/Dns";
 import CdnModel from "@/engine/models/Cdn";
+import MessageQueueModel from "@/engine/models/MessageQueue/MessageQueue";
 import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
 import Ipv4Generator from "@/utils/generateRandomIp";
 import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
@@ -59,7 +60,8 @@ type ComponentType =
   | "postgres"
   | "storage"
   | "dns"
-  | "cdn";
+  | "cdn"
+  | "message-queue";
 
 interface ComponentMetadata {
   type: ComponentType;
@@ -138,6 +140,13 @@ const COMPONENTS_LIBRARY: ComponentMetadata[] = [
     icon: "☁️",
     description: "Object storage bucket for file uploads using valet key URLs.",
     colorClass: "border-l-yellow-500 shadow-yellow-500/10 text-yellow-400",
+  },
+  {
+    type: "message-queue",
+    label: "Message Queue",
+    icon: "📬",
+    description: "Asynchronous message queue broker with producer-consumer routing.",
+    colorClass: "border-l-pink-500 shadow-pink-500/10 text-pink-400",
   },
 ];
 
@@ -447,6 +456,13 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
         originId: "",
         cache: [],
       };
+    case "message-queue":
+      return {
+        processingType: "FIFO",
+        queueSize: 10,
+        overflowBehavior: "REJECT",
+        connections: {},
+      };
     default:
       return {};
   }
@@ -464,6 +480,7 @@ function CustomNode({ id, data, selected }: any) {
     storage: "border-l-yellow-500 shadow-yellow-500/10",
     dns: "border-l-indigo-500 shadow-indigo-500/10",
     cdn: "border-l-teal-500 shadow-teal-500/10",
+    "message-queue": "border-l-pink-500 shadow-pink-500/10",
   };
 
   // Category-colored selection ring
@@ -477,6 +494,7 @@ function CustomNode({ id, data, selected }: any) {
     storage: "ring-yellow-500/70 shadow-yellow-500/25",
     dns: "ring-indigo-500/70 shadow-indigo-500/25",
     cdn: "ring-teal-500/70 shadow-teal-500/25",
+    "message-queue": "ring-pink-500/70 shadow-pink-500/25",
   };
 
   const colorClass = typeColors[data.type] || "border-l-slate-400";
@@ -1440,6 +1458,22 @@ function WorkspaceInner() {
               );
             }
             break;
+          case "message-queue":
+            modelInstance = new MessageQueueModel(
+              n.id,
+              labelStr,
+              config.processingType || "FIFO",
+              typeof config.queueSize === "number" ? config.queueSize : 10,
+              config.overflowBehavior || "REJECT",
+            );
+            if (config.connections) {
+              Object.entries(config.connections).forEach(([prod, cons]) => {
+                if (cons && typeof cons === "string") {
+                  modelInstance.addConnection(prod, cons);
+                }
+              });
+            }
+            break;
         }
 
         if (modelInstance) {
@@ -1487,6 +1521,36 @@ function WorkspaceInner() {
                 tcpConns,
                 postgresInstance,
               );
+            }
+          });
+
+          // Find if there is an edge between this server and any message-queue node
+          const connectedQueueEdges = activeEdges.filter((e) => {
+            if (e.source === n.id) {
+              const targetNode = activeNodes.find(
+                (node) => node.id === e.target,
+              );
+              return targetNode?.data.type === "message-queue";
+            }
+            if (e.target === n.id) {
+              const sourceNode = activeNodes.find(
+                (node) => node.id === e.source,
+              );
+              return sourceNode?.data.type === "message-queue";
+            }
+            return false;
+          });
+
+          connectedQueueEdges.forEach((edge) => {
+            const isProducer = edge.source === n.id;
+            const queueId = isProducer ? edge.target : edge.source;
+            const queueNode = activeNodes.find((node) => node.id === queueId);
+            const queueLabel = String(queueNode?.data.label || queueId);
+            
+            if (isProducer) {
+              serverInstance.addQueueProducer(queueId, queueLabel);
+            } else {
+              serverInstance.addQueueConsumer(queueId, queueLabel);
             }
           });
         }
@@ -4325,6 +4389,158 @@ function WorkspaceInner() {
                         + Add Endpoint Rule
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {/* Message Queue Configuration */}
+                {selectedNode.data.type === "message-queue" && (
+                  <div className="space-y-4">
+                    <p className="text-xs font-semibold text-pink-400 font-mono">
+                      Message Queue Settings
+                    </p>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Provider / Broker
+                      </label>
+                      <CustomDropdown
+                        type={(selectedNode.data as any).type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                        Processing Type
+                      </label>
+                      <select
+                        value={nodeConfigs[selectedNode.id]?.processingType ?? "FIFO"}
+                        onChange={(e) =>
+                          updateNodeConfig(selectedNode.id, { processingType: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500 cursor-pointer text-[color:var(--foreground)]"
+                      >
+                        <option value="FIFO">FIFO (First In, First Out)</option>
+                        <option value="LIFO">LIFO (Last In, First Out)</option>
+                        <option value="PRIORITY">PRIORITY (Priority Queue)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
+                        Queue Size Limit
+                      </label>
+                      <input
+                        type="number"
+                        value={nodeConfigs[selectedNode.id]?.queueSize ?? 10}
+                        onChange={(e) =>
+                          updateNodeConfig(selectedNode.id, {
+                            queueSize: Number(e.target.value),
+                          })
+                        }
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                        Overflow Behavior
+                      </label>
+                      <select
+                        value={nodeConfigs[selectedNode.id]?.overflowBehavior ?? "REJECT"}
+                        onChange={(e) =>
+                          updateNodeConfig(selectedNode.id, { overflowBehavior: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500 cursor-pointer text-[color:var(--foreground)]"
+                      >
+                        <option value="REJECT">Reject (Immediate Error)</option>
+                        <option value="BLOCK">Block Producer (Wait for consumer)</option>
+                        <option value="UNLIMITED">Unlimited Size (No limit)</option>
+                      </select>
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
+
+                    {/* Producer to Consumer Connections Mapping */}
+                    {(() => {
+                      const connectedProducers = edges
+                        .filter((e) => e.target === selectedNode.id)
+                        .map((e) => nodes.find((node) => node.id === e.source))
+                        .filter((n): n is Node => !!n && n.data.type === "server");
+
+                      const connectedConsumers = edges
+                        .filter((e) => e.source === selectedNode.id)
+                        .map((e) => nodes.find((node) => node.id === e.target))
+                        .filter((n): n is Node => !!n && n.data.type === "server");
+
+                      if (connectedProducers.length === 0) {
+                        return (
+                          <div className="space-y-1">
+                            <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block">
+                              Producer - Consumer Mappings
+                            </label>
+                            <p className="text-[10px] text-[color:var(--foreground)]/50 italic">
+                              No producer servers connected. Add edges from Server nodes to this Queue.
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-2">
+                          <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block">
+                            Producer - Consumer Mappings
+                          </label>
+                          <div className="space-y-2 border border-[var(--border)] rounded-lg p-2 bg-[var(--surface)]/50">
+                            {connectedProducers.map((prodNode) => {
+                              const prodId = prodNode.id;
+                              const prodLabel = String(prodNode.data.label || prodId);
+                              const connections = nodeConfigs[selectedNode.id]?.connections || {};
+                              const mappedConsumerId = connections[prodId] || "";
+
+                              return (
+                                <div key={prodId} className="flex flex-col gap-1 border-b border-[var(--border)]/35 pb-2 last:border-b-0 last:pb-0">
+                                  <span className="text-[10px] font-medium text-[color:var(--foreground)]/70 truncate flex items-center gap-1">
+                                    From: {prodLabel}
+                                  </span>
+                                  <select
+                                    value={mappedConsumerId}
+                                    onChange={(e) => {
+                                      const nextConns = {
+                                        ...(nodeConfigs[selectedNode.id]?.connections || {}),
+                                        [prodId]: e.target.value,
+                                      };
+                                      updateNodeConfig(selectedNode.id, {
+                                        connections: nextConns,
+                                      });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1 text-xs outline-none focus:border-pink-500 cursor-pointer"
+                                  >
+                                    <option value="">-- Select Consumer Server --</option>
+                                    {connectedConsumers.map((consNode) => (
+                                      <option key={consNode.id} value={consNode.id}>
+                                        {String(consNode.data.label || consNode.id)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 

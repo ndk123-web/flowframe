@@ -3,7 +3,7 @@ import {
   SiReact, SiNextdotjs, SiVuedotjs, SiSvelte, SiAngular, SiApple, SiAndroid,
   SiGooglecloud, SiNginx, SiCloudflare, SiNodedotjs, SiGo, SiPython, SiDotnet, SiRuby, SiPhp, SiRust,
   SiPostgresql, SiSupabase, SiPlanetscale, SiCockroachlabs, SiRedis, SiUpstash,
-  SiKong, SiTraefikproxy, SiFastly, SiAkamai
+  SiKong, SiTraefikproxy, SiFastly, SiAkamai, SiRabbitmq, SiApachekafka
 } from "react-icons/si";
 import { TbBrandAws, TbBrandAzure } from "react-icons/tb";
 import { FaJava } from "react-icons/fa";
@@ -188,6 +188,24 @@ export function ComponentIcon({ type, className = "w-5 h-5" }: IconProps) {
         </svg>
       );
 
+    case "message-queue":
+    case "message_queue":
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.8}
+          stroke="currentColor"
+          className={className}
+        >
+          <rect x="3" y="4" width="18" height="4" rx="1" fill="currentColor" fillOpacity={0.1} />
+          <rect x="3" y="10" width="18" height="4" rx="1" fill="currentColor" fillOpacity={0.15} />
+          <rect x="3" y="16" width="18" height="4" rx="1" fill="currentColor" fillOpacity={0.2} />
+          <path d="M7 6h10M7 12h10M7 18h10" strokeWidth={1.2} opacity={0.6} />
+        </svg>
+      );
+
     default:
       return (
         <svg
@@ -277,6 +295,10 @@ const BRAND_LOGO_MAP: Record<string, BrandLogoMapEntry> = {
   route53: { component: TbBrandAws, color: "#FF9900" },
   "cloudflare-dns": { component: SiCloudflare, color: "#F38020" },
   "gcp-dns": { component: SiGooglecloud, color: "#4285F4" },
+  rabbitmq: { component: SiRabbitmq, color: "#FF6600" },
+  kafka: { component: SiApachekafka, color: "#000000" },
+  sqs: { component: TbBrandAws, color: "#FF9900" },
+  "redis-mq": { component: SiRedis, color: "#DC382D" },
 };
 
 export function BrandLogo({ id, className = "w-5 h-5" }: { id: string; className?: string }) {
@@ -379,6 +401,12 @@ export const NODE_FLAVORS: Record<string, FlavorOption[]> = {
     { id: "route53", label: "AWS Route 53 DNS", shortLabel: "Route 53", textClass: "text-orange-300", bgClass: "bg-orange-500/10", borderClass: "border-orange-400/20" },
     { id: "cloudflare-dns", label: "Cloudflare DNS", shortLabel: "CF DNS", textClass: "text-orange-400", bgClass: "bg-orange-500/10", borderClass: "border-orange-400/20" },
     { id: "gcp-dns", label: "Google Cloud DNS", shortLabel: "GCP DNS", textClass: "text-blue-300", bgClass: "bg-blue-500/10", borderClass: "border-blue-400/20" },
+  ],
+  "message-queue": [
+    { id: "rabbitmq", label: "RabbitMQ Broker", shortLabel: "RabbitMQ", textClass: "text-orange-300", bgClass: "bg-orange-500/10", borderClass: "border-orange-400/20" },
+    { id: "kafka", label: "Apache Kafka Event Stream", shortLabel: "Kafka", textClass: "text-red-300", bgClass: "bg-red-500/10", borderClass: "border-red-400/20" },
+    { id: "sqs", label: "AWS Simple Queue Service (SQS)", shortLabel: "AWS SQS", textClass: "text-orange-200", bgClass: "bg-orange-600/10", borderClass: "border-orange-400/20" },
+    { id: "redis-mq", label: "Redis Message Queue", shortLabel: "Redis MQ", textClass: "text-red-400", bgClass: "bg-red-500/10", borderClass: "border-red-400/20" },
   ],
 };
 
