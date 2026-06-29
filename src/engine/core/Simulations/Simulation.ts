@@ -548,6 +548,48 @@ class SimulationManager {
                 currentNodeId = queueNodeId;
                 break;
               } else {
+                if (queueInstance.overflowBehavior === "BLOCK") {
+                  // 1. Push a blocked wait frame
+                  this.pushFrame(
+                    request,
+                    currentNodeId,
+                    queueNodeId,
+                    "QUEUE_FULL_WAIT",
+                    {
+                      payloadSummary: `Queue Full: Producer blocked, waiting for consumer to process...`,
+                    }
+                  );
+
+                  // 2. Simulate consumer activity by pulling/shifting a message out of the queue
+                  if (queueInstance.queue.length > 0) {
+                    queueInstance.queue.shift();
+                  }
+
+                  // 3. Re-try publishing now that space is freed
+                  const retrySuccess = serverInstance.publishMessage(
+                    queueInstance,
+                    msgId,
+                    msgName,
+                    { ...request.payload, priority: request.payload?.priority ?? 0 }
+                  );
+
+                  if (retrySuccess) {
+                    this.pushFrame(
+                      request,
+                      currentNodeId,
+                      queueNodeId,
+                      "SERVER_PUBLISH_MESSAGE",
+                      {
+                        payloadSummary: `Enqueued after wait: ${msgName}`,
+                      }
+                    );
+                    request.currentNodeId = queueNodeId;
+                    traversalPath.push(queueNodeId);
+                    currentNodeId = queueNodeId;
+                    break;
+                  }
+                }
+
                 const previousNodeId = traversalPath[traversalPath.length - 2] ?? currentNodeId;
                 this.pushFrame(
                   request,

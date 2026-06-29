@@ -7,12 +7,19 @@ enum MessageQueueProccessing {
   PRIORITY = "PRIORITY",
 }
 
+enum QueueOverflowBehavior {
+  REJECT = "REJECT",
+  BLOCK = "BLOCK",
+  UNLIMITED = "UNLIMITED",
+}
+
 class MessageQueueModel implements NodeInstance {
   id: string;
   name: string;
   type: string = "MESSAGE_QUEUE";
   processingType: MessageQueueProccessing;
   queueSize: number;
+  overflowBehavior: QueueOverflowBehavior;
   queue: Message[] = [];
 
   connections: Record<string, string> = {}; // maps producerId -> consumerId
@@ -22,14 +29,19 @@ class MessageQueueModel implements NodeInstance {
     name: string,
     processingType: MessageQueueProccessing = MessageQueueProccessing.FIFO,
     queueSize: number = 10,
+    overflowBehavior: QueueOverflowBehavior = QueueOverflowBehavior.REJECT,
   ) {
     this.id = id;
     this.name = name;
     this.processingType = processingType;
     this.queueSize = queueSize;
+    this.overflowBehavior = overflowBehavior;
   }
 
   isFull(): boolean {
+    if (this.overflowBehavior === QueueOverflowBehavior.UNLIMITED) {
+      return false;
+    }
     return this.queue.length >= this.queueSize;
   }
 
@@ -119,4 +131,5 @@ class MessageQueueModel implements NodeInstance {
   }
 }
 
+export { MessageQueueProccessing, QueueOverflowBehavior };
 export default MessageQueueModel;

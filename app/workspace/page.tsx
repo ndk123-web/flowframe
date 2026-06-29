@@ -460,6 +460,7 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
       return {
         processingType: "FIFO",
         queueSize: 10,
+        overflowBehavior: "REJECT",
         connections: {},
       };
     default:
@@ -1462,7 +1463,8 @@ function WorkspaceInner() {
               n.id,
               labelStr,
               config.processingType || "FIFO",
-              config.queueSize || 10,
+              typeof config.queueSize === "number" ? config.queueSize : 10,
+              config.overflowBehavior || "REJECT",
             );
             if (config.connections) {
               Object.entries(config.connections).forEach(([prod, cons]) => {
@@ -4449,6 +4451,23 @@ function WorkspaceInner() {
                         }
                         className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500"
                       />
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                        Overflow Behavior
+                      </label>
+                      <select
+                        value={nodeConfigs[selectedNode.id]?.overflowBehavior ?? "REJECT"}
+                        onChange={(e) =>
+                          updateNodeConfig(selectedNode.id, { overflowBehavior: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500 cursor-pointer text-[color:var(--foreground)]"
+                      >
+                        <option value="REJECT">Reject (Immediate Error)</option>
+                        <option value="BLOCK">Block Producer (Wait for consumer)</option>
+                        <option value="UNLIMITED">Unlimited Size (No limit)</option>
+                      </select>
                     </div>
 
                     <div className="h-px bg-[var(--border)]/70" />
