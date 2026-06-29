@@ -448,8 +448,12 @@ class SimulationManager {
             return;
           }
 
-          // Check endpoint and method validity (only for non-valetKey flows)
-          if (!request.context.valetKeyFlow) {
+          // Check if this server is behaving as a queue consumer in the current step
+          const previousHopId = traversalPath[traversalPath.length - 2];
+          const isActingAsConsumer = previousHopId && this.getNodeKind(previousHopId) === "MESSAGE_QUEUE";
+
+          // Check endpoint and method validity (only for non-valetKey and non-consumer flows)
+          if (!request.context.valetKeyFlow && !isActingAsConsumer) {
             const normalizePath = (p: string) => p.replace(/^\/+|\/+$/g, "");
             const reqEndpoint = normalizePath(request.endpoint || "");
             const reqMethod = request.method;
