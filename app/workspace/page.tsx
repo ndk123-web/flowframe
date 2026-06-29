@@ -78,22 +78,22 @@ const COMPONENTS_LIBRARY: ComponentMetadata[] = [
       "Generates requests (GET/POST/uploads) to route through the network.",
     colorClass: "border-l-violet-500 shadow-violet-500/10 text-violet-400",
   },
-  {
-    type: "dns",
-    label: "DNS Server",
-    icon: "🌐",
-    description:
-      "Resolves domain names (like ndkdev.me) to target node IDs or IP addresses.",
-    colorClass: "border-l-indigo-500 shadow-indigo-500/10 text-indigo-400",
-  },
-  {
-    type: "cdn",
-    label: "CDN Server",
-    icon: "🌍",
-    description:
-      "Distributed edge server that caches files near users to speed up asset delivery.",
-    colorClass: "border-l-teal-500 shadow-teal-500/10 text-teal-400",
-  },
+  // {
+  //   type: "dns",
+  //   label: "DNS Server",
+  //   icon: "🌐",
+  //   description:
+  //     "Resolves domain names (like ndkdev.me) to target node IDs or IP addresses.",
+  //   colorClass: "border-l-indigo-500 shadow-indigo-500/10 text-indigo-400",
+  // },
+  // {
+  //   type: "cdn",
+  //   label: "CDN Server",
+  //   icon: "🌍",
+  //   description:
+  //     "Distributed edge server that caches files near users to speed up asset delivery.",
+  //   colorClass: "border-l-teal-500 shadow-teal-500/10 text-teal-400",
+  // },
   {
     type: "api-gateway",
     label: "API Gateway",
