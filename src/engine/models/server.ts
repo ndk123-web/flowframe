@@ -24,6 +24,11 @@ class ServerModel implements NodeInstance {
     "api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"],
   };
 
+  queueConsumer: { queueId: string; queueName: string } = {
+    queueId: "",
+    queueName: "",
+  };
+
   constructor(id: string, name: string) {
     this.id = id;
     this.name = name;
@@ -91,6 +96,10 @@ class ServerModel implements NodeInstance {
    */
   hasLimitedPostgresPool(): boolean {
     return this.postgresConnectionPools > 0;
+  }
+
+  addQueueConsumer(queueId: string, queueName: string) {
+    this.queueConsumer = { queueId, queueName };
   }
 }
 
