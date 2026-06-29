@@ -1,6 +1,8 @@
 import type { NodeInstance } from "../contracts";
 import PostgresModel from "./Postgres";
 import { RequestManager } from "./Request";
+import MessageQueueModel from "./MessageQueue/MessageQueue";
+import Message from "./MessageQueue/Message";
 
 type HTTP_VALID_METHODS = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
@@ -28,6 +30,8 @@ class ServerModel implements NodeInstance {
     queueId: "",
     queueName: "",
   };
+
+  queueProducers: Array<{ queueId: string; queueName: string }> = [];
 
   constructor(id: string, name: string) {
     this.id = id;
@@ -100,6 +104,30 @@ class ServerModel implements NodeInstance {
 
   addQueueConsumer(queueId: string, queueName: string) {
     this.queueConsumer = { queueId, queueName };
+  }
+
+  addQueueProducer(queueId: string, queueName: string) {
+    if (!this.queueProducers.some((q) => q.queueId === queueId)) {
+      this.queueProducers.push({ queueId, queueName });
+    }
+  }
+
+  publishMessage(
+    queue: MessageQueueModel,
+    messageId: string,
+    messageName: string,
+    payload: any,
+  ): boolean {
+    const message = new Message(messageId, messageName, this.id, payload);
+    return queue.enqueue(message);
+  }
+
+  consumeMessage(queue: MessageQueueModel): Message | null {
+    const message = queue.dequeue(this.id);
+    if (message) {
+      message.updateStatus("PROCESSING");
+    }
+    return message;
   }
 }
 

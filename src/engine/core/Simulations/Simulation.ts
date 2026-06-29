@@ -10,6 +10,8 @@ import PostgresModel from "@/engine/models/Postgres";
 import ServerModel from "@/engine/models/server";
 import ApiGatewayModel from "@/engine/models/ApiGateway";
 import StorageModel from "@/engine/models/Storage";
+import MessageQueueModel from "@/engine/models/MessageQueue/MessageQueue";
+import Message from "@/engine/models/MessageQueue/Message";
 
 type SimulationNodeKind =
   | "CLIENT"
@@ -19,6 +21,7 @@ type SimulationNodeKind =
   | "POSTGRES"
   | "API_GATEWAY"
   | "STORAGE"
+  | "MESSAGE_QUEUE"
   | "UNKNOWN";
 
 class SimulationManager {
@@ -78,6 +81,10 @@ class SimulationManager {
 
     if (normalized === "STORAGE" || normalized === "STORAGE_SYSTEM" || normalized === "CLOUD_STORAGE") { 
       return "STORAGE";
+    }
+
+    if (normalized === "MESSAGE_QUEUE" || normalized === "QUEUE") {
+      return "MESSAGE_QUEUE";
     }
 
     return "UNKNOWN";
@@ -150,6 +157,8 @@ class SimulationManager {
           return "STORAGE_REJECT_MISSING_VALET_KEY";
         }
         return "STORAGE_RETURN_URL";
+      case "MESSAGE_QUEUE":
+        return "QUEUE_ACK_PUBLISH";
       default:
         return "RESPONSE_BACKTRACK";
     }
@@ -504,6 +513,59 @@ class SimulationManager {
 
             request.direction = "backward";
             break;
+          }
+
+           // check whether message queue is there ?
+          const queueNodeId = nextNodes.find(
+            (nodeId) => this.getNodeKind(nodeId) === "MESSAGE_QUEUE",
+          );
+
+          if (queueNodeId) {
+            const queueInstance = this.registry.getInstance(queueNodeId) as MessageQueueModel;
+            if (queueInstance) {
+              const msgId = `msg-${this.uid.rnd(5)}`;
+              const msgName = `Msg-${msgId}`;
+              const success = serverInstance.publishMessage(
+                queueInstance,
+                msgId,
+                msgName,
+                { ...request.payload, priority: request.payload?.priority ?? 0 }
+              );
+
+              if (success) {
+                this.pushFrame(
+                  request,
+                  currentNodeId,
+                  queueNodeId,
+                  "SERVER_PUBLISH_MESSAGE",
+                  {
+                    payloadSummary: `Enqueued: ${msgName}`,
+                  }
+                );
+
+                request.currentNodeId = queueNodeId;
+                traversalPath.push(queueNodeId);
+                currentNodeId = queueNodeId;
+                break;
+              } else {
+                const previousNodeId = traversalPath[traversalPath.length - 2] ?? currentNodeId;
+                this.pushFrame(
+                  request,
+                  currentNodeId,
+                  previousNodeId,
+                  "SERVER_QUEUE_FULL_REJECT",
+                  {
+                    payloadSummary: "503 Service Unavailable: Message Queue is full",
+                  }
+                );
+                request.context.serverErrorStatus = "503";
+                traversalPath.pop();
+                request.currentNodeId = previousNodeId;
+                currentNodeId = previousNodeId;
+                request.direction = "backward";
+                break;
+              }
+            }
           }
 
           // check whether redis is there ? 
@@ -897,10 +959,62 @@ class SimulationManager {
             }
           )
 
-          request.direction = "backward";
+           request.direction = "backward";
           traversalPath.pop();
           request.currentNodeId = traversalPath[traversalPath.length - 1];
           currentNodeId = traversalPath[traversalPath.length - 1];
+          break;
+        }
+
+        case "MESSAGE_QUEUE": {
+          if (traversalPath.length < 2) {
+            return;
+          }
+
+          const queueInstance = nodeInstance as MessageQueueModel;
+          const originatingServerId = traversalPath[traversalPath.length - 2];
+
+          // Find mapped consumer
+          const consumerId = queueInstance.connections[originatingServerId];
+          const isConsumerConnected = nextNodes.includes(consumerId);
+
+          if (consumerId && isConsumerConnected) {
+            // Dequeue the message for this consumer
+            const message = queueInstance.dequeue(consumerId);
+            const msgName = message?.name || "Message";
+
+            this.pushFrame(
+              request,
+              currentNodeId,
+              consumerId,
+              "QUEUE_DELIVER_MESSAGE",
+              {
+                payloadSummary: `Delivered: ${msgName}`,
+              }
+            );
+
+            // Forward traversal to the consumer server
+            request.currentNodeId = consumerId;
+            traversalPath.push(consumerId);
+            currentNodeId = consumerId;
+          } else {
+            // No mapping or consumer is not connected to queue in the graph
+            const previousNodeId = traversalPath[traversalPath.length - 2];
+            this.pushFrame(
+              request,
+              currentNodeId,
+              previousNodeId,
+              "QUEUE_NO_CONSUMER_REJECT",
+              {
+                payloadSummary: "502 Bad Gateway: No routed consumer mapped/connected",
+              }
+            );
+            request.context.serverErrorStatus = "502";
+            traversalPath.pop();
+            request.currentNodeId = previousNodeId;
+            currentNodeId = previousNodeId;
+            request.direction = "backward";
+          }
           break;
         }
       
