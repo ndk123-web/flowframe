@@ -33,6 +33,10 @@ class ServerModel implements NodeInstance {
 
   queueProducers: Array<{ queueId: string; queueName: string }> = [];
 
+  prefetchLimit: number = 1;
+  activeQueueMessages: number = 0;
+  queueProcessingIntervals: Array<{ requestId: string; start: number; end: number }> = [];
+
   constructor(id: string, name: string) {
     this.id = id;
     this.name = name;
@@ -41,6 +45,13 @@ class ServerModel implements NodeInstance {
   // if load is less than capacity, return true
   canAccepthRequest() {
     return this.load < this.capacity;
+  }
+
+  isConsumerFreeAt(timestamp: number, parallel: boolean): boolean {
+    const activeAtTime = this.queueProcessingIntervals.filter(
+      (int) => timestamp >= int.start && timestamp < int.end
+    ).length;
+    return activeAtTime < this.prefetchLimit;
   }
 
   // increament the load
@@ -123,7 +134,7 @@ class ServerModel implements NodeInstance {
   }
 
   consumeMessage(queue: MessageQueueModel): Message | null {
-    const message = queue.dequeue(this.id);
+    const message = queue.dequeue();
     if (message) {
       message.updateStatus("PROCESSING");
     }

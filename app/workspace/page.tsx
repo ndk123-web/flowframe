@@ -417,6 +417,7 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
       return {
         capacity: 100,
         tcpConnections: 10,
+        prefetchLimit: 1,
         endpoints: {
           "api/v1/posts": ["GET", "POST", "PUT", "DELETE", "PATCH"],
           "api/v1/users": ["GET", "POST", "PUT", "DELETE", "PATCH"],
@@ -1321,6 +1322,9 @@ function WorkspaceInner() {
             if (typeof config.capacity === "number") {
               modelInstance.capacity = config.capacity;
             }
+            if (typeof config.prefetchLimit === "number") {
+              modelInstance.prefetchLimit = config.prefetchLimit;
+            }
             if (config.endpoints) {
               modelInstance.endpoints = { ...config.endpoints };
             }
@@ -1466,13 +1470,6 @@ function WorkspaceInner() {
               typeof config.queueSize === "number" ? config.queueSize : 10,
               config.overflowBehavior || "REJECT",
             );
-            if (config.connections) {
-              Object.entries(config.connections).forEach(([prod, cons]) => {
-                if (cons && typeof cons === "string") {
-                  modelInstance.addConnection(prod, cons);
-                }
-              });
-            }
             break;
         }
 
@@ -1600,13 +1597,20 @@ function WorkspaceInner() {
       ];
 
       try {
-        // Clear connection pools active state on Postgres models
+        // Clear active states on Postgres and Server models
         activeNodes.forEach((n) => {
           if (n.data.type === "postgres") {
             const pg = registry.getInstance(n.id) as PostgresModel;
             if (pg) {
               pg.activeConnections.clear();
               pg.connectionIntervals = [];
+            }
+          }
+          if (n.data.type === "server") {
+            const server = registry.getInstance(n.id) as ServerModel;
+            if (server) {
+              server.activeQueueMessages = 0;
+              server.queueProcessingIntervals = [];
             }
           }
         });
@@ -4245,6 +4249,32 @@ function WorkspaceInner() {
                       </p>
                     </div>
 
+                    {edges.some(
+                      (e) => e.target === selectedNode.id && 
+                      nodes.find((node) => node.id === e.source)?.data.type === "message-queue"
+                    ) && (
+                      <div className="mt-3">
+                        <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
+                          Prefetch Limit (Competing Consumers)
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={100}
+                          value={nodeConfigs[selectedNode.id]?.prefetchLimit ?? 1}
+                          onChange={(e) =>
+                            updateNodeConfig(selectedNode.id, {
+                              prefetchLimit: Number(e.target.value),
+                            })
+                          }
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500"
+                        />
+                        <p className="mt-1 text-[9px] text-[color:var(--foreground)]/40 leading-relaxed">
+                          Max concurrent messages this consumer can pull from the queue.
+                        </p>
+                      </div>
+                    )}
+
                     <div className="h-px bg-[var(--border)]/70 my-2" />
 
                     <div>
@@ -4469,78 +4499,6 @@ function WorkspaceInner() {
                         <option value="UNLIMITED">Unlimited Size (No limit)</option>
                       </select>
                     </div>
-
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    {/* Producer to Consumer Connections Mapping */}
-                    {(() => {
-                      const connectedProducers = edges
-                        .filter((e) => e.target === selectedNode.id)
-                        .map((e) => nodes.find((node) => node.id === e.source))
-                        .filter((n): n is Node => !!n && n.data.type === "server");
-
-                      const connectedConsumers = edges
-                        .filter((e) => e.source === selectedNode.id)
-                        .map((e) => nodes.find((node) => node.id === e.target))
-                        .filter((n): n is Node => !!n && n.data.type === "server");
-
-                      if (connectedProducers.length === 0) {
-                        return (
-                          <div className="space-y-1">
-                            <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block">
-                              Producer - Consumer Mappings
-                            </label>
-                            <p className="text-[10px] text-[color:var(--foreground)]/50 italic">
-                              No producer servers connected. Add edges from Server nodes to this Queue.
-                            </p>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div className="space-y-2">
-                          <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block">
-                            Producer - Consumer Mappings
-                          </label>
-                          <div className="space-y-2 border border-[var(--border)] rounded-lg p-2 bg-[var(--surface)]/50">
-                            {connectedProducers.map((prodNode) => {
-                              const prodId = prodNode.id;
-                              const prodLabel = String(prodNode.data.label || prodId);
-                              const connections = nodeConfigs[selectedNode.id]?.connections || {};
-                              const mappedConsumerId = connections[prodId] || "";
-
-                              return (
-                                <div key={prodId} className="flex flex-col gap-1 border-b border-[var(--border)]/35 pb-2 last:border-b-0 last:pb-0">
-                                  <span className="text-[10px] font-medium text-[color:var(--foreground)]/70 truncate flex items-center gap-1">
-                                    From: {prodLabel}
-                                  </span>
-                                  <select
-                                    value={mappedConsumerId}
-                                    onChange={(e) => {
-                                      const nextConns = {
-                                        ...(nodeConfigs[selectedNode.id]?.connections || {}),
-                                        [prodId]: e.target.value,
-                                      };
-                                      updateNodeConfig(selectedNode.id, {
-                                        connections: nextConns,
-                                      });
-                                    }}
-                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1 text-xs outline-none focus:border-pink-500 cursor-pointer"
-                                  >
-                                    <option value="">-- Select Consumer Server --</option>
-                                    {connectedConsumers.map((consNode) => (
-                                      <option key={consNode.id} value={consNode.id}>
-                                        {String(consNode.data.label || consNode.id)}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })()}
                   </div>
                 )}
 

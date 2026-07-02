@@ -163,6 +163,17 @@ class SimulationManager {
         return "RESPONSE_BACKTRACK";
     }
   }
+
+  private pushAsyncClientResponse(request: RequestManager, traversalPath: NodeId[]) {
+    for (let i = traversalPath.length - 1; i >= 1; i--) {
+      const fromNodeId = traversalPath[i];
+      const toNodeId = traversalPath[i - 1];
+      const action = this.getResponseAction(fromNodeId, request);
+      this.pushFrame(request, fromNodeId, toNodeId, action, {
+        payloadSummary: "202 Accepted: Message enqueued asynchronously",
+      });
+    }
+  }
   
   /**
    * 
@@ -260,6 +271,30 @@ class SimulationManager {
         
         const responseFrom = traversalPath[traversalPath.length - 1];
         const responseTo = traversalPath[traversalPath.length - 2];
+
+        if (this.getNodeKind(responseTo) === "MESSAGE_QUEUE") {
+          const consumerInstance = this.registry.getInstance(responseFrom) as ServerModel;
+          if (consumerInstance) {
+            consumerInstance.activeQueueMessages = Math.max(0, consumerInstance.activeQueueMessages - 1);
+            const interval = consumerInstance.queueProcessingIntervals.find(
+              (int) => int.requestId === request.id
+            );
+            if (interval) {
+              interval.end = this.timestamp;
+            }
+          }
+
+          this.pushFrame(
+            request,
+            responseFrom,
+            responseTo,
+            "CONSUMER_ACK",
+            {
+              payloadSummary: "Message processed successfully. ACK sent to Queue.",
+            }
+          );
+          break;
+        }
 
         const extraPayload: Partial<Frame> = {};
         const kind = this.getNodeKind(responseFrom);
@@ -547,6 +582,22 @@ class SimulationManager {
                   }
                 );
 
+                this.pushFrame(
+                  request,
+                  queueNodeId,
+                  currentNodeId,
+                  "QUEUE_ACK_PUBLISH",
+                  {
+                    payloadSummary: `Publisher Confirm: Acked ${msgName}`,
+                  }
+                );
+
+                const deliveryStartTimestamp = this.timestamp;
+
+                this.pushAsyncClientResponse(request, traversalPath);
+
+                this.timestamp = deliveryStartTimestamp;
+
                 request.currentNodeId = queueNodeId;
                 traversalPath.push(queueNodeId);
                 currentNodeId = queueNodeId;
@@ -587,6 +638,23 @@ class SimulationManager {
                         payloadSummary: `Enqueued after wait: ${msgName}`,
                       }
                     );
+
+                    this.pushFrame(
+                      request,
+                      queueNodeId,
+                      currentNodeId,
+                      "QUEUE_ACK_PUBLISH",
+                      {
+                        payloadSummary: `Publisher Confirm: Acked ${msgName}`,
+                      }
+                    );
+
+                    const deliveryStartTimestamp = this.timestamp;
+
+                    this.pushAsyncClientResponse(request, traversalPath);
+
+                    this.timestamp = deliveryStartTimestamp;
+
                     request.currentNodeId = queueNodeId;
                     traversalPath.push(queueNodeId);
                     currentNodeId = queueNodeId;
@@ -1018,44 +1086,107 @@ class SimulationManager {
           }
 
           const queueInstance = nodeInstance as MessageQueueModel;
-          const originatingServerId = traversalPath[traversalPath.length - 2];
 
-          // Find mapped consumer
-          const consumerId = queueInstance.connections[originatingServerId];
-          const isConsumerConnected = nextNodes.includes(consumerId);
+          // Get all next nodes that are SERVER
+          const connectedConsumerIds = nextNodes.filter((nodeId) => {
+            const inst = this.registry.getInstance(nodeId);
+            return inst && (inst.type === "SERVER" || inst.type === "Server");
+          });
 
-          if (consumerId && isConsumerConnected) {
-            // Dequeue the message for this consumer
-            const message = queueInstance.dequeue(consumerId);
+          const parallel = Boolean(this.payloadForRequest?.parallelResponse);
+
+          // Find a free consumer server based on prefetch limits
+          // Find a free consumer server based on prefetch limits
+          let freeConsumerId = connectedConsumerIds.find((nodeId) => {
+            const server = this.registry.getInstance(nodeId) as ServerModel;
+            return server && server.isConsumerFreeAt(this.timestamp, parallel);
+          });
+
+          let deliveryTime = this.timestamp;
+
+          if (!freeConsumerId && connectedConsumerIds.length > 0) {
+            // Buffer the message and wait for a worker to become free
+            this.pushFrame(
+              request,
+              currentNodeId,
+              currentNodeId,
+              "QUEUE_MESSAGE_BUFFERED",
+              {
+                payloadSummary: `All consumers busy. Msg buffered in queue (Size: ${queueInstance.queue.length}).`,
+              }
+            );
+
+            // Wait loop to find next free timestamp
+            const maxWait = 1000;
+            let waitTicks = 0;
+            while (!freeConsumerId && waitTicks < maxWait) {
+              deliveryTime++;
+              waitTicks++;
+              freeConsumerId = connectedConsumerIds.find((nodeId) => {
+                const server = this.registry.getInstance(nodeId) as ServerModel;
+                if (!server) return false;
+
+                // Lookahead: if the worker is sending an ACK at deliveryTime, we must check if it's free at deliveryTime + 1
+                const isAcking = server.queueProcessingIntervals.some(
+                  (int) => deliveryTime === int.end
+                );
+                const targetTime = isAcking ? deliveryTime + 1 : deliveryTime;
+                return server.isConsumerFreeAt(targetTime, parallel);
+              });
+            }
+          }
+
+          if (freeConsumerId) {
+            const consumerInstance = this.registry.getInstance(freeConsumerId) as ServerModel;
+            // Dequeue the message
+            const message = queueInstance.dequeue();
             const msgName = message?.name || "Message";
+
+            // If we waited, we deliver at the target time (which might be deliveryTime + 1 if the worker was ACK'ing)
+            let finalDeliveryTime = deliveryTime;
+            if (deliveryTime > this.timestamp) {
+              const isAcking = consumerInstance.queueProcessingIntervals.some(
+                (int) => deliveryTime === int.end
+              );
+              finalDeliveryTime = isAcking ? deliveryTime + 1 : deliveryTime;
+            }
+
+            this.timestamp = finalDeliveryTime;
+
+            consumerInstance.activeQueueMessages++;
+            consumerInstance.queueProcessingIntervals.push({
+              requestId: request.id,
+              start: this.timestamp,
+              end: 999999,
+            });
 
             this.pushFrame(
               request,
               currentNodeId,
-              consumerId,
+              freeConsumerId,
               "QUEUE_DELIVER_MESSAGE",
               {
-                payloadSummary: `Delivered: ${msgName}`,
+                payloadSummary: `Delivered: ${msgName} to Consumer ${consumerInstance.name}`,
               }
             );
 
             // Forward traversal to the consumer server
-            request.currentNodeId = consumerId;
-            traversalPath.push(consumerId);
-            currentNodeId = consumerId;
+            request.currentNodeId = freeConsumerId;
+            traversalPath.push(freeConsumerId);
+            currentNodeId = freeConsumerId;
           } else {
-            // No mapping or consumer is not connected to queue in the graph
-            const previousNodeId = traversalPath[traversalPath.length - 2];
+            // All consumers are busy or none connected
             this.pushFrame(
               request,
               currentNodeId,
-              previousNodeId,
-              "QUEUE_NO_CONSUMER_REJECT",
+              currentNodeId,
+              "QUEUE_MESSAGE_BUFFERED",
               {
-                payloadSummary: "502 Bad Gateway: No routed consumer mapped/connected",
+                payloadSummary: `All consumers busy or none connected. Msg buffered in queue (Size: ${queueInstance.queue.length}).`,
               }
             );
-            request.context.serverErrorStatus = "502";
+
+            const previousNodeId = traversalPath[traversalPath.length - 2] ?? currentNodeId;
             traversalPath.pop();
             request.currentNodeId = previousNodeId;
             currentNodeId = previousNodeId;
