@@ -582,6 +582,8 @@ class SimulationManager {
                   }
                 );
 
+                const deliveryStartTimestamp = this.timestamp;
+
                 this.pushFrame(
                   request,
                   queueNodeId,
@@ -591,8 +593,6 @@ class SimulationManager {
                     payloadSummary: `Publisher Confirm: Acked ${msgName}`,
                   }
                 );
-
-                const deliveryStartTimestamp = this.timestamp;
 
                 this.pushAsyncClientResponse(request, traversalPath);
 
@@ -639,6 +639,8 @@ class SimulationManager {
                       }
                     );
 
+                    const deliveryStartTimestamp = this.timestamp;
+
                     this.pushFrame(
                       request,
                       queueNodeId,
@@ -648,8 +650,6 @@ class SimulationManager {
                         payloadSummary: `Publisher Confirm: Acked ${msgName}`,
                       }
                     );
-
-                    const deliveryStartTimestamp = this.timestamp;
 
                     this.pushAsyncClientResponse(request, traversalPath);
 
