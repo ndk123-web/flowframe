@@ -484,126 +484,215 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
   }
 }
 
+// ── Node shape geometry helpers ────────────────────────────────────────────
+// Shapes that need a wrapper SVG overlay (non-rectangular geometry)
+const NODE_SHAPES = [
+  { id: "rectangle", label: "Rectangle", icon: "⬜" },
+  { id: "rounded",   label: "Rounded",   icon: "🔲" },
+  { id: "stadium",   label: "Stadium",   icon: "🏟" },
+  { id: "circle",    label: "Circle",    icon: "⭕" },
+  { id: "diamond",   label: "Diamond",   icon: "◆" },
+  { id: "hexagon",   label: "Hexagon",   icon: "⬡" },
+  { id: "cylinder",  label: "Cylinder",  icon: "🗄" },
+  { id: "parallelogram", label: "Slant", icon: "▱" },
+];
+
+function getShapeStyle(shape: string): React.CSSProperties {
+  switch (shape) {
+    case "rounded":
+      return { borderRadius: "999px" };
+    case "stadium":
+      return { borderRadius: "999px 999px 999px 999px" };
+    case "circle":
+      return { borderRadius: "50%", aspectRatio: "1", minWidth: 90, padding: "12px" };
+    case "diamond":
+      return {
+        transform: "rotate(45deg)",
+        borderRadius: "8px",
+        aspectRatio: "1",
+        minWidth: 120,
+        padding: "0",
+      };
+    case "hexagon":
+      return { clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)", borderRadius: 0 };
+    case "cylinder":
+      return { borderRadius: "12px 12px 12px 12px", borderBottomWidth: "4px" };
+    case "parallelogram":
+      return { clipPath: "polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%)", borderRadius: 0 };
+    case "rectangle":
+    default:
+      return { borderRadius: "12px" };
+  }
+}
+
 // React Flow Custom Node
 function CustomNode({ id, data, selected }: any) {
-  const typeColors: any = {
-    client: "border-l-violet-500 shadow-violet-500/10",
-    "api-gateway": "border-l-fuchsia-500 shadow-fuchsia-500/10",
-    "load-balancer": "border-l-blue-500 shadow-blue-500/10",
-    server: "border-l-emerald-500 shadow-emerald-500/10",
-    redis: "border-l-amber-500 shadow-amber-500/10",
-    postgres: "border-l-cyan-500 shadow-cyan-500/10",
-    storage: "border-l-yellow-500 shadow-yellow-500/10",
-    dns: "border-l-indigo-500 shadow-indigo-500/10",
-    cdn: "border-l-teal-500 shadow-teal-500/10",
-    "message-queue": "border-l-pink-500 shadow-pink-500/10",
-    pubsub: "border-l-indigo-500 shadow-indigo-500/10",
+  const shape = (data.shape as string) || "rectangle";
+
+  // Per-type accent colors
+  const accentColors: Record<string, { ring: string; glow: string; accent: string; dot: string }> = {
+    client:          { ring: "rgba(139,92,246,0.6)", glow: "rgba(139,92,246,0.12)", accent: "#7c3aed", dot: "#8b5cf6" },
+    "api-gateway":   { ring: "rgba(217,70,239,0.6)", glow: "rgba(217,70,239,0.12)", accent: "#a21caf", dot: "#d946ef" },
+    "load-balancer": { ring: "rgba(59,130,246,0.6)",  glow: "rgba(59,130,246,0.12)",  accent: "#1d4ed8", dot: "#3b82f6" },
+    server:          { ring: "rgba(16,185,129,0.6)",  glow: "rgba(16,185,129,0.12)",  accent: "#059669", dot: "#10b981" },
+    redis:           { ring: "rgba(245,158,11,0.6)",  glow: "rgba(245,158,11,0.12)",  accent: "#d97706", dot: "#f59e0b" },
+    postgres:        { ring: "rgba(6,182,212,0.6)",   glow: "rgba(6,182,212,0.12)",   accent: "#0e7490", dot: "#06b6d4" },
+    storage:         { ring: "rgba(234,179,8,0.6)",   glow: "rgba(234,179,8,0.12)",   accent: "#a16207", dot: "#eab308" },
+    dns:             { ring: "rgba(99,102,241,0.6)",  glow: "rgba(99,102,241,0.12)",  accent: "#4338ca", dot: "#6366f1" },
+    cdn:             { ring: "rgba(20,184,166,0.6)",  glow: "rgba(20,184,166,0.12)",  accent: "#0f766e", dot: "#14b8a6" },
+    "message-queue": { ring: "rgba(236,72,153,0.6)",  glow: "rgba(236,72,153,0.12)",  accent: "#be185d", dot: "#ec4899" },
+    pubsub:          { ring: "rgba(99,102,241,0.6)",  glow: "rgba(99,102,241,0.12)",  accent: "#4338ca", dot: "#6366f1" },
   };
 
-  // Category-colored selection ring
-  const selectionRingColors: any = {
-    client: "ring-violet-500/70 shadow-violet-500/25",
-    "api-gateway": "ring-fuchsia-500/70 shadow-fuchsia-500/25",
-    "load-balancer": "ring-blue-500/70 shadow-blue-500/25",
-    server: "ring-emerald-500/70 shadow-emerald-500/25",
-    redis: "ring-amber-500/70 shadow-amber-500/25",
-    postgres: "ring-cyan-500/70 shadow-cyan-500/25",
-    storage: "ring-yellow-500/70 shadow-yellow-500/25",
-    dns: "ring-indigo-500/70 shadow-indigo-500/25",
-    cdn: "ring-teal-500/70 shadow-teal-500/25",
-    "message-queue": "ring-pink-500/70 shadow-pink-500/25",
-    pubsub: "ring-indigo-500/70 shadow-indigo-500/25",
-  };
-
-  const colorClass = typeColors[data.type] || "border-l-slate-400";
-  const ringClass = selectionRingColors[data.type] || "ring-violet-500/70 shadow-violet-500/25";
+  const colors = accentColors[data.type as string] ?? accentColors.server;
 
   // Flow rules
   const hasTarget = data.type !== "client";
-  const hasSource =
-    data.type !== "redis" &&
-    data.type !== "postgres" &&
-    data.type !== "storage";
+  const hasSource = data.type !== "redis" && data.type !== "postgres" && data.type !== "storage";
 
-  // Flavor badge — find the active flavor config for this node type
+  // Flavor badge
   const flavors = NODE_FLAVORS[data.type as string];
-  const activeFlavor = flavors
-    ? (flavors.find((f) => f.id === data.flavor) ?? flavors[0])
-    : null;
+  const activeFlavor = flavors ? (flavors.find((f) => f.id === data.flavor) ?? flavors[0]) : null;
+
+  // Diamond shape requires inner counter-rotation for content
+  const isDiamond  = shape === "diamond";
+  const isCircle   = shape === "circle";
+  const isHexagon  = shape === "hexagon";
+  const isParallelogram = shape === "parallelogram";
+  const isCylinder = shape === "cylinder";
+
+  const shapeStyle = getShapeStyle(shape);
+  const isClipShape = isHexagon || isParallelogram;
+
+  // Handle positions vary by shape
+  const handleStyle: React.CSSProperties = {
+    background: colors.dot,
+    width: 8, height: 8,
+    border: "2px solid rgba(255,255,255,0.25)",
+    borderRadius: "50%",
+  };
 
   return (
     <div
-      className={`relative rounded-xl border border-[var(--border)] border-l-4 bg-[var(--surface)] px-5 py-4 shadow-md transition-all duration-300 w-full h-full flex items-center ${colorClass} ${
-        selected
-          ? `ring-2 ${ringClass} scale-[1.03] shadow-lg`
-          : "hover:border-[var(--border)]/80 hover:shadow-lg"
-      }`}
-      style={{ minWidth: 210 }}
+      className="relative flex items-center justify-center transition-all duration-200"
+      style={{
+        width: "100%",
+        height: "100%",
+        minWidth: isDiamond ? 120 : isCircle ? 90 : 180,
+        filter: selected ? `drop-shadow(0 0 10px ${colors.ring})` : undefined,
+      }}
     >
-      {/* Dynamic Node Resizer — visible only when selected */}
+      {/* Resizer — outside shape container */}
       <NodeResizer
         isVisible={selected}
-        minWidth={180}
-        minHeight={50}
-        lineStyle={{ borderColor: "rgba(139, 92, 246, 0.35)", borderWidth: 1 }}
+        minWidth={isDiamond || isCircle ? 90 : 150}
+        minHeight={isDiamond || isCircle ? 90 : 44}
+        lineStyle={{ borderColor: colors.accent, borderWidth: 1 }}
         handleStyle={{
-          width: 8,
-          height: 8,
-          borderRadius: 2,
-          backgroundColor: "#8b5cf6",
+          width: 8, height: 8, borderRadius: "50%",
+          backgroundColor: colors.accent,
           border: "2px solid rgba(255,255,255,0.3)",
         }}
       />
 
+      {/* Target handle */}
       {hasTarget && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          style={{ background: "#8b5cf6", width: 9, height: 9, border: "2px solid rgba(139,92,246,0.3)" }}
-          id="left"
-        />
+        <Handle type="target" position={Position.Left} id="left" style={handleStyle} />
       )}
 
-      <div className="flex items-center justify-between gap-3 w-full">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <ComponentIcon type={data.type} className="w-6 h-6 shrink-0 text-[color:var(--foreground)]/70" />
-          <div className="leading-tight min-w-0 flex-1">
-            <p className="text-[13px] font-bold text-[color:var(--foreground)] break-words">
+      {/* ── Shape Container ─────────────────────────────────────────────── */}
+      <div
+        className="w-full h-full flex items-center justify-center overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 92%, ${colors.accent}) 100%)`,
+          border: `1.5px solid color-mix(in srgb, var(--border) 80%, ${colors.accent})`,
+          boxShadow: selected
+            ? `0 0 0 2px ${colors.ring}, 0 4px 20px ${colors.glow}`
+            : `0 2px 8px ${colors.glow}`,
+          ...shapeStyle,
+          ...(isCylinder ? { boxShadow: `${selected ? `0 0 0 2px ${colors.ring}, ` : ""}0 2px 8px ${colors.glow}, inset 0 -3px 0 color-mix(in srgb, var(--border) 60%, ${colors.accent})` } : {}),
+        }}
+      >
+        {/* Content wrapper — counter-rotate if diamond */}
+        <div
+          className="flex items-center gap-2.5 px-3 py-2.5 w-full h-full"
+          style={{
+            transform: isDiamond ? "rotate(-45deg)" : undefined,
+            flexDirection: isCircle ? "column" : "row",
+            justifyContent: isCircle ? "center" : "flex-start",
+            textAlign: isCircle ? "center" : "left",
+            paddingLeft: isParallelogram ? "20px" : undefined,
+          }}
+        >
+          {/* Icon */}
+          <div
+            className="shrink-0 flex items-center justify-center rounded-lg"
+            style={{
+              width: isCircle ? 28 : 26,
+              height: isCircle ? 28 : 26,
+              background: `color-mix(in srgb, transparent 88%, ${colors.accent})`,
+              padding: "5px",
+            }}
+          >
+            <ComponentIcon type={data.type} className="w-full h-full" />
+          </div>
+
+          {/* Label + sublabel */}
+          {!isCircle && (
+            <div className="min-w-0 flex-1 leading-tight">
+              <p
+                className="font-semibold text-[color:var(--foreground)] truncate"
+                style={{ fontSize: isDiamond ? "10px" : "12.5px" }}
+              >
+                {data.label}
+              </p>
+              {activeFlavor && !isDiamond && (
+                <p className="text-[10px] text-[color:var(--foreground)]/45 truncate font-medium">
+                  {activeFlavor.shortLabel}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Brand logo badge */}
+          {activeFlavor && !isDiamond && !isCircle && (
+            <div
+              className="shrink-0 flex items-center justify-center rounded-md"
+              style={{
+                width: 22, height: 22,
+                background: `color-mix(in srgb, var(--surface) 80%, ${colors.accent})`,
+                border: `1px solid color-mix(in srgb, var(--border) 70%, ${colors.accent})`,
+              }}
+            >
+              <BrandLogo id={activeFlavor.id} className="w-4 h-4" />
+            </div>
+          )}
+
+          {/* Circle: show label below icon */}
+          {isCircle && (
+            <p className="text-[9.5px] font-semibold text-[color:var(--foreground)] leading-tight w-full text-center truncate px-1 mt-0.5">
               {data.label}
             </p>
-            {activeFlavor && (
-              <p className="text-[10.5px] text-[color:var(--foreground)]/50 font-medium break-words">
-                {activeFlavor.shortLabel}
-              </p>
-            )}
-          </div>
+          )}
         </div>
-
-        {activeFlavor && (
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[color:var(--foreground)]/5 border border-[var(--border)]/50 shrink-0">
-            <BrandLogo id={activeFlavor.id} className="w-6 h-6" />
-          </div>
-        )}
       </div>
 
+      {/* Active pulse dot */}
       {data.isActive && (
-        <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-violet-500"></span>
+        <span className="absolute -top-1 -right-1 flex h-3 w-3 pointer-events-none">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: colors.dot }} />
+          <span className="relative inline-flex rounded-full h-3 w-3" style={{ background: colors.dot }} />
         </span>
       )}
 
+      {/* Source handle */}
       {hasSource && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          style={{ background: "#8b5cf6", width: 9, height: 9, border: "2px solid rgba(139,92,246,0.3)" }}
-          id="right"
-        />
+        <Handle type="source" position={Position.Right} id="right" style={handleStyle} />
       )}
     </div>
   );
 }
+
 
 // React Flow Custom Edge
 function packetColor(isReverseMotion: boolean) {
@@ -725,6 +814,7 @@ function Controls({
   onPrev,
   onNext,
   onReset,
+  onReframe,
   debugEnabled,
   onDebugToggle,
   speed,
@@ -736,6 +826,7 @@ function Controls({
   onPrev: () => void;
   onNext: () => void;
   onReset: () => void;
+  onReframe: () => void;
   debugEnabled: boolean;
   onDebugToggle: () => void;
   speed: number;
@@ -765,6 +856,14 @@ function Controls({
           </button>
           <button type="button" onClick={onReset} className={buttonClass}>
             Reset
+          </button>
+          <button
+            type="button"
+            onClick={onReframe}
+            className={`${buttonClass} bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 border-violet-500/30`}
+            title="Re-run simulation with current changes"
+          >
+            🔄 Reframe
           </button>
         </div>
 
@@ -1071,8 +1170,256 @@ function DebugPanel({
   );
 }
 
+// ── Shapes / Frame Library ─────────────────────────────────────────────────
+// These are used as group containers / annotation frames (like Excalidraw frames,
+// Figma frames, draw.io swim lanes). They sit behind regular nodes.
+const SHAPES_LIBRARY = [
+  {
+    id: "rect",
+    label: "Rectangle",
+    borderRadius: "10px",
+    clipPath: undefined,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-violet-400">
+        <rect x="3" y="3" width="18" height="18" rx="1.5" />
+      </svg>
+    ),
+  },
+  {
+    id: "rounded-rect",
+    label: "Round Rect",
+    borderRadius: "999px",
+    clipPath: undefined,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-blue-400">
+        <rect x="3" y="3" width="18" height="18" rx="6" />
+      </svg>
+    ),
+  },
+  {
+    id: "circle",
+    label: "Circle",
+    borderRadius: "50%",
+    clipPath: undefined,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-emerald-400">
+        <circle cx="12" cy="12" r="9" />
+      </svg>
+    ),
+  },
+  {
+    id: "diamond",
+    label: "Diamond",
+    borderRadius: "0",
+    clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-amber-400">
+        <path d="M12 2L22 12L12 22L2 12Z" />
+      </svg>
+    ),
+  },
+  {
+    id: "hexagon",
+    label: "Hexagon",
+    borderRadius: "0",
+    clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-cyan-400">
+        <path d="M12 2L21 7.2V16.8L12 22L3 16.8V7.2Z" />
+      </svg>
+    ),
+  },
+  {
+    id: "parallelogram",
+    label: "Slant",
+    borderRadius: "0",
+    clipPath: "polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%)",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-yellow-400">
+        <path d="M6 4H21L18 20H3Z" />
+      </svg>
+    ),
+  },
+  {
+    id: "triangle",
+    label: "Triangle",
+    borderRadius: "0",
+    clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-pink-400">
+        <path d="M12 3L22 21H2Z" />
+      </svg>
+    ),
+  },
+  {
+    id: "sticky",
+    label: "Sticky",
+    borderRadius: "4px",
+    clipPath: undefined,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-orange-400">
+        <path d="M3 3H16L21 8V21H3V3Z" />
+        <path d="M16 3V8H21" />
+      </svg>
+    ),
+  },
+  {
+    id: "text",
+    label: "Text",
+    borderRadius: "0",
+    clipPath: undefined,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-300">
+        <path d="M4 7V4H20V7M12 4V20M9 20H15" />
+      </svg>
+    ),
+  },
+];
+
+// Preset color palette for frame fills
+const FRAME_COLOR_PRESETS = [
+  { color: "#8b5cf6", label: "Violet" },
+  { color: "#3b82f6", label: "Blue" },
+  { color: "#10b981", label: "Emerald" },
+  { color: "#f59e0b", label: "Amber" },
+  { color: "#ec4899", label: "Pink" },
+  { color: "#06b6d4", label: "Cyan" },
+  { color: "#f97316", label: "Orange" },
+  { color: "#ef4444", label: "Red" },
+  { color: "#6366f1", label: "Indigo" },
+  { color: "#14b8a6", label: "Teal" },
+  { color: "#64748b", label: "Slate" },
+  { color: "#a3a3a3", label: "Gray" },
+];
+
+// React Flow Shape Node — Group frame / container, sits behind nodes
+// Label shown inside body (sticky/text) or bottom-left badge, with align options
+function ShapeNode({ data, selected }: any) {
+  const shapeDef = SHAPES_LIBRARY.find((s) => s.id === (data.shapeId ?? "rect")) ?? SHAPES_LIBRARY[0];
+  const isText    = data.shapeId === "text";
+  const isSticky  = data.shapeId === "sticky";
+  const color     = (data.color as string) || "#8b5cf6";
+  const textAlign = (data.textAlign as "left" | "center" | "right") || "center";
+
+  // Parse a hex color into rgba with an alpha
+  function hexToRgba(hex: string, alpha: number) {
+    const h = hex.replace("#", "");
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(4, 6), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  const fillColor   = isText ? "transparent" : hexToRgba(color, isSticky ? 0.18 : 0.07);
+  const borderColor = isText ? "transparent" : selected ? hexToRgba(color, 0.9) : hexToRgba(color, 0.45);
+  const labelColor  = hexToRgba(color, 0.9);
+
+  return (
+    <div
+      className="w-full h-full relative group"
+      style={{ minWidth: isText ? 80 : 160, minHeight: isText ? 28 : 100 }}
+    >
+      {/* Resizer — always shown for frames */}
+      <NodeResizer
+        isVisible={selected}
+        minWidth={isText ? 60 : 120}
+        minHeight={isText ? 24 : 80}
+        lineStyle={{ borderColor: hexToRgba(color, 0.6), borderWidth: 1 }}
+        handleStyle={{
+          width: 8, height: 8, borderRadius: "50%",
+          backgroundColor: color,
+          border: "2px solid rgba(255,255,255,0.3)",
+        }}
+      />
+
+      {isText ? (
+        /* ── Plain text label ── */
+        <div 
+          className="w-full h-full flex items-center"
+          style={{
+            justifyContent: textAlign === "left" ? "flex-start" : textAlign === "right" ? "flex-end" : "center"
+          }}
+        >
+          <span
+            className="select-none font-semibold w-full break-words"
+            style={{ 
+              fontSize: 15, 
+              color: "var(--foreground)", 
+              pointerEvents: "none",
+              textAlign: textAlign
+            }}
+          >
+            {data.label || "Text"}
+          </span>
+        </div>
+      ) : isSticky ? (
+        /* ── Sticky Note ── */
+        <div
+          className="w-full h-full relative overflow-hidden transition-all duration-150 flex items-center p-3"
+          style={{
+            background: fillColor,
+            border: `2px solid ${borderColor}`,
+            borderRadius: shapeDef.borderRadius,
+            boxShadow: selected ? `0 0 0 1px ${hexToRgba(color, 0.3)}, 0 4px 24px ${hexToRgba(color, 0.12)}` : "none",
+            justifyContent: textAlign === "left" ? "flex-start" : textAlign === "right" ? "flex-end" : "center",
+          }}
+        >
+          <span
+            className="text-xs font-semibold select-none leading-snug break-words w-full"
+            style={{ 
+              color: labelColor, 
+              pointerEvents: "none",
+              textAlign: textAlign
+            }}
+          >
+            {data.label || "Sticky Note"}
+          </span>
+        </div>
+      ) : (
+        /* ── Group Frame / Container shape ── */
+        <div
+          className="w-full h-full relative overflow-hidden transition-all duration-150"
+          style={{
+            background: fillColor,
+            border: `2px ${selected ? "solid" : "dashed"} ${borderColor}`,
+            borderRadius: shapeDef.borderRadius,
+            clipPath: shapeDef.clipPath,
+            boxShadow: selected ? `0 0 0 1px ${hexToRgba(color, 0.3)}, 0 4px 24px ${hexToRgba(color, 0.12)}` : "none",
+          }}
+        >
+          {/* ── Label badge at bottom-left ── */}
+          {!shapeDef.clipPath && (
+            <div
+              className="absolute bottom-0 left-0 right-0 px-3 py-1.5 flex items-center"
+              style={{
+                background: hexToRgba(color, 0.12),
+                borderTop: `1px solid ${hexToRgba(color, 0.2)}`,
+                justifyContent: textAlign === "left" ? "flex-start" : textAlign === "right" ? "flex-end" : "center"
+              }}
+            >
+              <span
+                className="text-[11px] font-bold truncate select-none"
+                style={{ 
+                  color: labelColor, 
+                  pointerEvents: "none",
+                  textAlign: textAlign,
+                  width: "100%"
+                }}
+              >
+                {data.label || shapeDef.label}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 const nodeTypes = {
   customNode: CustomNode,
+  shapeNode: ShapeNode,
 };
 
 const edgeTypes = {
@@ -1139,6 +1486,7 @@ function WorkspaceInner() {
   // Redesigned Sidebar Accordions & Search states
   const [isTemplatesExpanded, setIsTemplatesExpanded] = useState(true);
   const [isComponentsExpanded, setIsComponentsExpanded] = useState(true);
+  const [isShapesExpanded, setIsShapesExpanded] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Movable / Resizable / Mobile sidebar states
@@ -1835,6 +2183,47 @@ function WorkspaceInner() {
     setHoveredComponent(null);
   };
 
+  // Add Shape / Frame Node to canvas — sits behind regular nodes as a group container
+  const addShape = useCallback(
+    (shapeId: string, position?: { x: number; y: number }) => {
+      const shapeDef = SHAPES_LIBRARY.find((s) => s.id === shapeId);
+      const id = `shape-${shapeId}-${uid.rnd()}`;
+      const isText     = shapeId === "text";
+      const isCompact  = shapeId === "circle" || shapeId === "diamond" || shapeId === "triangle";
+      // Pick a random color from presets for new frames
+      const defaultColor = FRAME_COLOR_PRESETS[Math.floor(Math.random() * FRAME_COLOR_PRESETS.length)].color;
+
+      const newNode = {
+        id,
+        type: "shapeNode",
+        position: position ?? {
+          x: 80 + Math.random() * 200,
+          y: 60 + Math.random() * 150,
+        },
+        zIndex: -1,   // ← render behind all other nodes
+        data: {
+          shapeId,
+          label: isText ? "Text" : (shapeDef?.label ?? ""),
+          color: defaultColor,
+        },
+        style: {
+          // Frames are large by default so nodes fit inside
+          width:  isText ? 130 : isCompact ? 140 : 320,
+          height: isText ? 36  : isCompact ? 140 : 220,
+          zIndex: -1,
+        },
+      };
+      setNodes((nds) => [...nds, newNode]);
+      setSelectedNodeId(id);
+    },
+    [uid, setNodes, setSelectedNodeId]
+  );
+
+  const handleShapeDragStart = (e: React.DragEvent, shapeId: string) => {
+    e.dataTransfer.setData("application/flowframe-shape", shapeId);
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
   const handleDragEnd = () => {
     setDraggingType(null);
     setIsDragOverCanvas(false);
@@ -1859,13 +2248,19 @@ function WorkspaceInner() {
     setIsDragOverCanvas(false);
     setDraggingType(null);
 
-    const type = e.dataTransfer.getData(
-      "application/flowframe-type",
-    ) as ComponentType;
-    if (!type) return;
-
     // Convert screen coordinates to canvas-space using ReactFlow's utility
     const canvasPosition = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+
+    // Check for shape drops first
+    const shapeId = e.dataTransfer.getData("application/flowframe-shape");
+    if (shapeId) {
+      addShape(shapeId, canvasPosition);
+      return;
+    }
+
+    const type = e.dataTransfer.getData("application/flowframe-type") as ComponentType;
+    if (!type) return;
+
     addComponent(type, canvasPosition);
   };
 
@@ -2176,12 +2571,13 @@ function WorkspaceInner() {
       const isActive = currentFrames.some(
         (f) => f.from === node.id || f.to === node.id,
       );
+      const isShape = node.type === "shapeNode";
 
       return {
         ...node,
-        type: "customNode",
+        type: node.type || "customNode",
         selected: isSelected,
-        style: undefined,
+        style: isShape ? { ...node.style, zIndex: -1 } : undefined,
         data: {
           ...node.data,
           isActive,
@@ -2592,8 +2988,68 @@ function WorkspaceInner() {
             </div>
           </div>
 
+          {/* ── Shapes Section ───────────────────────────────────────────── */}
+          <div className="px-3 pb-2">
+            <button
+              type="button"
+              onClick={() => setIsShapesExpanded(!isShapesExpanded)}
+              className="w-full flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)] transition duration-150 text-left font-semibold cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-[8px] text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isShapesExpanded ? "rotate-90" : "rotate-0"}`}
+                >
+                  ▶
+                </span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
+                  Shapes
+                </span>
+              </div>
+              <span className="text-[9px] text-[color:var(--foreground)]/40 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-mono">
+                {SHAPES_LIBRARY.length}
+              </span>
+            </button>
+
+            {isShapesExpanded && (
+              <div className="grid grid-cols-5 gap-1.5 p-1 mt-1">
+                {SHAPES_LIBRARY.map((shape) => (
+                  <button
+                    key={shape.id}
+                    type="button"
+                    draggable
+                    onDragStart={(e) => handleShapeDragStart(e, shape.id)}
+                    onClick={() => addShape(shape.id)}
+                    title={`${shape.label} — click to add or drag onto canvas`}
+                    className="aspect-square rounded-xl border border-[var(--border)] bg-[var(--surface)]/40 flex flex-col items-center justify-center gap-0.5 transition duration-150 cursor-grab active:cursor-grabbing group hover:scale-105 hover:border-violet-500/40 hover:bg-[var(--surface)]"
+                  >
+                    {/* Legitimate vector SVG shape icon */}
+                    <div className="w-5 h-5 flex items-center justify-center group-hover:scale-110 transition duration-150">
+                      {shape.icon}
+                    </div>
+                    <span className="text-[7.5px] font-semibold text-[color:var(--foreground)]/45 leading-none truncate max-w-full px-0.5 group-hover:text-violet-400 transition">
+                      {shape.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Sidebar Footer Controls */}
           <div className="p-3 border-t border-[var(--border)] bg-[var(--surface)]/45 flex flex-col gap-2 shrink-0 bg-[var(--surface)]">
+            <button
+              type="button"
+              onClick={() => {
+                handleStartSimulation();
+                setFrameIndex(0);
+                setIsPlaying(true);
+              }}
+              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-violet-500/30 bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 text-[11px] font-bold transition cursor-pointer"
+              title="Re-run simulation with current changes"
+            >
+              <span>🔄</span>
+              <span>Re-run Simulation</span>
+            </button>
             <button
               type="button"
               onClick={() => setShowWelcomeModal(true)}
@@ -2904,6 +3360,7 @@ function WorkspaceInner() {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => {
                     setSelectedNodeId(null);
                     setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
@@ -2915,6 +3372,20 @@ function WorkspaceInner() {
               </div>
 
               <div className="p-4 flex-1 space-y-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleStartSimulation();
+                    setFrameIndex(0);
+                    setIsPlaying(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-violet-500/30 bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 text-[11px] font-bold transition cursor-pointer"
+                  title="Re-run simulation with current changes"
+                >
+                  <span>🔄</span>
+                  <span>Re-run Simulation</span>
+                </button>
+
                 {/* Rename Node section */}
                 <div>
                   <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
@@ -2939,6 +3410,105 @@ function WorkspaceInner() {
                 </div>
 
                 <div className="h-px bg-[var(--border)]/70" />
+
+                {/* ── Frame Color Picker (only for shape/frame nodes) ── */}
+                {selectedNode.type === "shapeNode" && (
+                  <div>
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                      Frame Color
+                    </label>
+                    {/* Preset swatches */}
+                    <div className="grid grid-cols-6 gap-1.5 mb-2">
+                      {FRAME_COLOR_PRESETS.map((preset) => {
+                        const isCurrent = ((selectedNode.data.color as string) || "#8b5cf6") === preset.color;
+                        return (
+                          <button
+                            key={preset.color}
+                            type="button"
+                            title={preset.label}
+                            onClick={() => {
+                              setNodes((nds) =>
+                                nds.map((n) =>
+                                  n.id === selectedNodeId
+                                    ? { ...n, data: { ...n.data, color: preset.color } }
+                                    : n
+                                )
+                              );
+                            }}
+                            className="aspect-square rounded-lg transition cursor-pointer hover:scale-110"
+                            style={{
+                              background: preset.color,
+                              outline: isCurrent ? `3px solid white` : "none",
+                              outlineOffset: isCurrent ? "2px" : "0",
+                              boxShadow: isCurrent ? `0 0 0 5px ${preset.color}55` : "none",
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                    {/* Custom hex input */}
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-7 h-7 rounded-md border border-[var(--border)] shrink-0 cursor-pointer"
+                        style={{ background: (selectedNode.data.color as string) || "#8b5cf6" }}
+                      />
+                      <input
+                        type="color"
+                        value={(selectedNode.data.color as string) || "#8b5cf6"}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, color: val } }
+                                : n
+                            )
+                          );
+                        }}
+                        className="flex-1 h-7 rounded-md border border-[var(--border)] bg-[var(--surface)] cursor-pointer text-xs px-1 outline-none"
+                        title="Custom color"
+                      />
+                      <span className="text-[10px] text-[color:var(--foreground)]/40 font-mono">
+                        {((selectedNode.data.color as string) || "#8b5cf6").toUpperCase()}
+                      </span>
+                    </div>
+
+                    {/* Text Alignment Picker */}
+                    <div className="mt-3">
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Text Alignment
+                      </label>
+                      <div className="grid grid-cols-3 gap-1">
+                        {(["left", "center", "right"] as const).map((align) => {
+                          const isCurrent = ((selectedNode.data.textAlign as string) || "center") === align;
+                          return (
+                            <button
+                              key={align}
+                              type="button"
+                              onClick={() => {
+                                setNodes((nds) =>
+                                  nds.map((n) =>
+                                    n.id === selectedNodeId
+                                      ? { ...n, data: { ...n.data, textAlign: align } }
+                                      : n
+                                  )
+                                );
+                              }}
+                              className="py-1.5 px-2 text-xs rounded-lg border transition cursor-pointer font-semibold flex items-center justify-center"
+                              style={{
+                                borderColor: isCurrent ? "rgba(139,92,246,0.6)" : "var(--border)",
+                                background: isCurrent ? "rgba(139,92,246,0.12)" : "var(--surface)",
+                                color: isCurrent ? "#a78bfa" : "var(--foreground)",
+                              }}
+                            >
+                              {align === "left" ? "⬅️ Left" : align === "right" ? "➡️ Right" : "↕️ Center"}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Client specific configuration */}
                 {selectedNode.data.type === "client" && (
@@ -3143,6 +3713,30 @@ function WorkspaceInner() {
                                       </label>
                                       <textarea
                                         value={activeReq.body || ""}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Tab") {
+                                            e.preventDefault();
+                                            const start = e.currentTarget.selectionStart;
+                                            const end = e.currentTarget.selectionEnd;
+                                            const val = e.currentTarget.value;
+                                            const newVal = val.substring(0, start) + "  " + val.substring(end);
+                                            
+                                            // Update value in requests
+                                            const currentRequests = [...requests];
+                                            currentRequests[activeIdx] = {
+                                              ...currentRequests[activeIdx],
+                                              body: newVal,
+                                            };
+                                            updateNodeConfig(selectedNode.id, {
+                                              requests: currentRequests,
+                                            });
+
+                                            // Restore selection start/end
+                                            setTimeout(() => {
+                                              e.currentTarget.selectionStart = e.currentTarget.selectionEnd = start + 2;
+                                            }, 0);
+                                          }
+                                        }}
                                         onChange={(e) => {
                                           const currentRequests = [...requests];
                                           currentRequests[activeIdx] = {
@@ -4981,6 +5575,11 @@ function WorkspaceInner() {
                       onPrev={goToPreviousFrame}
                       onNext={goToNextFrame}
                       onReset={resetPlayback}
+                      onReframe={() => {
+                        handleStartSimulation();
+                        setFrameIndex(0);
+                        setIsPlaying(true);
+                      }}
                       debugEnabled={debugEnabled}
                       onDebugToggle={() => setDebugEnabled((prev) => !prev)}
                       speed={speed}

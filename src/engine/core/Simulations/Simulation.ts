@@ -304,6 +304,70 @@ class SimulationManager {
           break;
         }
 
+        // ── PubSub Subscriber backtrack intercept ──────────────────────────
+        // When a subscriber server finishes its downstream work (Postgres, Redis,
+        // etc.) and backtracks to the PubSub Broker, send SUBSCRIBER_ACK and
+        // then forward to the next pending subscriber, or terminate if all done.
+        if (this.getNodeKind(responseTo) === "PUBSUB_BROKER") {
+          const subscriberInstance = this.registry.getInstance(responseFrom) as ServerModel;
+
+          this.pushFrame(
+            request,
+            responseFrom,
+            responseTo,
+            "SUBSCRIBER_ACK",
+            {
+              payloadSummary: `ACK sent to PubSub Broker from ${
+                subscriberInstance?.name ?? responseFrom
+              }`,
+            }
+          );
+
+          // Pop the subscriber off the traversal path — we are back at the broker
+          traversalPath.pop();
+          currentNodeId = responseTo;
+          request.currentNodeId = responseTo;
+
+          // Pick the next pending subscriber (tracked in request.context)
+          const pendingSubscribers: string[] = request.context.pendingPubSubSubscribers ?? [];
+          if (pendingSubscribers.length > 0) {
+            const nextSubId = pendingSubscribers.shift()!;
+            request.context.pendingPubSubSubscribers = pendingSubscribers;
+
+            const nextSubInstance = this.registry.getInstance(nextSubId) as ServerModel;
+
+            // Clear per-subscriber context flags so the next subscriber gets a clean downstream run
+            request.context.redisLookupDone = false;
+            request.context.awaitingDbLookup = false;
+            request.context.dbMiss = false;
+            request.context.serverErrorStatus = undefined;
+            request.context.responsePayloadSummary = undefined;
+
+            // Deliver to next subscriber
+            this.pushFrame(
+              request,
+              currentNodeId,
+              nextSubId,
+              "PUBSUB_DELIVER_MESSAGE",
+              {
+                payloadSummary: `Delivering message to Subscriber: ${
+                  nextSubInstance?.name ?? nextSubId
+                }`,
+              }
+            );
+
+            // Forward control to next subscriber
+            request.direction = "forward";
+            traversalPath.push(nextSubId);
+            currentNodeId = nextSubId;
+            request.currentNodeId = nextSubId;
+            continue;
+          }
+
+          // All subscribers processed — terminate fanout
+          break;
+        }
+
         const extraPayload: Partial<Frame> = {};
         const kind = this.getNodeKind(responseFrom);
         if (kind === "SERVER" || kind === "STORAGE") {
@@ -493,7 +557,7 @@ class SimulationManager {
 
           // Check if this server is behaving as a queue consumer in the current step
           const previousHopId = traversalPath[traversalPath.length - 2];
-          const isActingAsConsumer = previousHopId && this.getNodeKind(previousHopId) === "MESSAGE_QUEUE";
+          const isActingAsConsumer = previousHopId && (this.getNodeKind(previousHopId) === "MESSAGE_QUEUE" || this.getNodeKind(previousHopId) === "PUBSUB_BROKER");
 
           // Check endpoint and method validity (only for non-valetKey and non-consumer flows)
           if (!request.context.valetKeyFlow && !isActingAsConsumer) {
@@ -1298,60 +1362,36 @@ class SimulationManager {
             return;
           }
 
-          // Deliver message to each subscriber at the same time (parallel fanout)
-          const deliveryTime = this.timestamp;
-          
-          for (const subId of subscribers) {
-            const subscriberInstance = this.registry.getInstance(subId) as ServerModel;
-            if (subscriberInstance) {
-              this.pushFrame(
-                request,
-                currentNodeId,
-                subId,
-                "PUBSUB_DELIVER_MESSAGE",
-                {
-                  payloadSummary: `Delivering message to Subscriber: ${subscriberInstance.name}`,
-                  timestamp: deliveryTime,
-                }
-              );
+          // Store the remaining subscribers to process sequentially in request context.
+          // The first subscriber is delivered now; the rest are queued.
+          const [firstSubId, ...remainingSubIds] = subscribers;
+          request.context.pendingPubSubSubscribers = remainingSubIds;
+
+          // Clear per-subscriber server flags for the first subscriber's fresh traversal
+          request.context.redisLookupDone = false;
+          request.context.awaitingDbLookup = false;
+          request.context.dbMiss = false;
+          request.context.serverErrorStatus = undefined;
+          request.context.responsePayloadSummary = undefined;
+
+          // Deliver message to the first subscriber
+          const firstSubInst = this.registry.getInstance(firstSubId) as ServerModel;
+          this.pushFrame(
+            request,
+            currentNodeId,
+            firstSubId,
+            "PUBSUB_DELIVER_MESSAGE",
+            {
+              payloadSummary: `Delivering message to Subscriber: ${firstSubInst?.name ?? firstSubId}`,
             }
-          }
+          );
 
-          // Simulate processing by all subscribers concurrently (happens in parallel)
-          const processingEndTime = deliveryTime + 1;
-
-          for (const subId of subscribers) {
-            const subscriberInstance = this.registry.getInstance(subId) as ServerModel;
-            if (subscriberInstance) {
-              this.pushFrame(
-                request,
-                subId,
-                subId,
-                "SUBSCRIBER_PROCESSING",
-                {
-                  payloadSummary: `Subscriber "${subscriberInstance.name}" finished processing.`,
-                  timestamp: processingEndTime,
-                }
-              );
-
-              this.pushFrame(
-                request,
-                subId,
-                currentNodeId,
-                "SUBSCRIBER_ACK",
-                {
-                  payloadSummary: `ACK sent to PubSub Broker from ${subscriberInstance.name}`,
-                  timestamp: processingEndTime,
-                }
-              );
-            }
-          }
-
-          // Update the simulation manager's global timestamp to match the end of parallel processing
-          this.timestamp = processingEndTime + 1;
-
-          // Complete broker flow and end simulation immediately (async response already sent to client)
-          return;
+          // Forward traversal to the first subscriber server
+          request.currentNodeId = firstSubId;
+          traversalPath.push(firstSubId);
+          currentNodeId = firstSubId;
+          request.direction = "forward";
+          break;
         }
       
         default:
