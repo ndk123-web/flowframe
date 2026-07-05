@@ -47,7 +47,13 @@ import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 
 // Header
 import SiteHeader from "@/components/SiteHeader";
-import { ComponentIcon, BrandLogo, CustomDropdown, NODE_FLAVORS, getDefaultFlavor } from "@/components/ComponentIcons";
+import {
+  ComponentIcon,
+  BrandLogo,
+  CustomDropdown,
+  NODE_FLAVORS,
+  getDefaultFlavor,
+} from "@/components/ComponentIcons";
 
 type Theme = "light" | "dark";
 
@@ -147,14 +153,16 @@ const COMPONENTS_LIBRARY: ComponentMetadata[] = [
     type: "message-queue",
     label: "Message Queue",
     icon: "📬",
-    description: "Asynchronous message queue broker with producer-consumer routing.",
+    description:
+      "Asynchronous message queue broker with producer-consumer routing.",
     colorClass: "border-l-pink-500 shadow-pink-500/10 text-pink-400",
   },
   {
     type: "pubsub",
     label: "Pub/Sub Broker",
     icon: "📡",
-    description: "Asynchronous fanout message broker with topic/channel routing.",
+    description:
+      "Asynchronous fanout message broker with topic/channel routing.",
     colorClass: "border-l-indigo-500 shadow-indigo-500/10 text-indigo-400",
   },
 ];
@@ -366,25 +374,219 @@ const TEMPLATES = {
     ],
     edges: [
       {
-        id: "client-1->gateway-1",
+        id: "client-1-right->gateway-1-left",
         source: "client-1",
+        sourceHandle: "right",
         target: "gateway-1",
+        targetHandle: "left",
         type: "packet",
       },
       {
-        id: "gateway-1->server-1",
+        id: "gateway-1-right->server-1-left",
         source: "gateway-1",
+        sourceHandle: "right",
         target: "server-1",
+        targetHandle: "left",
         type: "packet",
       },
       {
-        id: "gateway-1->server-2",
+        id: "gateway-1-right->server-2-left",
         source: "gateway-1",
+        sourceHandle: "right",
         target: "server-2",
+        targetHandle: "left",
         type: "packet",
       },
     ],
   },
+  // messageQueue: {
+  //   nodes: [
+  //     {
+  //       id: "client-1",
+  //       type: "customNode",
+  //       position: { x: 40, y: 220 },
+  //       sourcePosition: Position.Right,
+  //       targetPosition: Position.Left,
+  //       data: { label: "Client", type: "client" },
+  //     },
+  //     {
+  //       id: "server-1",
+  //       type: "customNode",
+  //       position: { x: 280, y: 220 },
+  //       sourcePosition: Position.Right,
+  //       targetPosition: Position.Left,
+  //       data: { label: "Order Server", type: "server" },
+  //     },
+  //     {
+  //       id: "queue-1",
+  //       type: "customNode",
+  //       position: { x: 520, y: 220 },
+  //       sourcePosition: Position.Right,
+  //       targetPosition: Position.Left,
+  //       data: { label: "Message Queue", type: "message-queue" },
+  //     },
+  //     {
+  //       id: "server-2",
+  //       type: "customNode",
+  //       position: { x: 760, y: 220 },
+  //       sourcePosition: Position.Right,
+  //       targetPosition: Position.Left,
+  //       data: { label: "Worker Server", type: "server" },
+  //     },
+  //     {
+  //       id: "postgres-1",
+  //       type: "customNode",
+  //       position: { x: 1000, y: 220 },
+  //       sourcePosition: Position.Right,
+  //       targetPosition: Position.Left,
+  //       data: { label: "Postgres Database", type: "postgres" },
+  //     },
+  //   ],
+  //   edges: [
+  //     {
+  //       id: "client-1-right->server-1-left",
+  //       source: "client-1",
+  //       sourceHandle: "right",
+  //       target: "server-1",
+  //       targetHandle: "left",
+  //       type: "packet",
+  //     },
+  //     {
+  //       id: "server-1-right->queue-1-left",
+  //       source: "server-1",
+  //       sourceHandle: "right",
+  //       target: "queue-1",
+  //       targetHandle: "left",
+  //       type: "packet",
+  //     },
+  //     {
+  //       id: "queue-1-right->server-2-left",
+  //       source: "queue-1",
+  //       sourceHandle: "right",
+  //       target: "server-2",
+  //       targetHandle: "left",
+  //       type: "packet",
+  //     },
+  //     {
+  //       id: "server-2-right->postgres-1-left",
+  //       source: "server-2",
+  //       sourceHandle: "right",
+  //       target: "postgres-1",
+  //       targetHandle: "left",
+  //       type: "packet",
+  //     },
+  //   ],
+  // },
+  // pubSub: {
+  //   nodes: [
+  //     {
+  //       id: "client-1",
+  //       type: "customNode",
+  //       position: { x: 40, y: 220 },
+  //       sourcePosition: Position.Right,
+  //       targetPosition: Position.Left,
+  //       data: { label: "Client", type: "client" },
+  //     },
+  //     {
+  //       id: "server-1",
+  //       type: "customNode",
+  //       position: { x: 280, y: 220 },
+  //       sourcePosition: Position.Right,
+  //       targetPosition: Position.Left,
+  //       data: { label: "Publisher Server", type: "server" },
+  //     },
+  //     {
+  //       id: "broker-1",
+  //       type: "customNode",
+  //       position: { x: 520, y: 220 },
+  //       sourcePosition: Position.Right,
+  //       targetPosition: Position.Left,
+  //       data: { label: "PubSub Broker", type: "pub-sub" },
+  //     },
+  //     {
+  //       id: "server-2",
+  //       type: "customNode",
+  //       position: { x: 760, y: 80 },
+  //       sourcePosition: Position.Right,
+  //       targetPosition: Position.Left,
+  //       data: { label: "Web Server 2", type: "server" },
+  //     },
+  //     {
+  //       id: "server-3",
+  //       type: "customNode",
+  //       position: { x: 760, y: 360 },
+  //       sourcePosition: Position.Right,
+  //       targetPosition: Position.Left,
+  //       data: { label: "Web Server 3", type: "server" },
+  //     },
+  //     {
+  //       id: "postgres-1",
+  //       type: "customNode",
+  //       position: { x: 1000, y: 80 },
+  //       sourcePosition: Position.Right,
+  //       targetPosition: Position.Left,
+  //       data: { label: "Postgres Database", type: "postgres" },
+  //     },
+  //     {
+  //       id: "redis-1",
+  //       type: "customNode",
+  //       position: { x: 1000, y: 360 },
+  //       sourcePosition: Position.Right,
+  //       targetPosition: Position.Left,
+  //       data: { label: "Redis Cache", type: "redis" },
+  //     },
+  //   ],
+  //   edges: [
+  //     {
+  //       id: "client-1-right->server-1-left",
+  //       source: "client-1",
+  //       sourceHandle: "right",
+  //       target: "server-1",
+  //       targetHandle: "left",
+  //       type: "packet",
+  //     },
+  //     {
+  //       id: "server-1-right->broker-1-left",
+  //       source: "server-1",
+  //       sourceHandle: "right",
+  //       target: "broker-1",
+  //       targetHandle: "left",
+  //       type: "packet",
+  //     },
+  //     {
+  //       id: "broker-1-right->server-2-left",
+  //       source: "broker-1",
+  //       sourceHandle: "right",
+  //       target: "server-2",
+  //       targetHandle: "left",
+  //       type: "packet",
+  //     },
+  //     {
+  //       id: "broker-1-right->server-3-left",
+  //       source: "broker-1",
+  //       sourceHandle: "right",
+  //       target: "server-3",
+  //       targetHandle: "left",
+  //       type: "packet",
+  //     },
+  //     {
+  //       id: "server-2-right->postgres-1-left",
+  //       source: "server-2",
+  //       sourceHandle: "right",
+  //       target: "postgres-1",
+  //       targetHandle: "left",
+  //       type: "packet",
+  //     },
+  //     {
+  //       id: "server-3-right->redis-1-left",
+  //       source: "server-3",
+  //       sourceHandle: "right",
+  //       target: "redis-1",
+  //       targetHandle: "left",
+  //       type: "packet",
+  //     },
+  //   ],
+  // },
 };
 
 // Default configurations helper
@@ -430,9 +632,9 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
         tcpConnections: 10,
         prefetchLimit: 1,
         endpoints: {
-          "api/v1/posts": ["GET", "POST", "PUT", "DELETE", "PATCH"],
-          "api/v1/users": ["GET", "POST", "PUT", "DELETE", "PATCH"],
-          "api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          "/api/v1/posts": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          "/api/v1/users": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          "/api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"],
         },
       };
     case "redis":
@@ -488,12 +690,12 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
 // Shapes that need a wrapper SVG overlay (non-rectangular geometry)
 const NODE_SHAPES = [
   { id: "rectangle", label: "Rectangle", icon: "⬜" },
-  { id: "rounded",   label: "Rounded",   icon: "🔲" },
-  { id: "stadium",   label: "Stadium",   icon: "🏟" },
-  { id: "circle",    label: "Circle",    icon: "⭕" },
-  { id: "diamond",   label: "Diamond",   icon: "◆" },
-  { id: "hexagon",   label: "Hexagon",   icon: "⬡" },
-  { id: "cylinder",  label: "Cylinder",  icon: "🗄" },
+  { id: "rounded", label: "Rounded", icon: "🔲" },
+  { id: "stadium", label: "Stadium", icon: "🏟" },
+  { id: "circle", label: "Circle", icon: "⭕" },
+  { id: "diamond", label: "Diamond", icon: "◆" },
+  { id: "hexagon", label: "Hexagon", icon: "⬡" },
+  { id: "cylinder", label: "Cylinder", icon: "🗄" },
   { id: "parallelogram", label: "Slant", icon: "▱" },
 ];
 
@@ -504,7 +706,12 @@ function getShapeStyle(shape: string): React.CSSProperties {
     case "stadium":
       return { borderRadius: "999px 999px 999px 999px" };
     case "circle":
-      return { borderRadius: "50%", aspectRatio: "1", minWidth: 90, padding: "12px" };
+      return {
+        borderRadius: "50%",
+        aspectRatio: "1",
+        minWidth: 90,
+        padding: "12px",
+      };
     case "diamond":
       return {
         transform: "rotate(45deg)",
@@ -514,11 +721,18 @@ function getShapeStyle(shape: string): React.CSSProperties {
         padding: "0",
       };
     case "hexagon":
-      return { clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)", borderRadius: 0 };
+      return {
+        clipPath:
+          "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+        borderRadius: 0,
+      };
     case "cylinder":
       return { borderRadius: "12px 12px 12px 12px", borderBottomWidth: "4px" };
     case "parallelogram":
-      return { clipPath: "polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%)", borderRadius: 0 };
+      return {
+        clipPath: "polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%)",
+        borderRadius: 0,
+      };
     case "rectangle":
     default:
       return { borderRadius: "12px" };
@@ -530,34 +744,97 @@ function CustomNode({ id, data, selected }: any) {
   const shape = (data.shape as string) || "rectangle";
 
   // Per-type accent colors
-  const accentColors: Record<string, { ring: string; glow: string; accent: string; dot: string }> = {
-    client:          { ring: "rgba(139,92,246,0.6)", glow: "rgba(139,92,246,0.12)", accent: "#7c3aed", dot: "#8b5cf6" },
-    "api-gateway":   { ring: "rgba(217,70,239,0.6)", glow: "rgba(217,70,239,0.12)", accent: "#a21caf", dot: "#d946ef" },
-    "load-balancer": { ring: "rgba(59,130,246,0.6)",  glow: "rgba(59,130,246,0.12)",  accent: "#1d4ed8", dot: "#3b82f6" },
-    server:          { ring: "rgba(16,185,129,0.6)",  glow: "rgba(16,185,129,0.12)",  accent: "#059669", dot: "#10b981" },
-    redis:           { ring: "rgba(245,158,11,0.6)",  glow: "rgba(245,158,11,0.12)",  accent: "#d97706", dot: "#f59e0b" },
-    postgres:        { ring: "rgba(6,182,212,0.6)",   glow: "rgba(6,182,212,0.12)",   accent: "#0e7490", dot: "#06b6d4" },
-    storage:         { ring: "rgba(234,179,8,0.6)",   glow: "rgba(234,179,8,0.12)",   accent: "#a16207", dot: "#eab308" },
-    dns:             { ring: "rgba(99,102,241,0.6)",  glow: "rgba(99,102,241,0.12)",  accent: "#4338ca", dot: "#6366f1" },
-    cdn:             { ring: "rgba(20,184,166,0.6)",  glow: "rgba(20,184,166,0.12)",  accent: "#0f766e", dot: "#14b8a6" },
-    "message-queue": { ring: "rgba(236,72,153,0.6)",  glow: "rgba(236,72,153,0.12)",  accent: "#be185d", dot: "#ec4899" },
-    pubsub:          { ring: "rgba(99,102,241,0.6)",  glow: "rgba(99,102,241,0.12)",  accent: "#4338ca", dot: "#6366f1" },
+  const accentColors: Record<
+    string,
+    { ring: string; glow: string; accent: string; dot: string }
+  > = {
+    client: {
+      ring: "rgba(139,92,246,0.6)",
+      glow: "rgba(139,92,246,0.12)",
+      accent: "#7c3aed",
+      dot: "#8b5cf6",
+    },
+    "api-gateway": {
+      ring: "rgba(217,70,239,0.6)",
+      glow: "rgba(217,70,239,0.12)",
+      accent: "#a21caf",
+      dot: "#d946ef",
+    },
+    "load-balancer": {
+      ring: "rgba(59,130,246,0.6)",
+      glow: "rgba(59,130,246,0.12)",
+      accent: "#1d4ed8",
+      dot: "#3b82f6",
+    },
+    server: {
+      ring: "rgba(16,185,129,0.6)",
+      glow: "rgba(16,185,129,0.12)",
+      accent: "#059669",
+      dot: "#10b981",
+    },
+    redis: {
+      ring: "rgba(245,158,11,0.6)",
+      glow: "rgba(245,158,11,0.12)",
+      accent: "#d97706",
+      dot: "#f59e0b",
+    },
+    postgres: {
+      ring: "rgba(6,182,212,0.6)",
+      glow: "rgba(6,182,212,0.12)",
+      accent: "#0e7490",
+      dot: "#06b6d4",
+    },
+    storage: {
+      ring: "rgba(234,179,8,0.6)",
+      glow: "rgba(234,179,8,0.12)",
+      accent: "#a16207",
+      dot: "#eab308",
+    },
+    dns: {
+      ring: "rgba(99,102,241,0.6)",
+      glow: "rgba(99,102,241,0.12)",
+      accent: "#4338ca",
+      dot: "#6366f1",
+    },
+    cdn: {
+      ring: "rgba(20,184,166,0.6)",
+      glow: "rgba(20,184,166,0.12)",
+      accent: "#0f766e",
+      dot: "#14b8a6",
+    },
+    "message-queue": {
+      ring: "rgba(236,72,153,0.6)",
+      glow: "rgba(236,72,153,0.12)",
+      accent: "#be185d",
+      dot: "#ec4899",
+    },
+    pubsub: {
+      ring: "rgba(99,102,241,0.6)",
+      glow: "rgba(99,102,241,0.12)",
+      accent: "#4338ca",
+      dot: "#6366f1",
+    },
   };
 
   const colors = accentColors[data.type as string] ?? accentColors.server;
 
   // Flow rules
   const hasTarget = data.type !== "client";
-  const hasSource = data.type !== "redis" && data.type !== "postgres" && data.type !== "storage";
+  const hasSource =
+    data.type !== "redis" &&
+    data.type !== "postgres" &&
+    data.type !== "storage";
 
   // Flavor badge
   const flavors = NODE_FLAVORS[data.type as string];
-  const activeFlavor = flavors ? (flavors.find((f) => f.id === data.flavor) ?? flavors[0]) : null;
+  const activeFlavor = flavors
+    ? (flavors.find((f) => f.id === data.flavor) ?? flavors[0])
+    : null;
 
   // Diamond shape requires inner counter-rotation for content
-  const isDiamond  = shape === "diamond";
-  const isCircle   = shape === "circle";
-  const isHexagon  = shape === "hexagon";
+  const isDiamond = shape === "diamond";
+  const isCircle = shape === "circle";
+  const isHexagon = shape === "hexagon";
   const isParallelogram = shape === "parallelogram";
   const isCylinder = shape === "cylinder";
 
@@ -567,7 +844,8 @@ function CustomNode({ id, data, selected }: any) {
   // Handle positions vary by shape
   const handleStyle: React.CSSProperties = {
     background: colors.dot,
-    width: 8, height: 8,
+    width: 8,
+    height: 8,
     border: "2px solid rgba(255,255,255,0.25)",
     borderRadius: "50%",
   };
@@ -589,15 +867,32 @@ function CustomNode({ id, data, selected }: any) {
         minHeight={isDiamond || isCircle ? 90 : 44}
         lineStyle={{ borderColor: colors.accent, borderWidth: 1 }}
         handleStyle={{
-          width: 8, height: 8, borderRadius: "50%",
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
           backgroundColor: colors.accent,
           border: "2px solid rgba(255,255,255,0.3)",
         }}
       />
 
-      {/* Target handle */}
+      {/* Target handles (Left & Top) */}
       {hasTarget && (
-        <Handle type="target" position={Position.Left} id="left" style={handleStyle} />
+        <>
+          <Handle
+            type="target"
+            position={Position.Left}
+            id="left"
+            className="w-3.5 h-3.5 rounded-full border-[2.5px] border-white dark:border-[#0f172a] shadow-md cursor-crosshair hover:scale-[1.4] transition-all duration-150 z-50"
+            style={{ background: colors.dot }}
+          />
+          <Handle
+            type="target"
+            position={Position.Top}
+            id="top"
+            className="w-3.5 h-3.5 rounded-full border-[2.5px] border-white dark:border-[#0f172a] shadow-md cursor-crosshair hover:scale-[1.4] transition-all duration-150 z-50"
+            style={{ background: colors.dot }}
+          />
+        </>
       )}
 
       {/* ── Shape Container ─────────────────────────────────────────────── */}
@@ -610,7 +905,11 @@ function CustomNode({ id, data, selected }: any) {
             ? `0 0 0 2px ${colors.ring}, 0 4px 20px ${colors.glow}`
             : `0 2px 8px ${colors.glow}`,
           ...shapeStyle,
-          ...(isCylinder ? { boxShadow: `${selected ? `0 0 0 2px ${colors.ring}, ` : ""}0 2px 8px ${colors.glow}, inset 0 -3px 0 color-mix(in srgb, var(--border) 60%, ${colors.accent})` } : {}),
+          ...(isCylinder
+            ? {
+                boxShadow: `${selected ? `0 0 0 2px ${colors.ring}, ` : ""}0 2px 8px ${colors.glow}, inset 0 -3px 0 color-mix(in srgb, var(--border) 60%, ${colors.accent})`,
+              }
+            : {}),
         }}
       >
         {/* Content wrapper — counter-rotate if diamond */}
@@ -659,7 +958,8 @@ function CustomNode({ id, data, selected }: any) {
             <div
               className="shrink-0 flex items-center justify-center rounded-md"
               style={{
-                width: 22, height: 22,
+                width: 22,
+                height: 22,
                 background: `color-mix(in srgb, var(--surface) 80%, ${colors.accent})`,
                 border: `1px solid color-mix(in srgb, var(--border) 70%, ${colors.accent})`,
               }}
@@ -680,19 +980,39 @@ function CustomNode({ id, data, selected }: any) {
       {/* Active pulse dot */}
       {data.isActive && (
         <span className="absolute -top-1 -right-1 flex h-3 w-3 pointer-events-none">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: colors.dot }} />
-          <span className="relative inline-flex rounded-full h-3 w-3" style={{ background: colors.dot }} />
+          <span
+            className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+            style={{ background: colors.dot }}
+          />
+          <span
+            className="relative inline-flex rounded-full h-3 w-3"
+            style={{ background: colors.dot }}
+          />
         </span>
       )}
 
-      {/* Source handle */}
+      {/* Source handles (Right & Bottom) */}
       {hasSource && (
-        <Handle type="source" position={Position.Right} id="right" style={handleStyle} />
+        <>
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="right"
+            className="w-3.5 h-3.5 rounded-full border-[2.5px] border-white dark:border-[#0f172a] shadow-md cursor-crosshair hover:scale-[1.4] transition-all duration-150 z-50"
+            style={{ background: colors.dot }}
+          />
+          <Handle
+            type="source"
+            position={Position.Bottom}
+            id="bottom"
+            className="w-3.5 h-3.5 rounded-full border-[2.5px] border-white dark:border-[#0f172a] shadow-md cursor-crosshair hover:scale-[1.4] transition-all duration-150 z-50"
+            style={{ background: colors.dot }}
+          />
+        </>
       )}
     </div>
   );
 }
-
 
 // React Flow Custom Edge
 function packetColor(isReverseMotion: boolean) {
@@ -1180,7 +1500,13 @@ const SHAPES_LIBRARY = [
     borderRadius: "10px",
     clipPath: undefined,
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-violet-400">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        className="w-4 h-4 text-violet-400"
+      >
         <rect x="3" y="3" width="18" height="18" rx="1.5" />
       </svg>
     ),
@@ -1191,7 +1517,13 @@ const SHAPES_LIBRARY = [
     borderRadius: "999px",
     clipPath: undefined,
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-blue-400">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        className="w-4 h-4 text-blue-400"
+      >
         <rect x="3" y="3" width="18" height="18" rx="6" />
       </svg>
     ),
@@ -1202,7 +1534,13 @@ const SHAPES_LIBRARY = [
     borderRadius: "50%",
     clipPath: undefined,
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-emerald-400">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        className="w-4 h-4 text-emerald-400"
+      >
         <circle cx="12" cy="12" r="9" />
       </svg>
     ),
@@ -1213,7 +1551,13 @@ const SHAPES_LIBRARY = [
     borderRadius: "0",
     clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-amber-400">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        className="w-4 h-4 text-amber-400"
+      >
         <path d="M12 2L22 12L12 22L2 12Z" />
       </svg>
     ),
@@ -1224,7 +1568,13 @@ const SHAPES_LIBRARY = [
     borderRadius: "0",
     clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-cyan-400">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        className="w-4 h-4 text-cyan-400"
+      >
         <path d="M12 2L21 7.2V16.8L12 22L3 16.8V7.2Z" />
       </svg>
     ),
@@ -1235,7 +1585,13 @@ const SHAPES_LIBRARY = [
     borderRadius: "0",
     clipPath: "polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%)",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-yellow-400">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        className="w-4 h-4 text-yellow-400"
+      >
         <path d="M6 4H21L18 20H3Z" />
       </svg>
     ),
@@ -1246,7 +1602,13 @@ const SHAPES_LIBRARY = [
     borderRadius: "0",
     clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-pink-400">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        className="w-4 h-4 text-pink-400"
+      >
         <path d="M12 3L22 21H2Z" />
       </svg>
     ),
@@ -1257,7 +1619,13 @@ const SHAPES_LIBRARY = [
     borderRadius: "4px",
     clipPath: undefined,
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-orange-400">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        className="w-4 h-4 text-orange-400"
+      >
         <path d="M3 3H16L21 8V21H3V3Z" />
         <path d="M16 3V8H21" />
       </svg>
@@ -1269,7 +1637,13 @@ const SHAPES_LIBRARY = [
     borderRadius: "0",
     clipPath: undefined,
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-300">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        className="w-4 h-4 text-slate-300"
+      >
         <path d="M4 7V4H20V7M12 4V20M9 20H15" />
       </svg>
     ),
@@ -1295,10 +1669,12 @@ const FRAME_COLOR_PRESETS = [
 // React Flow Shape Node — Group frame / container, sits behind nodes
 // Label shown inside body (sticky/text) or bottom-left badge, with align options
 function ShapeNode({ data, selected }: any) {
-  const shapeDef = SHAPES_LIBRARY.find((s) => s.id === (data.shapeId ?? "rect")) ?? SHAPES_LIBRARY[0];
-  const isText    = data.shapeId === "text";
-  const isSticky  = data.shapeId === "sticky";
-  const color     = (data.color as string) || "#8b5cf6";
+  const shapeDef =
+    SHAPES_LIBRARY.find((s) => s.id === (data.shapeId ?? "rect")) ??
+    SHAPES_LIBRARY[0];
+  const isText = data.shapeId === "text";
+  const isSticky = data.shapeId === "sticky";
+  const color = (data.color as string) || "#8b5cf6";
   const textAlign = (data.textAlign as "left" | "center" | "right") || "center";
 
   // Parse a hex color into rgba with an alpha
@@ -1310,9 +1686,15 @@ function ShapeNode({ data, selected }: any) {
     return `rgba(${r},${g},${b},${alpha})`;
   }
 
-  const fillColor   = isText ? "transparent" : hexToRgba(color, isSticky ? 0.18 : 0.07);
-  const borderColor = isText ? "transparent" : selected ? hexToRgba(color, 0.9) : hexToRgba(color, 0.45);
-  const labelColor  = hexToRgba(color, 0.9);
+  const fillColor = isText
+    ? "transparent"
+    : hexToRgba(color, isSticky ? 0.18 : 0.07);
+  const borderColor = isText
+    ? "transparent"
+    : selected
+      ? hexToRgba(color, 0.9)
+      : hexToRgba(color, 0.45);
+  const labelColor = hexToRgba(color, 0.9);
 
   return (
     <div
@@ -1326,7 +1708,9 @@ function ShapeNode({ data, selected }: any) {
         minHeight={isText ? 24 : 80}
         lineStyle={{ borderColor: hexToRgba(color, 0.6), borderWidth: 1 }}
         handleStyle={{
-          width: 8, height: 8, borderRadius: "50%",
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
           backgroundColor: color,
           border: "2px solid rgba(255,255,255,0.3)",
         }}
@@ -1334,23 +1718,30 @@ function ShapeNode({ data, selected }: any) {
 
       {isText ? (
         /* ── Plain text label ── */
-        <div 
+        <div
           className="w-full h-full flex items-center"
           style={{
-            justifyContent: textAlign === "left" ? "flex-start" : textAlign === "right" ? "flex-end" : "center"
+            justifyContent:
+              textAlign === "left"
+                ? "flex-start"
+                : textAlign === "right"
+                  ? "flex-end"
+                  : "center",
           }}
         >
-          <span
-            className="select-none font-semibold w-full break-words"
-            style={{ 
-              fontSize: 15, 
-              color: "var(--foreground)", 
-              pointerEvents: "none",
-              textAlign: textAlign
-            }}
-          >
-            {data.label || "Text"}
-          </span>
+          {data.label && (
+            <span
+              className="select-none font-semibold w-full break-words"
+              style={{
+                fontSize: 15,
+                color: "var(--foreground)",
+                pointerEvents: "none",
+                textAlign: textAlign,
+              }}
+            >
+              {data.label}
+            </span>
+          )}
         </div>
       ) : isSticky ? (
         /* ── Sticky Note ── */
@@ -1360,20 +1751,29 @@ function ShapeNode({ data, selected }: any) {
             background: fillColor,
             border: `2px solid ${borderColor}`,
             borderRadius: shapeDef.borderRadius,
-            boxShadow: selected ? `0 0 0 1px ${hexToRgba(color, 0.3)}, 0 4px 24px ${hexToRgba(color, 0.12)}` : "none",
-            justifyContent: textAlign === "left" ? "flex-start" : textAlign === "right" ? "flex-end" : "center",
+            boxShadow: selected
+              ? `0 0 0 1px ${hexToRgba(color, 0.3)}, 0 4px 24px ${hexToRgba(color, 0.12)}`
+              : "none",
+            justifyContent:
+              textAlign === "left"
+                ? "flex-start"
+                : textAlign === "right"
+                  ? "flex-end"
+                  : "center",
           }}
         >
-          <span
-            className="text-xs font-semibold select-none leading-snug break-words w-full"
-            style={{ 
-              color: labelColor, 
-              pointerEvents: "none",
-              textAlign: textAlign
-            }}
-          >
-            {data.label || "Sticky Note"}
-          </span>
+          {data.label && (
+            <span
+              className="text-xs font-semibold select-none leading-snug break-words w-full"
+              style={{
+                color: labelColor,
+                pointerEvents: "none",
+                textAlign: textAlign,
+              }}
+            >
+              {data.label}
+            </span>
+          )}
         </div>
       ) : (
         /* ── Group Frame / Container shape ── */
@@ -1384,29 +1784,36 @@ function ShapeNode({ data, selected }: any) {
             border: `2px ${selected ? "solid" : "dashed"} ${borderColor}`,
             borderRadius: shapeDef.borderRadius,
             clipPath: shapeDef.clipPath,
-            boxShadow: selected ? `0 0 0 1px ${hexToRgba(color, 0.3)}, 0 4px 24px ${hexToRgba(color, 0.12)}` : "none",
+            boxShadow: selected
+              ? `0 0 0 1px ${hexToRgba(color, 0.3)}, 0 4px 24px ${hexToRgba(color, 0.12)}`
+              : "none",
           }}
         >
           {/* ── Label badge at bottom-left ── */}
-          {!shapeDef.clipPath && (
+          {!shapeDef.clipPath && data.label && (
             <div
               className="absolute bottom-0 left-0 right-0 px-3 py-1.5 flex items-center"
               style={{
                 background: hexToRgba(color, 0.12),
                 borderTop: `1px solid ${hexToRgba(color, 0.2)}`,
-                justifyContent: textAlign === "left" ? "flex-start" : textAlign === "right" ? "flex-end" : "center"
+                justifyContent:
+                  textAlign === "left"
+                    ? "flex-start"
+                    : textAlign === "right"
+                      ? "flex-end"
+                      : "center",
               }}
             >
               <span
                 className="text-[11px] font-bold truncate select-none"
-                style={{ 
-                  color: labelColor, 
+                style={{
+                  color: labelColor,
                   pointerEvents: "none",
                   textAlign: textAlign,
-                  width: "100%"
+                  width: "100%",
                 }}
               >
-                {data.label || shapeDef.label}
+                {data.label}
               </span>
             </div>
           )}
@@ -1415,7 +1822,6 @@ function ShapeNode({ data, selected }: any) {
     </div>
   );
 }
-
 
 const nodeTypes = {
   customNode: CustomNode,
@@ -1482,6 +1888,7 @@ function WorkspaceInner() {
   // Floating Panel Visibility States
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(true);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   // Redesigned Sidebar Accordions & Search states
   const [isTemplatesExpanded, setIsTemplatesExpanded] = useState(true);
@@ -1911,7 +2318,7 @@ function WorkspaceInner() {
             const queueId = isProducer ? edge.target : edge.source;
             const queueNode = activeNodes.find((node) => node.id === queueId);
             const queueLabel = String(queueNode?.data.label || queueId);
-            
+
             if (isProducer) {
               serverInstance.addQueueProducer(queueId, queueLabel);
             } else {
@@ -1941,7 +2348,9 @@ function WorkspaceInner() {
             const pubSubId = isProducer ? edge.target : edge.source;
             if (!isProducer) {
               // It's a subscriber/consumer server. Register subscription topic.
-              const pubSubInstance = registry.getInstance(pubSubId) as PubSubModel;
+              const pubSubInstance = registry.getInstance(
+                pubSubId,
+              ) as PubSubModel;
               if (pubSubInstance) {
                 const subTopicsArray = config.subscriptionTopics;
                 if (Array.isArray(subTopicsArray)) {
@@ -1951,7 +2360,8 @@ function WorkspaceInner() {
                     }
                   });
                 } else {
-                  const subTopicsStr = (config.subscriptionTopic as string) || "order.created";
+                  const subTopicsStr =
+                    (config.subscriptionTopic as string) || "order.created";
                   const subTopics = subTopicsStr
                     .split(",")
                     .map((t: string) => t.trim())
@@ -2034,7 +2444,10 @@ function WorkspaceInner() {
           const reqItem = clientRequests[i];
 
           let parsedBody = {};
-          if (typeof reqItem.body === "string" && reqItem.body.trim().length > 0) {
+          if (
+            typeof reqItem.body === "string" &&
+            reqItem.body.trim().length > 0
+          ) {
             try {
               parsedBody = JSON.parse(reqItem.body);
             } catch (err) {
@@ -2188,10 +2601,14 @@ function WorkspaceInner() {
     (shapeId: string, position?: { x: number; y: number }) => {
       const shapeDef = SHAPES_LIBRARY.find((s) => s.id === shapeId);
       const id = `shape-${shapeId}-${uid.rnd()}`;
-      const isText     = shapeId === "text";
-      const isCompact  = shapeId === "circle" || shapeId === "diamond" || shapeId === "triangle";
+      const isText = shapeId === "text";
+      const isCompact =
+        shapeId === "circle" || shapeId === "diamond" || shapeId === "triangle";
       // Pick a random color from presets for new frames
-      const defaultColor = FRAME_COLOR_PRESETS[Math.floor(Math.random() * FRAME_COLOR_PRESETS.length)].color;
+      const defaultColor =
+        FRAME_COLOR_PRESETS[
+          Math.floor(Math.random() * FRAME_COLOR_PRESETS.length)
+        ].color;
 
       const newNode = {
         id,
@@ -2200,23 +2617,23 @@ function WorkspaceInner() {
           x: 80 + Math.random() * 200,
           y: 60 + Math.random() * 150,
         },
-        zIndex: -1,   // ← render behind all other nodes
+        zIndex: -1, // ← render behind all other nodes
         data: {
           shapeId,
-          label: isText ? "Text" : (shapeDef?.label ?? ""),
+          label: "", // Always default to empty label so shape remains pure unless renamed by user
           color: defaultColor,
         },
         style: {
           // Frames are large by default so nodes fit inside
-          width:  isText ? 130 : isCompact ? 140 : 320,
-          height: isText ? 36  : isCompact ? 140 : 220,
+          width: isText ? 130 : isCompact ? 140 : 320,
+          height: isText ? 36 : isCompact ? 140 : 220,
           zIndex: -1,
         },
       };
       setNodes((nds) => [...nds, newNode]);
       setSelectedNodeId(id);
     },
-    [uid, setNodes, setSelectedNodeId]
+    [uid, setNodes, setSelectedNodeId],
   );
 
   const handleShapeDragStart = (e: React.DragEvent, shapeId: string) => {
@@ -2258,7 +2675,9 @@ function WorkspaceInner() {
       return;
     }
 
-    const type = e.dataTransfer.getData("application/flowframe-type") as ComponentType;
+    const type = e.dataTransfer.getData(
+      "application/flowframe-type",
+    ) as ComponentType;
     if (!type) return;
 
     addComponent(type, canvasPosition);
@@ -2268,9 +2687,11 @@ function WorkspaceInner() {
   const onConnect = useCallback(
     (connection: any) => {
       const inactiveStrokeColor = theme === "dark" ? "#475569" : "#cbd5e1";
+      const sourceHandleId = connection.sourceHandle || "right";
+      const targetHandleId = connection.targetHandle || "left";
       const newEdge = {
         ...connection,
-        id: `${connection.source}->${connection.target}`,
+        id: `${connection.source}-${sourceHandleId}->${connection.target}-${targetHandleId}`,
         type: "packet",
         markerEnd: { type: MarkerType.ArrowClosed, color: "#60a5fa" },
         style: { stroke: inactiveStrokeColor, strokeWidth: 1.8 },
@@ -2394,8 +2815,7 @@ function WorkspaceInner() {
         f.action.includes("REJECT") ||
         f.action.includes("RESPONSE_ERROR");
       const isWarning =
-        f.action.includes("CACHE_MISS") ||
-        f.action.includes("QUERY_MISS");
+        f.action.includes("CACHE_MISS") || f.action.includes("QUERY_MISS");
 
       if (!existing) {
         requestStats.set(f.requestId, {
@@ -2407,7 +2827,11 @@ function WorkspaceInner() {
           hasError: isError,
           errorMsg: isError ? f.payloadSummary : undefined,
           hasWarning: isWarning,
-          warningMsg: isWarning ? (f.action.includes("CACHE_MISS") ? "Cache Miss" : "Query Miss") : undefined,
+          warningMsg: isWarning
+            ? f.action.includes("CACHE_MISS")
+              ? "Cache Miss"
+              : "Query Miss"
+            : undefined,
         });
       } else {
         existing.end = Math.max(existing.end, f.timestamp);
@@ -2419,7 +2843,9 @@ function WorkspaceInner() {
           }
           if (isWarning) {
             existing.hasWarning = true;
-            existing.warningMsg = f.action.includes("CACHE_MISS") ? "Cache Miss" : "Query Miss";
+            existing.warningMsg = f.action.includes("CACHE_MISS")
+              ? "Cache Miss"
+              : "Query Miss";
           }
         }
       }
@@ -2607,30 +3033,42 @@ function WorkspaceInner() {
     >();
 
     for (const frame of currentFrames) {
-      const directEdgeId = `${frame.from}->${frame.to}`;
-      const reverseEdgeId = `${frame.to}->${frame.from}`;
-      const hasDirectEdge = edges.some((e) => e.id === directEdgeId);
-      const hasReverseEdge = edges.some((e) => e.id === reverseEdgeId);
+      // Find all edges that match this transmission step
+      const directEdge = edges.find(
+        (e) => e.source === frame.from && e.target === frame.to,
+      );
+      const reverseEdge = edges.find(
+        (e) => e.source === frame.to && e.target === frame.from,
+      );
 
-      const resolvedEdgeId = hasDirectEdge
-        ? directEdgeId
-        : hasReverseEdge
-          ? reverseEdgeId
-          : directEdgeId;
-
-      const isReverseMotion = !hasDirectEdge && hasReverseEdge;
-      const previous = edgeState.get(resolvedEdgeId);
-
-      if (!previous) {
-        edgeState.set(resolvedEdgeId, {
-          reverseMotion: isReverseMotion,
-          packetCount: 1,
-        });
-      } else {
-        edgeState.set(resolvedEdgeId, {
-          reverseMotion: previous.reverseMotion || isReverseMotion,
-          packetCount: previous.packetCount + 1,
-        });
+      if (directEdge) {
+        const resolvedEdgeId = directEdge.id;
+        const previous = edgeState.get(resolvedEdgeId);
+        if (!previous) {
+          edgeState.set(resolvedEdgeId, {
+            reverseMotion: false,
+            packetCount: 1,
+          });
+        } else {
+          edgeState.set(resolvedEdgeId, {
+            reverseMotion: previous.reverseMotion,
+            packetCount: previous.packetCount + 1,
+          });
+        }
+      } else if (reverseEdge) {
+        const resolvedEdgeId = reverseEdge.id;
+        const previous = edgeState.get(resolvedEdgeId);
+        if (!previous) {
+          edgeState.set(resolvedEdgeId, {
+            reverseMotion: true,
+            packetCount: 1,
+          });
+        } else {
+          edgeState.set(resolvedEdgeId, {
+            reverseMotion: previous.reverseMotion || true,
+            packetCount: previous.packetCount + 1,
+          });
+        }
       }
     }
 
@@ -2790,14 +3228,50 @@ function WorkspaceInner() {
                 Shape Library
               </h2>
               <div className="flex items-center gap-1.5">
+                {/* Modern Help Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowHelpModal(true)}
+                  className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center gap-1"
+                  title="How to Use Guide"
+                >
+                  <svg
+                    className="w-3.5 h-3.5 text-violet-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <line
+                      x1="12"
+                      y1="17"
+                      x2="12.01"
+                      y2="17"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <span>Help</span>
+                </button>
                 {/* Dock / Float Toggle */}
                 <button
                   type="button"
                   onClick={() => setIsSidebarFloating(!isSidebarFloating)}
-                  className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer"
+                  className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center gap-1"
                   title={isSidebarFloating ? "Dock Sidebar" : "Float Sidebar"}
                 >
-                  {isSidebarFloating ? "📌 Dock" : "✈️ Float"}
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <path d="M12 2v20M17 5H7" />
+                  </svg>
+                  <span>{isSidebarFloating ? "Dock" : "Float"}</span>
                 </button>
                 {/* Mobile Close Button */}
                 <button
@@ -2811,14 +3285,23 @@ function WorkspaceInner() {
               </div>
             </div>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-xs text-[color:var(--foreground)]/40">
-                🔍
+              <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
+                <svg
+                  className="w-3.5 h-3.5 text-[color:var(--foreground)]/40"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
               </span>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Type / to search shapes..."
+                placeholder="Type to search shapes..."
                 className="w-full pl-8 pr-7 py-1.5 bg-[var(--surface-muted)]/70 hover:bg-[var(--surface-muted)] focus:bg-[var(--surface)] text-xs text-[color:var(--foreground)] placeholder-[color:var(--foreground)]/40 border border-[var(--border)] rounded-lg outline-none focus:border-violet-500/80 transition-all duration-150"
               />
               {searchQuery && (
@@ -2853,7 +3336,7 @@ function WorkspaceInner() {
                   </span>
                 </div>
                 <span className="text-[9px] text-[color:var(--foreground)]/40 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-mono">
-                  4
+                  {Object.keys(TEMPLATES).length}
                 </span>
               </button>
 
@@ -2862,28 +3345,87 @@ function WorkspaceInner() {
                   {Object.entries({
                     cacheAside: {
                       label: "Cache Aside",
-                      icon: "💾",
+                      icon: (
+                        <svg
+                          className="w-5 h-5 text-violet-400 group-hover:scale-110 transition duration-150"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <rect
+                            x="2"
+                            y="3"
+                            width="20"
+                            height="14"
+                            rx="2"
+                            ry="2"
+                          />
+                          <line x1="2" y1="10" x2="22" y2="10" />
+                          <line x1="12" y1="10" x2="12" y2="21" />
+                        </svg>
+                      ),
                       description:
                         "Write/read path caching strategy prioritizing low latency using Redis Cache and Postgres DB.",
                       color: "hover:border-violet-500/40 text-violet-400",
                     },
                     loadBalancing: {
                       label: "Load Balancer",
-                      icon: "⚖️",
+                      icon: (
+                        <svg
+                          className="w-5 h-5 text-blue-400 group-hover:scale-110 transition duration-150"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="12" y1="2" x2="12" y2="22" />
+                          <line x1="12" y1="12" x2="22" y2="12" />
+                        </svg>
+                      ),
                       description:
                         "Distribute client requests across multiple backend web server nodes using Round Robin routing.",
                       color: "hover:border-blue-500/40 text-blue-400",
                     },
                     valetKey: {
                       label: "Valet Key",
-                      icon: "🔑",
+                      icon: (
+                        <svg
+                          className="w-5 h-5 text-yellow-400 group-hover:scale-110 transition duration-150"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <rect
+                            x="3"
+                            y="11"
+                            width="18"
+                            height="11"
+                            rx="2"
+                            ry="2"
+                          />
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                      ),
                       description:
                         "Clients fetch secure signed URLs from server, then upload files directly to Cloud Storage.",
                       color: "hover:border-yellow-500/40 text-yellow-400",
                     },
                     apiGateway: {
                       label: "API Gateway",
-                      icon: "🚪",
+                      icon: (
+                        <svg
+                          className="w-5 h-5 text-fuchsia-400 group-hover:scale-110 transition duration-150"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M9 3H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM21 3h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" />
+                        </svg>
+                      ),
                       description:
                         "Central entry point routes requests dynamically to Post or User services based on path prefixes.",
                       color: "hover:border-fuchsia-500/40 text-fuchsia-400",
@@ -2898,7 +3440,7 @@ function WorkspaceInner() {
                         setHoveredComponent({
                           type: key as any,
                           label: value.label,
-                          icon: value.icon,
+                          icon: "",
                           description: value.description,
                           colorClass: "",
                         });
@@ -2906,12 +3448,10 @@ function WorkspaceInner() {
                         setHoverTooltipY(rect.top + rect.height / 2);
                       }}
                       onMouseLeave={() => setHoveredComponent(null)}
-                      className={`flex flex-col items-center justify-center p-2 rounded-xl border border-[var(--border)]/70 bg-[var(--surface)]/40 ${value.color} hover:bg-[var(--surface)]/80 transition duration-150 text-center cursor-pointer group shadow-sm`}
+                      className={`flex flex-col items-center justify-center p-3.5 rounded-xl border border-[var(--border)]/70 bg-[var(--surface)]/40 ${value.color} hover:bg-[var(--surface)]/80 transition duration-150 text-center cursor-pointer group shadow-sm`}
                     >
-                      <span className="text-xl group-hover:scale-110 transition duration-150">
-                        {value.icon}
-                      </span>
-                      <span className="text-[9px] font-bold text-[color:var(--foreground)]/65 mt-1 truncate max-w-full">
+                      {value.icon}
+                      <span className="text-[9.5px] font-semibold text-[color:var(--foreground)]/65 mt-1.5 truncate max-w-full">
                         {value.label}
                       </span>
                     </button>
@@ -2922,7 +3462,7 @@ function WorkspaceInner() {
 
             <div className="h-px bg-[var(--border)]/40" />
 
-            {/* 2. Components Section */}
+            {/* 2. Components & Shapes Unified Section */}
             <div className="space-y-1">
               <button
                 type="button"
@@ -2936,103 +3476,93 @@ function WorkspaceInner() {
                     ▶
                   </span>
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
-                    Shapes & Components
+                    Components & Shapes
                   </span>
                 </div>
                 <span className="text-[9px] text-[color:var(--foreground)]/40 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-mono">
-                  {filteredComponents.length}
+                  {filteredComponents.length + SHAPES_LIBRARY.length}
                 </span>
               </button>
 
               {isComponentsExpanded && (
-                <div className="grid grid-cols-3 gap-2 p-1">
-                  {filteredComponents.map((item) => (
-                    <button
-                      key={item.type}
-                      type="button"
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, item.type)}
-                      onDragEnd={handleDragEnd}
-                      onClick={() => addComponent(item.type)}
-                      onMouseEnter={(e) => {
-                        if (draggingType) return; // don't show tooltip while dragging
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        setHoveredComponent(item);
-                        setHoverTooltipX(rect.right + 12);
-                        setHoverTooltipY(rect.top + rect.height / 2);
-                      }}
-                      onMouseLeave={() => setHoveredComponent(null)}
-                      className={`aspect-square rounded-xl border bg-[var(--surface)]/30 hover:bg-[var(--surface)] hover:border-violet-500/50 flex flex-col items-center justify-center transition duration-150 cursor-grab active:cursor-grabbing group relative shadow-sm ${
-                        draggingType === item.type
-                          ? "border-violet-500/60 bg-violet-500/10 scale-95"
-                          : "border-[var(--border)]"
-                      }`}
-                      title={`${item.label} — click to add or drag onto canvas`}
-                    >
-                      <ComponentIcon
-                        type={item.type}
-                        className="w-6 h-6 group-hover:scale-110 transition duration-150 text-[color:var(--foreground)]/65 group-hover:text-violet-400"
-                      />
-                      <span className="text-[8px] font-bold text-[color:var(--foreground)]/50 mt-1 truncate max-w-full px-1">
-                        {item.label}
-                      </span>
-                    </button>
-                  ))}
-                  {filteredComponents.length === 0 && (
-                    <div className="col-span-3 text-center py-6 text-xs text-[color:var(--foreground)]/40">
-                      No matching components
+                <div className="space-y-3 p-1">
+                  {/* Category 1: System Components */}
+                  <div>
+                    <h3 className="text-[9px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/40 mb-1.5 px-1">
+                      System Components
+                    </h3>
+                    <div className="grid grid-cols-3 gap-2">
+                      {filteredComponents.map((item) => (
+                        <button
+                          key={item.type}
+                          type="button"
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, item.type)}
+                          onDragEnd={handleDragEnd}
+                          onClick={() => addComponent(item.type)}
+                          onMouseEnter={(e) => {
+                            if (draggingType) return; // don't show tooltip while dragging
+                            const rect =
+                              e.currentTarget.getBoundingClientRect();
+                            setHoveredComponent(item);
+                            setHoverTooltipX(rect.right + 12);
+                            setHoverTooltipY(rect.top + rect.height / 2);
+                          }}
+                          onMouseLeave={() => setHoveredComponent(null)}
+                          className={`aspect-square rounded-xl border bg-[var(--surface)]/30 hover:bg-[var(--surface)] hover:border-violet-500/50 flex flex-col items-center justify-center transition duration-150 cursor-grab active:cursor-grabbing group relative shadow-sm ${
+                            draggingType === item.type
+                              ? "border-violet-500/60 bg-violet-500/10 scale-95"
+                              : "border-[var(--border)]"
+                          }`}
+                          title={`${item.label} — click to add or drag onto canvas`}
+                        >
+                          <ComponentIcon
+                            type={item.type}
+                            className="w-6 h-6 group-hover:scale-110 transition duration-150 text-[color:var(--foreground)]/65 group-hover:text-violet-400"
+                          />
+                          <span className="text-[8px] font-bold text-[color:var(--foreground)]/50 mt-1 truncate max-w-full px-1">
+                            {item.label}
+                          </span>
+                        </button>
+                      ))}
+                      {filteredComponents.length === 0 && (
+                        <div className="col-span-3 text-center py-6 text-xs text-[color:var(--foreground)]/40">
+                          No matching components
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
+
+                  {/* Category 2: Canvas Shapes */}
+                  <div className="pt-1.5 border-t border-[var(--border)]/20">
+                    <h3 className="text-[9px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/40 mb-1.5 px-1">
+                      Canvas Shapes & Frames
+                    </h3>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {SHAPES_LIBRARY.map((shape) => (
+                        <button
+                          key={shape.id}
+                          type="button"
+                          draggable
+                          onDragStart={(e) => handleShapeDragStart(e, shape.id)}
+                          onClick={() => addShape(shape.id)}
+                          title={`${shape.label} — click to add or drag onto canvas`}
+                          className="aspect-square rounded-xl border border-[var(--border)] bg-[var(--surface)]/40 flex flex-col items-center justify-center gap-0.5 transition duration-150 cursor-grab active:cursor-grabbing group hover:scale-105 hover:border-violet-500/40 hover:bg-[var(--surface)]"
+                        >
+                          {/* Legitimate vector SVG shape icon */}
+                          <div className="w-5 h-5 flex items-center justify-center group-hover:scale-110 transition duration-150">
+                            {shape.icon}
+                          </div>
+                          <span className="text-[7.5px] font-semibold text-[color:var(--foreground)]/45 leading-none truncate max-w-full px-0.5 group-hover:text-violet-400 transition">
+                            {shape.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
-          </div>
-
-          {/* ── Shapes Section ───────────────────────────────────────────── */}
-          <div className="px-3 pb-2">
-            <button
-              type="button"
-              onClick={() => setIsShapesExpanded(!isShapesExpanded)}
-              className="w-full flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)] transition duration-150 text-left font-semibold cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className={`text-[8px] text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isShapesExpanded ? "rotate-90" : "rotate-0"}`}
-                >
-                  ▶
-                </span>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
-                  Shapes
-                </span>
-              </div>
-              <span className="text-[9px] text-[color:var(--foreground)]/40 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-mono">
-                {SHAPES_LIBRARY.length}
-              </span>
-            </button>
-
-            {isShapesExpanded && (
-              <div className="grid grid-cols-5 gap-1.5 p-1 mt-1">
-                {SHAPES_LIBRARY.map((shape) => (
-                  <button
-                    key={shape.id}
-                    type="button"
-                    draggable
-                    onDragStart={(e) => handleShapeDragStart(e, shape.id)}
-                    onClick={() => addShape(shape.id)}
-                    title={`${shape.label} — click to add or drag onto canvas`}
-                    className="aspect-square rounded-xl border border-[var(--border)] bg-[var(--surface)]/40 flex flex-col items-center justify-center gap-0.5 transition duration-150 cursor-grab active:cursor-grabbing group hover:scale-105 hover:border-violet-500/40 hover:bg-[var(--surface)]"
-                  >
-                    {/* Legitimate vector SVG shape icon */}
-                    <div className="w-5 h-5 flex items-center justify-center group-hover:scale-110 transition duration-150">
-                      {shape.icon}
-                    </div>
-                    <span className="text-[7.5px] font-semibold text-[color:var(--foreground)]/45 leading-none truncate max-w-full px-0.5 group-hover:text-violet-400 transition">
-                      {shape.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Sidebar Footer Controls */}
@@ -3047,7 +3577,15 @@ function WorkspaceInner() {
               className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-violet-500/30 bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 text-[11px] font-bold transition cursor-pointer"
               title="Re-run simulation with current changes"
             >
-              <span>🔄</span>
+              <svg
+                className="w-3.5 h-3.5 animate-spin-hover"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-1.54" />
+              </svg>
               <span>Re-run Simulation</span>
             </button>
             <button
@@ -3055,15 +3593,32 @@ function WorkspaceInner() {
               onClick={() => setShowWelcomeModal(true)}
               className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-[var(--border)] bg-[var(--surface)]/85 hover:bg-[var(--surface-muted)] text-[11px] font-semibold text-[color:var(--foreground)]/75 transition cursor-pointer"
             >
-              <span>📁</span>
-              <span>Open Templates Picker</span>
+              <svg
+                className="w-3.5 h-3.5 text-[color:var(--foreground)]/50"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+              <span>Templates Gallery</span>
             </button>
             <button
               type="button"
               onClick={handleClearCanvas}
               className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 hover:border-rose-500/40 text-rose-500 dark:text-rose-400 text-[11px] font-semibold transition cursor-pointer"
             >
-              <span>🗑️</span>
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
               <span>Clear Canvas</span>
             </button>
           </div>
@@ -3149,8 +3704,8 @@ function WorkspaceInner() {
             </ReactFlow>
 
             {/* System Health & Load Monitor Overlay */}
-            {systemMetrics && (
-              showMetrics ? (
+            {systemMetrics &&
+              (showMetrics ? (
                 <div className="absolute top-16 left-4 z-10 w-72 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md shadow-lg p-3 flex flex-col gap-2.5 font-sans select-none pointer-events-auto">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-1.5">
@@ -3160,8 +3715,8 @@ function WorkspaceInner() {
                             systemMetrics.errorRequests.length > 0
                               ? "bg-rose-400"
                               : systemMetrics.warningRequests?.length > 0
-                              ? "bg-amber-400"
-                              : "bg-emerald-400"
+                                ? "bg-amber-400"
+                                : "bg-emerald-400"
                           }`}
                         ></span>
                         <span
@@ -3169,8 +3724,8 @@ function WorkspaceInner() {
                             systemMetrics.errorRequests.length > 0
                               ? "bg-rose-500"
                               : systemMetrics.warningRequests?.length > 0
-                              ? "bg-amber-500"
-                              : "bg-emerald-500"
+                                ? "bg-amber-500"
+                                : "bg-emerald-500"
                           }`}
                         ></span>
                       </span>
@@ -3199,7 +3754,8 @@ function WorkspaceInner() {
                         In-Flight Req
                       </p>
                       <p className="text-xs font-bold text-[color:var(--foreground)] mt-0.5">
-                        {systemMetrics.activeCount} / {systemMetrics.totalRequests}
+                        {systemMetrics.activeCount} /{" "}
+                        {systemMetrics.totalRequests}
                       </p>
                     </div>
                     <div
@@ -3250,40 +3806,46 @@ function WorkspaceInner() {
                         <span>❌</span> Failures Detected
                       </p>
                       <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
-                        {systemMetrics.errorRequests.map((err: string, idx: number) => (
-                          <p
-                            key={idx}
-                            className="text-[9px] font-mono text-rose-200/90 leading-tight"
-                          >
-                            • {err}
-                          </p>
-                        ))}
+                        {systemMetrics.errorRequests.map(
+                          (err: string, idx: number) => (
+                            <p
+                              key={idx}
+                              className="text-[9px] font-mono text-rose-200/90 leading-tight"
+                            >
+                              • {err}
+                            </p>
+                          ),
+                        )}
                       </div>
                     </div>
                   )}
 
-                  {systemMetrics.warningRequests && systemMetrics.warningRequests.length > 0 && (
-                    <div className="flex flex-col gap-1 rounded-xl bg-amber-500/10 border border-amber-500/20 p-2">
-                      <p className="text-[8px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1">
-                        <span>⚠️</span> Warnings Detected
-                      </p>
-                      <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
-                        {systemMetrics.warningRequests.map((warn: string, idx: number) => (
-                          <p
-                            key={idx}
-                            className="text-[9px] font-mono text-amber-200/90 leading-tight"
-                          >
-                            • {warn}
-                          </p>
-                        ))}
+                  {systemMetrics.warningRequests &&
+                    systemMetrics.warningRequests.length > 0 && (
+                      <div className="flex flex-col gap-1 rounded-xl bg-amber-500/10 border border-amber-500/20 p-2">
+                        <p className="text-[8px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1">
+                          <span>⚠️</span> Warnings Detected
+                        </p>
+                        <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
+                          {systemMetrics.warningRequests.map(
+                            (warn: string, idx: number) => (
+                              <p
+                                key={idx}
+                                className="text-[9px] font-mono text-amber-200/90 leading-tight"
+                              >
+                                • {warn}
+                              </p>
+                            ),
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {systemMetrics.activeCount > 0 &&
                     systemMetrics.queuedRequests.length === 0 &&
                     systemMetrics.errorRequests.length === 0 &&
-                    (!systemMetrics.warningRequests || systemMetrics.warningRequests.length === 0) && (
+                    (!systemMetrics.warningRequests ||
+                      systemMetrics.warningRequests.length === 0) && (
                       <div className="flex items-center gap-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/15 p-1.5 text-emerald-400">
                         <span className="text-xs">⚡</span>
                         <span className="text-[8px] font-bold uppercase tracking-wider">
@@ -3305,8 +3867,8 @@ function WorkspaceInner() {
                         systemMetrics.errorRequests.length > 0
                           ? "bg-rose-400"
                           : systemMetrics.warningRequests?.length > 0
-                          ? "bg-amber-400"
-                          : "bg-emerald-400"
+                            ? "bg-amber-400"
+                            : "bg-emerald-400"
                       }`}
                     ></span>
                     <span
@@ -3314,15 +3876,14 @@ function WorkspaceInner() {
                         systemMetrics.errorRequests.length > 0
                           ? "bg-rose-500"
                           : systemMetrics.warningRequests?.length > 0
-                          ? "bg-amber-500"
-                          : "bg-emerald-500"
+                            ? "bg-amber-500"
+                            : "bg-emerald-500"
                       }`}
                     ></span>
                   </span>
                   <span>⚡ Health & Load</span>
                 </button>
-              )
-            )}
+              ))}
           </div>
 
           {/* Floating Warning Message */}
@@ -3363,7 +3924,9 @@ function WorkspaceInner() {
                   type="button"
                   onClick={() => {
                     setSelectedNodeId(null);
-                    setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+                    setNodes((nds) =>
+                      nds.map((n) => ({ ...n, selected: false })),
+                    );
                   }}
                   className="text-xs text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] h-6 w-6 rounded-full hover:bg-[var(--surface-muted)] flex items-center justify-center font-bold transition cursor-pointer"
                 >
@@ -3420,7 +3983,9 @@ function WorkspaceInner() {
                     {/* Preset swatches */}
                     <div className="grid grid-cols-6 gap-1.5 mb-2">
                       {FRAME_COLOR_PRESETS.map((preset) => {
-                        const isCurrent = ((selectedNode.data.color as string) || "#8b5cf6") === preset.color;
+                        const isCurrent =
+                          ((selectedNode.data.color as string) || "#8b5cf6") ===
+                          preset.color;
                         return (
                           <button
                             key={preset.color}
@@ -3430,9 +3995,15 @@ function WorkspaceInner() {
                               setNodes((nds) =>
                                 nds.map((n) =>
                                   n.id === selectedNodeId
-                                    ? { ...n, data: { ...n.data, color: preset.color } }
-                                    : n
-                                )
+                                    ? {
+                                        ...n,
+                                        data: {
+                                          ...n.data,
+                                          color: preset.color,
+                                        },
+                                      }
+                                    : n,
+                                ),
                               );
                             }}
                             className="aspect-square rounded-lg transition cursor-pointer hover:scale-110"
@@ -3440,7 +4011,9 @@ function WorkspaceInner() {
                               background: preset.color,
                               outline: isCurrent ? `3px solid white` : "none",
                               outlineOffset: isCurrent ? "2px" : "0",
-                              boxShadow: isCurrent ? `0 0 0 5px ${preset.color}55` : "none",
+                              boxShadow: isCurrent
+                                ? `0 0 0 5px ${preset.color}55`
+                                : "none",
                             }}
                           />
                         );
@@ -3450,7 +4023,10 @@ function WorkspaceInner() {
                     <div className="flex items-center gap-2">
                       <div
                         className="w-7 h-7 rounded-md border border-[var(--border)] shrink-0 cursor-pointer"
-                        style={{ background: (selectedNode.data.color as string) || "#8b5cf6" }}
+                        style={{
+                          background:
+                            (selectedNode.data.color as string) || "#8b5cf6",
+                        }}
                       />
                       <input
                         type="color"
@@ -3461,15 +4037,17 @@ function WorkspaceInner() {
                             nds.map((n) =>
                               n.id === selectedNodeId
                                 ? { ...n, data: { ...n.data, color: val } }
-                                : n
-                            )
+                                : n,
+                            ),
                           );
                         }}
                         className="flex-1 h-7 rounded-md border border-[var(--border)] bg-[var(--surface)] cursor-pointer text-xs px-1 outline-none"
                         title="Custom color"
                       />
                       <span className="text-[10px] text-[color:var(--foreground)]/40 font-mono">
-                        {((selectedNode.data.color as string) || "#8b5cf6").toUpperCase()}
+                        {(
+                          (selectedNode.data.color as string) || "#8b5cf6"
+                        ).toUpperCase()}
                       </span>
                     </div>
 
@@ -3480,7 +4058,9 @@ function WorkspaceInner() {
                       </label>
                       <div className="grid grid-cols-3 gap-1">
                         {(["left", "center", "right"] as const).map((align) => {
-                          const isCurrent = ((selectedNode.data.textAlign as string) || "center") === align;
+                          const isCurrent =
+                            ((selectedNode.data.textAlign as string) ||
+                              "center") === align;
                           return (
                             <button
                               key={align}
@@ -3489,19 +4069,32 @@ function WorkspaceInner() {
                                 setNodes((nds) =>
                                   nds.map((n) =>
                                     n.id === selectedNodeId
-                                      ? { ...n, data: { ...n.data, textAlign: align } }
-                                      : n
-                                  )
+                                      ? {
+                                          ...n,
+                                          data: { ...n.data, textAlign: align },
+                                        }
+                                      : n,
+                                  ),
                                 );
                               }}
                               className="py-1.5 px-2 text-xs rounded-lg border transition cursor-pointer font-semibold flex items-center justify-center"
                               style={{
-                                borderColor: isCurrent ? "rgba(139,92,246,0.6)" : "var(--border)",
-                                background: isCurrent ? "rgba(139,92,246,0.12)" : "var(--surface)",
-                                color: isCurrent ? "#a78bfa" : "var(--foreground)",
+                                borderColor: isCurrent
+                                  ? "rgba(139,92,246,0.6)"
+                                  : "var(--border)",
+                                background: isCurrent
+                                  ? "rgba(139,92,246,0.12)"
+                                  : "var(--surface)",
+                                color: isCurrent
+                                  ? "#a78bfa"
+                                  : "var(--foreground)",
                               }}
                             >
-                              {align === "left" ? "⬅️ Left" : align === "right" ? "➡️ Right" : "↕️ Center"}
+                              {align === "left"
+                                ? "⬅️ Left"
+                                : align === "right"
+                                  ? "➡️ Right"
+                                  : "↕️ Center"}
                             </button>
                           );
                         })}
@@ -3519,12 +4112,20 @@ function WorkspaceInner() {
                       </label>
                       <CustomDropdown
                         type={(selectedNode.data as any).type}
-                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        value={
+                          ((selectedNode.data as any).flavor ||
+                            getDefaultFlavor(
+                              (selectedNode.data as any).type,
+                            )) as string
+                        }
                         onChange={(flavorId) => {
                           setNodes((nds) =>
                             nds.map((n) =>
                               n.id === selectedNodeId
-                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                ? {
+                                    ...n,
+                                    data: { ...n.data, flavor: flavorId },
+                                  }
                                 : n,
                             ),
                           );
@@ -3558,17 +4159,32 @@ function WorkspaceInner() {
 
                     <div>
                       {(() => {
-                        const requests = nodeConfigs[selectedNode.id]?.requests || [
+                        const requests = nodeConfigs[selectedNode.id]
+                          ?.requests || [
                           {
-                            endpoint: nodeConfigs[selectedNode.id]?.endpoint || "/api/v1/posts",
-                            method: nodeConfigs[selectedNode.id]?.method || "GET",
-                            lookupKey: nodeConfigs[selectedNode.id]?.lookupKey || "rohan",
-                            fileName: nodeConfigs[selectedNode.id]?.fileName || "file.png",
-                            isThereFileToUpload: nodeConfigs[selectedNode.id]?.isThereFileToUpload !== false,
-                            targetBucket: nodeConfigs[selectedNode.id]?.targetBucket || "media-uploads",
+                            endpoint:
+                              nodeConfigs[selectedNode.id]?.endpoint ||
+                              "/api/v1/posts",
+                            method:
+                              nodeConfigs[selectedNode.id]?.method || "GET",
+                            lookupKey:
+                              nodeConfigs[selectedNode.id]?.lookupKey ||
+                              "rohan",
+                            fileName:
+                              nodeConfigs[selectedNode.id]?.fileName ||
+                              "file.png",
+                            isThereFileToUpload:
+                              nodeConfigs[selectedNode.id]
+                                ?.isThereFileToUpload !== false,
+                            targetBucket:
+                              nodeConfigs[selectedNode.id]?.targetBucket ||
+                              "media-uploads",
                           },
                         ];
-                        const activeIdx = Math.max(0, Math.min(activeReqIdx, requests.length - 1));
+                        const activeIdx = Math.max(
+                          0,
+                          Math.min(activeReqIdx, requests.length - 1),
+                        );
                         const activeReq = requests[activeIdx];
 
                         return (
@@ -3625,7 +4241,9 @@ function WorkspaceInner() {
                                       updateNodeConfig(selectedNode.id, {
                                         requests: nextRequests,
                                       });
-                                      setActiveReqIdx(Math.max(0, activeIdx - 1));
+                                      setActiveReqIdx(
+                                        Math.max(0, activeIdx - 1),
+                                      );
                                     }}
                                     className="absolute top-1 right-2 text-rose-500 hover:text-rose-600 text-xs font-bold cursor-pointer"
                                     title="Delete Request"
@@ -3648,7 +4266,9 @@ function WorkspaceInner() {
                                         <select
                                           value={activeReq.method || "GET"}
                                           onChange={(e) => {
-                                            const currentRequests = [...requests];
+                                            const currentRequests = [
+                                              ...requests,
+                                            ];
                                             currentRequests[activeIdx] = {
                                               ...currentRequests[activeIdx],
                                               method: e.target.value,
@@ -3674,7 +4294,9 @@ function WorkspaceInner() {
                                           type="text"
                                           value={activeReq.endpoint}
                                           onChange={(e) => {
-                                            const currentRequests = [...requests];
+                                            const currentRequests = [
+                                              ...requests,
+                                            ];
                                             currentRequests[activeIdx] = {
                                               ...currentRequests[activeIdx],
                                               endpoint: e.target.value,
@@ -3716,13 +4338,20 @@ function WorkspaceInner() {
                                         onKeyDown={(e) => {
                                           if (e.key === "Tab") {
                                             e.preventDefault();
-                                            const start = e.currentTarget.selectionStart;
-                                            const end = e.currentTarget.selectionEnd;
-                                            const val = e.currentTarget.value;
-                                            const newVal = val.substring(0, start) + "  " + val.substring(end);
-                                            
+                                            const textarea = e.currentTarget;
+                                            const start =
+                                              textarea.selectionStart;
+                                            const end = textarea.selectionEnd;
+                                            const val = textarea.value;
+                                            const newVal =
+                                              val.substring(0, start) +
+                                              "  " +
+                                              val.substring(end);
+
                                             // Update value in requests
-                                            const currentRequests = [...requests];
+                                            const currentRequests = [
+                                              ...requests,
+                                            ];
                                             currentRequests[activeIdx] = {
                                               ...currentRequests[activeIdx],
                                               body: newVal,
@@ -3731,9 +4360,11 @@ function WorkspaceInner() {
                                               requests: currentRequests,
                                             });
 
-                                            // Restore selection start/end
+                                            // Restore selection start/end safely on local ref
                                             setTimeout(() => {
-                                              e.currentTarget.selectionStart = e.currentTarget.selectionEnd = start + 2;
+                                              textarea.selectionStart =
+                                                textarea.selectionEnd =
+                                                  start + 2;
                                             }, 0);
                                           }
                                         }}
@@ -3752,7 +4383,10 @@ function WorkspaceInner() {
                                         className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)] resize-none"
                                       />
                                       {(() => {
-                                        if (activeReq.body && activeReq.body.trim().length > 0) {
+                                        if (
+                                          activeReq.body &&
+                                          activeReq.body.trim().length > 0
+                                        ) {
                                           try {
                                             JSON.parse(activeReq.body);
                                           } catch (err: any) {
@@ -3778,7 +4412,9 @@ function WorkspaceInner() {
                                           type="text"
                                           value={activeReq.fileName}
                                           onChange={(e) => {
-                                            const currentRequests = [...requests];
+                                            const currentRequests = [
+                                              ...requests,
+                                            ];
                                             currentRequests[activeIdx] = {
                                               ...currentRequests[activeIdx],
                                               fileName: e.target.value,
@@ -3796,9 +4432,14 @@ function WorkspaceInner() {
                                         </label>
                                         <input
                                           type="text"
-                                          value={activeReq.targetBucket || "media-uploads"}
+                                          value={
+                                            activeReq.targetBucket ||
+                                            "media-uploads"
+                                          }
                                           onChange={(e) => {
-                                            const currentRequests = [...requests];
+                                            const currentRequests = [
+                                              ...requests,
+                                            ];
                                             currentRequests[activeIdx] = {
                                               ...currentRequests[activeIdx],
                                               targetBucket: e.target.value,
@@ -3820,7 +4461,8 @@ function WorkspaceInner() {
                                           const currentRequests = [...requests];
                                           currentRequests[activeIdx] = {
                                             ...currentRequests[activeIdx],
-                                            isThereFileToUpload: e.target.checked,
+                                            isThereFileToUpload:
+                                              e.target.checked,
                                           };
                                           updateNodeConfig(selectedNode.id, {
                                             requests: currentRequests,
@@ -3835,7 +4477,8 @@ function WorkspaceInner() {
                               </div>
                             ) : (
                               <div className="text-[10px] text-[color:var(--foreground)]/50 italic py-4 text-center">
-                                No requests configured. Click "+ Add" to add one.
+                                No requests configured. Click "+ Add" to add
+                                one.
                               </div>
                             )}
                           </div>
@@ -3858,12 +4501,20 @@ function WorkspaceInner() {
                       </label>
                       <CustomDropdown
                         type={(selectedNode.data as any).type}
-                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        value={
+                          ((selectedNode.data as any).flavor ||
+                            getDefaultFlavor(
+                              (selectedNode.data as any).type,
+                            )) as string
+                        }
                         onChange={(flavorId) => {
                           setNodes((nds) =>
                             nds.map((n) =>
                               n.id === selectedNodeId
-                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                ? {
+                                    ...n,
+                                    data: { ...n.data, flavor: flavorId },
+                                  }
                                 : n,
                             ),
                           );
@@ -3878,16 +4529,23 @@ function WorkspaceInner() {
                         Balancing Strategy
                       </label>
                       <select
-                        value={nodeConfigs[selectedNode.id]?.strategy ?? "ROUND_ROBIN"}
+                        value={
+                          nodeConfigs[selectedNode.id]?.strategy ??
+                          "ROUND_ROBIN"
+                        }
                         onChange={(e) =>
-                          updateNodeConfig(selectedNode.id, { strategy: e.target.value })
+                          updateNodeConfig(selectedNode.id, {
+                            strategy: e.target.value,
+                          })
                         }
                         className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500 cursor-pointer text-[color:var(--foreground)]"
                       >
                         <option value="ROUND_ROBIN">Round Robin</option>
                         <option value="RANDOM">Random Dispatch</option>
                         <option value="IP_HASH">IP Address Hash</option>
-                        <option value="LEAST_CONNECTIONS">Least Connections</option>
+                        <option value="LEAST_CONNECTIONS">
+                          Least Connections
+                        </option>
                       </select>
                     </div>
                   </div>
@@ -3906,12 +4564,20 @@ function WorkspaceInner() {
                       </label>
                       <CustomDropdown
                         type={(selectedNode.data as any).type}
-                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        value={
+                          ((selectedNode.data as any).flavor ||
+                            getDefaultFlavor(
+                              (selectedNode.data as any).type,
+                            )) as string
+                        }
                         onChange={(flavorId) => {
                           setNodes((nds) =>
                             nds.map((n) =>
                               n.id === selectedNodeId
-                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                ? {
+                                    ...n,
+                                    data: { ...n.data, flavor: flavorId },
+                                  }
                                 : n,
                             ),
                           );
@@ -4173,12 +4839,20 @@ function WorkspaceInner() {
                       </label>
                       <CustomDropdown
                         type={(selectedNode.data as any).type}
-                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        value={
+                          ((selectedNode.data as any).flavor ||
+                            getDefaultFlavor(
+                              (selectedNode.data as any).type,
+                            )) as string
+                        }
                         onChange={(flavorId) => {
                           setNodes((nds) =>
                             nds.map((n) =>
                               n.id === selectedNodeId
-                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                ? {
+                                    ...n,
+                                    data: { ...n.data, flavor: flavorId },
+                                  }
                                 : n,
                             ),
                           );
@@ -4285,12 +4959,20 @@ function WorkspaceInner() {
                       </label>
                       <CustomDropdown
                         type={(selectedNode.data as any).type}
-                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        value={
+                          ((selectedNode.data as any).flavor ||
+                            getDefaultFlavor(
+                              (selectedNode.data as any).type,
+                            )) as string
+                        }
                         onChange={(flavorId) => {
                           setNodes((nds) =>
                             nds.map((n) =>
                               n.id === selectedNodeId
-                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                ? {
+                                    ...n,
+                                    data: { ...n.data, flavor: flavorId },
+                                  }
                                 : n,
                             ),
                           );
@@ -4520,12 +5202,20 @@ function WorkspaceInner() {
                       </label>
                       <CustomDropdown
                         type={(selectedNode.data as any).type}
-                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        value={
+                          ((selectedNode.data as any).flavor ||
+                            getDefaultFlavor(
+                              (selectedNode.data as any).type,
+                            )) as string
+                        }
                         onChange={(flavorId) => {
                           setNodes((nds) =>
                             nds.map((n) =>
                               n.id === selectedNodeId
-                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                ? {
+                                    ...n,
+                                    data: { ...n.data, flavor: flavorId },
+                                  }
                                 : n,
                             ),
                           );
@@ -4764,12 +5454,20 @@ function WorkspaceInner() {
                       </label>
                       <CustomDropdown
                         type={(selectedNode.data as any).type}
-                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        value={
+                          ((selectedNode.data as any).flavor ||
+                            getDefaultFlavor(
+                              (selectedNode.data as any).type,
+                            )) as string
+                        }
                         onChange={(flavorId) => {
                           setNodes((nds) =>
                             nds.map((n) =>
                               n.id === selectedNodeId
-                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                ? {
+                                    ...n,
+                                    data: { ...n.data, flavor: flavorId },
+                                  }
                                 : n,
                             ),
                           );
@@ -4894,12 +5592,20 @@ function WorkspaceInner() {
                       </label>
                       <CustomDropdown
                         type={(selectedNode.data as any).type}
-                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        value={
+                          ((selectedNode.data as any).flavor ||
+                            getDefaultFlavor(
+                              (selectedNode.data as any).type,
+                            )) as string
+                        }
                         onChange={(flavorId) => {
                           setNodes((nds) =>
                             nds.map((n) =>
                               n.id === selectedNodeId
-                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                ? {
+                                    ...n,
+                                    data: { ...n.data, flavor: flavorId },
+                                  }
                                 : n,
                             ),
                           );
@@ -4955,8 +5661,10 @@ function WorkspaceInner() {
                     </div>
 
                     {edges.some(
-                      (e) => e.target === selectedNode.id && 
-                      nodes.find((node) => node.id === e.source)?.data.type === "message-queue"
+                      (e) =>
+                        e.target === selectedNode.id &&
+                        nodes.find((node) => node.id === e.source)?.data
+                          .type === "message-queue",
                     ) && (
                       <div className="mt-3">
                         <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
@@ -4966,7 +5674,9 @@ function WorkspaceInner() {
                           type="number"
                           min={1}
                           max={100}
-                          value={nodeConfigs[selectedNode.id]?.prefetchLimit ?? 1}
+                          value={
+                            nodeConfigs[selectedNode.id]?.prefetchLimit ?? 1
+                          }
                           onChange={(e) =>
                             updateNodeConfig(selectedNode.id, {
                               prefetchLimit: Number(e.target.value),
@@ -4975,30 +5685,37 @@ function WorkspaceInner() {
                           className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500"
                         />
                         <p className="mt-1 text-[9px] text-[color:var(--foreground)]/40 leading-relaxed">
-                          Max concurrent messages this consumer can pull from the queue.
+                          Max concurrent messages this consumer can pull from
+                          the queue.
                         </p>
                       </div>
                     )}
 
                     {edges.some(
-                      (e) => e.target === selectedNode.id && 
-                      nodes.find((node) => node.id === e.source)?.data.type === "pubsub"
+                      (e) =>
+                        e.target === selectedNode.id &&
+                        nodes.find((node) => node.id === e.source)?.data
+                          .type === "pubsub",
                     ) && (
                       <div className="mt-3 space-y-2">
                         <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
                           Subscription Topics / Channels
                         </label>
-                        
+
                         {(() => {
-                          const topics = nodeConfigs[selectedNode.id]?.subscriptionTopics || 
-                                         (nodeConfigs[selectedNode.id]?.subscriptionTopic
-                                            ? [nodeConfigs[selectedNode.id].subscriptionTopic]
-                                            : ["order.created"]);
-                          
+                          const topics =
+                            nodeConfigs[selectedNode.id]?.subscriptionTopics ||
+                            (nodeConfigs[selectedNode.id]?.subscriptionTopic
+                              ? [nodeConfigs[selectedNode.id].subscriptionTopic]
+                              : ["order.created"]);
+
                           return (
                             <div className="space-y-2">
                               {topics.map((topic: string, index: number) => (
-                                <div key={index} className="flex items-center gap-1.5">
+                                <div
+                                  key={index}
+                                  className="flex items-center gap-1.5"
+                                >
                                   <input
                                     type="text"
                                     value={topic}
@@ -5017,10 +5734,13 @@ function WorkspaceInner() {
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        const nextTopics = topics.filter((_: any, i: number) => i !== index);
+                                        const nextTopics = topics.filter(
+                                          (_: any, i: number) => i !== index,
+                                        );
                                         updateNodeConfig(selectedNode.id, {
                                           subscriptionTopics: nextTopics,
-                                          subscriptionTopic: nextTopics[0] || "",
+                                          subscriptionTopic:
+                                            nextTopics[0] || "",
                                         });
                                       }}
                                       className="text-rose-500 hover:text-rose-600 text-xs px-2 font-bold cursor-pointer transition-colors"
@@ -5031,11 +5751,14 @@ function WorkspaceInner() {
                                   )}
                                 </div>
                               ))}
-                              
+
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const nextTopics = [...topics, `topic-${topics.length + 1}`];
+                                  const nextTopics = [
+                                    ...topics,
+                                    `topic-${topics.length + 1}`,
+                                  ];
                                   updateNodeConfig(selectedNode.id, {
                                     subscriptionTopics: nextTopics,
                                     subscriptionTopic: nextTopics[0] || "",
@@ -5049,7 +5772,8 @@ function WorkspaceInner() {
                           );
                         })()}
                         <p className="mt-1 text-[9px] text-[color:var(--foreground)]/40 leading-relaxed">
-                          Topics/channels this server subscribes to on the Pub/Sub broker.
+                          Topics/channels this server subscribes to on the
+                          Pub/Sub broker.
                         </p>
                       </div>
                     )}
@@ -5214,12 +5938,20 @@ function WorkspaceInner() {
                       </label>
                       <CustomDropdown
                         type={(selectedNode.data as any).type}
-                        value={((selectedNode.data as any).flavor || getDefaultFlavor((selectedNode.data as any).type)) as string}
+                        value={
+                          ((selectedNode.data as any).flavor ||
+                            getDefaultFlavor(
+                              (selectedNode.data as any).type,
+                            )) as string
+                        }
                         onChange={(flavorId) => {
                           setNodes((nds) =>
                             nds.map((n) =>
                               n.id === selectedNodeId
-                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                ? {
+                                    ...n,
+                                    data: { ...n.data, flavor: flavorId },
+                                  }
                                 : n,
                             ),
                           );
@@ -5234,15 +5966,21 @@ function WorkspaceInner() {
                         Processing Type
                       </label>
                       <select
-                        value={nodeConfigs[selectedNode.id]?.processingType ?? "FIFO"}
+                        value={
+                          nodeConfigs[selectedNode.id]?.processingType ?? "FIFO"
+                        }
                         onChange={(e) =>
-                          updateNodeConfig(selectedNode.id, { processingType: e.target.value })
+                          updateNodeConfig(selectedNode.id, {
+                            processingType: e.target.value,
+                          })
                         }
                         className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500 cursor-pointer text-[color:var(--foreground)]"
                       >
                         <option value="FIFO">FIFO (First In, First Out)</option>
                         <option value="LIFO">LIFO (Last In, First Out)</option>
-                        <option value="PRIORITY">PRIORITY (Priority Queue)</option>
+                        <option value="PRIORITY">
+                          PRIORITY (Priority Queue)
+                        </option>
                       </select>
                     </div>
 
@@ -5267,15 +6005,24 @@ function WorkspaceInner() {
                         Overflow Behavior
                       </label>
                       <select
-                        value={nodeConfigs[selectedNode.id]?.overflowBehavior ?? "REJECT"}
+                        value={
+                          nodeConfigs[selectedNode.id]?.overflowBehavior ??
+                          "REJECT"
+                        }
                         onChange={(e) =>
-                          updateNodeConfig(selectedNode.id, { overflowBehavior: e.target.value })
+                          updateNodeConfig(selectedNode.id, {
+                            overflowBehavior: e.target.value,
+                          })
                         }
                         className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500 cursor-pointer text-[color:var(--foreground)]"
                       >
                         <option value="REJECT">Reject (Immediate Error)</option>
-                        <option value="BLOCK">Block Producer (Wait for consumer)</option>
-                        <option value="UNLIMITED">Unlimited Size (No limit)</option>
+                        <option value="BLOCK">
+                          Block Producer (Wait for consumer)
+                        </option>
+                        <option value="UNLIMITED">
+                          Unlimited Size (No limit)
+                        </option>
                       </select>
                     </div>
                   </div>
@@ -5294,12 +6041,18 @@ function WorkspaceInner() {
                       </label>
                       <CustomDropdown
                         type={selectedNode.data.type}
-                        value={((selectedNode.data as any).flavor || getDefaultFlavor(selectedNode.data.type)) as string}
+                        value={
+                          ((selectedNode.data as any).flavor ||
+                            getDefaultFlavor(selectedNode.data.type)) as string
+                        }
                         onChange={(flavorId) => {
                           setNodes((nds) =>
                             nds.map((n) =>
                               n.id === selectedNodeId
-                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                ? {
+                                    ...n,
+                                    data: { ...n.data, flavor: flavorId },
+                                  }
                                 : n,
                             ),
                           );
@@ -5315,33 +6068,49 @@ function WorkspaceInner() {
                       </label>
                       {(() => {
                         const subscriberEdges = edges.filter(
-                          (e) => e.source === selectedNode.id
+                          (e) => e.source === selectedNode.id,
                         );
                         if (subscriberEdges.length === 0) {
                           return (
                             <p className="text-[10px] text-[color:var(--foreground)]/45 italic leading-normal">
-                              No subscribers connected. Connect an outgoing line from the Pub/Sub broker to a Web Server node.
+                              No subscribers connected. Connect an outgoing line
+                              from the Pub/Sub broker to a Web Server node.
                             </p>
                           );
                         }
                         return (
                           <div className="space-y-1.5 mt-2">
                             {subscriberEdges.map((edge) => {
-                              const targetNode = nodes.find((n) => n.id === edge.target);
-                              const targetLabel = (targetNode?.data?.label as string) || edge.target;
-                              const targetTopics = nodeConfigs[edge.target]?.subscriptionTopics || 
-                                                   (nodeConfigs[edge.target]?.subscriptionTopic
-                                                      ? [nodeConfigs[edge.target].subscriptionTopic]
-                                                      : ["order.created"]);
+                              const targetNode = nodes.find(
+                                (n) => n.id === edge.target,
+                              );
+                              const targetLabel =
+                                (targetNode?.data?.label as string) ||
+                                edge.target;
+                              const targetTopics =
+                                nodeConfigs[edge.target]?.subscriptionTopics ||
+                                (nodeConfigs[edge.target]?.subscriptionTopic
+                                  ? [nodeConfigs[edge.target].subscriptionTopic]
+                                  : ["order.created"]);
                               return (
-                                <div key={edge.id} className="flex justify-between items-center text-xs p-2 rounded border border-[var(--border)] bg-[var(--surface)]/50 gap-2">
-                                  <span className="font-semibold text-[color:var(--foreground)]/80 shrink-0">{targetLabel}</span>
+                                <div
+                                  key={edge.id}
+                                  className="flex justify-between items-center text-xs p-2 rounded border border-[var(--border)] bg-[var(--surface)]/50 gap-2"
+                                >
+                                  <span className="font-semibold text-[color:var(--foreground)]/80 shrink-0">
+                                    {targetLabel}
+                                  </span>
                                   <div className="flex flex-wrap gap-1 max-w-[65%] justify-end">
-                                    {targetTopics.map((topic: string, tIdx: number) => (
-                                      <span key={tIdx} className="font-mono text-[9px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded shrink-0">
-                                        {topic}
-                                      </span>
-                                    ))}
+                                    {targetTopics.map(
+                                      (topic: string, tIdx: number) => (
+                                        <span
+                                          key={tIdx}
+                                          className="font-mono text-[9px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded shrink-0"
+                                        >
+                                          {topic}
+                                        </span>
+                                      ),
+                                    )}
                                   </div>
                                 </div>
                               );
@@ -5614,7 +6383,9 @@ function WorkspaceInner() {
                         onChange={() => setParallelResponse((prev) => !prev)}
                         className="accent-violet-500 cursor-pointer"
                       />
-                      <span className="group-hover:text-blue-300">Parallel</span>
+                      <span className="group-hover:text-blue-300">
+                        Parallel
+                      </span>
                     </label>
 
                     <label
@@ -5711,7 +6482,24 @@ function WorkspaceInner() {
                     className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-violet-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">💾</span>
+                      <svg
+                        className="w-5 h-5 text-violet-400 group-hover:scale-110 transition duration-150"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <rect
+                          x="2"
+                          y="3"
+                          width="20"
+                          height="14"
+                          rx="2"
+                          ry="2"
+                        />
+                        <line x1="2" y1="10" x2="22" y2="10" />
+                        <line x1="12" y1="10" x2="12" y2="21" />
+                      </svg>
                       <span className="font-bold text-xs group-hover:text-violet-400 transition">
                         Cache Aside
                       </span>
@@ -5731,7 +6519,17 @@ function WorkspaceInner() {
                     className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-blue-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">⚖️</span>
+                      <svg
+                        className="w-5 h-5 text-blue-400 group-hover:scale-110 transition duration-150"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="2" x2="12" y2="22" />
+                        <line x1="12" y1="12" x2="22" y2="12" />
+                      </svg>
                       <span className="font-bold text-xs group-hover:text-blue-400 transition">
                         Load Balancing
                       </span>
@@ -5751,7 +6549,23 @@ function WorkspaceInner() {
                     className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-yellow-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">🔑</span>
+                      <svg
+                        className="w-5 h-5 text-yellow-400 group-hover:scale-110 transition duration-150"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <rect
+                          x="3"
+                          y="11"
+                          width="18"
+                          height="11"
+                          rx="2"
+                          ry="2"
+                        />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
                       <span className="font-bold text-xs group-hover:text-yellow-400 transition">
                         Valet Key
                       </span>
@@ -5771,7 +6585,15 @@ function WorkspaceInner() {
                     className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-fuchsia-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">🚪</span>
+                      <svg
+                        className="w-5 h-5 text-fuchsia-400 group-hover:scale-110 transition duration-150"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M9 3H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM21 3h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" />
+                      </svg>
                       <span className="font-bold text-xs group-hover:text-fuchsia-400 transition">
                         API Gateway
                       </span>
@@ -5781,6 +6603,52 @@ function WorkspaceInner() {
                       User services based on path prefixes.
                     </p>
                   </button>
+
+                  {/* <button
+                    type="button"
+                    onClick={() => {
+                      loadTemplate("messageQueue");
+                      setShowWelcomeModal(false);
+                    }}
+                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-emerald-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition duration-150" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <rect x="2" y="4" width="20" height="7" rx="2" />
+                        <rect x="2" y="13" width="20" height="7" rx="2" />
+                      </svg>
+                      <span className="font-bold text-xs group-hover:text-emerald-400 transition">
+                        Message Queue
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-[color:var(--foreground)]/50 mt-1.5 leading-normal">
+                      Asynchronous job processing architecture leveraging Message Queue buffering & worker servers.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loadTemplate("pubSub");
+                      setShowWelcomeModal(false);
+                    }}
+                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-pink-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-pink-400 group-hover:scale-110 transition duration-150" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <circle cx="18" cy="5" r="3" />
+                        <circle cx="6" cy="19" r="3" />
+                        <circle cx="6" cy="5" r="3" />
+                        <path d="M6 8v8M8 5h7" />
+                      </svg>
+                      <span className="font-bold text-xs group-hover:text-pink-400 transition">
+                        Pub/Sub Broker
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-[color:var(--foreground)]/50 mt-1.5 leading-normal">
+                      Event-driven notification and analytics message fans dispatching to isolated subscriber groups.
+                    </p>
+                  </button> */}
                 </div>
               </div>
 
@@ -5796,6 +6664,168 @@ function WorkspaceInner() {
                   className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 hover:bg-[var(--surface-muted)] text-xs font-semibold px-4 py-2 transition cursor-pointer"
                 >
                   Start with Blank Canvas →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Help / How to Use Modal ────────────────────────────────────── */}
+        {showHelpModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md transition-all">
+            <div className="w-[500px] max-w-[95vw] rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-violet-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <line
+                      x1="12"
+                      y1="17"
+                      x2="12.01"
+                      y2="17"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-[color:var(--foreground)]">
+                    FlowFrame Sandbox Guide
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowHelpModal(false)}
+                  className="rounded-full hover:bg-[var(--surface-muted)] text-sm font-bold h-7 w-7 flex items-center justify-center border border-[var(--border)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] cursor-pointer transition"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto scrollbar-thin pr-1 text-xs text-[color:var(--foreground)]/75">
+                {/* 1. Placing components */}
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex items-center justify-center shrink-0">
+                    <svg
+                      className="w-4 h-4 text-violet-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <line x1="9" y1="3" x2="9" y2="21" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-[color:var(--foreground)] mb-0.5">
+                      1. Add & Manage Nodes
+                    </h3>
+                    <p className="leading-relaxed">
+                      Drag shapes and system components (Client, Load Balancer,
+                      Web Server, Message Queue, Event Broker, Storage,
+                      Database) from the left sidebar directly onto the canvas,
+                      or click any library element to place it.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. Resizing & Layout */}
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex items-center justify-center shrink-0">
+                    <svg
+                      className="w-4 h-4 text-blue-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-[color:var(--foreground)] mb-0.5">
+                      2. Resizing & Organization
+                    </h3>
+                    <p className="leading-relaxed">
+                      Reposition elements by dragging. Click a node to reveal
+                      boundary resize handles. Drag decorative shapes like
+                      **Sticky Notes** or **Text** elements to label your stack,
+                      or use **Rectangle frames** to visually group multiple
+                      servers.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3. Multi-port handles */}
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex items-center justify-center shrink-0">
+                    <svg
+                      className="w-4 h-4 text-emerald-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <circle cx="18" cy="5" r="3" />
+                      <circle cx="6" cy="19" r="3" />
+                      <path d="M6 16V9a4 4 0 0 1 4-4h5" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-[color:var(--foreground)] mb-0.5">
+                      3. Multi-Port Connections
+                    </h3>
+                    <p className="leading-relaxed">
+                      Link nodes by dragging from output handles (Right &
+                      Bottom) to input handles (Left & Top). Custom multi-port
+                      handles allow you to clean up your canvas routing and
+                      prevent overlapping lines when nodes have multiple
+                      connections.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 4. Requests & Simulations */}
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex items-center justify-center shrink-0">
+                    <svg
+                      className="w-4 h-4 text-amber-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-[color:var(--foreground)] mb-0.5">
+                      4. Trigger Packet Animations
+                    </h3>
+                    <p className="leading-relaxed">
+                      Select the Client node to write requests and payload
+                      parameters in the inspector (JSON request body supports
+                      the **Tab** key). Click `Re-run Simulation` or hit the
+                      **Spacebar** to see packets route in real-time through
+                      your architecture!
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-[var(--border)] pt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowHelpModal(false)}
+                  className="rounded-xl border border-violet-500/30 bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 text-xs font-semibold px-4 py-2 transition cursor-pointer"
+                >
+                  Got it, close guide
                 </button>
               </div>
             </div>
