@@ -171,6 +171,8 @@ type NodeRole =
   | "storage"
   | "redis"
   | "postgres"
+  | "message-queue"
+  | "pubsub"
   | "other";
 
 function getNodeRole(label: string): NodeRole {
@@ -188,6 +190,8 @@ function getNodeRole(label: string): NodeRole {
   if (normalized.includes("server")) return "server";
   if (normalized.includes("redis")) return "redis";
   if (normalized.includes("postgres")) return "postgres";
+  if (normalized.includes("queue") || normalized.includes("mq")) return "message-queue";
+  if (normalized.includes("pubsub") || normalized.includes("broker")) return "pubsub";
 
   return "other";
 }

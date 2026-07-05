@@ -206,6 +206,22 @@ export function ComponentIcon({ type, className = "w-5 h-5" }: IconProps) {
         </svg>
       );
 
+    case "pubsub":
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.8}
+          stroke="currentColor"
+          className={className}
+        >
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity={0.1} />
+          <path d="M12 2v20M2 12h20M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10z" strokeWidth={1.2} opacity={0.6} />
+        </svg>
+      );
+
     default:
       return (
         <svg
@@ -299,6 +315,10 @@ const BRAND_LOGO_MAP: Record<string, BrandLogoMapEntry> = {
   kafka: { component: SiApachekafka, color: "#000000" },
   sqs: { component: TbBrandAws, color: "#FF9900" },
   "redis-mq": { component: SiRedis, color: "#DC382D" },
+  "redis-pubsub": { component: SiRedis, color: "#DC382D" },
+  "kafka-pubsub": { component: SiApachekafka, color: "#000000" },
+  "rabbitmq-fanout": { component: SiRabbitmq, color: "#FF6600" },
+  "aws-sns": { component: TbBrandAws, color: "#FF9900" },
 };
 
 export function BrandLogo({ id, className = "w-5 h-5" }: { id: string; className?: string }) {
