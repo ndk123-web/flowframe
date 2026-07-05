@@ -40,6 +40,7 @@ import StorageModel from "@/engine/models/Storage";
 import DnsModel from "@/engine/models/Dns";
 import CdnModel from "@/engine/models/Cdn";
 import MessageQueueModel from "@/engine/models/MessageQueue/MessageQueue";
+import PubSubModel from "@/engine/models/PubSub/PubSubModel";
 import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
 import Ipv4Generator from "@/utils/generateRandomIp";
 import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
@@ -61,7 +62,8 @@ type ComponentType =
   | "storage"
   | "dns"
   | "cdn"
-  | "message-queue";
+  | "message-queue"
+  | "pubsub";
 
 interface ComponentMetadata {
   type: ComponentType;
@@ -147,6 +149,13 @@ const COMPONENTS_LIBRARY: ComponentMetadata[] = [
     icon: "📬",
     description: "Asynchronous message queue broker with producer-consumer routing.",
     colorClass: "border-l-pink-500 shadow-pink-500/10 text-pink-400",
+  },
+  {
+    type: "pubsub",
+    label: "Pub/Sub Broker",
+    icon: "📡",
+    description: "Asynchronous fanout message broker with topic/channel routing.",
+    colorClass: "border-l-indigo-500 shadow-indigo-500/10 text-indigo-400",
   },
 ];
 
@@ -390,6 +399,7 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
         fileName: "file.png",
         isThereFileToUpload: false,
         targetBucket: "media-uploads",
+        body: "",
         requests: [
           {
             endpoint: "/api/v1/posts",
@@ -398,6 +408,7 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
             fileName: "file.png",
             isThereFileToUpload: false,
             targetBucket: "media-uploads",
+            body: "",
           },
         ],
       };
@@ -464,6 +475,10 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
         overflowBehavior: "REJECT",
         connections: {},
       };
+    case "pubsub":
+      return {
+        channels: {},
+      };
     default:
       return {};
   }
@@ -482,6 +497,7 @@ function CustomNode({ id, data, selected }: any) {
     dns: "border-l-indigo-500 shadow-indigo-500/10",
     cdn: "border-l-teal-500 shadow-teal-500/10",
     "message-queue": "border-l-pink-500 shadow-pink-500/10",
+    pubsub: "border-l-indigo-500 shadow-indigo-500/10",
   };
 
   // Category-colored selection ring
@@ -496,6 +512,7 @@ function CustomNode({ id, data, selected }: any) {
     dns: "ring-indigo-500/70 shadow-indigo-500/25",
     cdn: "ring-teal-500/70 shadow-teal-500/25",
     "message-queue": "ring-pink-500/70 shadow-pink-500/25",
+    pubsub: "ring-indigo-500/70 shadow-indigo-500/25",
   };
 
   const colorClass = typeColors[data.type] || "border-l-slate-400";
@@ -1471,6 +1488,9 @@ function WorkspaceInner() {
               config.overflowBehavior || "REJECT",
             );
             break;
+          case "pubsub":
+            modelInstance = new PubSubModel(n.id, labelStr);
+            break;
         }
 
         if (modelInstance) {
@@ -1550,6 +1570,52 @@ function WorkspaceInner() {
               serverInstance.addQueueConsumer(queueId, queueLabel);
             }
           });
+
+          // Find if there is an edge between this server and any pubsub node
+          const connectedPubSubEdges = activeEdges.filter((e) => {
+            if (e.source === n.id) {
+              const targetNode = activeNodes.find(
+                (node) => node.id === e.target,
+              );
+              return targetNode?.data.type === "pubsub";
+            }
+            if (e.target === n.id) {
+              const sourceNode = activeNodes.find(
+                (node) => node.id === e.source,
+              );
+              return sourceNode?.data.type === "pubsub";
+            }
+            return false;
+          });
+
+          connectedPubSubEdges.forEach((edge) => {
+            const isProducer = edge.source === n.id;
+            const pubSubId = isProducer ? edge.target : edge.source;
+            if (!isProducer) {
+              // It's a subscriber/consumer server. Register subscription topic.
+              const pubSubInstance = registry.getInstance(pubSubId) as PubSubModel;
+              if (pubSubInstance) {
+                const subTopicsArray = config.subscriptionTopics;
+                if (Array.isArray(subTopicsArray)) {
+                  subTopicsArray.forEach((topic: string) => {
+                    if (topic && topic.trim().length > 0) {
+                      pubSubInstance.subscribe(topic.trim(), n.id);
+                    }
+                  });
+                } else {
+                  const subTopicsStr = (config.subscriptionTopic as string) || "order.created";
+                  const subTopics = subTopicsStr
+                    .split(",")
+                    .map((t: string) => t.trim())
+                    .filter((t: string) => t.length > 0);
+
+                  subTopics.forEach((topic: string) => {
+                    pubSubInstance.subscribe(topic, n.id);
+                  });
+                }
+              }
+            }
+          });
         }
       });
 
@@ -1619,6 +1685,15 @@ function WorkspaceInner() {
           const sourceIp = ipv4Instance.getRandomIpv4();
           const reqItem = clientRequests[i];
 
+          let parsedBody = {};
+          if (typeof reqItem.body === "string" && reqItem.body.trim().length > 0) {
+            try {
+              parsedBody = JSON.parse(reqItem.body);
+            } catch (err) {
+              console.error("Failed to parse request body JSON:", err);
+            }
+          }
+
           const payload: any = {
             valetKeyFlow: clientConfig.valetKeyFlow,
             lookupKey: reqItem.lookupKey,
@@ -1628,6 +1703,7 @@ function WorkspaceInner() {
             method: reqItem.method || "GET",
             targetBucket: reqItem.targetBucket,
             parallelResponse,
+            ...parsedBody,
           };
 
           const simulation = new SimulationManager(
@@ -3061,6 +3137,41 @@ function WorkspaceInner() {
                                         className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
                                       />
                                     </div>
+                                    <div>
+                                      <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                        Request Body (JSON)
+                                      </label>
+                                      <textarea
+                                        value={activeReq.body || ""}
+                                        onChange={(e) => {
+                                          const currentRequests = [...requests];
+                                          currentRequests[activeIdx] = {
+                                            ...currentRequests[activeIdx],
+                                            body: e.target.value,
+                                          };
+                                          updateNodeConfig(selectedNode.id, {
+                                            requests: currentRequests,
+                                          });
+                                        }}
+                                        rows={4}
+                                        placeholder='{\n  "topic": "order.created",\n  "amount": 250\n}'
+                                        className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)] resize-none"
+                                      />
+                                      {(() => {
+                                        if (activeReq.body && activeReq.body.trim().length > 0) {
+                                          try {
+                                            JSON.parse(activeReq.body);
+                                          } catch (err: any) {
+                                            return (
+                                              <span className="text-[9px] text-rose-500 mt-1 block leading-normal font-mono">
+                                                ⚠ {err.message}
+                                              </span>
+                                            );
+                                          }
+                                        }
+                                        return null;
+                                      })()}
+                                    </div>
                                   </div>
                                 ) : (
                                   <div className="space-y-1.5">
@@ -4275,6 +4386,80 @@ function WorkspaceInner() {
                       </div>
                     )}
 
+                    {edges.some(
+                      (e) => e.target === selectedNode.id && 
+                      nodes.find((node) => node.id === e.source)?.data.type === "pubsub"
+                    ) && (
+                      <div className="mt-3 space-y-2">
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                          Subscription Topics / Channels
+                        </label>
+                        
+                        {(() => {
+                          const topics = nodeConfigs[selectedNode.id]?.subscriptionTopics || 
+                                         (nodeConfigs[selectedNode.id]?.subscriptionTopic
+                                            ? [nodeConfigs[selectedNode.id].subscriptionTopic]
+                                            : ["order.created"]);
+                          
+                          return (
+                            <div className="space-y-2">
+                              {topics.map((topic: string, index: number) => (
+                                <div key={index} className="flex items-center gap-1.5">
+                                  <input
+                                    type="text"
+                                    value={topic}
+                                    onChange={(e) => {
+                                      const nextTopics = [...topics];
+                                      nextTopics[index] = e.target.value;
+                                      updateNodeConfig(selectedNode.id, {
+                                        subscriptionTopics: nextTopics,
+                                        subscriptionTopic: nextTopics[0] || "",
+                                      });
+                                    }}
+                                    className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-indigo-500 font-mono text-[color:var(--foreground)]"
+                                    placeholder="e.g. order.created"
+                                  />
+                                  {topics.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const nextTopics = topics.filter((_: any, i: number) => i !== index);
+                                        updateNodeConfig(selectedNode.id, {
+                                          subscriptionTopics: nextTopics,
+                                          subscriptionTopic: nextTopics[0] || "",
+                                        });
+                                      }}
+                                      className="text-rose-500 hover:text-rose-600 text-xs px-2 font-bold cursor-pointer transition-colors"
+                                      title="Remove Topic"
+                                    >
+                                      ×
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                              
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nextTopics = [...topics, `topic-${topics.length + 1}`];
+                                  updateNodeConfig(selectedNode.id, {
+                                    subscriptionTopics: nextTopics,
+                                    subscriptionTopic: nextTopics[0] || "",
+                                  });
+                                }}
+                                className="w-full mt-1.5 rounded-lg border border-[var(--border)] py-1 text-center text-[10px] hover:bg-[var(--surface)] transition font-semibold cursor-pointer text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
+                              >
+                                + Add Topic / Channel
+                              </button>
+                            </div>
+                          );
+                        })()}
+                        <p className="mt-1 text-[9px] text-[color:var(--foreground)]/40 leading-relaxed">
+                          Topics/channels this server subscribes to on the Pub/Sub broker.
+                        </p>
+                      </div>
+                    )}
+
                     <div className="h-px bg-[var(--border)]/70 my-2" />
 
                     <div>
@@ -4498,6 +4683,78 @@ function WorkspaceInner() {
                         <option value="BLOCK">Block Producer (Wait for consumer)</option>
                         <option value="UNLIMITED">Unlimited Size (No limit)</option>
                       </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pub/Sub Broker Configuration */}
+                {selectedNode.data.type === "pubsub" && (
+                  <div className="space-y-4">
+                    <p className="text-xs font-semibold text-indigo-400 font-mono">
+                      Pub/Sub Broker Settings
+                    </p>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                        Provider / Technology
+                      </label>
+                      <CustomDropdown
+                        type={selectedNode.data.type}
+                        value={((selectedNode.data as any).flavor || getDefaultFlavor(selectedNode.data.type)) as string}
+                        onChange={(flavorId) => {
+                          setNodes((nds) =>
+                            nds.map((n) =>
+                              n.id === selectedNodeId
+                                ? { ...n, data: { ...n.data, flavor: flavorId } }
+                                : n,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="h-px bg-[var(--border)]/70" />
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                        Active Subscribers (Connected)
+                      </label>
+                      {(() => {
+                        const subscriberEdges = edges.filter(
+                          (e) => e.source === selectedNode.id
+                        );
+                        if (subscriberEdges.length === 0) {
+                          return (
+                            <p className="text-[10px] text-[color:var(--foreground)]/45 italic leading-normal">
+                              No subscribers connected. Connect an outgoing line from the Pub/Sub broker to a Web Server node.
+                            </p>
+                          );
+                        }
+                        return (
+                          <div className="space-y-1.5 mt-2">
+                            {subscriberEdges.map((edge) => {
+                              const targetNode = nodes.find((n) => n.id === edge.target);
+                              const targetLabel = (targetNode?.data?.label as string) || edge.target;
+                              const targetTopics = nodeConfigs[edge.target]?.subscriptionTopics || 
+                                                   (nodeConfigs[edge.target]?.subscriptionTopic
+                                                      ? [nodeConfigs[edge.target].subscriptionTopic]
+                                                      : ["order.created"]);
+                              return (
+                                <div key={edge.id} className="flex justify-between items-center text-xs p-2 rounded border border-[var(--border)] bg-[var(--surface)]/50 gap-2">
+                                  <span className="font-semibold text-[color:var(--foreground)]/80 shrink-0">{targetLabel}</span>
+                                  <div className="flex flex-wrap gap-1 max-w-[65%] justify-end">
+                                    {targetTopics.map((topic: string, tIdx: number) => (
+                                      <span key={tIdx} className="font-mono text-[9px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded shrink-0">
+                                        {topic}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}

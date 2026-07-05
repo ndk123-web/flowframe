@@ -206,6 +206,22 @@ export function ComponentIcon({ type, className = "w-5 h-5" }: IconProps) {
         </svg>
       );
 
+    case "pubsub":
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.8}
+          stroke="currentColor"
+          className={className}
+        >
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity={0.1} />
+          <path d="M12 2v20M2 12h20M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10z" strokeWidth={1.2} opacity={0.6} />
+        </svg>
+      );
+
     default:
       return (
         <svg
@@ -299,6 +315,10 @@ const BRAND_LOGO_MAP: Record<string, BrandLogoMapEntry> = {
   kafka: { component: SiApachekafka, color: "#000000" },
   sqs: { component: TbBrandAws, color: "#FF9900" },
   "redis-mq": { component: SiRedis, color: "#DC382D" },
+  "redis-pubsub": { component: SiRedis, color: "#DC382D" },
+  "kafka-pubsub": { component: SiApachekafka, color: "#000000" },
+  "rabbitmq-fanout": { component: SiRabbitmq, color: "#FF6600" },
+  "aws-sns": { component: TbBrandAws, color: "#FF9900" },
 };
 
 export function BrandLogo({ id, className = "w-5 h-5" }: { id: string; className?: string }) {
@@ -407,6 +427,12 @@ export const NODE_FLAVORS: Record<string, FlavorOption[]> = {
     { id: "kafka", label: "Apache Kafka Event Stream", shortLabel: "Kafka", textClass: "text-red-300", bgClass: "bg-red-500/10", borderClass: "border-red-400/20" },
     { id: "sqs", label: "AWS Simple Queue Service (SQS)", shortLabel: "AWS SQS", textClass: "text-orange-200", bgClass: "bg-orange-600/10", borderClass: "border-orange-400/20" },
     { id: "redis-mq", label: "Redis Message Queue", shortLabel: "Redis MQ", textClass: "text-red-400", bgClass: "bg-red-500/10", borderClass: "border-red-400/20" },
+  ],
+  pubsub: [
+    { id: "redis-pubsub", label: "Redis Pub/Sub Broker", shortLabel: "Redis PubSub", textClass: "text-red-400", bgClass: "bg-red-500/10", borderClass: "border-red-400/20" },
+    { id: "kafka-pubsub", label: "Apache Kafka Topic", shortLabel: "Kafka Topic", textClass: "text-red-300", bgClass: "bg-red-500/10", borderClass: "border-red-400/20" },
+    { id: "rabbitmq-fanout", label: "RabbitMQ Fanout Exchange", shortLabel: "RabbitMQ PubSub", textClass: "text-orange-300", bgClass: "bg-orange-500/10", borderClass: "border-orange-400/20" },
+    { id: "aws-sns", label: "AWS SNS Topic", shortLabel: "AWS SNS", textClass: "text-orange-200", bgClass: "bg-orange-600/10", borderClass: "border-orange-400/20" },
   ],
 };
 

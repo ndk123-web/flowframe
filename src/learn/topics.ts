@@ -485,5 +485,85 @@ Ready to design any system you can imagine? Open the Sandbox and experiment free
 - Test what happens when you misconfigure routing rules`
       }
     ]
+  },
+  {
+    id: "message-queues",
+    title: "Message Queues",
+    subtitle: "Decoupling workloads with asynchronous message queues",
+    description: "Learn how message queues enable reliable, asynchronous communication, buffer spike traffic, and implement the competing consumers scaling pattern.",
+    scenarioId: "simple-message-queue",
+    sections: [
+      {
+        id: "mq-components",
+        title: "1. Components in This Simulation",
+        content: `Let's understand each component of the Message Queue architecture on the canvas:
+
+### 💻 Client
+Initiates the action (e.g., clicking 'Order Now' in an e-commerce app). It sends requests to the Web Server.
+
+### 🖥️ Web Server
+The entrypoint API. Instead of executing heavy tasks (like processing payment or generating PDF invoices) synchronously, it packages the task into a message and publishes it to the queue immediately, returning a quick \`202 Accepted\` back to the client.
+
+### 📬 Message Queue Broker
+Acts as the buffer storage. It receives messages from producers (Web Server) and queues them. It manages message routing using FIFO/LIFO ordering.
+
+### ⚙️ Worker Servers (×2)
+Independent background consumers that pull messages from the queue, execute the heavy tasks in parallel, and store the final results in the database.
+
+### 💾 Postgres Database
+The shared persistent storage where Worker Servers write completed transaction records.`
+      },
+      {
+        id: "mq-intro",
+        title: "2. Why Use a Message Queue?",
+        content: `Without a queue, if your database slows down, the entire user-facing web server blocks, leading to request timeouts and site crashes.
+
+### Key Benefits:
+- **Asynchronous Execution**: Offloads heavy tasks to background workers, keeping user-facing APIs fast and responsive.
+- **Load Spike Buffering (Rate Limiting)**: If 10,000 requests hit your site in 1 second, the queue holds them safely in a buffer. The workers pull them at a controlled speed, protecting your database from crashing.
+- **Competing Consumers Pattern**: Multiple workers poll the same queue. If Worker 1 is busy with a heavy request, Worker 2 picks up the next message, allowing easy horizontal scaling.
+
+### Watch It in Action
+Press **Play**. The client fires 3 requests. The web server sends them straight to the queue and returns quick responses. Then, watch the two Worker Servers pull and process the queue messages in parallel!`
+      }
+    ]
+  },
+  {
+    id: "pub-sub",
+    title: "Publish / Subscribe",
+    subtitle: "Event-driven microservices fanout routing",
+    description: "Learn how Pub/Sub brokers distribute messages to multiple subscriber services in parallel, enabling decoupled event-driven architectures.",
+    scenarioId: "simple-pub-sub",
+    sections: [
+      {
+        id: "pubsub-components",
+        title: "1. Components in This Simulation",
+        content: `Let's understand each component of the Pub/Sub architecture:
+
+### 💻 Client
+Sends requests to the Publisher Server (e.g. creating a new post or making a purchase).
+
+### 🖥️ Publisher Server
+Receives user requests and publishes the event to the Pub/Sub Broker (e.g., publishing an \`order.created\` event).
+
+### 📡 Pub/Sub Broker
+The event router (like Redis Pub/Sub, Kafka, or AWS SNS). It manages channels/topics and delivers published messages to all subscribed services.
+
+### 🖥️ Email & Analytics Services
+Decoupled subscriber microservices. They subscribe to specific channels on the broker. When an event is published, the broker pushes the message to all of them concurrently.`
+      },
+      {
+        id: "pubsub-intro",
+        title: "2. The Power of Pub/Sub (Fanout)",
+        content: `Unlike a Message Queue where **only one consumer** handles each message, a Pub/Sub Broker implements **fanout delivery**, where **every subscriber** receives a copy of the message.
+
+### Why Use Pub/Sub?
+- **Extreme Decoupling**: The Publisher Server does not know who the subscribers are. If you want to add a new SMS notification service, you just connect it to the broker. You don't need to change any code in the Publisher Server.
+- **Parallel Event Processing**: When a user registers, the Email Service sends a welcome email and the Analytics Service logs the user signup *simultaneously* in parallel.
+
+### Watch It in Action
+Press **Play**. You'll see the publisher server post an event to the broker. The broker immediately sends an ACK back to the publisher, and concurrently fans out the message to both Email and Analytics services at the exact same timestamp!`
+      }
+    ]
   }
 ];

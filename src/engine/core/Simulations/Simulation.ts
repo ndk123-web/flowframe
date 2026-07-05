@@ -12,6 +12,7 @@ import ApiGatewayModel from "@/engine/models/ApiGateway";
 import StorageModel from "@/engine/models/Storage";
 import MessageQueueModel from "@/engine/models/MessageQueue/MessageQueue";
 import Message from "@/engine/models/MessageQueue/Message";
+import PubSubModel from "@/engine/models/PubSub/PubSubModel";
 
 type SimulationNodeKind =
   | "CLIENT"
@@ -22,6 +23,7 @@ type SimulationNodeKind =
   | "API_GATEWAY"
   | "STORAGE"
   | "MESSAGE_QUEUE"
+  | "PUBSUB_BROKER"
   | "UNKNOWN";
 
 class SimulationManager {
@@ -85,6 +87,10 @@ class SimulationManager {
 
     if (normalized === "MESSAGE_QUEUE" || normalized === "QUEUE") {
       return "MESSAGE_QUEUE";
+    }
+
+    if (normalized === "PUBSUB_BROKER" || normalized === "PUBSUB") {
+      return "PUBSUB_BROKER";
     }
 
     return "UNKNOWN";
@@ -159,6 +165,8 @@ class SimulationManager {
         return "STORAGE_RETURN_URL";
       case "MESSAGE_QUEUE":
         return "QUEUE_ACK_PUBLISH";
+      case "PUBSUB_BROKER":
+        return "PUBSUB_ACK_PUBLISH";
       default:
         return "RESPONSE_BACKTRACK";
     }
@@ -682,6 +690,77 @@ class SimulationManager {
             }
           }
 
+          // check whether pubsub broker is there ?
+          const pubSubNodeId = nextNodes.find(
+            (nodeId) => this.getNodeKind(nodeId) === "PUBSUB_BROKER",
+          );
+
+          if (pubSubNodeId) {
+            const pubSubInstance = this.registry.getInstance(pubSubNodeId) as PubSubModel;
+            if (pubSubInstance) {
+              const topic = request.payload?.topic;
+
+              if (!topic) {
+                const previousNodeId = traversalPath[traversalPath.length - 2] ?? currentNodeId;
+                this.pushFrame(
+                  request,
+                  currentNodeId,
+                  previousNodeId,
+                  "SERVER_PUBSUB_MISSING_TOPIC",
+                  {
+                    payloadSummary: "400 Bad Request: Missing 'topic' in payload",
+                  }
+                );
+                request.context.serverErrorStatus = "400";
+                traversalPath.pop();
+                request.currentNodeId = previousNodeId;
+                currentNodeId = previousNodeId;
+                request.direction = "backward";
+                break;
+              }
+
+              const msgId = `msg-${this.uid.rnd(5)}`;
+              const msgName = `Msg-${msgId}`;
+              
+              // Publish to the broker
+              pubSubInstance.publish(topic, currentNodeId, request.payload);
+
+              this.pushFrame(
+                request,
+                currentNodeId,
+                pubSubNodeId,
+                "SERVER_PUBLISH_PUBSUB",
+                {
+                  payloadSummary: `Publishing: ${msgName} to topic "${topic}"`,
+                }
+              );
+
+              const deliveryStartTimestamp = this.timestamp;
+
+              this.pushFrame(
+                request,
+                pubSubNodeId,
+                currentNodeId,
+                "PUBSUB_ACK_PUBLISH",
+                {
+                  payloadSummary: `PubSub Broker Confirm: Acked ${msgName}`,
+                }
+              );
+
+              // 1. Immediately backtrack response to client asynchronously
+              this.pushAsyncClientResponse(request, traversalPath);
+
+              // 2. Align the delivery time with the publish ACK timestamp
+              this.timestamp = deliveryStartTimestamp;
+
+              // 3. Transition request control to the PUBSUB_BROKER node
+              request.currentNodeId = pubSubNodeId;
+              traversalPath.push(pubSubNodeId);
+              currentNodeId = pubSubNodeId;
+              break;
+            }
+          }
+
           // check whether redis is there ? 
           const redisNodeId = nextNodes.find(
             (nodeId) => this.getNodeKind(nodeId) === "REDIS",
@@ -1193,6 +1272,86 @@ class SimulationManager {
             request.direction = "backward";
           }
           break;
+        }
+
+        case "PUBSUB_BROKER": {
+          if (traversalPath.length < 2) {
+            return;
+          }
+
+          const pubSubInstance = nodeInstance as PubSubModel;
+          const topic = request.payload?.topic || "default-topic";
+          const subscribers = pubSubInstance.channels.get(topic) || [];
+
+          if (subscribers.length === 0) {
+            this.pushFrame(
+              request,
+              currentNodeId,
+              currentNodeId,
+              "PUBSUB_NO_SUBSCRIBERS",
+              {
+                payloadSummary: `Topic "${topic}" has 0 subscribers. Message discarded.`,
+              }
+            );
+            
+            // Terminate simulation immediately (async response already sent to client)
+            return;
+          }
+
+          // Deliver message to each subscriber at the same time (parallel fanout)
+          const deliveryTime = this.timestamp;
+          
+          for (const subId of subscribers) {
+            const subscriberInstance = this.registry.getInstance(subId) as ServerModel;
+            if (subscriberInstance) {
+              this.pushFrame(
+                request,
+                currentNodeId,
+                subId,
+                "PUBSUB_DELIVER_MESSAGE",
+                {
+                  payloadSummary: `Delivering message to Subscriber: ${subscriberInstance.name}`,
+                  timestamp: deliveryTime,
+                }
+              );
+            }
+          }
+
+          // Simulate processing by all subscribers concurrently (happens in parallel)
+          const processingEndTime = deliveryTime + 1;
+
+          for (const subId of subscribers) {
+            const subscriberInstance = this.registry.getInstance(subId) as ServerModel;
+            if (subscriberInstance) {
+              this.pushFrame(
+                request,
+                subId,
+                subId,
+                "SUBSCRIBER_PROCESSING",
+                {
+                  payloadSummary: `Subscriber "${subscriberInstance.name}" finished processing.`,
+                  timestamp: processingEndTime,
+                }
+              );
+
+              this.pushFrame(
+                request,
+                subId,
+                currentNodeId,
+                "SUBSCRIBER_ACK",
+                {
+                  payloadSummary: `ACK sent to PubSub Broker from ${subscriberInstance.name}`,
+                  timestamp: processingEndTime,
+                }
+              );
+            }
+          }
+
+          // Update the simulation manager's global timestamp to match the end of parallel processing
+          this.timestamp = processingEndTime + 1;
+
+          // Complete broker flow and end simulation immediately (async response already sent to client)
+          return;
         }
       
         default:
