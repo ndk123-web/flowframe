@@ -408,6 +408,12 @@ export const NODE_FLAVORS: Record<string, FlavorOption[]> = {
     { id: "sqs", label: "AWS Simple Queue Service (SQS)", shortLabel: "AWS SQS", textClass: "text-orange-200", bgClass: "bg-orange-600/10", borderClass: "border-orange-400/20" },
     { id: "redis-mq", label: "Redis Message Queue", shortLabel: "Redis MQ", textClass: "text-red-400", bgClass: "bg-red-500/10", borderClass: "border-red-400/20" },
   ],
+  pubsub: [
+    { id: "redis-pubsub", label: "Redis Pub/Sub Broker", shortLabel: "Redis PubSub", textClass: "text-red-400", bgClass: "bg-red-500/10", borderClass: "border-red-400/20" },
+    { id: "kafka-pubsub", label: "Apache Kafka Topic", shortLabel: "Kafka Topic", textClass: "text-red-300", bgClass: "bg-red-500/10", borderClass: "border-red-400/20" },
+    { id: "rabbitmq-fanout", label: "RabbitMQ Fanout Exchange", shortLabel: "RabbitMQ PubSub", textClass: "text-orange-300", bgClass: "bg-orange-500/10", borderClass: "border-orange-400/20" },
+    { id: "aws-sns", label: "AWS SNS Topic", shortLabel: "AWS SNS", textClass: "text-orange-200", bgClass: "bg-orange-600/10", borderClass: "border-orange-400/20" },
+  ],
 };
 
 /** Returns the first (default) flavor id for a given node type. */
