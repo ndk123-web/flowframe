@@ -175,7 +175,21 @@ type NodeRole =
   | "pubsub"
   | "other";
 
-function getNodeRole(label: string): NodeRole {
+function getNodeRole(node: any): NodeRole {
+  if (!node) return "other";
+
+  // 1. Check data.type if explicitly set
+  if (node.data?.type) {
+    const t = String(node.data.type).toLowerCase();
+    if (t === "pubsub" || t === "pub-sub") return "pubsub";
+    if (t === "message-queue" || t === "queue" || t === "mq") return "message-queue";
+    if (t === "api-gateway") return "api-gateway";
+    if (t === "load-balancer") return "load-balancer";
+    return t as NodeRole;
+  }
+
+  // 2. Fall back to label text parsing
+  const label = typeof node.data?.label === "string" ? node.data.label : node.id || "";
   const normalized = label.toLowerCase();
 
   if (normalized.includes("client")) return "client";
@@ -185,13 +199,12 @@ function getNodeRole(label: string): NodeRole {
     return "load-balancer";
   if (normalized.includes("storage") || normalized.includes("cloud"))
     return "storage";
-  if (normalized.includes("upload") && normalized.includes("service"))
-    return "server";
+  if (normalized.includes("service")) return "server";
   if (normalized.includes("server")) return "server";
   if (normalized.includes("redis")) return "redis";
   if (normalized.includes("postgres")) return "postgres";
   if (normalized.includes("queue") || normalized.includes("mq")) return "message-queue";
-  if (normalized.includes("pubsub") || normalized.includes("broker")) return "pubsub";
+  if (normalized.includes("pubsub") || normalized.includes("broker") || normalized.includes("pub/sub")) return "pubsub";
 
   return "other";
 }
@@ -630,6 +643,7 @@ function Controls({
   onPrev,
   onNext,
   onReset,
+  onReframe,
   speed,
   onSpeedChange,
   theme,
@@ -639,6 +653,7 @@ function Controls({
   onPrev: () => void;
   onNext: () => void;
   onReset: () => void;
+  onReframe: () => void;
   speed: number;
   onSpeedChange: (value: number) => void;
   theme: Theme;
@@ -666,6 +681,14 @@ function Controls({
           </button>
           <button type="button" onClick={onReset} className={buttonClass}>
             Reset
+          </button>
+          <button
+            type="button"
+            onClick={onReframe}
+            className={`${buttonClass} bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 border-violet-500/30 font-semibold`}
+            title="Restart simulation from the beginning"
+          >
+            🔄 Reframe
           </button>
         </div>
 
@@ -771,6 +794,7 @@ function NodeInspectorPanel({
   nodeConfigs,
   updateNodeConfig,
   nodes,
+  edges,
   scenarioId,
 }: {
   selectedNode: Node | null;
@@ -785,6 +809,7 @@ function NodeInspectorPanel({
     updatedFields: Record<string, any>,
   ) => void;
   nodes: Node[];
+  edges: Edge[];
   scenarioId: string;
 }) {
   const [activeReqIdx, setActiveReqIdx] = useState(0);
@@ -812,11 +837,11 @@ function NodeInspectorPanel({
     );
   }
 
+  const role = getNodeRole(selectedNode);
   const label =
     typeof selectedNode.data?.label === "string"
       ? selectedNode.data.label
       : selectedNode.id;
-  const role = getNodeRole(label);
 
   const relatedFrames = currentFrames.filter(
     (frame) => frame.from === selectedNode.id || frame.to === selectedNode.id,
@@ -887,6 +912,7 @@ function NodeInspectorPanel({
                                 fileName: "file.png",
                                 isThereFileToUpload: false,
                                 targetBucket: "media-uploads",
+                                body: "{}",
                               },
                             ];
                             updateNodeConfig(selectedNode.id, {
@@ -1037,6 +1063,76 @@ function NodeInspectorPanel({
                                   }}
                                   className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] outline-none font-mono text-xs text-[color:var(--foreground)]"
                                 />
+                              </div>
+                              <div>
+                                <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                  Request Body (JSON)
+                                </label>
+                                <textarea
+                                  value={activeReq.body || ""}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Tab") {
+                                      e.preventDefault();
+                                      const textarea = e.currentTarget;
+                                      const start = textarea.selectionStart;
+                                      const end = textarea.selectionEnd;
+                                      const val = textarea.value;
+                                      const newVal =
+                                        val.substring(0, start) +
+                                        "  " +
+                                        val.substring(end);
+
+                                      // Update value in requests
+                                      const currentRequests = [...requests];
+                                      currentRequests[activeIdx] = {
+                                        ...currentRequests[activeIdx],
+                                        body: newVal,
+                                      };
+                                      updateNodeConfig(selectedNode.id, {
+                                        requests: currentRequests,
+                                      });
+
+                                      // Restore selection start/end safely
+                                      setTimeout(() => {
+                                        if (textarea) {
+                                          textarea.selectionStart =
+                                            textarea.selectionEnd =
+                                              start + 2;
+                                        }
+                                      }, 0);
+                                    }
+                                  }}
+                                  onChange={(e) => {
+                                    const currentRequests = [...requests];
+                                    currentRequests[activeIdx] = {
+                                      ...currentRequests[activeIdx],
+                                      body: e.target.value,
+                                    };
+                                    updateNodeConfig(selectedNode.id, {
+                                      requests: currentRequests,
+                                    });
+                                  }}
+                                  rows={4}
+                                  placeholder='{\n  "key": "value"\n}'
+                                  className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)] resize-none"
+                                />
+                                {(() => {
+                                  if (
+                                    activeReq.body &&
+                                    activeReq.body.trim().length > 0
+                                  ) {
+                                    try {
+                                      JSON.parse(activeReq.body);
+                                    } catch (err: any) {
+                                      return (
+                                        <span className="text-[9px] text-rose-500 mt-1 block leading-normal font-mono">
+                                          ⚠ {err.message}
+                                        </span>
+                                      );
+                                    }
+                                  }
+                                  return null;
+                                })()}
                               </div>
                             </div>
                           )}
@@ -1443,6 +1539,116 @@ function NodeInspectorPanel({
                       })}
                     </div>
                   </div>
+
+                  {/* Consumer Configs if connected to MQ */}
+                  {edges.some(
+                    (e) =>
+                      e.target === selectedNode.id &&
+                      nodes.find((node) => node.id === e.source)?.data?.type === "message-queue"
+                  ) && (
+                    <div className="mt-3">
+                      <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
+                        Consumer Prefetch Limit
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={nodeConfigs[selectedNode.id]?.prefetchLimit ?? 1}
+                        onChange={(e) =>
+                          updateNodeConfig(selectedNode.id, {
+                            prefetchLimit: Number(e.target.value),
+                          })
+                        }
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500 text-[color:var(--foreground)]"
+                      />
+                      <p className="mt-1 text-[9px] text-[color:var(--foreground)]/40 leading-relaxed">
+                        Max concurrent messages this consumer can pull from the queue.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Subscriber Configs if connected to PubSub */}
+                  {edges.some(
+                    (e) =>
+                      e.target === selectedNode.id &&
+                      nodes.find((node) => node.id === e.source)?.data?.type === "pubsub"
+                  ) && (
+                    <div className="mt-3 space-y-2">
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                        Subscription Topics
+                      </label>
+                      {(() => {
+                        const topics =
+                          nodeConfigs[selectedNode.id]?.subscriptionTopics ||
+                          (nodeConfigs[selectedNode.id]?.subscriptionTopic
+                            ? [nodeConfigs[selectedNode.id].subscriptionTopic]
+                            : ["order.created"]);
+
+                        return (
+                          <div className="space-y-2">
+                            {topics.map((topic: string, index: number) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-1.5"
+                              >
+                                <input
+                                  type="text"
+                                  value={topic}
+                                  onChange={(e) => {
+                                    const nextTopics = [...topics];
+                                    nextTopics[index] = e.target.value;
+                                    updateNodeConfig(selectedNode.id, {
+                                      subscriptionTopics: nextTopics,
+                                      subscriptionTopic: nextTopics[0] || "",
+                                    });
+                                  }}
+                                  className="flex-1 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-indigo-500 text-[color:var(--foreground)]"
+                                />
+                                {topics.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const nextTopics = topics.filter(
+                                        (_: any, i: number) => i !== index,
+                                      );
+                                      updateNodeConfig(selectedNode.id, {
+                                        subscriptionTopics: nextTopics,
+                                        subscriptionTopic: nextTopics[0] || "",
+                                      });
+                                    }}
+                                    className="text-rose-500 hover:text-rose-600 text-xs px-2 font-bold cursor-pointer transition-colors"
+                                  >
+                                    ×
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextTopics = [
+                                  ...topics,
+                                  `topic-${topics.length + 1}`,
+                                ];
+                                updateNodeConfig(selectedNode.id, {
+                                  subscriptionTopics: nextTopics,
+                                  subscriptionTopic: nextTopics[0] || "",
+                                });
+                              }}
+                              className="text-[9px] bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 font-bold px-2 py-1 rounded transition cursor-pointer"
+                            >
+                              + Add Topic
+                            </button>
+                          </div>
+                        );
+                      })()}
+                      <p className="mt-1 text-[9px] text-[color:var(--foreground)]/40 leading-relaxed">
+                        Topics/channels this server subscribes to on the Pub/Sub broker.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1680,6 +1886,137 @@ function NodeInspectorPanel({
                         </button>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {role === "message-queue" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                      Processing Type
+                    </label>
+                    <select
+                      value={
+                        nodeConfigs[selectedNode.id]?.processingType ?? "FIFO"
+                      }
+                      onChange={(e) =>
+                        updateNodeConfig(selectedNode.id, {
+                          processingType: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500 cursor-pointer text-[color:var(--foreground)]"
+                    >
+                      <option value="FIFO">FIFO (First In, First Out)</option>
+                      <option value="LIFO">LIFO (Last In, First Out)</option>
+                      <option value="PRIORITY">
+                        PRIORITY (Priority Queue)
+                      </option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
+                      Queue Size Limit
+                    </label>
+                    <input
+                      type="number"
+                      value={nodeConfigs[selectedNode.id]?.queueSize ?? 10}
+                      onChange={(e) =>
+                        updateNodeConfig(selectedNode.id, {
+                          queueSize: Number(e.target.value),
+                        })
+                      }
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500 text-[color:var(--foreground)]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                      Overflow Behavior
+                    </label>
+                    <select
+                      value={
+                        nodeConfigs[selectedNode.id]?.overflowBehavior ??
+                        "REJECT"
+                      }
+                      onChange={(e) =>
+                        updateNodeConfig(selectedNode.id, {
+                          overflowBehavior: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500 cursor-pointer text-[color:var(--foreground)]"
+                    >
+                      <option value="REJECT">Reject (Immediate Error)</option>
+                      <option value="BLOCK">
+                        Block Producer (Wait for consumer)
+                      </option>
+                      <option value="UNLIMITED">
+                        Unlimited Size (No limit)
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {role === "pubsub" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                      Active Subscribers (Connected)
+                    </label>
+                    {(() => {
+                      const subscriberEdges = edges.filter(
+                        (e) => e.source === selectedNode.id,
+                      );
+                      if (subscriberEdges.length === 0) {
+                        return (
+                          <p className="text-[10px] text-[color:var(--foreground)]/45 italic leading-normal">
+                            No subscribers connected. Connect an outgoing line
+                            from the Pub/Sub broker to a Web Server node.
+                          </p>
+                        );
+                      }
+                      return (
+                        <div className="space-y-1.5 mt-2">
+                          {subscriberEdges.map((edge) => {
+                            const targetNode = nodes.find(
+                              (n) => n.id === edge.target,
+                            );
+                            const targetLabel =
+                              (targetNode?.data?.label as string) ||
+                              edge.target;
+                            const targetTopics =
+                              nodeConfigs[edge.target]?.subscriptionTopics ||
+                              (nodeConfigs[edge.target]?.subscriptionTopic
+                                ? [nodeConfigs[edge.target].subscriptionTopic]
+                                : ["order.created"]);
+                            return (
+                              <div
+                                key={edge.id}
+                                className="flex justify-between items-center text-xs p-2 rounded border border-[var(--border)] bg-[var(--surface)]/50 gap-2"
+                              >
+                                <span className="font-semibold text-[color:var(--foreground)]/80 shrink-0">
+                                  {targetLabel}
+                                </span>
+                                <div className="flex flex-wrap gap-1 max-w-[65%] justify-end">
+                                  {targetTopics.map(
+                                    (topic: string, tIdx: number) => (
+                                      <span
+                                        key={tIdx}
+                                        className="font-mono text-[9px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded shrink-0"
+                                      >
+                                        {topic}
+                                      </span>
+                                    ),
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
@@ -2160,6 +2497,7 @@ function createDefaultConfig(type: string, id: string, label: string) {
             fileName: "file.png",
             isThereFileToUpload: false,
             targetBucket: "media-uploads",
+            body: "{}",
           },
         ],
       } as any;
@@ -2469,8 +2807,8 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
 
     const initialConfigs: Record<string, any> = {};
     initialBundle.nodes.forEach((n) => {
+      const role = getNodeRole(n);
       const label = typeof n.data?.label === "string" ? n.data.label : n.id;
-      const role = getNodeRole(label);
       const defaultConfig = createDefaultConfig(role, n.id, label);
 
       if (topic.scenarioId === "simple-valet-key") {
@@ -2529,6 +2867,33 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
         } else if (role === "server") {
           defaultConfig.endpoints = {
             "api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          };
+        }
+      } else if (topic.scenarioId === "simple-pub-sub") {
+        if (role === "client") {
+          defaultConfig.requests = [
+            {
+              endpoint: "/api/v1/getData",
+              method: "POST",
+              lookupKey: "order.created",
+              body: '{\n  "topic": "order.created",\n  "amount": 250\n}',
+            },
+          ];
+        } else if (role === "server") {
+          defaultConfig.endpoints = {
+            "api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          };
+        }
+      } else if (topic.scenarioId === "simple-message-queue") {
+        if (role === "client") {
+          defaultConfig.requests = [
+            { endpoint: "/api/v1/posts", method: "POST", lookupKey: "key-1", body: "{}" },
+            { endpoint: "/api/v1/posts", method: "POST", lookupKey: "key-2", body: "{}" },
+            { endpoint: "/api/v1/posts", method: "POST", lookupKey: "key-3", body: "{}" },
+          ];
+        } else if (role === "server") {
+          defaultConfig.endpoints = {
+            "api/v1/posts": ["GET", "POST", "PUT", "DELETE", "PATCH"],
           };
         }
       }
@@ -2853,9 +3218,9 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
     () =>
       nodes.map((node) => {
         const isSelected = node.id === selectedNodeId;
+        const role = getNodeRole(node);
         const label =
           typeof node.data?.label === "string" ? node.data.label : node.id;
-        const role = getNodeRole(label);
         const activeFrames = currentFrames.filter(
           (f) => f.from === node.id || f.to === node.id,
         );
@@ -3385,6 +3750,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                       nodeConfigs={nodeConfigs}
                       updateNodeConfig={updateNodeConfig}
                       nodes={nodes}
+                      edges={edges}
                       scenarioId={topic.scenarioId}
                     />
                   </div>
@@ -3425,6 +3791,10 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                     onPrev={goToPreviousFrame}
                     onNext={goToNextFrame}
                     onReset={resetPlayback}
+                    onReframe={() => {
+                      setFrameIndex(0);
+                      setIsPlaying(true);
+                    }}
                     speed={speed}
                     onSpeedChange={setSpeed}
                     theme={theme}

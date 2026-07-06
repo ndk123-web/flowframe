@@ -143,7 +143,10 @@ function createSimplePubSubSimulationBundle(options: ScenarioRunOptions): SimBun
     allFrames.push(...runFrames);
 
     if (!parallelResponse) {
-      globalTimestampOffset += generatedFrames.length;
+      const maxTime = generatedFrames.length > 0
+        ? Math.max(...generatedFrames.map((f: any) => f.timestamp))
+        : -1;
+      globalTimestampOffset += (maxTime + 1);
     }
   }
 
@@ -170,7 +173,7 @@ function createSimplePubSubSimulationBundle(options: ScenarioRunOptions): SimBun
   const flowNodes: Node[] = [
     {
       id: clientId,
-      data: { label: "Client" },
+      data: { label: "Client", type: "client" },
       position: { x: 80, y: 220 },
       type: "default",
       sourcePosition: Position.Right,
@@ -186,7 +189,7 @@ function createSimplePubSubSimulationBundle(options: ScenarioRunOptions): SimBun
     },
     {
       id: serverId,
-      data: { label: "Publisher Server" },
+      data: { label: "Publisher Server", type: "server" },
       position: { x: 320, y: 220 },
       type: "default",
       sourcePosition: Position.Right,
@@ -202,7 +205,7 @@ function createSimplePubSubSimulationBundle(options: ScenarioRunOptions): SimBun
     },
     {
       id: brokerId,
-      data: { label: "Pub/Sub Broker" },
+      data: { label: "Pub/Sub Broker", type: "pubsub" },
       position: { x: 560, y: 220 },
       type: "default",
       sourcePosition: Position.Right,
@@ -218,7 +221,7 @@ function createSimplePubSubSimulationBundle(options: ScenarioRunOptions): SimBun
     },
     {
       id: subscriber1Id,
-      data: { label: "Email Service" },
+      data: { label: "Email Service", type: "server" },
       position: { x: 800, y: 120 },
       type: "default",
       sourcePosition: Position.Right,
@@ -234,7 +237,7 @@ function createSimplePubSubSimulationBundle(options: ScenarioRunOptions): SimBun
     },
     {
       id: subscriber2Id,
-      data: { label: "Analytics Service" },
+      data: { label: "Analytics Service", type: "server" },
       position: { x: 800, y: 320 },
       type: "default",
       sourcePosition: Position.Right,
