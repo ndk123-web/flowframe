@@ -2736,7 +2736,10 @@ function WorkspaceInner() {
       flatFrames.push(...runFrames);
 
       if (!parallelResponse) {
-        globalTimestampOffset += run.frames.length;
+        const maxTime = run.frames.length > 0
+          ? Math.max(...run.frames.map((f: any) => f.timestamp))
+          : -1;
+        globalTimestampOffset += (maxTime + 1);
       }
     });
 
