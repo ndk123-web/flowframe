@@ -135,6 +135,7 @@ function createSimpleMessageQueueSimulationBundle(options: ScenarioRunOptions): 
         endpoint: req.endpoint || "/api/v1/posts",
         method: req.method || "POST",
         lookupKey,
+        body: req.body || "{}",
       },
       sourceIp
     );
@@ -162,7 +163,10 @@ function createSimpleMessageQueueSimulationBundle(options: ScenarioRunOptions): 
     allFrames.push(...runFrames);
 
     if (!parallelResponse) {
-      globalTimestampOffset += generatedFrames.length;
+      const maxTime = generatedFrames.length > 0
+        ? Math.max(...generatedFrames.map((f: any) => f.timestamp))
+        : -1;
+      globalTimestampOffset += (maxTime + 1);
     }
   }
 

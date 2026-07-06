@@ -175,6 +175,7 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
         endpoint: req.endpoint || "/api/v1/getData",
         method: req.method || "GET",
         parallelResponse,
+        body: req.body || "{}",
       },
       sourceIp,
     );
@@ -203,7 +204,11 @@ function createSimpleCacheScenario(options: ScenarioRunOptions): SimBundle {
     allFrames.push(...runFrames);
 
     if (!parallelResponse) {
-      globalTimestampOffset += (simulation.getFrames() as Frame[]).length;
+      const rawFrames = simulation.getFrames() as Frame[];
+      const maxTime = rawFrames.length > 0
+        ? Math.max(...rawFrames.map((f: any) => f.timestamp))
+        : -1;
+      globalTimestampOffset += (maxTime + 1);
     }
   }
 

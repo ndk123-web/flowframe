@@ -139,6 +139,7 @@ export function createSimpleLoadBalancerSimulationBundle(
         endpoint: req.endpoint,
         method: req.method,
         lookupKey: req.lookupKey,
+        body: req.body || "{}",
       },
       sourceIp,
     );
@@ -167,7 +168,11 @@ export function createSimpleLoadBalancerSimulationBundle(
 
     // if the response is not parallel, then we need to increment the global timestamp offset by the length of the frames generated 
     if (!parallelResponse) {
-      globalTimestampOffset += (simulation.getFrames() as Frame[]).length;
+      const rawFrames = simulation.getFrames() as Frame[];
+      const maxTime = rawFrames.length > 0
+        ? Math.max(...rawFrames.map((f: any) => f.timestamp))
+        : -1;
+      globalTimestampOffset += (maxTime + 1);
     }
   }
 

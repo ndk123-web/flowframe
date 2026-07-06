@@ -254,6 +254,7 @@ function createSimpleApiGatewaySimulation(
         endpoint,
         method: req.method || "GET",
         parallelResponse,
+        body: req.body || "{}",
       },
       sourceIp,
     );
@@ -284,7 +285,10 @@ function createSimpleApiGatewaySimulation(
     allFrames.push(...remappedRunFrames);
 
     if (!parallelResponse) {
-      globalOffset += rawFrames.length;
+      const maxTime = rawFrames.length > 0
+        ? Math.max(...rawFrames.map((f: any) => f.timestamp))
+        : -1;
+      globalOffset += (maxTime + 1);
     }
   }
 
