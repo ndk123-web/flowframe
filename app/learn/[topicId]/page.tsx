@@ -643,6 +643,7 @@ function Controls({
   onPrev,
   onNext,
   onReset,
+  onReframe,
   speed,
   onSpeedChange,
   theme,
@@ -652,6 +653,7 @@ function Controls({
   onPrev: () => void;
   onNext: () => void;
   onReset: () => void;
+  onReframe: () => void;
   speed: number;
   onSpeedChange: (value: number) => void;
   theme: Theme;
@@ -679,6 +681,14 @@ function Controls({
           </button>
           <button type="button" onClick={onReset} className={buttonClass}>
             Reset
+          </button>
+          <button
+            type="button"
+            onClick={onReframe}
+            className={`${buttonClass} bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 border-violet-500/30 font-semibold`}
+            title="Restart simulation from the beginning"
+          >
+            🔄 Reframe
           </button>
         </div>
 
@@ -3781,6 +3791,10 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                     onPrev={goToPreviousFrame}
                     onNext={goToNextFrame}
                     onReset={resetPlayback}
+                    onReframe={() => {
+                      setFrameIndex(0);
+                      setIsPlaying(true);
+                    }}
                     speed={speed}
                     onSpeedChange={setSpeed}
                     theme={theme}
