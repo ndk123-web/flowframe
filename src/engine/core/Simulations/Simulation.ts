@@ -323,6 +323,12 @@ class SimulationManager {
             }
           );
 
+          // Track maximum timestamp to resume simulation after all subscribers complete
+          request.context.maxPubSubTimestamp = Math.max(
+            request.context.maxPubSubTimestamp || 0,
+            this.timestamp
+          );
+
           // Pop the subscriber off the traversal path — we are back at the broker
           traversalPath.pop();
           currentNodeId = responseTo;
@@ -333,6 +339,11 @@ class SimulationManager {
           if (pendingSubscribers.length > 0) {
             const nextSubId = pendingSubscribers.shift()!;
             request.context.pendingPubSubSubscribers = pendingSubscribers;
+
+            // Reset simulation timestamp to the start of the delivery block to align parallel execution
+            if (typeof request.context.pubSubDeliveryStartTimestamp === "number") {
+              this.timestamp = request.context.pubSubDeliveryStartTimestamp;
+            }
 
             const nextSubInstance = this.registry.getInstance(nextSubId) as ServerModel;
 
@@ -364,7 +375,10 @@ class SimulationManager {
             continue;
           }
 
-          // All subscribers processed — terminate fanout
+          // All subscribers processed — restore maximum timestamp and terminate fanout
+          if (typeof request.context.maxPubSubTimestamp === "number") {
+            this.timestamp = request.context.maxPubSubTimestamp;
+          }
           break;
         }
 
@@ -1366,6 +1380,10 @@ class SimulationManager {
           // The first subscriber is delivered now; the rest are queued.
           const [firstSubId, ...remainingSubIds] = subscribers;
           request.context.pendingPubSubSubscribers = remainingSubIds;
+
+          // Record starting timestamps for simultaneous delivery simulation
+          request.context.pubSubDeliveryStartTimestamp = this.timestamp;
+          request.context.maxPubSubTimestamp = this.timestamp;
 
           // Clear per-subscriber server flags for the first subscriber's fresh traversal
           request.context.redisLookupDone = false;
