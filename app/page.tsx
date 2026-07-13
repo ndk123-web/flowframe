@@ -678,7 +678,7 @@ function LearnAndSandbox() {
                 Drag & drop any component — Clients, Load Balancers, Servers, Redis, Postgres, API Gateways — and wire up your own topology. Then run it.
               </p>
               <div className="flex flex-col gap-2 mb-6">
-                {["Drag & drop canvas", "Custom connections", "Run any topology", "Live inspection"].map(t => (
+                {["Drag & drop canvas", "Import/Export topologies", "Download diagram image", "Custom connections", "Run any topology", "Live inspection"].map(t => (
                   <div key={t} className="flex items-center gap-2 text-sm" style={{ color: "var(--foreground)", opacity: 0.7 }}>
                     <span className="h-1 w-1 rounded-full bg-emerald-400 shrink-0" />
                     {t}
@@ -709,6 +709,8 @@ function V1Status() {
     "Frame-by-frame playback",
     "Node state inspector",
     "Custom sandbox canvas",
+    "Flows Import/Export (JSON)",
+    "Diagram Export (PNG)",
     "Interactive learning docs",
     "Dark / Light mode",
   ];
@@ -875,7 +877,7 @@ export default function Home() {
 
             {/* v1 callout */}
             <p className="mt-6 text-[11px] font-medium" style={{ color: "var(--foreground)", opacity: 0.38 }}>
-              v1.0.1 — 4 scenarios supported + Postgres Pools · More patterns coming
+              v1.0.5 — Flows Import/Export + Capture Diagram · 4 scenarios · Sandbox
             </p>
           </div>
 
