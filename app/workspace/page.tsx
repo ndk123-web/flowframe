@@ -1878,6 +1878,19 @@ function WorkspaceInner() {
   const [validationWarning, setValidationWarning] = useState<string | null>(
     null,
   );
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-dismiss success toast
+  useEffect(() => {
+    if (successToast) {
+      const timer = setTimeout(() => {
+        setSuccessToast(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successToast]);
+
   const [showMetrics, setShowMetrics] = useState(true);
   const [activeReqIdx, setActiveReqIdx] = useState(0);
 
@@ -1914,7 +1927,7 @@ function WorkspaceInner() {
   const [draggingType, setDraggingType] = useState<ComponentType | null>(null);
   const [isDragOverCanvas, setIsDragOverCanvas] = useState(false);
 
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, fitView } = useReactFlow();
 
   const dragStartOffset = useRef({ x: 0, y: 0 });
 
@@ -3171,6 +3184,86 @@ function WorkspaceInner() {
     setValidationWarning(null);
   };
 
+  // Export flow handler
+  const handleExportFlow = () => {
+    try {
+      const exportData = {
+        version: "1.0",
+        nodes,
+        edges,
+        nodeConfigs,
+      };
+      
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `flow-frame-export-${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      setSuccessToast("Architecture flow exported successfully!");
+    } catch (err: any) {
+      setValidationWarning(`Export failed: ${err.message || err}`);
+    }
+  };
+
+  // Import click trigger
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Import flow handler
+  const handleImportFlow = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        const data = JSON.parse(content);
+
+        if (!data || typeof data !== "object") {
+          throw new Error("Invalid file format.");
+        }
+        if (!Array.isArray(data.nodes)) {
+          throw new Error("Missing 'nodes' array.");
+        }
+        if (!Array.isArray(data.edges)) {
+          throw new Error("Missing 'edges' array.");
+        }
+
+        setIsPlaying(false);
+        setFrameIndex(0);
+        setRawSimulationFrames([]);
+        setSelectedNodeId(null);
+        setValidationWarning(null);
+
+        setNodes(data.nodes);
+        setEdges(data.edges);
+        setNodeConfigs(data.nodeConfigs || {});
+
+        setSuccessToast("Architecture flow imported successfully!");
+        
+        setTimeout(() => {
+          fitView({ duration: 800 });
+        }, 100);
+      } catch (err: any) {
+        setValidationWarning(`Import failed: ${err.message || "Invalid JSON structure."}`);
+      } finally {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <main className="relative min-h-[100dvh] h-[100dvh] overflow-hidden flex flex-col bg-[var(--background)]">
       <div className="pointer-events-none absolute inset-0 -z-10 technical-grid opacity-35" />
@@ -3607,10 +3700,56 @@ function WorkspaceInner() {
               </svg>
               <span>Templates Gallery</span>
             </button>
+            {/* Import / Export Controls */}
+            <div className="grid grid-cols-2 gap-2 w-full animate-fade-in">
+              <button
+                type="button"
+                onClick={handleExportFlow}
+                className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg border border-emerald-500/25 bg-emerald-500/5 hover:bg-emerald-500/15 hover:border-emerald-500/45 text-emerald-500 dark:text-emerald-400 text-[11px] font-semibold transition cursor-pointer shadow-sm hover:shadow active:scale-95 duration-200"
+                title="Export current architecture flow to a JSON file"
+              >
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                <span>Export Flow</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleImportClick}
+                className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg border border-cyan-500/25 bg-cyan-500/5 hover:bg-cyan-500/15 hover:border-cyan-500/45 text-cyan-500 dark:text-cyan-400 text-[11px] font-semibold transition cursor-pointer shadow-sm hover:shadow active:scale-95 duration-200"
+                title="Import architecture flow from a JSON file"
+              >
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                </svg>
+                <span>Import Flow</span>
+              </button>
+              {/* Hidden file input for import */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImportFlow}
+                accept=".json"
+                className="hidden"
+              />
+            </div>
+
             <button
               type="button"
               onClick={handleClearCanvas}
-              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 hover:border-rose-500/40 text-rose-500 dark:text-rose-400 text-[11px] font-semibold transition cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 hover:border-rose-500/40 text-rose-500 dark:text-rose-400 text-[11px] font-semibold transition cursor-pointer active:scale-95 duration-200"
             >
               <svg
                 className="w-3.5 h-3.5"
@@ -3891,12 +4030,32 @@ function WorkspaceInner() {
 
           {/* Floating Warning Message */}
           {validationWarning && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4 animate-fade-in">
               <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 backdrop-blur-xl px-4 py-3 text-xs text-amber-300 flex items-center justify-between shadow-lg">
                 <span>⚠️ {validationWarning}</span>
                 <button
                   onClick={() => setValidationWarning(null)}
                   className="text-amber-400 font-bold ml-2 text-base hover:text-amber-300"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Floating Success Message */}
+          {successToast && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4 animate-fade-in">
+              <div className="rounded-xl border border-emerald-500/50 bg-emerald-500/10 backdrop-blur-xl px-4 py-3 text-xs text-emerald-300 flex items-center justify-between shadow-lg">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {successToast}
+                </span>
+                <button
+                  onClick={() => setSuccessToast(null)}
+                  className="text-emerald-400 font-bold ml-2 text-base hover:text-emerald-300"
                 >
                   ×
                 </button>
