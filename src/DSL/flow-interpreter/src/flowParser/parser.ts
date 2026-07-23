@@ -13,7 +13,15 @@ function parserFlow(tokens: LexerTokens[]): Ast[] {
   let ast: Ast[] = [];
 
   while (position < size) {
-    const typeOfToken: string = tokens[position]['token_type'];
+    let typeOfToken: string = tokens[position]['token_type'];
+
+    // Handle optional 'define' keyword before node data type
+    if (typeOfToken === 'DEFINE') {
+      position++;
+      if (position < size) {
+        typeOfToken = tokens[position]['token_type'];
+      }
+    }
 
     if (DATA_TYPES[typeOfToken] !== undefined) {
       let response: DefineParse = defineParser(tokens, position, typeOfToken);
@@ -24,12 +32,26 @@ function parserFlow(tokens: LexerTokens[]): Ast[] {
 
       position = response.position;
     } else if (
-      typeOfToken === 'IDENTIFIER' &&
-      position + 1 < size &&
-      tokens[position + 1]['token_type'] === 'CONNECT'
+      typeOfToken === 'CONNECT_KEYWORD' ||
+      (typeOfToken === 'IDENTIFIER' &&
+        position + 1 < size &&
+        tokens[position + 1]['token_type'] === 'CONNECT')
     ) {
+      if (typeOfToken === 'CONNECT_KEYWORD') {
+        position++; // consume 'connect' keyword
+      }
+
+      if (position >= size || tokens[position]['token_type'] !== 'IDENTIFIER') {
+        throw new Error(`Syntax Error: Expected source node identifier after 'connect'`);
+      }
+
       let from = tokens[position].value;
-      position += 2; // consume initial IDENTIFIER and CONNECT
+      position++; // consume source IDENTIFIER
+
+      if (position >= size || tokens[position]['token_type'] !== 'CONNECT') {
+        throw new Error(`Syntax Error: Expected '->' after node '${from}'`);
+      }
+      position++; // consume '->'
 
       while (position < size && tokens[position]['token_type'] === 'IDENTIFIER') {
         let to = tokens[position].value;
@@ -44,8 +66,8 @@ function parserFlow(tokens: LexerTokens[]): Ast[] {
         }
       }
     } else {
-      // Prevent infinite loop by moving to next token if token type is unhandled
-      position++;
+      const invalidTokenVal = tokens[position].value || tokens[position].token_type;
+      throw new Error(`Syntax Error: Unexpected keyword or token '${invalidTokenVal}'`);
     }
   }
 

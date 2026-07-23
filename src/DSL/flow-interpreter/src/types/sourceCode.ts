@@ -1,8 +1,13 @@
 type ClientRequestStructure = {
   endpoint: string;
-  allowedMethod: string[];
-  body: Record<string, string>;
-  key: string;
+  allowedMethods: string[];
+  allowedMethod?: string[];
+  body?: Record<string, any> | string;
+  key?: string;
+  lookupKey?: string;
+  fileName?: string;
+  isThereFileToUpload?: boolean;
+  targetBucket?: string;
 };
 
 type ClientNodeStructure = {
@@ -10,15 +15,16 @@ type ClientNodeStructure = {
   label: string;
   type: string;
   valet: boolean;
-  technologyOfServer: string;
+  technologyOfClient?: string;
 };
 
 type ServerEndpointStructure = {
   endpoint: string;
   allowedMethods: string[];
+  allowedMethod?: string[];
 };
 
-type ServerRegsiterTopicsForPubSub = {
+type ServerRegisterTopicsForPubSub = {
   topic: string;
 };
 
@@ -28,8 +34,8 @@ type ServerNodeStructure = {
   capacity: number;
   label: string;
   technologyOfServer: string;
-  prefetchLimit: string;
-  registeredTopics: ServerRegsiterTopicsForPubSub[];
+  prefetchLimit: number;
+  registeredTopics?: ServerRegisterTopicsForPubSub[];
 };
 
 type LoadBalancerStructure = {
@@ -44,7 +50,6 @@ type GatewayRouteRules = {
 };
 
 type ServiceMapping = {
-  // ex: /post , toNode is s2, and nameOfServuce: PostService from the Gateway Rules
   toNode: string;
   nameOfService: string;
 };
@@ -60,6 +65,7 @@ type ApiGatewayStructure = {
 type RedisKeyValue = {
   key: string;
   value: string;
+  val?: string;
 };
 
 type RedisStructure = {
@@ -69,16 +75,16 @@ type RedisStructure = {
 };
 
 type PostgresRow = {
-  tableName: string;
+  tableName?: string;
   key: string;
-  value: string;
+  value?: string;
+  val?: string;
 };
 
-// check dbName in postgres model before , in simulation may get error
-type PostgreStructure = {
+type PostgresStructure = {
   label: string;
   technologyOfPostgres: string;
-  dbName: string;
+  table: string;
   data: PostgresRow[];
 };
 
@@ -92,17 +98,16 @@ type CloudStorage = {
   bucketName: CloudBucket[];
 };
 
-type overflowTypes = 'REJECT' | 'BLOCK' | 'UNLIMITED';
-type proccesingTypes = 'FIFO' | 'LIFO' | 'PRIORITY';
+type overflowTypes = 'REJECT' | 'BLOCK' | 'UNLIMITED' | 'DROP_OLDEST';
+type processingTypes = 'FIFO' | 'LIFO' | 'PRIORITY';
 
 type MessageQueueStructure = {
   label: string;
-  processingType: proccesingTypes;
-  queueSizeLimit: string;
-  overflowBehavious: overflowTypes;
+  processingType: processingTypes;
+  queueSize: number;
+  overflowBehavior: overflowTypes;
 };
 
-// means pubsub connected to the subsribers ..
 type PubSubSubscribers = {
   idOfNode: string;
   topic: string;
@@ -111,7 +116,19 @@ type PubSubSubscribers = {
 type PubSubStructure = {
   label: string;
   technologyOfPubSub: string;
-  activeSubcribers: PubSubSubscribers[];
+  activeSubscribers: PubSubSubscribers[];
 };
 
-export type { ClientNodeStructure, ServerEndpointStructure };
+export type {
+  ClientRequestStructure,
+  ClientNodeStructure,
+  ServerEndpointStructure,
+  ServerNodeStructure,
+  LoadBalancerStructure,
+  ApiGatewayStructure,
+  RedisStructure,
+  PostgresStructure,
+  CloudStorage,
+  MessageQueueStructure,
+  PubSubStructure,
+};

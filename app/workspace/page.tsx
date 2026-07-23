@@ -38,7 +38,8 @@ import { motion } from "framer-motion";
 import ShortUniqueId from "short-unique-id";
 import { toPng } from "html-to-image";
 
-// Engine Core and Models
+// DSL Interpreter & Graph Engine
+import { compileDSL } from "@/DSL";
 import { GraphManager } from "@/engine/core/Graph/graph";
 import { NodeRegistry } from "@/engine/core/Graph/nodeResgistry";
 import { SimulationManager } from "@/engine/core/Simulations/Simulation";
@@ -1930,6 +1931,7 @@ function WorkspaceInner() {
   const [dslCode, setDslCode] = useState<string>(`// FlowFrame Architecture DSL Script
 // Define system nodes and connections
 
+// define "client" 
 define CLIENT c1 {
   label: "Client 1",
   requests: [
@@ -1937,10 +1939,11 @@ define CLIENT c1 {
       endpoint: "/api/v1/posts",
       allowedMethods: ["GET", "POST"],
       key: "rohan"
-    }
-  ]
-}
-
+      }
+      ]
+      }
+      
+// define "server" 
 define SERVER s1 {
   label: "API Server",
   capacity: 100,
@@ -1948,10 +1951,11 @@ define SERVER s1 {
     {
       endpoint: "/api/v1/posts",
       allowedMethod: ["GET", "POST"]
-    }
-  ]
-}
-
+      }
+      ]
+      }
+      
+// define "redis" 
 define REDIS r1 {
   label: "Redis Cache",
   data: [
@@ -1959,7 +1963,7 @@ define REDIS r1 {
   ]
 }
 
-// Connections
+// Connections (u can also not use "connect" keyword)
 connect c1 -> s1
 connect s1 -> r1
 `);
@@ -2171,7 +2175,13 @@ connect s1 -> r1
             modelInstance = new RedisModel(n.id, labelStr);
             if (Array.isArray(config.data)) {
               config.data.forEach((item: any) => {
-                if (item.key) modelInstance.addData(item.key, item.val);
+                const itemVal =
+                  item.value !== undefined
+                    ? item.value
+                    : item.val !== undefined
+                      ? item.val
+                      : "cached data";
+                if (item.key) modelInstance.addData(item.key, itemVal);
               });
             }
             break;
@@ -2179,11 +2189,17 @@ connect s1 -> r1
             modelInstance = new PostgresModel(n.id, labelStr);
             if (Array.isArray(config.data)) {
               config.data.forEach((item: any) => {
+                const itemVal =
+                  item.value !== undefined
+                    ? item.value
+                    : item.val !== undefined
+                      ? item.val
+                      : "record data";
                 if (item.key) {
                   modelInstance.addRecord(
                     config.table || "users",
                     item.key,
-                    item.val,
+                    itemVal,
                   );
                 }
               });
@@ -2563,6 +2579,326 @@ connect s1 -> r1
     },
     [nodes, nodeConfigs, edges],
   );
+
+  // Compile & Execute DSL script from Monaco Editor
+  const handleRunDSL = useCallback(() => {
+    try {
+      if (!dslCode || dslCode.trim().length === 0) {
+        setValidationWarning("DSL code is empty.");
+        return;
+      }
+      const output = compileDSL(dslCode);
+      if (!output.nodes || output.nodes.length === 0) {
+        setValidationWarning("No nodes generated from DSL.");
+        return;
+      }
+
+      setNodes(output.nodes);
+      setEdges(output.edges);
+      setNodeConfigs(output.nodeConfigs);
+      setValidationWarning(null);
+      setSuccessToast("DSL compiled & architecture generated! ⚡");
+
+      const firstClient = output.nodes.find((n: any) => n.data?.type === "client");
+      if (firstClient) {
+        handleStartSimulation(firstClient.id, output.nodes, output.edges, output.nodeConfigs);
+      }
+    } catch (err: any) {
+      setValidationWarning(`DSL Compilation Error: ${err.message || err}`);
+    }
+  }, [dslCode, setNodes, setEdges, setNodeConfigs, handleStartSimulation]);
+
+  // Register custom .flow language, syntax highlighter, autocompletion & bracket pairs for Monaco Editor
+  const handleEditorWillMount = useCallback((monaco: any) => {
+    if (!monaco.languages.getLanguages().some((lang: any) => lang.id === "flow")) {
+      monaco.languages.register({ id: "flow" });
+
+      // Auto-closing brackets & quotes configuration
+      monaco.languages.setLanguageConfiguration("flow", {
+        brackets: [
+          ["{", "}"],
+          ["[", "]"],
+          ["(", ")"],
+        ],
+        autoClosingPairs: [
+          { open: "{", close: "}" },
+          { open: "[", close: "]" },
+          { open: "(", close: ")" },
+          { open: '"', close: '"' },
+          { open: "'", close: "'" },
+        ],
+        surroundingPairs: [
+          { open: "{", close: "}" },
+          { open: "[", close: "]" },
+          { open: "(", close: ")" },
+          { open: '"', close: '"' },
+          { open: "'", close: "'" },
+        ],
+      });
+
+      // Syntax tokens classification
+      monaco.languages.setMonarchTokensProvider("flow", {
+        keywords: [
+          "define",
+          "connect",
+          "CONNECT",
+          "client",
+          "server",
+          "loadbalancer",
+          "gateway",
+          "pubsub",
+          "postgres",
+          "redis",
+          "messagequeue",
+          "CLIENT",
+          "SERVER",
+          "LOADBALANCER",
+          "GATEWAY",
+          "PUBSUB",
+          "POSTGRES",
+          "REDIS",
+          "MESSAGEQUEUE",
+          "true",
+          "false",
+        ],
+        tokenizer: {
+          root: [
+            [/[a-zA-Z_]\w*/, { cases: { "@keywords": "keyword", "@default": "identifier" } }],
+            [/[{}()\[\]]/, "@brackets"],
+            [/->/, "operator.special"],
+            [/[:]/, "delimiter"],
+            [/\d+/, "number"],
+            [/"([^"\\]|\\.)*"/, "string"],
+            [/'([^'\\]|\\.)*'/, "string"],
+            [/\/\/.*$/, "comment"],
+          ],
+        },
+      });
+
+      // Intellisense Completion Provider for Node Types & Properties
+      monaco.languages.registerCompletionItemProvider("flow", {
+        provideCompletionItems: (model: any, position: any) => {
+          const textUntilPosition = model.getValueInRange({
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: position.lineNumber,
+            endColumn: position.column,
+          });
+
+          const word = model.getWordUntilPosition(position);
+          const range = {
+            startLineNumber: position.lineNumber,
+            endLineNumber: position.lineNumber,
+            startColumn: word.startColumn,
+            endColumn: word.endColumn,
+          };
+
+          const suggestions: any[] = [];
+          const lineText = model.getLineContent(position.lineNumber);
+          const textBeforeCursor = lineText.substring(0, position.column - 1);
+
+          // 1. Suggestions right after 'define'
+          if (/define\s+\w*$/i.test(textBeforeCursor)) {
+            const nodeTypes = [
+              { label: "CLIENT", detail: "Client Node Definition", insertText: "CLIENT " },
+              { label: "SERVER", detail: "Server Node Definition", insertText: "SERVER " },
+              { label: "REDIS", detail: "Redis Cache Node Definition", insertText: "REDIS " },
+              { label: "POSTGRES", detail: "PostgreSQL Database Node Definition", insertText: "POSTGRES " },
+              { label: "LOADBALANCER", detail: "Load Balancer Node Definition", insertText: "LOADBALANCER " },
+              { label: "GATEWAY", detail: "API Gateway Node Definition", insertText: "GATEWAY " },
+              { label: "MESSAGEQUEUE", detail: "Message Queue Node Definition", insertText: "MESSAGEQUEUE " },
+              { label: "PUBSUB", detail: "PubSub Broker Node Definition", insertText: "PUBSUB " },
+            ];
+
+            return {
+              suggestions: nodeTypes.map((t) => ({
+                label: t.label,
+                kind: monaco.languages.CompletionItemKind.Keyword,
+                insertText: t.insertText,
+                detail: t.detail,
+                range,
+              })),
+            };
+          }
+
+          // 2. Contextual Property Suggestions inside Client / Server blocks
+          if (textUntilPosition.toLowerCase().includes("client")) {
+            const clientProps = [
+              { label: "requests", insertText: "requests: [\n  {\n    endpoint: \"/api/v1/posts\",\n    allowedMethods: [\"GET\", \"POST\"],\n    key: \"rohan\"\n  }\n]", detail: "HTTP Client Requests Array" },
+              { label: "label", insertText: 'label: "Client 1"', detail: "Node Display Label" },
+              { label: "valet", insertText: "valet: false", detail: "Valet Key Direct Storage Upload Flow" },
+            ];
+            clientProps.forEach((p) => {
+              suggestions.push({
+                label: p.label,
+                kind: monaco.languages.CompletionItemKind.Property,
+                insertText: p.insertText,
+                detail: p.detail,
+                range,
+              });
+            });
+          }
+
+          if (textUntilPosition.toLowerCase().includes("server")) {
+            const serverProps = [
+              { label: "acceptedEndpoints", insertText: "acceptedEndpoints: [\n  {\n    endpoint: \"/api/v1/posts\",\n    allowedMethod: [\"GET\", \"POST\"]\n  }\n]", detail: "Supported Endpoint Routes" },
+              { label: "capacity", insertText: "capacity: 100", detail: "Max Concurrent Request Capacity" },
+              { label: "tcpConnectionsToPostgres", insertText: "tcpConnectionsToPostgres: 10", detail: "Database Connection Pool Size" },
+              { label: "label", insertText: 'label: "API Server"', detail: "Node Display Label" },
+            ];
+            serverProps.forEach((p) => {
+              suggestions.push({
+                label: p.label,
+                kind: monaco.languages.CompletionItemKind.Property,
+                insertText: p.insertText,
+                detail: p.detail,
+                range,
+              });
+            });
+          }
+
+          // 3. Top level template snippets & keywords
+          const topLevelSnippets = [
+            {
+              label: "define CLIENT snippet",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'define CLIENT c1 {\n  label: "Client 1",\n  requests: [\n    {\n      endpoint: "/api/v1/posts",\n      allowedMethods: ["GET", "POST"],\n      key: "rohan"\n    }\n  ]\n}',
+              detail: "Create full Client node definition",
+              range,
+            },
+            {
+              label: "define SERVER snippet",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'define SERVER s1 {\n  label: "API Server",\n  capacity: 100,\n  acceptedEndpoints: [\n    {\n      endpoint: "/api/v1/posts",\n      allowedMethod: ["GET", "POST"]\n    }\n  ]\n}',
+              detail: "Create full Server node definition",
+              range,
+            },
+            {
+              label: "define REDIS snippet",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'define REDIS r1 {\n  label: "Redis Cache",\n  data: [\n    {\n      key: "rohan",\n      value: "cached data for rohan"\n    }\n  ]\n}',
+              detail: "Create Redis cache node definition",
+              range,
+            },
+            {
+              label: "define POSTGRES snippet",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'define POSTGRES db1 {\n  label: "Postgres Database",\n  table: "users",\n  data: [\n    {\n      key: "rohan",\n      value: "db record data"\n    }\n  ]\n}',
+              detail: "Create PostgreSQL DB node definition",
+              range,
+            },
+            {
+              label: "connect",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "connect ",
+              detail: "Connect keyword with trailing space",
+              range,
+            },
+            {
+              label: "connect snippet",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "connect ${1:c1} -> ${2:s1}",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              detail: "Connect two nodes snippet",
+              range,
+            },
+            {
+              label: "->",
+              kind: monaco.languages.CompletionItemKind.Operator,
+              insertText: " -> ",
+              detail: "Connection arrow with spaces",
+              range,
+            },
+            {
+              label: "define",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "define ",
+              detail: "Define keyword with trailing space",
+              range,
+            },
+            {
+              label: "CLIENT",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "CLIENT ",
+              detail: "Client node type",
+              range,
+            },
+            {
+              label: "SERVER",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "SERVER ",
+              detail: "Server node type",
+              range,
+            },
+            {
+              label: "REDIS",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "REDIS ",
+              detail: "Redis node type",
+              range,
+            },
+            {
+              label: "POSTGRES",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "POSTGRES ",
+              detail: "Postgres node type",
+              range,
+            },
+            {
+              label: "LOADBALANCER",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "LOADBALANCER ",
+              detail: "Load balancer node type",
+              range,
+            },
+            {
+              label: "GATEWAY",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "GATEWAY ",
+              detail: "API gateway node type",
+              range,
+            },
+          ];
+
+          topLevelSnippets.forEach((s) => suggestions.push(s));
+
+          return { suggestions };
+        },
+      });
+
+      monaco.editor.defineTheme("flow-dark", {
+        base: "vs-dark",
+        inherit: true,
+        rules: [
+          { token: "keyword", foreground: "C586C0", fontStyle: "bold" },
+          { token: "identifier", foreground: "9CDCFE" },
+          { token: "string", foreground: "CE9178" },
+          { token: "number", foreground: "B5CEA8" },
+          { token: "operator.special", foreground: "569CD6", fontStyle: "bold" },
+          { token: "comment", foreground: "6A9955", fontStyle: "italic" },
+        ],
+        colors: {
+          "editor.background": "#1e1e1e",
+        },
+      });
+
+      monaco.editor.defineTheme("flow-light", {
+        base: "vs",
+        inherit: true,
+        rules: [
+          { token: "keyword", foreground: "AF00DB", fontStyle: "bold" },
+          { token: "identifier", foreground: "001080" },
+          { token: "string", foreground: "A31515" },
+          { token: "number", foreground: "098658" },
+          { token: "operator.special", foreground: "0000FF", fontStyle: "bold" },
+          { token: "comment", foreground: "008000", fontStyle: "italic" },
+        ],
+        colors: {
+          "editor.background": "#f8fafc",
+        },
+      });
+    }
+  }, []);
 
   // Quick Load Template
   const loadTemplate = useCallback(
@@ -3205,6 +3541,24 @@ connect s1 -> r1
   // Keyboard controls listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement as HTMLElement | null;
+      const targetEl = e.target as HTMLElement | null;
+
+      // Ignore shortcut keys if user is typing in Monaco Editor or form inputs
+      const isInputFocused =
+        activeEl?.tagName === "INPUT" ||
+        activeEl?.tagName === "TEXTAREA" ||
+        activeEl?.tagName === "SELECT" ||
+        activeEl?.isContentEditable ||
+        Boolean(activeEl?.closest(".monaco-editor")) ||
+        Boolean(targetEl?.closest(".monaco-editor")) ||
+        Boolean(document.querySelector(".monaco-editor")?.contains(activeEl)) ||
+        Boolean(document.querySelector(".monaco-editor")?.contains(targetEl));
+
+      if (isInputFocused) {
+        return;
+      }
+
       if (e.target === document.body || e.target === document.documentElement) {
         if (e.code === "Space") {
           e.preventDefault();
@@ -3221,8 +3575,8 @@ connect s1 -> r1
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [frameGroups.length]);
 
   // Clear Canvas handler
@@ -3445,6 +3799,15 @@ connect s1 -> r1
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
+                    onClick={handleRunDSL}
+                    className="rounded bg-violet-600 hover:bg-violet-500 text-white text-[10px] px-2.5 py-1 font-bold shadow-md transition cursor-pointer flex items-center gap-1"
+                    title="Compile DSL script and render architecture on canvas"
+                  >
+                    <span>▶</span>
+                    <span>Run Flow</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => {
                       navigator.clipboard.writeText(dslCode);
                       setSuccessToast("Code copied to clipboard! 📋");
@@ -3468,8 +3831,9 @@ connect s1 -> r1
               <div className="flex-1 w-full h-full min-h-0 rounded-xl overflow-hidden border border-[var(--border)] shadow-inner bg-[#1e1e1e]">
                 <MonacoEditor
                   height="100%"
-                  language="typescript"
-                  theme={theme === "dark" ? "vs-dark" : "light"}
+                  language="flow"
+                  theme={theme === "dark" ? "flow-dark" : "flow-light"}
+                  beforeMount={handleEditorWillMount}
                   value={dslCode}
                   onChange={(val) => setDslCode(val || "")}
                   options={{
@@ -3483,6 +3847,13 @@ connect s1 -> r1
                     padding: { top: 8, bottom: 8 },
                     formatOnType: true,
                     formatOnPaste: true,
+                    autoClosingBrackets: "always",
+                    autoClosingQuotes: "always",
+                    autoSurround: "languageDefined",
+                    quickSuggestions: true,
+                    suggestOnTriggerCharacters: true,
+                    acceptSuggestionOnEnter: "on",
+                    tabCompletion: "on",
                   }}
                 />
               </div>

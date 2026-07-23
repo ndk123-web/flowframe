@@ -1,6 +1,5 @@
 import { Ast } from '../contracts/ast';
 import graphBuilder, { FlowFrameGraphOutput } from '../flowGraphBuilder/graphBuilder';
-import util from 'util';
 
 class InterpreterFlow {
   ast: Ast[] = [];
@@ -10,13 +9,11 @@ class InterpreterFlow {
   }
 
   run(): FlowFrameGraphOutput {
-    console.log('\n--- AST NODES ---');
-    console.log(util.inspect(this.ast, { depth: null, colors: true }));
+    console.log('--- AST NODES ---', this.ast);
 
     const graphOutput = graphBuilder(this.ast);
 
-    console.log('\n--- FINAL GENERATED FLOWFRAME GRAPH JSON ---');
-    console.log(util.inspect(graphOutput, { depth: null, colors: true }));
+    console.log('--- FINAL GENERATED FLOWFRAME GRAPH JSON ---', graphOutput);
 
     return graphOutput;
   }
