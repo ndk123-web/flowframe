@@ -1,6 +1,17 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
+
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full w-full items-center justify-center bg-[var(--surface-muted)] text-xs text-[color:var(--foreground)]/50">
+      Loading Monaco Editor...
+    </div>
+  ),
+});
+
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -1914,6 +1925,45 @@ function WorkspaceInner() {
   const [isShapesExpanded, setIsShapesExpanded] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Left Sidebar Mode: Library vs Monaco Code Editor
+  const [sidebarTab, setSidebarTab] = useState<"library" | "editor">("library");
+  const [dslCode, setDslCode] = useState<string>(`// FlowFrame Architecture DSL Script
+// Define system nodes and connections
+
+define CLIENT c1 {
+  label: "Client 1",
+  requests: [
+    {
+      endpoint: "/api/v1/posts",
+      allowedMethods: ["GET", "POST"],
+      key: "rohan"
+    }
+  ]
+}
+
+define SERVER s1 {
+  label: "API Server",
+  capacity: 100,
+  acceptedEndpoints: [
+    {
+      endpoint: "/api/v1/posts",
+      allowedMethod: ["GET", "POST"]
+    }
+  ]
+}
+
+define REDIS r1 {
+  label: "Redis Cache",
+  data: [
+    { key: "rohan", value: "cached post data" }
+  ]
+}
+
+// Connections
+connect c1 -> s1
+connect s1 -> r1
+`);
+
   // Movable / Resizable / Mobile sidebar states
   const [isSidebarFloating, setIsSidebarFloating] = useState(false);
   const [sidebarPosition, setSidebarPosition] = useState({ x: 16, y: 16 });
@@ -3350,110 +3400,199 @@ function WorkspaceInner() {
             />
           )}
 
-          {/* Sidebar Title & Search Shape */}
-          <div
-            className={`p-3 border-b border-[var(--border)] flex flex-col gap-2 shrink-0 bg-[var(--surface)] ${
-              isSidebarFloating
-                ? "cursor-grab active:cursor-grabbing select-none"
-                : ""
-            }`}
-            onMouseDown={handleHeaderMouseDown}
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
-                Shape Library
-              </h2>
-              <div className="flex items-center gap-1.5">
-                {/* Modern Help Button */}
-                <button
-                  type="button"
-                  onClick={() => setShowHelpModal(true)}
-                  className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center gap-1"
-                  title="How to Use Guide"
-                >
-                  <svg
-                    className="w-3.5 h-3.5 text-violet-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                    <line
-                      x1="12"
-                      y1="17"
-                      x2="12.01"
-                      y2="17"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <span>Help</span>
-                </button>
-                {/* Dock / Float Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarFloating(!isSidebarFloating)}
-                  className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center gap-1"
-                  title={isSidebarFloating ? "Dock Sidebar" : "Float Sidebar"}
-                >
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                  >
-                    <path d="M12 2v20M17 5H7" />
-                  </svg>
-                  <span>{isSidebarFloating ? "Dock" : "Float"}</span>
-                </button>
-                {/* Mobile Close Button */}
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarOpenMobile(false)}
-                  className="md:hidden rounded-full hover:bg-[var(--surface-muted)] text-xs font-bold h-6 w-6 flex items-center justify-center border border-[var(--border)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] cursor-pointer"
-                  title="Close Sidebar"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
-                <svg
-                  className="w-3.5 h-3.5 text-[color:var(--foreground)]/40"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Type to search shapes..."
-                className="w-full pl-8 pr-7 py-1.5 bg-[var(--surface-muted)]/70 hover:bg-[var(--surface-muted)] focus:bg-[var(--surface)] text-xs text-[color:var(--foreground)] placeholder-[color:var(--foreground)]/40 border border-[var(--border)] rounded-lg outline-none focus:border-violet-500/80 transition-all duration-150"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-xs text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)] font-bold cursor-pointer"
-                >
-                  ×
-                </button>
-              )}
+          {/* Mode Switcher Header: Library vs Monaco Code Editor */}
+          <div className="p-2 border-b border-[var(--border)] bg-[var(--surface)] shrink-0 flex flex-col gap-2">
+            <div className="flex items-center gap-1 bg-[var(--surface-muted)] p-1 rounded-xl border border-[var(--border)]">
+              <button
+                type="button"
+                onClick={() => setSidebarTab("library")}
+                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  sidebarTab === "library"
+                    ? "bg-[var(--surface)] text-violet-400 shadow-sm border border-[var(--border)] font-bold"
+                    : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+                }`}
+              >
+                <span>🎨</span>
+                <span>Library</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSidebarTab("editor")}
+                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  sidebarTab === "editor"
+                    ? "bg-[var(--surface)] text-violet-400 shadow-sm border border-[var(--border)] font-bold"
+                    : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+                }`}
+              >
+                <span>⚡</span>
+                <span>Code Editor</span>
+              </button>
             </div>
           </div>
 
-          {/* Collapsible Accordion Lists */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-2">
+          {sidebarTab === "editor" ? (
+            /* Monaco Code Editor Panel in Left Sidebar */
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-[var(--background)] p-3 gap-2">
+              <div className="flex items-center justify-between pb-2 border-b border-[var(--border)] shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
+                    Monaco Editor
+                  </span>
+                  <span className="text-[9px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-1.5 py-0.5 rounded font-mono font-bold">
+                    DSL / TS
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(dslCode);
+                      setSuccessToast("Code copied to clipboard! 📋");
+                    }}
+                    className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-2 py-1 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] transition cursor-pointer"
+                    title="Copy Code"
+                  >
+                    Copy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDslCode("")}
+                    className="rounded hover:bg-rose-500/10 text-[10px] px-2 py-1 border border-rose-500/20 font-semibold text-rose-400 transition cursor-pointer"
+                    title="Clear Editor"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 w-full h-full min-h-0 rounded-xl overflow-hidden border border-[var(--border)] shadow-inner bg-[#1e1e1e]">
+                <MonacoEditor
+                  height="100%"
+                  language="typescript"
+                  theme={theme === "dark" ? "vs-dark" : "light"}
+                  value={dslCode}
+                  onChange={(val) => setDslCode(val || "")}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 12,
+                    lineNumbers: "on",
+                    scrollBeyondLastLine: false,
+                    wordWrap: "on",
+                    automaticLayout: true,
+                    tabSize: 2,
+                    padding: { top: 8, bottom: 8 },
+                    formatOnType: true,
+                    formatOnPaste: true,
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Sidebar Title & Search Shape */}
+              <div
+                className={`p-3 border-b border-[var(--border)] flex flex-col gap-2 shrink-0 bg-[var(--surface)] ${
+                  isSidebarFloating
+                    ? "cursor-grab active:cursor-grabbing select-none"
+                    : ""
+                }`}
+                onMouseDown={handleHeaderMouseDown}
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
+                    Shape Library
+                  </h2>
+                  <div className="flex items-center gap-1.5">
+                    {/* Modern Help Button */}
+                    <button
+                      type="button"
+                      onClick={() => setShowHelpModal(true)}
+                      className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center gap-1"
+                      title="How to Use Guide"
+                    >
+                      <svg
+                        className="w-3.5 h-3.5 text-violet-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                        <line
+                          x1="12"
+                          y1="17"
+                          x2="12.01"
+                          y2="17"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <span>Help</span>
+                    </button>
+                    {/* Dock / Float Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => setIsSidebarFloating(!isSidebarFloating)}
+                      className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center gap-1"
+                      title={isSidebarFloating ? "Dock Sidebar" : "Float Sidebar"}
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                      >
+                        <path d="M12 2v20M17 5H7" />
+                      </svg>
+                      <span>{isSidebarFloating ? "Dock" : "Float"}</span>
+                    </button>
+                    {/* Mobile Close Button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsSidebarOpenMobile(false)}
+                      className="md:hidden rounded-full hover:bg-[var(--surface-muted)] text-xs font-bold h-6 w-6 flex items-center justify-center border border-[var(--border)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] cursor-pointer"
+                      title="Close Sidebar"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
+                    <svg
+                      className="w-3.5 h-3.5 text-[color:var(--foreground)]/40"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                  </span>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Type to search shapes..."
+                    className="w-full pl-8 pr-7 py-1.5 bg-[var(--surface-muted)]/70 hover:bg-[var(--surface-muted)] focus:bg-[var(--surface)] text-xs text-[color:var(--foreground)] placeholder-[color:var(--foreground)]/40 border border-[var(--border)] rounded-lg outline-none focus:border-violet-500/80 transition-all duration-150"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-xs text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)] font-bold cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Collapsible Accordion Lists */}
+              <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-2">
             {/* 1. Templates Section */}
             <div className="space-y-1">
               <button
@@ -3821,6 +3960,8 @@ function WorkspaceInner() {
               <span>Clear Canvas</span>
             </button>
           </div>
+            </>
+          )}
         </aside>
 
         {/* Right Canvas Area (Fills the rest of screen) */}
