@@ -1,6 +1,17 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
+
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full w-full items-center justify-center bg-[var(--surface-muted)] text-xs text-[color:var(--foreground)]/50">
+      Loading Monaco Editor...
+    </div>
+  ),
+});
+
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -27,7 +38,8 @@ import { motion } from "framer-motion";
 import ShortUniqueId from "short-unique-id";
 import { toPng } from "html-to-image";
 
-// Engine Core and Models
+// DSL Interpreter & Graph Engine
+import { compileDSL } from "@/DSL";
 import { GraphManager } from "@/engine/core/Graph/graph";
 import { NodeRegistry } from "@/engine/core/Graph/nodeResgistry";
 import { SimulationManager } from "@/engine/core/Simulations/Simulation";
@@ -1914,6 +1926,48 @@ function WorkspaceInner() {
   const [isShapesExpanded, setIsShapesExpanded] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Left Sidebar Mode: Library vs Monaco Code Editor
+  const [sidebarTab, setSidebarTab] = useState<"library" | "editor">("library");
+  const [dslCode, setDslCode] = useState<string>(`// FlowFrame Architecture DSL Script
+// Define system nodes and connections
+
+// define "client" 
+define CLIENT c1 {
+  label: "Client 1",
+  requests: [
+    {
+      endpoint: "/api/v1/posts",
+      allowedMethods: ["GET", "POST"],
+      key: "rohan"
+      }
+      ]
+      }
+      
+// define "server" 
+define SERVER s1 {
+  label: "API Server",
+  capacity: 100,
+  acceptedEndpoints: [
+    {
+      endpoint: "/api/v1/posts",
+      allowedMethod: ["GET", "POST"]
+      }
+      ]
+      }
+      
+// define "redis" 
+define REDIS r1 {
+  label: "Redis Cache",
+  data: [
+    { key: "rohan", value: "cached post data" }
+  ]
+}
+
+// Connections (u can also not use "connect" keyword)
+connect c1 -> s1
+connect s1 -> r1
+`);
+
   // Movable / Resizable / Mobile sidebar states
   const [isSidebarFloating, setIsSidebarFloating] = useState(false);
   const [sidebarPosition, setSidebarPosition] = useState({ x: 16, y: 16 });
@@ -2121,7 +2175,13 @@ function WorkspaceInner() {
             modelInstance = new RedisModel(n.id, labelStr);
             if (Array.isArray(config.data)) {
               config.data.forEach((item: any) => {
-                if (item.key) modelInstance.addData(item.key, item.val);
+                const itemVal =
+                  item.value !== undefined
+                    ? item.value
+                    : item.val !== undefined
+                      ? item.val
+                      : "cached data";
+                if (item.key) modelInstance.addData(item.key, itemVal);
               });
             }
             break;
@@ -2129,11 +2189,17 @@ function WorkspaceInner() {
             modelInstance = new PostgresModel(n.id, labelStr);
             if (Array.isArray(config.data)) {
               config.data.forEach((item: any) => {
+                const itemVal =
+                  item.value !== undefined
+                    ? item.value
+                    : item.val !== undefined
+                      ? item.val
+                      : "record data";
                 if (item.key) {
                   modelInstance.addRecord(
                     config.table || "users",
                     item.key,
-                    item.val,
+                    itemVal,
                   );
                 }
               });
@@ -2182,13 +2248,22 @@ function WorkspaceInner() {
               let serviceName = serviceMapping[serverId];
 
               if (!serviceName) {
-                const labelLower = serverLabel.toLowerCase();
-                if (labelLower.includes("user")) {
-                  serviceName = "USER_SERVICE";
-                } else if (labelLower.includes("post")) {
-                  serviceName = "POST_SERVICE";
+                // If routes list explicitly targets this serverId directly (e.g. target: s1)
+                const routeTargets = Object.values(routesList).map(String);
+                if (routeTargets.includes(serverId)) {
+                  serviceName = serverId;
                 } else {
-                  serviceName = serviceOptions[0] || "DEFAULT_SERVICE";
+                  const labelLower = serverLabel.toLowerCase();
+                  if (labelLower.includes("user")) {
+                    serviceName = "USER_SERVICE";
+                  } else if (labelLower.includes("post")) {
+                    serviceName = "POST_SERVICE";
+                  } else {
+                    serviceName =
+                      serviceOptions[0] !== undefined
+                        ? String(serviceOptions[0])
+                        : "DEFAULT_SERVICE";
+                  }
                 }
               }
 
@@ -2196,7 +2271,22 @@ function WorkspaceInner() {
                 if (!serviceGroups[serviceName]) {
                   serviceGroups[serviceName] = [];
                 }
-                serviceGroups[serviceName].push(serverId);
+                if (!serviceGroups[serviceName].includes(serverId)) {
+                  serviceGroups[serviceName].push(serverId);
+                }
+              }
+            });
+
+            // Fallback: Ensure all target keys/names specified in routes exist in serviceGroups
+            Object.values(routesList).forEach((targetName: any) => {
+              const targetStr = String(targetName);
+              if (!serviceGroups[targetStr]) {
+                const isServerNode = activeNodes.some(
+                  (node) => node.id === targetStr && node.data.type === "server",
+                );
+                if (isServerNode) {
+                  serviceGroups[targetStr] = [targetStr];
+                }
               }
             });
 
@@ -2368,7 +2458,8 @@ function WorkspaceInner() {
                 pubSubId,
               ) as PubSubModel;
               if (pubSubInstance) {
-                const subTopicsArray = config.subscriptionTopics;
+                const subTopicsArray =
+                  config.registeredTopics || config.subscriptionTopics;
                 if (Array.isArray(subTopicsArray)) {
                   subTopicsArray.forEach((topic: string) => {
                     if (topic && topic.trim().length > 0) {
@@ -2377,7 +2468,9 @@ function WorkspaceInner() {
                   });
                 } else {
                   const subTopicsStr =
-                    (config.subscriptionTopic as string) || "order.created";
+                    (config.registeredTopics as string) ||
+                    (config.subscriptionTopic as string) ||
+                    "order.created";
                   const subTopics = subTopicsStr
                     .split(",")
                     .map((t: string) => t.trim())
@@ -2513,6 +2606,326 @@ function WorkspaceInner() {
     },
     [nodes, nodeConfigs, edges],
   );
+
+  // Compile & Execute DSL script from Monaco Editor
+  const handleRunDSL = useCallback(() => {
+    try {
+      if (!dslCode || dslCode.trim().length === 0) {
+        setValidationWarning("DSL code is empty.");
+        return;
+      }
+      const output = compileDSL(dslCode);
+      if (!output.nodes || output.nodes.length === 0) {
+        setValidationWarning("No nodes generated from DSL.");
+        return;
+      }
+
+      setNodes(output.nodes);
+      setEdges(output.edges);
+      setNodeConfigs(output.nodeConfigs);
+      setValidationWarning(null);
+      setSuccessToast("DSL compiled & architecture generated! ⚡");
+
+      const firstClient = output.nodes.find((n: any) => n.data?.type === "client");
+      if (firstClient) {
+        handleStartSimulation(firstClient.id, output.nodes, output.edges, output.nodeConfigs);
+      }
+    } catch (err: any) {
+      setValidationWarning(`DSL Compilation Error: ${err.message || err}`);
+    }
+  }, [dslCode, setNodes, setEdges, setNodeConfigs, handleStartSimulation]);
+
+  // Register custom .flow language, syntax highlighter, autocompletion & bracket pairs for Monaco Editor
+  const handleEditorWillMount = useCallback((monaco: any) => {
+    if (!monaco.languages.getLanguages().some((lang: any) => lang.id === "flow")) {
+      monaco.languages.register({ id: "flow" });
+
+      // Auto-closing brackets & quotes configuration
+      monaco.languages.setLanguageConfiguration("flow", {
+        brackets: [
+          ["{", "}"],
+          ["[", "]"],
+          ["(", ")"],
+        ],
+        autoClosingPairs: [
+          { open: "{", close: "}" },
+          { open: "[", close: "]" },
+          { open: "(", close: ")" },
+          { open: '"', close: '"' },
+          { open: "'", close: "'" },
+        ],
+        surroundingPairs: [
+          { open: "{", close: "}" },
+          { open: "[", close: "]" },
+          { open: "(", close: ")" },
+          { open: '"', close: '"' },
+          { open: "'", close: "'" },
+        ],
+      });
+
+      // Syntax tokens classification
+      monaco.languages.setMonarchTokensProvider("flow", {
+        keywords: [
+          "define",
+          "connect",
+          "CONNECT",
+          "client",
+          "server",
+          "loadbalancer",
+          "gateway",
+          "pubsub",
+          "postgres",
+          "redis",
+          "messagequeue",
+          "CLIENT",
+          "SERVER",
+          "LOADBALANCER",
+          "GATEWAY",
+          "PUBSUB",
+          "POSTGRES",
+          "REDIS",
+          "MESSAGEQUEUE",
+          "true",
+          "false",
+        ],
+        tokenizer: {
+          root: [
+            [/[a-zA-Z_]\w*/, { cases: { "@keywords": "keyword", "@default": "identifier" } }],
+            [/[{}()\[\]]/, "@brackets"],
+            [/->/, "operator.special"],
+            [/[:]/, "delimiter"],
+            [/\d+/, "number"],
+            [/"([^"\\]|\\.)*"/, "string"],
+            [/'([^'\\]|\\.)*'/, "string"],
+            [/\/\/.*$/, "comment"],
+          ],
+        },
+      });
+
+      // Intellisense Completion Provider for Node Types & Properties
+      monaco.languages.registerCompletionItemProvider("flow", {
+        provideCompletionItems: (model: any, position: any) => {
+          const textUntilPosition = model.getValueInRange({
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: position.lineNumber,
+            endColumn: position.column,
+          });
+
+          const word = model.getWordUntilPosition(position);
+          const range = {
+            startLineNumber: position.lineNumber,
+            endLineNumber: position.lineNumber,
+            startColumn: word.startColumn,
+            endColumn: word.endColumn,
+          };
+
+          const suggestions: any[] = [];
+          const lineText = model.getLineContent(position.lineNumber);
+          const textBeforeCursor = lineText.substring(0, position.column - 1);
+
+          // 1. Suggestions right after 'define'
+          if (/define\s+\w*$/i.test(textBeforeCursor)) {
+            const nodeTypes = [
+              { label: "CLIENT", detail: "Client Node Definition", insertText: "CLIENT " },
+              { label: "SERVER", detail: "Server Node Definition", insertText: "SERVER " },
+              { label: "REDIS", detail: "Redis Cache Node Definition", insertText: "REDIS " },
+              { label: "POSTGRES", detail: "PostgreSQL Database Node Definition", insertText: "POSTGRES " },
+              { label: "LOADBALANCER", detail: "Load Balancer Node Definition", insertText: "LOADBALANCER " },
+              { label: "GATEWAY", detail: "API Gateway Node Definition", insertText: "GATEWAY " },
+              { label: "MESSAGEQUEUE", detail: "Message Queue Node Definition", insertText: "MESSAGEQUEUE " },
+              { label: "PUBSUB", detail: "PubSub Broker Node Definition", insertText: "PUBSUB " },
+            ];
+
+            return {
+              suggestions: nodeTypes.map((t) => ({
+                label: t.label,
+                kind: monaco.languages.CompletionItemKind.Keyword,
+                insertText: t.insertText,
+                detail: t.detail,
+                range,
+              })),
+            };
+          }
+
+          // 2. Contextual Property Suggestions inside Client / Server blocks
+          if (textUntilPosition.toLowerCase().includes("client")) {
+            const clientProps = [
+              { label: "requests", insertText: "requests: [\n  {\n    endpoint: \"/api/v1/posts\",\n    allowedMethods: [\"GET\", \"POST\"],\n    key: \"rohan\"\n  }\n]", detail: "HTTP Client Requests Array" },
+              { label: "label", insertText: 'label: "Client 1"', detail: "Node Display Label" },
+              { label: "valet", insertText: "valet: false", detail: "Valet Key Direct Storage Upload Flow" },
+            ];
+            clientProps.forEach((p) => {
+              suggestions.push({
+                label: p.label,
+                kind: monaco.languages.CompletionItemKind.Property,
+                insertText: p.insertText,
+                detail: p.detail,
+                range,
+              });
+            });
+          }
+
+          if (textUntilPosition.toLowerCase().includes("server")) {
+            const serverProps = [
+              { label: "acceptedEndpoints", insertText: "acceptedEndpoints: [\n  {\n    endpoint: \"/api/v1/posts\",\n    allowedMethod: [\"GET\", \"POST\"]\n  }\n]", detail: "Supported Endpoint Routes" },
+              { label: "capacity", insertText: "capacity: 100", detail: "Max Concurrent Request Capacity" },
+              { label: "tcpConnectionsToPostgres", insertText: "tcpConnectionsToPostgres: 10", detail: "Database Connection Pool Size" },
+              { label: "label", insertText: 'label: "API Server"', detail: "Node Display Label" },
+            ];
+            serverProps.forEach((p) => {
+              suggestions.push({
+                label: p.label,
+                kind: monaco.languages.CompletionItemKind.Property,
+                insertText: p.insertText,
+                detail: p.detail,
+                range,
+              });
+            });
+          }
+
+          // 3. Top level template snippets & keywords
+          const topLevelSnippets = [
+            {
+              label: "define CLIENT snippet",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'define CLIENT c1 {\n  label: "Client 1",\n  requests: [\n    {\n      endpoint: "/api/v1/posts",\n      allowedMethods: ["GET", "POST"],\n      key: "rohan"\n    }\n  ]\n}',
+              detail: "Create full Client node definition",
+              range,
+            },
+            {
+              label: "define SERVER snippet",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'define SERVER s1 {\n  label: "API Server",\n  capacity: 100,\n  acceptedEndpoints: [\n    {\n      endpoint: "/api/v1/posts",\n      allowedMethod: ["GET", "POST"]\n    }\n  ]\n}',
+              detail: "Create full Server node definition",
+              range,
+            },
+            {
+              label: "define REDIS snippet",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'define REDIS r1 {\n  label: "Redis Cache",\n  data: [\n    {\n      key: "rohan",\n      value: "cached data for rohan"\n    }\n  ]\n}',
+              detail: "Create Redis cache node definition",
+              range,
+            },
+            {
+              label: "define POSTGRES snippet",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'define POSTGRES db1 {\n  label: "Postgres Database",\n  table: "users",\n  data: [\n    {\n      key: "rohan",\n      value: "db record data"\n    }\n  ]\n}',
+              detail: "Create PostgreSQL DB node definition",
+              range,
+            },
+            {
+              label: "connect",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "connect ",
+              detail: "Connect keyword with trailing space",
+              range,
+            },
+            {
+              label: "connect snippet",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "connect ${1:c1} -> ${2:s1}",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              detail: "Connect two nodes snippet",
+              range,
+            },
+            {
+              label: "->",
+              kind: monaco.languages.CompletionItemKind.Operator,
+              insertText: " -> ",
+              detail: "Connection arrow with spaces",
+              range,
+            },
+            {
+              label: "define",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "define ",
+              detail: "Define keyword with trailing space",
+              range,
+            },
+            {
+              label: "CLIENT",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "CLIENT ",
+              detail: "Client node type",
+              range,
+            },
+            {
+              label: "SERVER",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "SERVER ",
+              detail: "Server node type",
+              range,
+            },
+            {
+              label: "REDIS",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "REDIS ",
+              detail: "Redis node type",
+              range,
+            },
+            {
+              label: "POSTGRES",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "POSTGRES ",
+              detail: "Postgres node type",
+              range,
+            },
+            {
+              label: "LOADBALANCER",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "LOADBALANCER ",
+              detail: "Load balancer node type",
+              range,
+            },
+            {
+              label: "GATEWAY",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "GATEWAY ",
+              detail: "API gateway node type",
+              range,
+            },
+          ];
+
+          topLevelSnippets.forEach((s) => suggestions.push(s));
+
+          return { suggestions };
+        },
+      });
+
+      monaco.editor.defineTheme("flow-dark", {
+        base: "vs-dark",
+        inherit: true,
+        rules: [
+          { token: "keyword", foreground: "C586C0", fontStyle: "bold" },
+          { token: "identifier", foreground: "9CDCFE" },
+          { token: "string", foreground: "CE9178" },
+          { token: "number", foreground: "B5CEA8" },
+          { token: "operator.special", foreground: "569CD6", fontStyle: "bold" },
+          { token: "comment", foreground: "6A9955", fontStyle: "italic" },
+        ],
+        colors: {
+          "editor.background": "#1e1e1e",
+        },
+      });
+
+      monaco.editor.defineTheme("flow-light", {
+        base: "vs",
+        inherit: true,
+        rules: [
+          { token: "keyword", foreground: "AF00DB", fontStyle: "bold" },
+          { token: "identifier", foreground: "001080" },
+          { token: "string", foreground: "A31515" },
+          { token: "number", foreground: "098658" },
+          { token: "operator.special", foreground: "0000FF", fontStyle: "bold" },
+          { token: "comment", foreground: "008000", fontStyle: "italic" },
+        ],
+        colors: {
+          "editor.background": "#f8fafc",
+        },
+      });
+    }
+  }, []);
 
   // Quick Load Template
   const loadTemplate = useCallback(
@@ -3155,6 +3568,24 @@ function WorkspaceInner() {
   // Keyboard controls listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement as HTMLElement | null;
+      const targetEl = e.target as HTMLElement | null;
+
+      // Ignore shortcut keys if user is typing in Monaco Editor or form inputs
+      const isInputFocused =
+        activeEl?.tagName === "INPUT" ||
+        activeEl?.tagName === "TEXTAREA" ||
+        activeEl?.tagName === "SELECT" ||
+        activeEl?.isContentEditable ||
+        Boolean(activeEl?.closest(".monaco-editor")) ||
+        Boolean(targetEl?.closest(".monaco-editor")) ||
+        Boolean(document.querySelector(".monaco-editor")?.contains(activeEl)) ||
+        Boolean(document.querySelector(".monaco-editor")?.contains(targetEl));
+
+      if (isInputFocused) {
+        return;
+      }
+
       if (e.target === document.body || e.target === document.documentElement) {
         if (e.code === "Space") {
           e.preventDefault();
@@ -3171,8 +3602,8 @@ function WorkspaceInner() {
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [frameGroups.length]);
 
   // Clear Canvas handler
@@ -3350,110 +3781,216 @@ function WorkspaceInner() {
             />
           )}
 
-          {/* Sidebar Title & Search Shape */}
-          <div
-            className={`p-3 border-b border-[var(--border)] flex flex-col gap-2 shrink-0 bg-[var(--surface)] ${
-              isSidebarFloating
-                ? "cursor-grab active:cursor-grabbing select-none"
-                : ""
-            }`}
-            onMouseDown={handleHeaderMouseDown}
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
-                Shape Library
-              </h2>
-              <div className="flex items-center gap-1.5">
-                {/* Modern Help Button */}
-                <button
-                  type="button"
-                  onClick={() => setShowHelpModal(true)}
-                  className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center gap-1"
-                  title="How to Use Guide"
-                >
-                  <svg
-                    className="w-3.5 h-3.5 text-violet-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                    <line
-                      x1="12"
-                      y1="17"
-                      x2="12.01"
-                      y2="17"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <span>Help</span>
-                </button>
-                {/* Dock / Float Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarFloating(!isSidebarFloating)}
-                  className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center gap-1"
-                  title={isSidebarFloating ? "Dock Sidebar" : "Float Sidebar"}
-                >
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                  >
-                    <path d="M12 2v20M17 5H7" />
-                  </svg>
-                  <span>{isSidebarFloating ? "Dock" : "Float"}</span>
-                </button>
-                {/* Mobile Close Button */}
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarOpenMobile(false)}
-                  className="md:hidden rounded-full hover:bg-[var(--surface-muted)] text-xs font-bold h-6 w-6 flex items-center justify-center border border-[var(--border)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] cursor-pointer"
-                  title="Close Sidebar"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
-                <svg
-                  className="w-3.5 h-3.5 text-[color:var(--foreground)]/40"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Type to search shapes..."
-                className="w-full pl-8 pr-7 py-1.5 bg-[var(--surface-muted)]/70 hover:bg-[var(--surface-muted)] focus:bg-[var(--surface)] text-xs text-[color:var(--foreground)] placeholder-[color:var(--foreground)]/40 border border-[var(--border)] rounded-lg outline-none focus:border-violet-500/80 transition-all duration-150"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-xs text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)] font-bold cursor-pointer"
-                >
-                  ×
-                </button>
-              )}
+          {/* Mode Switcher Header: Library vs Monaco Code Editor */}
+          <div className="p-2 border-b border-[var(--border)] bg-[var(--surface)] shrink-0 flex flex-col gap-2">
+            <div className="flex items-center gap-1 bg-[var(--surface-muted)] p-1 rounded-xl border border-[var(--border)]">
+              <button
+                type="button"
+                onClick={() => setSidebarTab("library")}
+                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  sidebarTab === "library"
+                    ? "bg-[var(--surface)] text-violet-400 shadow-sm border border-[var(--border)] font-bold"
+                    : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+                }`}
+              >
+                <span>🎨</span>
+                <span>Library</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSidebarTab("editor")}
+                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  sidebarTab === "editor"
+                    ? "bg-[var(--surface)] text-violet-400 shadow-sm border border-[var(--border)] font-bold"
+                    : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+                }`}
+              >
+                <span>⚡</span>
+                <span>Code Editor</span>
+              </button>
             </div>
           </div>
 
-          {/* Collapsible Accordion Lists */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-2">
+          {sidebarTab === "editor" ? (
+            /* Monaco Code Editor Panel in Left Sidebar */
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-[var(--background)] p-3 gap-2">
+              <div className="flex items-center justify-between pb-2 border-b border-[var(--border)] shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
+                    Monaco Editor
+                  </span>
+                  <span className="text-[9px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-1.5 py-0.5 rounded font-mono font-bold">
+                    DSL / TS
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={handleRunDSL}
+                    className="rounded bg-violet-600 hover:bg-violet-500 text-white text-[10px] px-2.5 py-1 font-bold shadow-md transition cursor-pointer flex items-center gap-1"
+                    title="Compile DSL script and render architecture on canvas"
+                  >
+                    <span>▶</span>
+                    <span>Run Flow</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(dslCode);
+                      setSuccessToast("Code copied to clipboard! 📋");
+                    }}
+                    className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-2 py-1 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] transition cursor-pointer"
+                    title="Copy Code"
+                  >
+                    Copy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDslCode("")}
+                    className="rounded hover:bg-rose-500/10 text-[10px] px-2 py-1 border border-rose-500/20 font-semibold text-rose-400 transition cursor-pointer"
+                    title="Clear Editor"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 w-full h-full min-h-0 rounded-xl overflow-hidden border border-[var(--border)] shadow-inner bg-[#1e1e1e]">
+                <MonacoEditor
+                  height="100%"
+                  language="flow"
+                  theme={theme === "dark" ? "flow-dark" : "flow-light"}
+                  beforeMount={handleEditorWillMount}
+                  value={dslCode}
+                  onChange={(val) => setDslCode(val || "")}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 12,
+                    lineNumbers: "on",
+                    scrollBeyondLastLine: false,
+                    wordWrap: "on",
+                    automaticLayout: true,
+                    tabSize: 2,
+                    padding: { top: 8, bottom: 8 },
+                    formatOnType: true,
+                    formatOnPaste: true,
+                    autoClosingBrackets: "always",
+                    autoClosingQuotes: "always",
+                    autoSurround: "languageDefined",
+                    quickSuggestions: true,
+                    suggestOnTriggerCharacters: true,
+                    acceptSuggestionOnEnter: "on",
+                    tabCompletion: "on",
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Sidebar Title & Search Shape */}
+              <div
+                className={`p-3 border-b border-[var(--border)] flex flex-col gap-2 shrink-0 bg-[var(--surface)] ${
+                  isSidebarFloating
+                    ? "cursor-grab active:cursor-grabbing select-none"
+                    : ""
+                }`}
+                onMouseDown={handleHeaderMouseDown}
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
+                    Shape Library
+                  </h2>
+                  <div className="flex items-center gap-1.5">
+                    {/* Modern Help Button */}
+                    <button
+                      type="button"
+                      onClick={() => setShowHelpModal(true)}
+                      className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center gap-1"
+                      title="How to Use Guide"
+                    >
+                      <svg
+                        className="w-3.5 h-3.5 text-violet-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                        <line
+                          x1="12"
+                          y1="17"
+                          x2="12.01"
+                          y2="17"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <span>Help</span>
+                    </button>
+                    {/* Dock / Float Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => setIsSidebarFloating(!isSidebarFloating)}
+                      className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center gap-1"
+                      title={isSidebarFloating ? "Dock Sidebar" : "Float Sidebar"}
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                      >
+                        <path d="M12 2v20M17 5H7" />
+                      </svg>
+                      <span>{isSidebarFloating ? "Dock" : "Float"}</span>
+                    </button>
+                    {/* Mobile Close Button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsSidebarOpenMobile(false)}
+                      className="md:hidden rounded-full hover:bg-[var(--surface-muted)] text-xs font-bold h-6 w-6 flex items-center justify-center border border-[var(--border)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] cursor-pointer"
+                      title="Close Sidebar"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
+                    <svg
+                      className="w-3.5 h-3.5 text-[color:var(--foreground)]/40"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                  </span>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Type to search shapes..."
+                    className="w-full pl-8 pr-7 py-1.5 bg-[var(--surface-muted)]/70 hover:bg-[var(--surface-muted)] focus:bg-[var(--surface)] text-xs text-[color:var(--foreground)] placeholder-[color:var(--foreground)]/40 border border-[var(--border)] rounded-lg outline-none focus:border-violet-500/80 transition-all duration-150"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-xs text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)] font-bold cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Collapsible Accordion Lists */}
+              <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-2">
             {/* 1. Templates Section */}
             <div className="space-y-1">
               <button
@@ -3821,6 +4358,8 @@ function WorkspaceInner() {
               <span>Clear Canvas</span>
             </button>
           </div>
+            </>
+          )}
         </aside>
 
         {/* Right Canvas Area (Fills the rest of screen) */}
