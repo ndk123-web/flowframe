@@ -2248,13 +2248,22 @@ connect s1 -> r1
               let serviceName = serviceMapping[serverId];
 
               if (!serviceName) {
-                const labelLower = serverLabel.toLowerCase();
-                if (labelLower.includes("user")) {
-                  serviceName = "USER_SERVICE";
-                } else if (labelLower.includes("post")) {
-                  serviceName = "POST_SERVICE";
+                // If routes list explicitly targets this serverId directly (e.g. target: s1)
+                const routeTargets = Object.values(routesList).map(String);
+                if (routeTargets.includes(serverId)) {
+                  serviceName = serverId;
                 } else {
-                  serviceName = serviceOptions[0] || "DEFAULT_SERVICE";
+                  const labelLower = serverLabel.toLowerCase();
+                  if (labelLower.includes("user")) {
+                    serviceName = "USER_SERVICE";
+                  } else if (labelLower.includes("post")) {
+                    serviceName = "POST_SERVICE";
+                  } else {
+                    serviceName =
+                      serviceOptions[0] !== undefined
+                        ? String(serviceOptions[0])
+                        : "DEFAULT_SERVICE";
+                  }
                 }
               }
 
@@ -2262,7 +2271,22 @@ connect s1 -> r1
                 if (!serviceGroups[serviceName]) {
                   serviceGroups[serviceName] = [];
                 }
-                serviceGroups[serviceName].push(serverId);
+                if (!serviceGroups[serviceName].includes(serverId)) {
+                  serviceGroups[serviceName].push(serverId);
+                }
+              }
+            });
+
+            // Fallback: Ensure all target keys/names specified in routes exist in serviceGroups
+            Object.values(routesList).forEach((targetName: any) => {
+              const targetStr = String(targetName);
+              if (!serviceGroups[targetStr]) {
+                const isServerNode = activeNodes.some(
+                  (node) => node.id === targetStr && node.data.type === "server",
+                );
+                if (isServerNode) {
+                  serviceGroups[targetStr] = [targetStr];
+                }
               }
             });
 
