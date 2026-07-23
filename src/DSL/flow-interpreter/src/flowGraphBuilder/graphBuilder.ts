@@ -46,7 +46,7 @@ function mapNodeType(typeOfNode: string): { type: string; flavor: string } {
     case 'REDIS_NODE':
       return { type: 'redis', flavor: 'redis' };
     case 'MESSAGE_QUEUE_NODE':
-      return { type: 'messagequeue', flavor: 'rabbitmq' };
+      return { type: 'message-queue', flavor: 'rabbitmq' };
     default:
       return { type: 'server', flavor: 'nodejs' };
   }
@@ -240,6 +240,14 @@ function graphBuilder(ast: Ast[]): FlowFrameGraphOutput {
           : {
               '/posts': ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
             };
+      processedConfig.registeredTopics =
+        rawConfig.registeredTopics ||
+        rawConfig.subscriptionTopics ||
+        rawConfig.subscriptionTopic;
+      processedConfig.subscriptionTopics = processedConfig.registeredTopics;
+      processedConfig.subscriptionTopic = Array.isArray(processedConfig.registeredTopics)
+        ? processedConfig.registeredTopics[0]
+        : processedConfig.registeredTopics;
     } else if (type === 'postgres') {
       processedConfig.table = rawConfig.table || 'users';
       const rawData = rawConfig.data || [{ key: 'rohan', value: 'db data for rohan' }];

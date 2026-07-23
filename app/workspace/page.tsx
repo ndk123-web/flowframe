@@ -2458,7 +2458,8 @@ connect s1 -> r1
                 pubSubId,
               ) as PubSubModel;
               if (pubSubInstance) {
-                const subTopicsArray = config.subscriptionTopics;
+                const subTopicsArray =
+                  config.registeredTopics || config.subscriptionTopics;
                 if (Array.isArray(subTopicsArray)) {
                   subTopicsArray.forEach((topic: string) => {
                     if (topic && topic.trim().length > 0) {
@@ -2467,7 +2468,9 @@ connect s1 -> r1
                   });
                 } else {
                   const subTopicsStr =
-                    (config.subscriptionTopic as string) || "order.created";
+                    (config.registeredTopics as string) ||
+                    (config.subscriptionTopic as string) ||
+                    "order.created";
                   const subTopics = subTopicsStr
                     .split(",")
                     .map((t: string) => t.trim())
