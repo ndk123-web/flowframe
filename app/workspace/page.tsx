@@ -2212,8 +2212,8 @@ connect s1 -> r1
               modelInstance.setRoutes(config.routes);
             }
 
-            // Dynamic routing node target registration
-            const connectedServers = activeEdges
+            // Dynamic routing node target registration (supports Server and Load Balancer targets)
+            const connectedTargets = activeEdges
               .filter((e) => {
                 const isSourceGateway = e.source === n.id;
                 const isTargetGateway = e.target === n.id;
@@ -2221,13 +2221,19 @@ connect s1 -> r1
                   const targetNode = activeNodes.find(
                     (node) => node.id === e.target,
                   );
-                  return targetNode?.data.type === "server";
+                  return (
+                    targetNode?.data.type === "server" ||
+                    targetNode?.data.type === "load-balancer"
+                  );
                 }
                 if (isTargetGateway) {
                   const sourceNode = activeNodes.find(
                     (node) => node.id === e.source,
                   );
-                  return sourceNode?.data.type === "server";
+                  return (
+                    sourceNode?.data.type === "server" ||
+                    sourceNode?.data.type === "load-balancer"
+                  );
                 }
                 return false;
               })
@@ -2240,20 +2246,20 @@ connect s1 -> r1
               new Set(Object.values(routesList)),
             );
 
-            connectedServers.forEach((serverId) => {
-              const serverNode = activeNodes.find(
-                (node) => node.id === serverId,
+            connectedTargets.forEach((targetId) => {
+              const targetNode = activeNodes.find(
+                (node) => node.id === targetId,
               );
-              const serverLabel = String(serverNode?.data.label || serverId);
-              let serviceName = serviceMapping[serverId];
+              const targetLabel = String(targetNode?.data.label || targetId);
+              let serviceName = serviceMapping[targetId];
 
               if (!serviceName) {
-                // If routes list explicitly targets this serverId directly (e.g. target: s1)
+                // If routes list explicitly targets this targetId directly (e.g. target: lb1 or target: s1)
                 const routeTargets = Object.values(routesList).map(String);
-                if (routeTargets.includes(serverId)) {
-                  serviceName = serverId;
+                if (routeTargets.includes(targetId)) {
+                  serviceName = targetId;
                 } else {
-                  const labelLower = serverLabel.toLowerCase();
+                  const labelLower = targetLabel.toLowerCase();
                   if (labelLower.includes("user")) {
                     serviceName = "USER_SERVICE";
                   } else if (labelLower.includes("post")) {
@@ -2262,7 +2268,7 @@ connect s1 -> r1
                     serviceName =
                       serviceOptions[0] !== undefined
                         ? String(serviceOptions[0])
-                        : "DEFAULT_SERVICE";
+                        : targetId;
                   }
                 }
               }
@@ -2271,8 +2277,8 @@ connect s1 -> r1
                 if (!serviceGroups[serviceName]) {
                   serviceGroups[serviceName] = [];
                 }
-                if (!serviceGroups[serviceName].includes(serverId)) {
-                  serviceGroups[serviceName].push(serverId);
+                if (!serviceGroups[serviceName].includes(targetId)) {
+                  serviceGroups[serviceName].push(targetId);
                 }
               }
             });
@@ -2281,10 +2287,13 @@ connect s1 -> r1
             Object.values(routesList).forEach((targetName: any) => {
               const targetStr = String(targetName);
               if (!serviceGroups[targetStr]) {
-                const isServerNode = activeNodes.some(
-                  (node) => node.id === targetStr && node.data.type === "server",
+                const isTargetNode = activeNodes.some(
+                  (node) =>
+                    node.id === targetStr &&
+                    (node.data.type === "server" ||
+                      node.data.type === "load-balancer"),
                 );
-                if (isServerNode) {
+                if (isTargetNode) {
                   serviceGroups[targetStr] = [targetStr];
                 }
               }
@@ -5457,27 +5466,29 @@ connect s1 -> r1
 
                     <div className="h-px bg-[var(--border)]/70" />
 
-                    {/* Service Pools Mapping */}
+                    {/* Service Pools Mapping (supports Servers and Load Balancers) */}
                     {(() => {
-                      const allServers = nodes.filter(
-                        (n) => n.data.type === "server",
+                      const targetNodes = nodes.filter(
+                        (n) =>
+                          n.data.type === "server" ||
+                          n.data.type === "load-balancer",
                       );
 
-                      if (allServers.length === 0) {
+                      if (targetNodes.length === 0) {
                         return (
                           <div>
                             <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
                               Service Pools Mapping
                             </label>
                             <p className="text-[10px] text-[color:var(--foreground)]/50 italic">
-                              No servers on the canvas. Add a Server first.
+                              No servers or load balancers on the canvas. Add a Server or Load Balancer first.
                             </p>
                           </div>
                         );
                       }
 
                       const routes = nodeConfigs[selectedNode.id]?.routes || {};
-                      const serviceOptions = Array.from(
+                      const routeTargets = Array.from(
                         new Set(Object.values(routes)),
                       );
 
@@ -5487,11 +5498,12 @@ connect s1 -> r1
                             Service Pools Mapping
                           </label>
                           <div className="space-y-2 border border-[var(--border)] rounded-lg p-2 bg-[var(--surface)]/50">
-                            {allServers.map((serverNode) => {
-                              const serverId = serverNode.id;
-                              const serverLabel = String(
-                                serverNode.data.label || serverId,
+                            {targetNodes.map((targetNode) => {
+                              const targetId = targetNode.id;
+                              const targetLabel = String(
+                                targetNode.data.label || targetId,
                               );
+                              const targetType = targetNode.data.type as string;
                               const serviceMapping =
                                 nodeConfigs[selectedNode.id]?.serviceMapping ||
                                 {};
@@ -5499,41 +5511,50 @@ connect s1 -> r1
                               const isConnectedCorrectly = edges.some(
                                 (e) =>
                                   e.source === selectedNode.id &&
-                                  e.target === serverId,
+                                  e.target === targetId,
                               );
                               const isConnectedBackwards = edges.some(
                                 (e) =>
-                                  e.source === serverId &&
+                                  e.source === targetId &&
                                   e.target === selectedNode.id,
                               );
                               const isConnected =
                                 isConnectedCorrectly || isConnectedBackwards;
 
-                              let currentVal = serviceMapping[serverId];
+                              // Include targetId in dropdown choices alongside route target strings
+                              const dropdownChoices = Array.from(
+                                new Set([...routeTargets, targetId]),
+                              );
+
+                              let currentVal = serviceMapping[targetId];
                               if (!currentVal) {
-                                const labelLower = serverLabel.toLowerCase();
-                                if (labelLower.includes("user")) {
-                                  currentVal = "USER_SERVICE";
-                                } else if (labelLower.includes("post")) {
-                                  currentVal = "POST_SERVICE";
+                                if (routeTargets.map(String).includes(targetId)) {
+                                  currentVal = targetId;
                                 } else {
-                                  currentVal =
-                                    serviceOptions[0] || "DEFAULT_SERVICE";
+                                  const labelLower = targetLabel.toLowerCase();
+                                  if (labelLower.includes("user")) {
+                                    currentVal = "USER_SERVICE";
+                                  } else if (labelLower.includes("post")) {
+                                    currentVal = "POST_SERVICE";
+                                  } else {
+                                    currentVal =
+                                      dropdownChoices[0] || targetId || "DEFAULT_SERVICE";
+                                  }
                                 }
                               }
 
                               return (
                                 <div
-                                  key={serverId}
+                                  key={targetId}
                                   className="flex flex-col gap-1 border-b border-[var(--border)]/35 pb-2 last:border-b-0 last:pb-0"
                                 >
                                   <div className="flex items-center justify-between gap-1">
                                     <span className="text-[10px] font-medium text-[color:var(--foreground)]/70 truncate flex items-center gap-1.5">
                                       <ComponentIcon
-                                        type="server"
+                                        type={targetType}
                                         className="w-3.5 h-3.5"
                                       />
-                                      {serverLabel}
+                                      {targetLabel}
                                     </span>
                                     {!isConnected && (
                                       <span className="text-[8px] text-amber-500 font-semibold bg-amber-500/10 px-1 rounded">
@@ -5557,7 +5578,7 @@ connect s1 -> r1
                                       const nextMapping = {
                                         ...(nodeConfigs[selectedNode.id]
                                           ?.serviceMapping || {}),
-                                        [serverId]: e.target.value,
+                                        [targetId]: e.target.value,
                                       };
                                       updateNodeConfig(selectedNode.id, {
                                         serviceMapping: nextMapping,
@@ -5565,14 +5586,11 @@ connect s1 -> r1
                                     }}
                                     className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1 text-xs outline-none focus:border-violet-500 cursor-pointer"
                                   >
-                                    {serviceOptions.map((opt: any) => (
+                                    {dropdownChoices.map((opt: any) => (
                                       <option key={opt} value={opt}>
                                         {opt}
                                       </option>
                                     ))}
-                                    <option value="UNASSIGNED">
-                                      Unassigned
-                                    </option>
                                   </select>
                                 </div>
                               );

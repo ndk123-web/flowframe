@@ -93,6 +93,13 @@ export default function SiteHeader({
             </Link>
           )}
 
+          <Link
+            href="/docs"
+            className="rounded-lg border border-[var(--border)] bg-[var(--surface)]/85 px-2.5 py-1.5 sm:px-3.5 sm:py-2 text-xs sm:text-sm font-semibold text-[color:var(--foreground)]/80 hover:text-[color:var(--foreground)] transition hover:bg-[var(--surface-muted)]"
+          >
+            Docs
+          </Link>
+
           {/* Workspace Sandbox: hidden on mobile to prevent overflow */}
           {!hideSandboxLink && (showHomeLink || scrolled) && (
             <Link
