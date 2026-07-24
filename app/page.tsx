@@ -440,19 +440,26 @@ function buildSim() {
 // ─── Ticker bar ──────────────────────────────────────────────────────────────
 function Ticker() {
   const items = [
-    "⚖️  Load Balancing — Round Robin · IP Hash · Least-Conn",
-    "🗄️  Cache-Aside — Redis hit/miss · DB fallback · TTL eviction",
-    "🚪  API Gateway — Path routing · Rate limiting · Service pools",
-    "🔑  Valet Key — Token issuance · Direct cloud-storage upload",
-    "🛠️  Custom Sandbox — Build & test any topology",
-    "📚  Interactive Docs — Learn by running live simulations",
+    "⚡ FlowFrame DSL (.flow) — Declarative architecture compiler & engine",
+    "💻 Monaco Code Editor — Real-time syntax highlighting & autocompletion",
+    "🚪 API Gateway — Path-based routing to Server & LoadBalancer clusters",
+    "⚖️ Load Balancing — Round Robin & IP Hash traffic distribution",
+    "📬 RabbitMQ Queue — Asynchronous message buffering & consumer prefetch",
+    "📢 PubSub Broker — Multi-subscriber event fan-out & topic channels",
+    "🗄️ Cache-Aside — Redis hit/miss & PostgreSQL database fallback",
+    "📖 Interactive Docs (/docs) — FastAPI-style comprehensive language reference",
   ];
   const all = [...items, ...items]; // duplicate for seamless loop
   return (
-    <div className="ticker-wrap border-y border-[var(--border)]/30 bg-[var(--surface-muted)]/20 py-2.5 text-[11px] font-medium text-[color:var(--foreground)]/50">
-      <div className="ticker-track">
+    <div className="ticker-wrap border-y border-[var(--border)]/30 bg-[var(--surface-muted)]/20 py-3 text-[11px] font-medium text-[color:var(--foreground)]/70">
+      <div className="ticker-track hover:[animation-play-state:paused] cursor-pointer">
         {all.map((t, i) => (
-          <span key={i} className="mx-8 shrink-0">{t}</span>
+          <span
+            key={i}
+            className="mx-4 shrink-0 rounded-full border border-[var(--border)]/50 bg-[var(--surface)]/60 px-3.5 py-1 text-xs font-semibold backdrop-blur shadow-sm inline-flex items-center gap-1.5"
+          >
+            {t}
+          </span>
         ))}
       </div>
     </div>
@@ -522,7 +529,7 @@ function WhatItDoes() {
   );
 }
 
-// ─── V1 Scenarios section ─────────────────────────────────────────────────────
+// ─── V2 Scenarios section ─────────────────────────────────────────────────────
 function V1Scenarios() {
   const router = useRouter();
   const scenes = [
@@ -532,7 +539,7 @@ function V1Scenarios() {
       color: "#3b82f6",
       accent: "rgba(59,130,246,.12)",
       label: "Load Balancing",
-      tag: "v1 · Live",
+      tag: "v2.0 · Live",
       desc: "Watch Round Robin and IP Hash distribute requests across 3 servers. Drag capacity to 0 to see failover in action.",
       chips: ["Round Robin", "IP Hash", "Failover"],
     },
@@ -542,7 +549,7 @@ function V1Scenarios() {
       color: "#f59e0b",
       accent: "rgba(245,158,11,.12)",
       label: "Cache-Aside",
-      tag: "v1 · Live",
+      tag: "v2.0 · Live",
       desc: "Three deterministic requests: cache hit, cache miss → DB fallback, and invalid key. See Redis snapshots update frame-by-frame.",
       chips: ["Redis Hit/Miss", "DB Fallback", "TTL"],
     },
@@ -552,9 +559,9 @@ function V1Scenarios() {
       color: "#8b5cf6",
       accent: "rgba(139,92,246,.12)",
       label: "API Gateway",
-      tag: "v1 · Live",
-      desc: "Path-based routing with server pools. Set a server's capacity to 0 and watch the gateway return 503 automatically.",
-      chips: ["Path Routing", "Rate Limiting", "503 Failover"],
+      tag: "v2.0 · Live",
+      desc: "Path-based routing with server & LoadBalancer pools. Set a server's capacity to 0 and watch gateway failover.",
+      chips: ["Path Routing", "LoadBalancer Target", "503 Failover"],
     },
     {
       id: "simple-valet-key",
@@ -562,7 +569,7 @@ function V1Scenarios() {
       color: "#10b981",
       accent: "rgba(16,185,129,.12)",
       label: "Valet Key Pattern",
-      tag: "v1 · Live",
+      tag: "v2.0 · Live",
       desc: "Client requests a signed upload token from the server. Server issues it. Client uploads directly to cloud storage — no proxy.",
       chips: ["Token Issuance", "Direct Upload", "Cloud Storage"],
     },
@@ -573,8 +580,8 @@ function V1Scenarios() {
       <section className="mx-auto max-w-6xl px-6 py-20">
         <div className="mb-12">
           <div className="flex items-center gap-3 mb-4">
-            <p className="text-xs font-bold uppercase tracking-[.18em] text-violet-400">Supported in v1</p>
-            <span className="v1-badge rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-violet-300">4 SCENARIOS</span>
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-violet-400">Supported in v2.0</p>
+            <span className="v1-badge rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-violet-300">v2.0.0 RELEASE</span>
           </div>
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "var(--foreground)" }}>
             Pick a scenario. Hit play.
@@ -626,38 +633,51 @@ function V1Scenarios() {
   );
 }
 
-// ─── Learn + Sandbox split section ────────────────────────────────────────────
+// ─── Learn & Sandbox section ─────────────────────────────────────────────────
 function LearnAndSandbox() {
   const router = useRouter();
   return (
     <Reveal>
       <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="grid gap-5 md:grid-cols-2">
-          {/* Learn */}
+        <div className="grid gap-5 md:grid-cols-3">
+          {/* Learn Docs */}
           <div
             className="card-glow group relative cursor-pointer overflow-hidden rounded-2xl border border-[var(--border)]/40 p-8 backdrop-blur transition-all"
             style={{ background: "linear-gradient(135deg, rgba(99,102,241,.08), rgba(139,92,246,.04))" }}
-            onClick={() => router.push("/learn")}
+            onClick={() => router.push("/docs")}
           >
             <div className="pointer-events-none absolute -top-10 -right-10 h-48 w-48 rounded-full bg-violet-500/10 blur-[50px]" />
             <div className="relative z-10">
               <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/15 text-3xl border border-violet-500/20">
+                📖
+              </div>
+              <h3 className="mb-2 text-2xl font-bold" style={{ color: "var(--foreground)" }}>FlowFrame DSL Docs</h3>
+              <p className="mb-5 text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.6 }}>
+                Explore language specifications, syntax rules, schema specs for all 8 component nodes, and copy-pasteable flagship architecture scripts.
+              </p>
+              <div className="inline-flex items-center gap-2 rounded-xl bg-violet-500/15 px-4 py-2 text-sm font-bold text-violet-400 transition group-hover:bg-violet-500/25">
+                Read DSL Docs (/docs) <span className="transition-transform group-hover:translate-x-1">→</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Learn Scenarios */}
+          <div
+            className="card-glow group relative cursor-pointer overflow-hidden rounded-2xl border border-[var(--border)]/40 p-8 backdrop-blur transition-all"
+            style={{ background: "linear-gradient(135deg, rgba(168,85,247,.08), rgba(192,132,252,.04))" }}
+            onClick={() => router.push("/learn")}
+          >
+            <div className="pointer-events-none absolute -top-10 -right-10 h-48 w-48 rounded-full bg-purple-500/10 blur-[50px]" />
+            <div className="relative z-10">
+              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-500/15 text-3xl border border-purple-500/20">
                 📚
               </div>
-              <h3 className="mb-2 text-2xl font-bold" style={{ color: "var(--foreground)" }}>Interactive Docs</h3>
+              <h3 className="mb-2 text-2xl font-bold" style={{ color: "var(--foreground)" }}>Guided Scenarios</h3>
               <p className="mb-5 text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.6 }}>
-                Guided learning for each distributed system concept — theory on the left, live simulation on the right. Read the explanation, trigger the scenario, watch it run.
+                Guided learning for each distributed system concept — theory on the left, live simulation on the right.
               </p>
-              <div className="flex flex-col gap-2 mb-6">
-                {["Load Balancers", "Cache-Aside", "API Gateways", "Valet Key"].map(t => (
-                  <div key={t} className="flex items-center gap-2 text-sm" style={{ color: "var(--foreground)", opacity: 0.7 }}>
-                    <span className="h-1 w-1 rounded-full bg-violet-400 shrink-0" />
-                    {t}
-                  </div>
-                ))}
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-xl bg-violet-500/15 px-4 py-2 text-sm font-bold text-violet-400 transition group-hover:bg-violet-500/25">
-                Start Learning <span className="transition-transform group-hover:translate-x-1">→</span>
+              <div className="inline-flex items-center gap-2 rounded-xl bg-purple-500/15 px-4 py-2 text-sm font-bold text-purple-400 transition group-hover:bg-purple-500/25">
+                Start Scenarios <span className="transition-transform group-hover:translate-x-1">→</span>
               </div>
             </div>
           </div>
@@ -671,22 +691,14 @@ function LearnAndSandbox() {
             <div className="pointer-events-none absolute -bottom-10 -right-10 h-48 w-48 rounded-full bg-emerald-500/10 blur-[50px]" />
             <div className="relative z-10">
               <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-3xl border border-emerald-500/20">
-                🛠️
+                ⚡
               </div>
-              <h3 className="mb-2 text-2xl font-bold" style={{ color: "var(--foreground)" }}>Custom Sandbox</h3>
+              <h3 className="mb-2 text-2xl font-bold" style={{ color: "var(--foreground)" }}>Monaco DSL Sandbox</h3>
               <p className="mb-5 text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.6 }}>
-                Drag & drop any component — Clients, Load Balancers, Servers, Redis, Postgres, API Gateways — and wire up your own topology. Then run it.
+                Write code in Monaco Editor using FlowFrame DSL or drag & drop nodes on canvas. Run live system simulations instantly.
               </p>
-              <div className="flex flex-col gap-2 mb-6">
-                {["Drag & drop canvas", "Import/Export topologies", "Download diagram image", "Custom connections", "Run any topology", "Live inspection"].map(t => (
-                  <div key={t} className="flex items-center gap-2 text-sm" style={{ color: "var(--foreground)", opacity: 0.7 }}>
-                    <span className="h-1 w-1 rounded-full bg-emerald-400 shrink-0" />
-                    {t}
-                  </div>
-                ))}
-              </div>
               <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/15 px-4 py-2 text-sm font-bold text-emerald-400 transition group-hover:bg-emerald-500/25">
-                Open Sandbox <span className="transition-transform group-hover:translate-x-1">→</span>
+                Open Workspace <span className="transition-transform group-hover:translate-x-1">→</span>
               </div>
             </div>
           </div>
@@ -696,31 +708,29 @@ function LearnAndSandbox() {
   );
 }
 
-// ─── V1 honest section ────────────────────────────────────────────────────────
+// ─── V2 status section ────────────────────────────────────────────────────────
 function V1Status() {
   const supported = [
-    "Round Robin load balancing",
-    "IP Hash load balancing",
+    "FlowFrame DSL (.flow) Interpreter Engine",
+    "Monaco Code Editor with Syntax Highlighting & Autocompletion",
+    "Client -> API Gateway -> LoadBalancer -> Server Topology",
+    "Message Queue (RabbitMQ FIFO) Producer/Consumer Simulation",
+    "PubSub Broker Event Fan-Out & Custom Server Topic Registration",
+    "Round Robin & IP Hash load balancing",
     "Capacity-based server failover",
     "Cache-Aside pattern (Redis)",
     "Database fallback (Postgres)",
-    "API Gateway path routing",
-    "Valet Key token issuance",
-    "Frame-by-frame playback",
-    "Node state inspector",
-    "Custom sandbox canvas",
-    "Flows Import/Export (JSON)",
-    "Diagram Export (PNG)",
-    "Interactive learning docs",
-    "Dark / Light mode",
+    "API Gateway path routing with LoadBalancer targets",
+    "Valet Key token issuance & Cloud Storage uploads",
+    "Frame-by-frame traffic playback",
+    "Node state inspector & health overlay",
+    "Custom sandbox canvas with JSON import/export",
   ];
   const coming = [
     "More LB strategies (Least Conn, Weighted RR)",
     "Circuit Breaker & Retry patterns",
-    "Saga / distributed transaction flows",
-    "Message Queue simulations (Kafka, RabbitMQ)",
-    "Multi-region & CDN scenarios",
-    "User-shareable scenario links",
+    "Distributed Tracing (OpenTelemetry style visualization)",
+    "Kafka Partitioned Log simulations",
   ];
 
   return (
@@ -729,8 +739,8 @@ function V1Status() {
         <div className="rounded-2xl border border-[var(--border)]/40 p-8 md:p-10 backdrop-blur"
           style={{ background: "var(--surface-muted)", opacity: 1 }}>
           <div className="mb-8 flex items-center gap-3">
-            <div className="v1-badge rounded-full px-3 py-1 text-xs font-bold tracking-wider text-violet-300">Version 1.0</div>
-            <p className="text-sm font-semibold" style={{ color: "var(--foreground)", opacity: 0.7 }}>What's supported right now</p>
+            <div className="v1-badge rounded-full px-3 py-1 text-xs font-bold tracking-wider text-violet-300">Version 2.0.0</div>
+            <p className="text-sm font-semibold" style={{ color: "var(--foreground)", opacity: 0.7 }}>What's supported right now in v2.0</p>
           </div>
           <div className="grid gap-10 md:grid-cols-2">
             <div>
@@ -859,25 +869,25 @@ export default function Home() {
 
             {/* CTAs */}
             <div className="mt-8 flex flex-wrap gap-3">
-              <button onClick={() => router.push("/scenarios")}
-                className="btn-primary rounded-2xl px-7 py-3.5 text-sm font-bold text-white">
-                Explore Scenarios →
-              </button>
-              <button onClick={() => router.push("/learn")}
-                className="btn-outline rounded-2xl px-7 py-3.5 text-sm font-bold"
-                style={{ color: "var(--foreground)", background: "var(--surface)" }}>
-                Start Learning
+              <button onClick={() => router.push("/docs")}
+                className="btn-primary rounded-2xl px-7 py-3.5 text-sm font-bold text-white shadow-lg">
+                📖 Read DSL Docs (/docs) →
               </button>
               <button onClick={() => router.push("/workspace")}
                 className="btn-outline rounded-2xl px-7 py-3.5 text-sm font-bold"
                 style={{ color: "var(--foreground)", background: "var(--surface)" }}>
-                Open Sandbox
+                ⚡ Open Workspace
+              </button>
+              <button onClick={() => router.push("/scenarios")}
+                className="btn-outline rounded-2xl px-7 py-3.5 text-sm font-bold"
+                style={{ color: "var(--foreground)", background: "var(--surface)" }}>
+                Explore Scenarios
               </button>
             </div>
 
-            {/* v1 callout */}
-            <p className="mt-6 text-[11px] font-medium" style={{ color: "var(--foreground)", opacity: 0.38 }}>
-              v1.0.5 — Flows Import/Export + Capture Diagram · 4 scenarios · Sandbox
+            {/* v2 callout */}
+            <p className="mt-6 text-[11px] font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>
+              v2.0.0 — FlowFrame DSL Engine + Monaco Code Editor · API Gateway, Load Balancers, RabbitMQ & PubSub Brokers · 8 Component Nodes
             </p>
           </div>
 

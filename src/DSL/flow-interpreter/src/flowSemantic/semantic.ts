@@ -89,15 +89,15 @@ function semanticAnalyzer(ast: Ast[]): Ast[] {
       );
     }
 
-    // Topology Rule B: Direct Gateway -> LoadBalancer connection unsupported in simulation
-    if (
-      (sourceNode.typeOfNode === "GATEWAY_NODE" || sourceNode.typeOfNode === "gateway") &&
-      (targetNode.typeOfNode === "LOADBALANCER_NODE" || targetNode.typeOfNode === "loadbalancer")
-    ) {
-      throw new Error(
-        `Semantic Error: Direct connection from Gateway '${conn.from}' to LoadBalancer '${conn.to}' is not supported.`
-      );
-    }
+    // // Topology Rule B: Direct Gateway -> LoadBalancer connection unsupported in simulation
+    // if (
+    //   (sourceNode.typeOfNode === "GATEWAY_NODE" || sourceNode.typeOfNode === "gateway") &&
+    //   (targetNode.typeOfNode === "LOADBALANCER_NODE" || targetNode.typeOfNode === "loadbalancer")
+    // ) {
+    //   throw new Error(
+    //     `Semantic Error: Direct connection from Gateway '${conn.from}' to LoadBalancer '${conn.to}' is not supported.`
+    //   );
+    // }
   }
 
   // 3. Validate Node Configs against ALLOWED_VARIABLES and Engine Models
