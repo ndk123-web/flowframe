@@ -274,13 +274,13 @@ pubsubConsumer1 -> db2
 pubsubConsumer2 -> db2
 pubsubConsumer2 -> r2`;
 
-// Monaco-style Syntax Highlighter Component
+// Monaco-style Syntax Highlighter Component (Theme-Adaptive for Light & Dark modes)
 function FlowCodeBlock({ code }: { code: string }) {
   const highlightLine = (line: string, index: number) => {
     const trimmed = line.trim();
     if (trimmed.startsWith("//")) {
       return (
-        <span key={index} className="text-emerald-500/80 italic font-mono">
+        <span key={index} className="text-emerald-600 dark:text-emerald-400 italic font-mono">
           {line}
         </span>
       );
@@ -290,14 +290,14 @@ function FlowCodeBlock({ code }: { code: string }) {
     const parts = line.split(/(\s+|[{}[\](),:->"])/);
 
     return (
-      <span key={index} className="font-mono">
+      <span key={index} className="font-mono text-[color:var(--foreground)]">
         {parts.map((part, pIdx) => {
           if (!part) return null;
           const upper = part.toUpperCase();
 
           if (["DEFINE", "CONNECT"].includes(upper)) {
             return (
-              <span key={pIdx} className="text-violet-400 font-bold">
+              <span key={pIdx} className="text-violet-600 dark:text-violet-400 font-bold">
                 {part}
               </span>
             );
@@ -316,7 +316,7 @@ function FlowCodeBlock({ code }: { code: string }) {
             ].includes(upper)
           ) {
             return (
-              <span key={pIdx} className="text-sky-400 font-semibold">
+              <span key={pIdx} className="text-sky-600 dark:text-sky-400 font-semibold">
                 {part}
               </span>
             );
@@ -344,7 +344,7 @@ function FlowCodeBlock({ code }: { code: string }) {
             ].includes(upper)
           ) {
             return (
-              <span key={pIdx} className="text-blue-300 font-medium">
+              <span key={pIdx} className="text-blue-600 dark:text-blue-300 font-semibold">
                 {part}
               </span>
             );
@@ -352,7 +352,7 @@ function FlowCodeBlock({ code }: { code: string }) {
 
           if (part.startsWith('"') || part.endsWith('"')) {
             return (
-              <span key={pIdx} className="text-emerald-300">
+              <span key={pIdx} className="text-emerald-700 dark:text-emerald-300 font-medium">
                 {part}
               </span>
             );
@@ -360,7 +360,7 @@ function FlowCodeBlock({ code }: { code: string }) {
 
           if (part === "->") {
             return (
-              <span key={pIdx} className="text-amber-400 font-bold">
+              <span key={pIdx} className="text-amber-600 dark:text-amber-400 font-bold">
                 {part}
               </span>
             );
@@ -368,21 +368,21 @@ function FlowCodeBlock({ code }: { code: string }) {
 
           if (/^\d+$/.test(part)) {
             return (
-              <span key={pIdx} className="text-orange-300">
+              <span key={pIdx} className="text-orange-600 dark:text-orange-300 font-mono">
                 {part}
               </span>
             );
           }
 
-          if (["c1", "gw1", "lb1", "lb2", "s1", "s2", "s3", "s4", "s5", "mq1", "db1", "r1", "db2", "r2", "postPubsub"].includes(part)) {
+          if (["c1", "gw1", "lb1", "lb2", "s1", "s2", "s3", "s4", "s5", "mq1", "db1", "r1", "db2", "r2", "postPubsub", "producerPostQueue1", "producerPostQueue2", "pubsubConsumer1", "pubsubConsumer2"].includes(part)) {
             return (
-              <span key={pIdx} className="text-amber-300 font-semibold">
+              <span key={pIdx} className="text-amber-600 dark:text-amber-300 font-semibold">
                 {part}
               </span>
             );
           }
 
-          return <span key={pIdx}>{part}</span>;
+          return <span key={pIdx} className="text-[color:var(--foreground)]">{part}</span>;
         })}
       </span>
     );
@@ -391,10 +391,10 @@ function FlowCodeBlock({ code }: { code: string }) {
   const lines = code.split("\n");
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[#1e1e1e] p-4 text-xs font-mono overflow-x-auto shadow-2xl leading-relaxed scrollbar-thin">
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] text-[color:var(--foreground)] p-4 text-xs font-mono overflow-x-auto shadow-sm leading-relaxed scrollbar-thin transition-colors">
       {lines.map((line, idx) => (
         <div key={idx} className="table-row">
-          <span className="table-cell text-right pr-4 text-gray-600 select-none text-[10px]">
+          <span className="table-cell text-right pr-4 text-[color:var(--foreground)]/30 select-none text-[10px]">
             {idx + 1}
           </span>
           <span className="table-cell whitespace-pre">{highlightLine(line, idx)}</span>
