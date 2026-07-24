@@ -2757,7 +2757,7 @@ connect s1 -> r1
             };
           }
 
-          // 2. Contextual Property Suggestions inside Client / Server blocks
+          // 2. Contextual Property Suggestions inside Node blocks
           if (textUntilPosition.toLowerCase().includes("client")) {
             const clientProps = [
               { label: "requests", insertText: "requests: [\n  {\n    endpoint: \"/api/v1/posts\",\n    allowedMethods: [\"GET\", \"POST\"],\n    key: \"rohan\"\n  }\n]", detail: "HTTP Client Requests Array" },
@@ -2780,6 +2780,8 @@ connect s1 -> r1
               { label: "acceptedEndpoints", insertText: "acceptedEndpoints: [\n  {\n    endpoint: \"/api/v1/posts\",\n    allowedMethod: [\"GET\", \"POST\"]\n  }\n]", detail: "Supported Endpoint Routes" },
               { label: "capacity", insertText: "capacity: 100", detail: "Max Concurrent Request Capacity" },
               { label: "tcpConnectionsToPostgres", insertText: "tcpConnectionsToPostgres: 10", detail: "Database Connection Pool Size" },
+              { label: "prefetchLimit", insertText: "prefetchLimit: 1", detail: "Queue Message Prefetch Limit" },
+              { label: "registeredTopics", insertText: "registeredTopics: [\"post.created\"]", detail: "PubSub Subscribed Topics Array" },
               { label: "label", insertText: 'label: "API Server"', detail: "Node Display Label" },
             ];
             serverProps.forEach((p) => {
@@ -2793,7 +2795,107 @@ connect s1 -> r1
             });
           }
 
-          // 3. Top level template snippets & keywords
+          if (textUntilPosition.toLowerCase().includes("gateway")) {
+            const gatewayProps = [
+              { label: "routes", insertText: "routes: [\n  {\n    path: \"/api/v1/posts\",\n    target: s1\n  }\n]", detail: "API Gateway Path Routing Rules" },
+              { label: "strategy", insertText: 'strategy: "ROUND_ROBIN"', detail: "Load Balancing Strategy" },
+              { label: "label", insertText: 'label: "AWS API Gateway"', detail: "Node Display Label" },
+            ];
+            gatewayProps.forEach((p) => {
+              suggestions.push({
+                label: p.label,
+                kind: monaco.languages.CompletionItemKind.Property,
+                insertText: p.insertText,
+                detail: p.detail,
+                range,
+              });
+            });
+          }
+
+          if (textUntilPosition.toLowerCase().includes("loadbalancer")) {
+            const lbProps = [
+              { label: "strategy", insertText: 'strategy: "ROUND_ROBIN"', detail: "Traffic Distribution Strategy" },
+              { label: "label", insertText: 'label: "Order Service LoadBalancer"', detail: "Node Display Label" },
+            ];
+            lbProps.forEach((p) => {
+              suggestions.push({
+                label: p.label,
+                kind: monaco.languages.CompletionItemKind.Property,
+                insertText: p.insertText,
+                detail: p.detail,
+                range,
+              });
+            });
+          }
+
+          if (textUntilPosition.toLowerCase().includes("redis")) {
+            const redisProps = [
+              { label: "data", insertText: "data: [\n  {\n    key: \"rohan\",\n    value: \"cached data for rohan\"\n  }\n]", detail: "Pre-populated Redis Cache Data" },
+              { label: "label", insertText: 'label: "Redis Cache"', detail: "Node Display Label" },
+            ];
+            redisProps.forEach((p) => {
+              suggestions.push({
+                label: p.label,
+                kind: monaco.languages.CompletionItemKind.Property,
+                insertText: p.insertText,
+                detail: p.detail,
+                range,
+              });
+            });
+          }
+
+          if (textUntilPosition.toLowerCase().includes("postgres")) {
+            const pgProps = [
+              { label: "table", insertText: 'table: "users"', detail: "Database Table Name" },
+              { label: "data", insertText: "data: [\n  {\n    key: \"rohan\",\n    value: \"db record data\"\n  }\n]", detail: "Pre-populated Postgres Records" },
+              { label: "label", insertText: 'label: "Postgres Database"', detail: "Node Display Label" },
+            ];
+            pgProps.forEach((p) => {
+              suggestions.push({
+                label: p.label,
+                kind: monaco.languages.CompletionItemKind.Property,
+                insertText: p.insertText,
+                detail: p.detail,
+                range,
+              });
+            });
+          }
+
+          if (textUntilPosition.toLowerCase().includes("messagequeue")) {
+            const mqProps = [
+              { label: "processingType", insertText: 'processingType: "FIFO"', detail: "Message Processing Order" },
+              { label: "queueSize", insertText: "queueSize: 50", detail: "Maximum Queue Buffer Capacity" },
+              { label: "overflowBehavior", insertText: 'overflowBehavior: "REJECT"', detail: "Queue Overflow Strategy" },
+              { label: "label", insertText: 'label: "Post Queue"', detail: "Node Display Label" },
+            ];
+            mqProps.forEach((p) => {
+              suggestions.push({
+                label: p.label,
+                kind: monaco.languages.CompletionItemKind.Property,
+                insertText: p.insertText,
+                detail: p.detail,
+                range,
+              });
+            });
+          }
+
+          if (textUntilPosition.toLowerCase().includes("pubsub")) {
+            const pubsubProps = [
+              { label: "topic", insertText: 'topic: "post.created"', detail: "PubSub Event Channel Topic" },
+              { label: "label", insertText: 'label: "PostPubSub 1"', detail: "Node Display Label" },
+            ];
+            pubsubProps.forEach((p) => {
+              suggestions.push({
+                label: p.label,
+                kind: monaco.languages.CompletionItemKind.Property,
+                insertText: p.insertText,
+                detail: p.detail,
+                range,
+              });
+            });
+          }
+
+          // 3. Top level template snippets & keywords (All 8 Node Types)
           const topLevelSnippets = [
             {
               label: "define CLIENT snippet",
@@ -2810,6 +2912,20 @@ connect s1 -> r1
               range,
             },
             {
+              label: "define GATEWAY snippet",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'define GATEWAY gw1 {\n  label: "AWS API Gateway",\n  strategy: "ROUND_ROBIN",\n  routes: [\n    {\n      path: "/api/v1/posts",\n      target: s1\n    }\n  ]\n}',
+              detail: "Create API Gateway node definition",
+              range,
+            },
+            {
+              label: "define LOADBALANCER snippet",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'define LOADBALANCER lb1 {\n  label: "Order Service LoadBalancer",\n  strategy: "ROUND_ROBIN"\n}',
+              detail: "Create Load Balancer node definition",
+              range,
+            },
+            {
               label: "define REDIS snippet",
               kind: monaco.languages.CompletionItemKind.Snippet,
               insertText: 'define REDIS r1 {\n  label: "Redis Cache",\n  data: [\n    {\n      key: "rohan",\n      value: "cached data for rohan"\n    }\n  ]\n}',
@@ -2821,6 +2937,20 @@ connect s1 -> r1
               kind: monaco.languages.CompletionItemKind.Snippet,
               insertText: 'define POSTGRES db1 {\n  label: "Postgres Database",\n  table: "users",\n  data: [\n    {\n      key: "rohan",\n      value: "db record data"\n    }\n  ]\n}',
               detail: "Create PostgreSQL DB node definition",
+              range,
+            },
+            {
+              label: "define MESSAGEQUEUE snippet",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'define MESSAGEQUEUE mq1 {\n  label: "Post Queue",\n  processingType: "FIFO",\n  queueSize: 50,\n  overflowBehavior: "REJECT"\n}',
+              detail: "Create Message Queue node definition",
+              range,
+            },
+            {
+              label: "define PUBSUB snippet",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'define PUBSUB postPubsub {\n  label: "PostPubSub 1",\n  topic: "post.created"\n}',
+              detail: "Create PubSub broker node definition",
               range,
             },
             {
@@ -2867,6 +2997,20 @@ connect s1 -> r1
               range,
             },
             {
+              label: "GATEWAY",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "GATEWAY ",
+              detail: "API gateway node type",
+              range,
+            },
+            {
+              label: "LOADBALANCER",
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: "LOADBALANCER ",
+              detail: "Load balancer node type",
+              range,
+            },
+            {
               label: "REDIS",
               kind: monaco.languages.CompletionItemKind.Keyword,
               insertText: "REDIS ",
@@ -2881,17 +3025,17 @@ connect s1 -> r1
               range,
             },
             {
-              label: "LOADBALANCER",
+              label: "MESSAGEQUEUE",
               kind: monaco.languages.CompletionItemKind.Keyword,
-              insertText: "LOADBALANCER ",
-              detail: "Load balancer node type",
+              insertText: "MESSAGEQUEUE ",
+              detail: "Message Queue node type",
               range,
             },
             {
-              label: "GATEWAY",
+              label: "PUBSUB",
               kind: monaco.languages.CompletionItemKind.Keyword,
-              insertText: "GATEWAY ",
-              detail: "API gateway node type",
+              insertText: "PUBSUB ",
+              detail: "PubSub Broker node type",
               range,
             },
           ];
