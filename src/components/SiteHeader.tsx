@@ -100,6 +100,13 @@ export default function SiteHeader({
             Docs
           </Link>
 
+          <Link
+            href="/signin"
+            className="rounded-lg border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5 sm:px-3.5 sm:py-2 text-xs sm:text-sm font-bold text-violet-400 hover:bg-violet-500/20 transition"
+          >
+            Sign In
+          </Link>
+
           {/* Workspace Sandbox: hidden on mobile to prevent overflow */}
           {!hideSandboxLink && (showHomeLink || scrolled) && (
             <Link
