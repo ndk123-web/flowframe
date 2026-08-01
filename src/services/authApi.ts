@@ -1,0 +1,69 @@
+import { AuthResponse } from "@/store/useAuthStore";
+
+const API_BASE_URL = "http://127.0.0.1:8000/api/auth";
+
+export interface AuthCredentials {
+  email: string;
+  password: string;
+  type_of_signin?: string;
+}
+
+export async function signInApi(credentials: AuthCredentials): Promise<AuthResponse> {
+  const payload = {
+    email: credentials.email,
+    password: credentials.password,
+    type_of_signin: credentials.type_of_signin || "email",
+  };
+
+  const response = await fetch(`${API_BASE_URL}/signin`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Sign in failed";
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || errorData.message || errorMessage;
+    } catch {
+      errorMessage = `HTTP Error ${response.status}: ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  const data: AuthResponse = await response.json();
+  return data;
+}
+
+export async function signUpApi(credentials: AuthCredentials): Promise<AuthResponse> {
+  const payload = {
+    email: credentials.email,
+    password: credentials.password,
+    type_of_signin: credentials.type_of_signin || "email",
+  };
+
+  const response = await fetch(`${API_BASE_URL}/signup`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Sign up failed";
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || errorData.message || errorMessage;
+    } catch {
+      errorMessage = `HTTP Error ${response.status}: ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  const data: AuthResponse = await response.json();
+  return data;
+}
