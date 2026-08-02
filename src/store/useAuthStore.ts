@@ -7,6 +7,9 @@ export interface AuthUser {
   id: string;
   email: string;
   type_of_signin: string;
+  firebase_uid?: string;
+  name?: string;
+  avatar?: string;
 }
 
 export interface AuthResponse {
