@@ -821,6 +821,7 @@ export default function Home() {
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     window.localStorage.setItem("flowframe-theme", theme);
+    // console.log(process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENTID)
   }, [theme]);
 
   return (
