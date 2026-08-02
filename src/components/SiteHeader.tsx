@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuthStore } from "@/store/useAuthStore";
+import UserDropdown from "@/components/UserDropdown";
 
 type Theme = "light" | "dark";
 
@@ -25,7 +26,7 @@ export default function SiteHeader({
   alwaysGlass = false,
 }: SiteHeaderProps) {
   const [scrolled, setScrolled] = useState(false);
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     if (alwaysGlass) {
@@ -75,7 +76,6 @@ export default function SiteHeader({
 
           <div className="leading-tight min-w-0">
             <p className="text-sm sm:text-base font-semibold tracking-tight text-[color:var(--foreground)] truncate">FlowFrame</p>
-            {/* Badge only visible sm+ */}
             <p className="hidden sm:block text-[10px] uppercase tracking-[0.2em] text-[color:var(--foreground)]/55 truncate max-w-[200px]">
               {badgeText}
             </p>
@@ -101,62 +101,42 @@ export default function SiteHeader({
             Docs
           </Link>
 
-          {isAuthenticated && user ? (
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-2.5 py-1.5 text-xs">
-                {user.avatar ? (
-                  <img src={user.avatar} alt="Avatar" className="w-5 h-5 rounded-full object-cover" />
-                ) : (
-                  <div className="w-5 h-5 rounded-full bg-violet-500/20 text-violet-300 font-bold flex items-center justify-center text-[10px]">
-                    {user.email.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <span className="font-mono text-[color:var(--foreground)]/80 max-w-[120px] truncate" title={user.email}>
-                  {user.name || user.email}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={logout}
-                className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/20 transition cursor-pointer"
-                title="Logout"
-              >
-                Logout
-              </button>
-            </div>
-          ) : (
-            <Link
-              href="/signin"
-              className="rounded-lg border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5 sm:px-3.5 sm:py-2 text-xs sm:text-sm font-bold text-violet-400 hover:bg-violet-500/20 transition"
-            >
-              Sign In
-            </Link>
-          )}
-
-          {/* Workspace Sandbox */}
+          {/* Sandbox Sandbox */}
           {!hideSandboxLink && (showHomeLink || scrolled) && (
             <Link
               href="/workspace"
-              className="hidden sm:inline-flex items-center animate-fade-in-scale rounded-lg border border-[var(--border)] bg-gradient-to-r from-violet-500/10 to-blue-500/10 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-violet-500 dark:text-violet-300 transition hover:from-violet-500/20 hover:to-blue-500/20 hover:scale-105 duration-300 shadow-md"
+              className="hidden sm:inline-flex items-center rounded-lg border border-[var(--border)] bg-gradient-to-r from-violet-500/10 to-blue-500/10 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-violet-500 dark:text-violet-300 transition hover:from-violet-500/20 hover:to-blue-500/20 hover:scale-105 duration-300 shadow-md"
             >
               Sandbox
             </Link>
           )}
 
-          {/* Theme toggle */}
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            className="group relative inline-flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-gradient-to-r from-[var(--surface)]/90 to-[var(--surface)]/70 px-0.5 py-0.5 transition hover:shadow-[0_4px_16px_var(--glow)] active:scale-95 cursor-pointer"
-            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          >
-            <span className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full transition-all text-sm ${theme === "dark" ? "bg-[var(--surface-muted)] shadow-sm" : "opacity-60"}`}>
-              ☀️
-            </span>
-            <span className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full transition-all text-sm ${theme === "light" ? "bg-[var(--surface-muted)] shadow-sm" : "opacity-60"}`}>
-              🌙
-            </span>
-          </button>
+          {isAuthenticated ? (
+            <UserDropdown theme={theme} onToggleTheme={onToggleTheme} />
+          ) : (
+            <>
+              <Link
+                href="/signin"
+                className="rounded-lg border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5 sm:px-3.5 sm:py-2 text-xs sm:text-sm font-bold text-violet-400 hover:bg-violet-500/20 transition"
+              >
+                Sign In
+              </Link>
+              {/* Theme toggle for logged out state */}
+              <button
+                type="button"
+                onClick={onToggleTheme}
+                className="group relative inline-flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-gradient-to-r from-[var(--surface)]/90 to-[var(--surface)]/70 px-0.5 py-0.5 transition hover:shadow-[0_4px_16px_var(--glow)] active:scale-95 cursor-pointer"
+                title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+              >
+                <span className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full transition-all text-sm ${theme === "dark" ? "bg-[var(--surface-muted)] shadow-sm" : "opacity-60"}`}>
+                  ☀️
+                </span>
+                <span className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full transition-all text-sm ${theme === "light" ? "bg-[var(--surface-muted)] shadow-sm" : "opacity-60"}`}>
+                  🌙
+                </span>
+              </button>
+            </>
+          )}
         </nav>
       </div>
     </header>

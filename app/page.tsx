@@ -28,6 +28,21 @@ import {
 import "@xyflow/react/dist/style.css";
 import Ipv4Generator from "@/utils/generateRandomIp";
 import Link from "next/link";
+import {
+  ZapIcon,
+  CodeIcon,
+  NodeLinkIcon,
+  ScaleIcon,
+  InboxIcon,
+  BroadcastIcon,
+  DatabaseIcon,
+  DocsIcon,
+  FilmIcon,
+  SandboxIcon,
+  CartIcon,
+  ChatIcon,
+  CreditCardIcon,
+} from "@/components/DashboardIcons";
 
 type Theme = "light" | "dark";
 
@@ -148,317 +163,160 @@ const animationStyles = `
     border-radius: 50%;
     background: #34d399;
     box-shadow: 0 0 0 2px rgba(52,211,153,.25);
-    animation: pulseRing 2s ease infinite;
-    display: inline-block;
   }
 `;
 
-// ─── Intersection Reveal ──────────────────────────────────────────────────────
-function Reveal({
-  children,
-  delay = 0,
-  className = "",
-}: {
-  children: React.ReactNode;
-  delay?: number;
-  className?: string;
-}) {
+// ─── Custom Animated Edge ───────────────────────────────────────────────────
+function AnimatedEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style = {},
+  markerEnd,
+}: EdgeProps) {
+  const [edgePath] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+
+  return (
+    <g>
+      <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
+      <circle r="4" fill="#a78bfa" className="ping-ring">
+        <animateMotion dur="2s" repeatCount="indefinite" path={edgePath} />
+      </circle>
+    </g>
+  );
+}
+
+const edgeTypes = { animated: AnimatedEdge };
+
+// ─── Custom Landing Nodes ─────────────────────────────────────────────────────
+function LandingClientNode({ data }: { data: { label: string; sub: string } }) {
+  return (
+    <div className="relative flex flex-col items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-lg backdrop-blur min-w-[130px] transition hover:scale-105">
+      <Handle type="source" position={Position.Right} className="!bg-indigo-400 !w-2.5 !h-2.5" />
+      <ComponentIcon type="client" className="h-6 w-6 text-indigo-400 mb-1" />
+      <span className="text-xs font-bold text-[color:var(--foreground)]">{data.label}</span>
+      <span className="text-[10px] text-[color:var(--foreground)]/50 font-mono">{data.sub}</span>
+    </div>
+  );
+}
+
+function LandingLBNode({ data }: { data: { label: string; sub: string } }) {
+  return (
+    <div className="relative flex flex-col items-center justify-center rounded-2xl border border-indigo-500/40 bg-indigo-500/10 p-3 shadow-lg backdrop-blur min-w-[140px] transition hover:scale-105">
+      <Handle type="target" position={Position.Left} className="!bg-indigo-400 !w-2.5 !h-2.5" />
+      <Handle type="source" position={Position.Right} className="!bg-indigo-400 !w-2.5 !h-2.5" />
+      <ComponentIcon type="load-balancer" className="h-6 w-6 text-indigo-400 mb-1" />
+      <span className="text-xs font-bold text-indigo-300">{data.label}</span>
+      <span className="text-[10px] text-indigo-200/60 font-mono">{data.sub}</span>
+    </div>
+  );
+}
+
+function LandingServerNode({ data }: { data: { label: string; sub: string; active?: boolean } }) {
+  return (
+    <div className={`relative flex flex-col items-center justify-center rounded-2xl border p-3 shadow-lg backdrop-blur min-w-[130px] transition hover:scale-105 ${
+      data.active ? "border-emerald-500/50 bg-emerald-500/10" : "border-[var(--border)] bg-[var(--surface)]"
+    }`}>
+      <Handle type="target" position={Position.Left} className="!bg-violet-400 !w-2.5 !h-2.5" />
+      <ComponentIcon type="server" className={`h-6 w-6 mb-1 ${data.active ? "text-emerald-400" : "text-violet-400"}`} />
+      <span className="text-xs font-bold text-[color:var(--foreground)]">{data.label}</span>
+      <span className="text-[10px] text-[color:var(--foreground)]/50 font-mono">{data.sub}</span>
+    </div>
+  );
+}
+
+const nodeTypes = {
+  landingClient: LandingClientNode,
+  landingLB: LandingLBNode,
+  landingServer: LandingServerNode,
+};
+
+// ─── Scroll Reveal Hook ───────────────────────────────────────────────────────
+function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
   const [vis, setVis] = useState(false);
-  const [el, setEl] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    const el = ref.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVis(true); obs.unobserve(el); } },
-      { threshold: 0.08 }
-    );
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setVis(true); obs.unobserve(el); }
+    }, { threshold: 0.12 });
     obs.observe(el);
     return () => obs.disconnect();
-  }, [el]);
+  }, []);
 
   return (
     <div
-      ref={setEl}
-      className={`${className} ${vis ? "fade-up" : "opacity-0"}`}
-      style={{ animationDelay: `${delay}s` }}
+      ref={ref}
+      style={{
+        opacity: vis ? 1 : 0,
+        transform: vis ? "translateY(0)" : "translateY(24px)",
+        transition: `opacity 0.65s cubic-bezier(.22,1,.36,1) ${delay}s, transform 0.65s cubic-bezier(.22,1,.36,1) ${delay}s`,
+      }}
     >
       {children}
     </div>
   );
 }
 
-// ─── Packet Edge (same logic, cleaned up) ────────────────────────────────────
-function PacketEdge(props: EdgeProps) {
-  const { sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, markerEnd, data } = props;
-  const [edgePath] = getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, borderRadius: 10 });
+// ─── Interactive Hero Simulation ──────────────────────────────────────────────
+const uid = new ShortUniqueId({ length: 6 });
 
-  const isActive       = Boolean(data?.active);
-  const duration       = Number(data?.packetDuration ?? 1.8);
-  const isReverse      = Boolean(data?.reverseMotion);
-  const count          = Math.max(1, Math.min(Number(data?.packetCount ?? 1), 4));
-  const frameIndex     = Number(data?.frameIndex ?? 0);
+function buildDemoNodesAndEdges() {
+  const nodes: Node[] = [
+    { id: "c1", type: "landingClient", position: { x: 40,  y: 40  }, data: { label: "Client 1", sub: "Web App" } },
+    { id: "c2", type: "landingClient", position: { x: 40,  y: 260 }, data: { label: "Client 2", sub: "Mobile"  } },
+    { id: "lb", type: "landingLB",     position: { x: 260, y: 150 }, data: { label: "Load Balancer", sub: "Round Robin" } },
+    { id: "s1", type: "landingServer", position: { x: 500, y: 20  }, data: { label: "Server A", sub: "Node.js", active: true  } },
+    { id: "s2", type: "landingServer", position: { x: 500, y: 150 }, data: { label: "Server B", sub: "Go App",  active: false } },
+    { id: "s3", type: "landingServer", position: { x: 500, y: 280 }, data: { label: "Server C", sub: "Rust Server", active: false } },
+  ];
 
-  const [animationPath] = getSmoothStepPath({
-    sourceX: isReverse ? targetX : sourceX,
-    sourceY: isReverse ? targetY : sourceY,
-    sourcePosition: isReverse ? targetPosition : sourcePosition,
-    targetX: isReverse ? sourceX : targetX,
-    targetY: isReverse ? sourceY : targetY,
-    targetPosition: isReverse ? sourcePosition : targetPosition,
-    borderRadius: 10,
-  });
+  const edges: Edge[] = [
+    { id: "e-c1-lb", source: "c1", target: "lb", type: "animated", style: { stroke: "#6366f1", strokeWidth: 2 } },
+    { id: "e-c2-lb", source: "c2", target: "lb", type: "animated", style: { stroke: "#6366f1", strokeWidth: 2 } },
+    { id: "e-lb-s1", source: "lb", target: "s1", type: "animated", style: { stroke: "#8b5cf6", strokeWidth: 2 } },
+    { id: "e-lb-s2", source: "lb", target: "s2", type: "animated", style: { stroke: "#8b5cf6", strokeWidth: 2 } },
+    { id: "e-lb-s3", source: "lb", target: "s3", type: "animated", style: { stroke: "#8b5cf6", strokeWidth: 2 } },
+  ];
 
-  const col = isReverse ? "#f59e0b" : "#8b5cf6";
-
-  return (
-    <>
-      <BaseEdge path={edgePath} markerEnd={markerEnd}
-        style={{ ...style, strokeOpacity: isActive ? 0.9 : 0.2, transition: "stroke-opacity 150ms" }} />
-      {isActive && Array.from({ length: count }).map((_, i) => (
-        <circle key={`${props.id}-${i}-${animationPath}-${frameIndex}`} r={4.5 - i * 0.5} fill={col} cx="0" cy="0"
-          style={{ filter: `drop-shadow(0 0 5px ${col}cc)`, opacity: Math.max(0.4, 0.9 - i * 0.15) }}>
-          <animateMotion dur={`${duration}s`}
-            repeatCount="2" fill="freeze" begin={`${i * 0.12}s`} path={animationPath}
-            keyPoints="0;1" keyTimes="0;1" calcMode="linear" />
-        </circle>
-      ))}
-    </>
-  );
-}
-
-// ─── Custom Node for Hero diagram ─────────────────────────────────────────────
-function HeroNode({ data }: any) {
-  const border: Record<string, string> = {
-    client: "#8b5cf6", "load-balancer": "#3b82f6", server: "#10b981",
-  };
-  const isActive = Boolean(data.isActive);
-  const col = border[data.type] || "#64748b";
-
-  return (
-    <div
-      className="relative flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold backdrop-blur"
-      style={{
-        background: "var(--surface)",
-        border: `1.5px solid ${isActive ? col : "rgba(148,163,184,.25)"}`,
-        boxShadow: isActive ? `0 0 18px -4px ${col}99` : "none",
-        minWidth: 130,
-        transition: "all .15s ease",
-      }}
-    >
-      {data.type !== "client" && (
-        <Handle type="target" position={Position.Left}
-          style={{ background: col, width: 7, height: 7, border: "none" }} />
-      )}
-      <ComponentIcon type={data.type} className="w-4 h-4 shrink-0" />
-      <div className="leading-tight">
-        <p className="text-[9px] font-semibold uppercase tracking-wider opacity-40">{data.type}</p>
-        <p className="text-[11px] font-bold truncate max-w-[90px]" style={{ color: "var(--foreground)" }}>{data.label}</p>
-      </div>
-      {isActive && (
-        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: col }} />
-          <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ background: col }} />
-        </span>
-      )}
-      {data.type !== "server" && (
-        <Handle type="source" position={Position.Right}
-          style={{ background: col, width: 7, height: 7, border: "none" }} />
-      )}
-    </div>
-  );
-}
-
-const NODE_TYPES = { heroNode: HeroNode };
-
-// ─── Hero Live Sim ─────────────────────────────────────────────────────────────
-function HeroSim() {
-  const [frameIndex, setFrameIndex] = useState(0);
-  const [isPlaying, setIsPlaying]   = useState(false); // starts paused
-  const [simData, setSimData]       = useState<any>(null);
-  const [hasStarted, setHasStarted] = useState(false);
-
-  useEffect(() => { setSimData(buildSim()); }, []);
-
-  // Auto-advance when playing
-  useEffect(() => {
-    if (!isPlaying || !simData) return;
-    const total = simData.frames.length || 1;
-    const id = setInterval(() => {
-      setFrameIndex(p => {
-        if (p >= total - 1) {
-          setIsPlaying(false);
-          return p;
-        }
-        return p + 1;
-      });
-    }, 900);
-    return () => clearInterval(id);
-  }, [isPlaying, simData]);
-
-  const handleNodeClick = (_: any, node: any) => {
-    if (node.id === simData?.ids?.cId) {
-      // clicking Client → restart simulation
-      setFrameIndex(0);
-      setIsPlaying(true);
-      setHasStarted(true);
-    }
-  };
-
-  const nodes = useMemo<Node[]>(() => {
-    if (!simData) return [];
-    const f = simData.frames[frameIndex];
-    const active = (id: string) => f?.from === id || f?.to === id;
-    const { cId, lbId, s1, s2, s3 } = simData.ids;
-    return [
-      { id: cId,  type: "heroNode", position: { x: 20,  y: 165 }, data: { label: "Client",       type: "client",        isActive: active(cId)  }, sourcePosition: Position.Right, targetPosition: Position.Left },
-      { id: lbId, type: "heroNode", position: { x: 230, y: 165 }, data: { label: "Load Balancer", type: "load-balancer", isActive: active(lbId) }, sourcePosition: Position.Right, targetPosition: Position.Left },
-      { id: s1,   type: "heroNode", position: { x: 450, y: 30  }, data: { label: "Web Server 1",  type: "server",        isActive: active(s1)   }, sourcePosition: Position.Right, targetPosition: Position.Left },
-      { id: s2,   type: "heroNode", position: { x: 450, y: 165 }, data: { label: "Web Server 2",  type: "server",        isActive: active(s2)   }, sourcePosition: Position.Right, targetPosition: Position.Left },
-      { id: s3,   type: "heroNode", position: { x: 450, y: 300 }, data: { label: "Web Server 3",  type: "server",        isActive: active(s3)   }, sourcePosition: Position.Right, targetPosition: Position.Left },
-    ];
-  }, [simData, frameIndex]);
-
-  const edges = useMemo<Edge[]>(() => {
-    if (!simData) return [];
-    const { cId, lbId, s1, s2, s3 } = simData.ids;
-    const f = simData.frames[frameIndex];
-    const BASE = new Set([`${cId}->${lbId}`, `${lbId}->${s1}`, `${lbId}->${s2}`, `${lbId}->${s3}`]);
-    const activeMap = new Map<string, boolean>();
-    if (f?.from && f?.to) {
-      const d = `${f.from}->${f.to}`, r = `${f.to}->${f.from}`;
-      if (BASE.has(d)) activeMap.set(d, false);
-      else if (BASE.has(r)) activeMap.set(r, true);
-    }
-    return [
-      { id: `${cId}->${lbId}`, source: cId,  target: lbId, type: "packet" },
-      { id: `${lbId}->${s1}`,  source: lbId, target: s1,   type: "packet" },
-      { id: `${lbId}->${s2}`,  source: lbId, target: s2,   type: "packet" },
-      { id: `${lbId}->${s3}`,  source: lbId, target: s3,   type: "packet" },
-    ].map(e => {
-      const rev = activeMap.get(e.id);
-      const isAct = activeMap.has(e.id);
-      return {
-        ...e,
-        data: { active: isAct, reverseMotion: rev ?? false, packetDuration: 0.9, frameIndex, packetCount: isAct ? 1 : 0 },
-        style: { stroke: isAct ? (rev ? "#f59e0b" : "#8b5cf6") : "rgba(148,163,184,.2)", strokeWidth: isAct ? 2 : 1.5, transition: "all .15s ease" },
-      };
-    });
-  }, [simData, frameIndex]);
-
-  if (!simData || nodes.length === 0) return null;
-
-  const { frames } = simData;
-  const cur = frames[frameIndex];
-  const total = frames.length;
-
-  return (
-    <div className="relative w-full overflow-hidden rounded-2xl border border-[var(--border)]/40 bg-[var(--surface-muted)]/30 backdrop-blur"
-      style={{ height: 400 }}>
-      {/* glow blobs */}
-      <div className="pointer-events-none absolute -top-12 -right-12 h-56 w-56 rounded-full bg-violet-500/10 blur-[60px]" />
-      <div className="pointer-events-none absolute -bottom-8 -left-8 h-40 w-40 rounded-full bg-blue-500/10 blur-[50px]" />
-
-      {/* initial state hint */}
-      {!hasStarted && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
-          <div className="flex flex-col items-center gap-2 rounded-2xl border border-violet-500/25 bg-[var(--surface)]/90 px-6 py-4 backdrop-blur-sm shadow-xl">
-            <span className="text-2xl">▶</span>
-            <p className="text-xs font-semibold text-violet-400">Click the <b>"Client"</b> node to start</p>
-          </div>
-        </div>
-      )}
-
-      <div className="relative z-10 h-full">
-        <ReactFlow nodes={nodes} edges={edges} nodeTypes={NODE_TYPES} edgeTypes={{ packet: PacketEdge }}
-          fitView fitViewOptions={{ padding: 0.22 }} nodesDraggable={false} nodesConnectable={false}
-          elementsSelectable={false} panOnDrag zoomOnScroll zoomOnPinch
-          onNodeClick={handleNodeClick}
-          style={{ background: "transparent", width: "100%", height: "100%" }}>
-          <Background variant={BackgroundVariant.Dots} gap={20} size={0.6} color="rgba(148,163,184,.08)" />
-        </ReactFlow>
-      </div>
-
-      {/* bottom status bar */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 flex items-center justify-between gap-3
-        border-t border-[var(--border)]/30 bg-[var(--surface)]/85 px-4 py-2.5 backdrop-blur-sm text-xs">
-        <div className="flex items-center gap-2.5">
-          <button onClick={() => { setIsPlaying(p => !p); setHasStarted(true); }}
-            className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-500/15 text-violet-400 hover:bg-violet-500/25 transition text-[11px]">
-            {isPlaying ? "⏸" : "▶"}
-          </button>
-          <button onClick={() => { setFrameIndex(0); setIsPlaying(false); setHasStarted(false); }}
-            className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)]/50 text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition font-mono">Reset</button>
-          <span className="text-[color:var(--foreground)]/40">Frame {frameIndex + 1}/{total}</span>
-          <input type="range" min={0} max={Math.max(total - 1, 0)} value={frameIndex}
-            onChange={e => { setFrameIndex(+e.target.value); setIsPlaying(false); setHasStarted(+e.target.value > 0); }}
-            className="h-0.5 w-20 accent-violet-500" />
-        </div>
-        {hasStarted && cur && (
-          <div className="hidden sm:flex items-center gap-2 font-mono text-[10px] text-[color:var(--foreground)]/50">
-            <span className="status-dot" />
-            <span className="truncate max-w-[180px]">{cur.from} → {cur.to}</span>
-          </div>
-        )}
-        {!hasStarted && (
-          <span className="text-[10px] text-violet-400/70 font-medium hidden sm:block">Click Client node to start</span>
-        )}
-        <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-widest text-violet-400 bg-violet-500/10">{isPlaying ? "RUNNING" : "READY"}</span>
-      </div>
-    </div>
-  );
-}
-
-function buildSim() {
-  const uid = new ShortUniqueId({ length: 6 });
-  const graph = new GraphManager(uid.rnd(6));
-  const registry = new NodeRegistry(uid.rnd(6));
-  const ipv4 = new Ipv4Generator();
-
-  const ids = { cId: "c-1", lbId: "lb-1", s1: "s-1", s2: "s-2", s3: "s-3" };
-  const { cId, lbId, s1, s2, s3 } = ids;
-
-  const lb = new LoadBalancerModel(lbId, "LB", new RoundRobinStrategy());
-  registry.register(cId,  new ClientModel(cId, "Client"));
-  registry.register(lbId, lb);
-  registry.register(s1,   new ServerModel(s1, "S1"));
-  registry.register(s2,   new ServerModel(s2, "S2"));
-  registry.register(s3,   new ServerModel(s3, "S3"));
-
-  [cId, lbId, s1, s2, s3].forEach(id => graph.addNode(id, id));
-  graph.addEdge(cId, lbId); graph.addEdge(lbId, s1); graph.addEdge(lbId, s2); graph.addEdge(lbId, s3);
-
-  const allFrames: any[] = [];
-  for (let i = 0; i < 4; i++) {
-    const ip = ipv4.getRandomIpv4() as string;
-    const sim = new SimulationManager(graph, registry, {}, ip);
-    sim.runSimulation(cId);
-    allFrames.push(...(sim.getFrames() as any[]).map(f => ({ ...f, ip })));
-  }
-  return { frames: allFrames, ids };
+  return { nodes, edges };
 }
 
 // ─── Ticker bar ──────────────────────────────────────────────────────────────
 function Ticker() {
   const items = [
-    "⚡ FlowFrame DSL (.flow) — Declarative architecture compiler & engine",
-    "💻 Monaco Code Editor — Real-time syntax highlighting & autocompletion",
-    "🚪 API Gateway — Path-based routing to Server & LoadBalancer clusters",
-    "⚖️ Load Balancing — Round Robin & IP Hash traffic distribution",
-    "📬 RabbitMQ Queue — Asynchronous message buffering & consumer prefetch",
-    "📢 PubSub Broker — Multi-subscriber event fan-out & topic channels",
-    "🗄️ Cache-Aside — Redis hit/miss & PostgreSQL database fallback",
-    "📖 Interactive Docs (/docs) — FastAPI-style comprehensive language reference",
+    { text: "FlowFrame DSL (.flow) — Declarative architecture compiler & engine", icon: <ZapIcon className="w-3.5 h-3.5 text-violet-400 shrink-0" /> },
+    { text: "Monaco Code Editor — Real-time syntax highlighting & autocompletion", icon: <CodeIcon className="w-3.5 h-3.5 text-cyan-400 shrink-0" /> },
+    { text: "API Gateway — Path-based routing to Server & LoadBalancer clusters", icon: <NodeLinkIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> },
+    { text: "Load Balancing — Round Robin & IP Hash traffic distribution", icon: <ScaleIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" /> },
+    { text: "RabbitMQ Queue — Asynchronous message buffering & consumer prefetch", icon: <InboxIcon className="w-3.5 h-3.5 text-rose-400 shrink-0" /> },
+    { text: "PubSub Broker — Multi-subscriber event fan-out & topic channels", icon: <BroadcastIcon className="w-3.5 h-3.5 text-indigo-400 shrink-0" /> },
+    { text: "Cache-Aside — Redis hit/miss & PostgreSQL database fallback", icon: <DatabaseIcon className="w-3.5 h-3.5 text-sky-400 shrink-0" /> },
+    { text: "Interactive Docs (/docs) — FastAPI-style comprehensive language reference", icon: <DocsIcon className="w-3.5 h-3.5 text-teal-400 shrink-0" /> },
   ];
-  const all = [...items, ...items]; // duplicate for seamless loop
+  const all = [...items, ...items];
   return (
     <div className="ticker-wrap border-y border-[var(--border)]/30 bg-[var(--surface-muted)]/20 py-3 text-[11px] font-medium text-[color:var(--foreground)]/70">
       <div className="ticker-track hover:[animation-play-state:paused] cursor-pointer">
         {all.map((t, i) => (
           <span
             key={i}
-            className="mx-4 shrink-0 rounded-full border border-[var(--border)]/50 bg-[var(--surface)]/60 px-3.5 py-1 text-xs font-semibold backdrop-blur shadow-sm inline-flex items-center gap-1.5"
+            className="mx-4 shrink-0 rounded-full border border-[var(--border)]/50 bg-[var(--surface)]/60 px-3.5 py-1 text-xs font-semibold backdrop-blur shadow-sm inline-flex items-center gap-2"
           >
-            {t}
+            {t.icon} {t.text}
           </span>
         ))}
       </div>
@@ -470,25 +328,25 @@ function Ticker() {
 function WhatItDoes() {
   const points = [
     {
-      icon: "⚡",
+      icon: <ZapIcon className="w-6 h-6 text-indigo-400" />,
       color: "#6366f1",
       title: "Run real simulations",
       body: "The engine actually runs your distributed system. Requests hop from Client → Load Balancer → Server → Redis → Postgres — not just drawn arrows.",
     },
     {
-      icon: "🎞️",
+      icon: <FilmIcon className="w-6 h-6 text-violet-400" />,
       color: "#8b5cf6",
       title: "Frame-by-frame playback",
       body: "Every request hop becomes a playback frame. Pause at any moment, scrub backwards, or fast-forward. See exactly what happened and why.",
     },
     {
-      icon: "🔬",
+      icon: <SandboxIcon className="w-6 h-6 text-cyan-400" />,
       color: "#06b6d4",
       title: "Inspect node state",
       body: "Open any node's inspector. See Redis key snapshots, server load, capacity, request queues — all updating live as the simulation runs.",
     },
     {
-      icon: "📚",
+      icon: <DocsIcon className="w-6 h-6 text-emerald-400" />,
       color: "#10b981",
       title: "Learn as you simulate",
       body: "Each concept has a guided doc page with a live sim embedded. Read the theory, trigger the failure, watch the recovery — all on one screen.",
@@ -512,7 +370,7 @@ function WhatItDoes() {
           {points.map((p, i) => (
             <Reveal key={p.title} delay={i * 0.1}>
               <div className="card-glow group flex gap-5 rounded-2xl border border-[var(--border)]/40 bg-[var(--surface)]/40 p-7 backdrop-blur transition-all duration-300">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl"
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
                   style={{ background: `${p.color}18`, border: `1px solid ${p.color}30` }}>
                   {p.icon}
                 </div>
@@ -535,7 +393,7 @@ function V1Scenarios() {
   const scenes = [
     {
       id: "simple-load-balancer",
-      icon: "⚖️",
+      icon: <ScaleIcon className="w-6 h-6 text-blue-400" />,
       color: "#3b82f6",
       accent: "rgba(59,130,246,.12)",
       label: "Load Balancing",
@@ -545,7 +403,7 @@ function V1Scenarios() {
     },
     {
       id: "simple-cache",
-      icon: "🗄️",
+      icon: <DatabaseIcon className="w-6 h-6 text-amber-400" />,
       color: "#f59e0b",
       accent: "rgba(245,158,11,.12)",
       label: "Cache-Aside",
@@ -555,7 +413,7 @@ function V1Scenarios() {
     },
     {
       id: "simple-api-gateway",
-      icon: "🚪",
+      icon: <NodeLinkIcon className="w-6 h-6 text-purple-400" />,
       color: "#8b5cf6",
       accent: "rgba(139,92,246,.12)",
       label: "API Gateway",
@@ -565,7 +423,7 @@ function V1Scenarios() {
     },
     {
       id: "simple-valet-key",
-      icon: "🔑",
+      icon: <ZapIcon className="w-6 h-6 text-emerald-400" />,
       color: "#10b981",
       accent: "rgba(16,185,129,.12)",
       label: "Valet Key Pattern",
@@ -600,7 +458,7 @@ function V1Scenarios() {
                 style={{ background: `linear-gradient(135deg, ${s.accent}, transparent)` }}
               >
                 <div className="mb-4 flex items-start justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl"
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl"
                     style={{ background: `${s.color}20`, border: `1px solid ${s.color}30` }}>
                     {s.icon}
                   </div>
@@ -648,8 +506,8 @@ function LearnAndSandbox() {
           >
             <div className="pointer-events-none absolute -top-10 -right-10 h-48 w-48 rounded-full bg-violet-500/10 blur-[50px]" />
             <div className="relative z-10">
-              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/15 text-3xl border border-violet-500/20">
-                📖
+              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/15 border border-violet-500/20">
+                <DocsIcon className="w-7 h-7 text-violet-400" />
               </div>
               <h3 className="mb-2 text-2xl font-bold" style={{ color: "var(--foreground)" }}>FlowFrame DSL Docs</h3>
               <p className="mb-5 text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.6 }}>
@@ -669,8 +527,8 @@ function LearnAndSandbox() {
           >
             <div className="pointer-events-none absolute -top-10 -right-10 h-48 w-48 rounded-full bg-purple-500/10 blur-[50px]" />
             <div className="relative z-10">
-              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-500/15 text-3xl border border-purple-500/20">
-                📚
+              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-500/15 border border-purple-500/20">
+                <FilmIcon className="w-7 h-7 text-purple-400" />
               </div>
               <h3 className="mb-2 text-2xl font-bold" style={{ color: "var(--foreground)" }}>Guided Scenarios</h3>
               <p className="mb-5 text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.6 }}>
@@ -690,8 +548,8 @@ function LearnAndSandbox() {
           >
             <div className="pointer-events-none absolute -bottom-10 -right-10 h-48 w-48 rounded-full bg-emerald-500/10 blur-[50px]" />
             <div className="relative z-10">
-              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-3xl border border-emerald-500/20">
-                ⚡
+              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 border border-emerald-500/20">
+                <ZapIcon className="w-7 h-7 text-emerald-400" />
               </div>
               <h3 className="mb-2 text-2xl font-bold" style={{ color: "var(--foreground)" }}>Monaco DSL Sandbox</h3>
               <p className="mb-5 text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.6 }}>
@@ -708,251 +566,126 @@ function LearnAndSandbox() {
   );
 }
 
-// ─── V2 status section ────────────────────────────────────────────────────────
-function V1Status() {
-  const supported = [
-    "FlowFrame DSL (.flow) Interpreter Engine",
-    "Monaco Code Editor with Syntax Highlighting & Autocompletion",
-    "Client -> API Gateway -> LoadBalancer -> Server Topology",
-    "Message Queue (RabbitMQ FIFO) Producer/Consumer Simulation",
-    "PubSub Broker Event Fan-Out & Custom Server Topic Registration",
-    "Round Robin & IP Hash load balancing",
-    "Capacity-based server failover",
-    "Cache-Aside pattern (Redis)",
-    "Database fallback (Postgres)",
-    "API Gateway path routing with LoadBalancer targets",
-    "Valet Key token issuance & Cloud Storage uploads",
-    "Frame-by-frame traffic playback",
-    "Node state inspector & health overlay",
-    "Custom sandbox canvas with JSON import/export",
-  ];
-  const coming = [
-    "More LB strategies (Least Conn, Weighted RR)",
-    "Circuit Breaker & Retry patterns",
-    "Distributed Tracing (OpenTelemetry style visualization)",
-    "Kafka Partitioned Log simulations",
-  ];
-
-  return (
-    <Reveal>
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="rounded-2xl border border-[var(--border)]/40 p-8 md:p-10 backdrop-blur"
-          style={{ background: "var(--surface-muted)", opacity: 1 }}>
-          <div className="mb-8 flex items-center gap-3">
-            <div className="v1-badge rounded-full px-3 py-1 text-xs font-bold tracking-wider text-violet-300">Version 2.0.0</div>
-            <p className="text-sm font-semibold" style={{ color: "var(--foreground)", opacity: 0.7 }}>What's supported right now in v2.0</p>
-          </div>
-          <div className="grid gap-10 md:grid-cols-2">
-            <div>
-              <p className="mb-4 text-xs font-bold uppercase tracking-[.15em] text-emerald-400">✓ Supported</p>
-              <ul className="space-y-2.5">
-                {supported.map(s => (
-                  <li key={s} className="flex items-start gap-2.5 text-sm" style={{ color: "var(--foreground)", opacity: 0.75 }}>
-                    <span className="mt-0.5 h-4 w-4 shrink-0 flex items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400 text-[10px]">✓</span>
-                    {s}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="mb-4 text-xs font-bold uppercase tracking-[.15em] text-amber-400">⏳ Coming next</p>
-              <ul className="space-y-2.5">
-                {coming.map(s => (
-                  <li key={s} className="flex items-start gap-2.5 text-sm" style={{ color: "var(--foreground)", opacity: 0.55 }}>
-                    <span className="mt-0.5 h-4 w-4 shrink-0 flex items-center justify-center rounded-full bg-amber-500/10 text-amber-400 text-[10px]">○</span>
-                    {s}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-    </Reveal>
-  );
-}
-
-// ─── Final CTA ────────────────────────────────────────────────────────────────
-function CTA() {
-  const router = useRouter();
-  return (
-    <Reveal>
-      <section className="mx-auto max-w-6xl px-6 pb-24 pt-4">
-        <div className="relative overflow-hidden rounded-3xl p-10 text-center md:p-16"
-          style={{ background: "linear-gradient(135deg, #4f46e5cc, #7c3aedcc, #0891b2cc)" }}>
-          <div className="pointer-events-none absolute inset-0 dot-grid opacity-20" />
-          <div className="relative z-10">
-            <h2 className="text-3xl font-bold text-white md:text-4xl">
-              Ready to see your architecture run?
-            </h2>
-            <p className="mx-auto mt-3 max-w-lg text-base text-white/75">
-              Pick a scenario, hit play, and watch every hop of every request — live.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <button onClick={() => router.push("/scenarios")} className="btn-primary rounded-xl px-7 py-3 text-sm font-bold text-white">
-                Launch Simulator →
-              </button>
-              <button onClick={() => router.push("/learn")} className="rounded-xl border border-white/30 bg-white/10 px-7 py-3 text-sm font-bold text-white backdrop-blur hover:bg-white/20 transition">
-                Start Learning
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-    </Reveal>
-  );
-}
-
-// ─── Root ─────────────────────────────────────────────────────────────────────
-export default function Home() {
-  const router = useRouter();
-
+// ─── MAIN LANDING PAGE ────────────────────────────────────────────────────────
+export default function LandingPage() {
   const [theme, setTheme] = useState<Theme>("dark");
+  const router = useRouter();
 
   useEffect(() => {
-    const s = window.localStorage.getItem("flowframe-theme") as Theme | null;
-    if (s === "light" || s === "dark") {
-      setTheme(s);
-    } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
-      setTheme("light");
-    }
+    const saved = localStorage.getItem("flowframe-theme") as Theme | null;
+    if (saved === "light" || saved === "dark") setTheme(saved);
+    else if (window.matchMedia?.("(prefers-color-scheme: light)").matches) setTheme("light");
   }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    window.localStorage.setItem("flowframe-theme", theme);
-    // console.log(process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENTID)
+    localStorage.setItem("flowframe-theme", theme);
   }, [theme]);
 
+  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => buildDemoNodesAndEdges(), []);
+
   return (
-    <main className="relative min-h-screen overflow-x-hidden" style={{ fontFamily: "var(--font-inter, var(--font-geist-sans), system-ui, sans-serif)" }}>
-      <style dangerouslySetInnerHTML={{ __html: animationStyles }} />
+    <div className="min-h-screen bg-[var(--background)] transition-colors duration-300 overflow-x-hidden">
+      <style>{animationStyles}</style>
 
-      {/* ambient blobs */}
-      <div className="pointer-events-none fixed inset-0 -z-10 dot-grid opacity-60" />
-      <div className="pointer-events-none fixed -left-32 -top-32 -z-10 h-[500px] w-[500px] rounded-full bg-violet-600/8 blur-[100px]" />
-      <div className="pointer-events-none fixed -right-24 top-1/3 -z-10 h-[400px] w-[400px] rounded-full bg-blue-600/8 blur-[100px]" />
-      <div className="pointer-events-none fixed bottom-0 left-1/3 -z-10 h-[300px] w-[300px] rounded-full bg-cyan-600/6 blur-[80px]" />
+      {/* Header */}
+      <SiteHeader
+        theme={theme}
+        onToggleTheme={() => setTheme(t => (t === "dark" ? "light" : "dark"))}
+        showHomeLink={false}
+      />
 
-      <SiteHeader theme={theme} onToggleTheme={() => setTheme(p => p === "dark" ? "light" : "dark")} />
+      {/* Hero Section */}
+      <section className="relative mx-auto max-w-6xl px-6 pt-16 pb-24 text-center">
+        {/* Glow backdrop */}
+        <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-violet-600/15 blur-[120px]" />
 
-      {/* ── HERO ── */}
-      <section className="mx-auto max-w-6xl px-6 pb-10 pt-6">
-        <div className="grid gap-14 lg:grid-cols-[1fr_1.1fr] lg:items-start">
-          {/* left copy */}
-          <div className="slide-l" style={{ animationDelay: ".05s" }}>
-            {/* badge */}
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-violet-500/25 bg-violet-500/8 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[.18em] text-violet-400">
-              <span className="status-dot" />
-              Distributed System Simulator
+        {/* v1.0 Badge */}
+        <div className="fade-up inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-1.5 text-xs font-semibold text-violet-300 shadow-sm backdrop-blur mb-8">
+          <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[11px] uppercase tracking-wider text-violet-400 font-bold">FlowFrame v2.0.0 Live</span>
+          <span className="text-violet-400/60 font-normal">|</span>
+          <span className="text-violet-200">Monaco DSL Compiler & Interactive Engine</span>
+        </div>
+
+        {/* Hero Title */}
+        <h1 className="fade-up mx-auto max-w-4xl text-4xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl leading-[1.08]"
+          style={{ animationDelay: ".05s", color: "var(--foreground)" }}>
+          Design distributed systems.<br />
+          <span className="grad-text">Simulate every frame.</span>
+        </h1>
+
+        {/* Hero Subtitle */}
+        <p className="fade-up mx-auto mt-6 max-w-2xl text-base sm:text-lg leading-relaxed"
+          style={{ animationDelay: ".1s", color: "var(--foreground)", opacity: 0.65 }}>
+          FlowFrame is an interactive visual simulator for distributed architecture logic. Watch requests route through API Gateways, load balancers, server pools, Redis caches, and message queues in real time.
+        </p>
+
+        {/* CTAs */}
+        <div className="fade-up mt-10 flex flex-wrap items-center justify-center gap-4" style={{ animationDelay: ".15s" }}>
+          <button
+            onClick={() => router.push("/workspace")}
+            className="btn-primary flex items-center gap-2 rounded-2xl px-8 py-4 text-sm font-bold text-white shadow-xl cursor-pointer"
+          >
+            <ZapIcon className="w-4 h-4 text-white" /> Open Sandbox Studio
+            <span className="text-xs opacity-75 font-mono">(/workspace)</span>
+          </button>
+          <button
+            onClick={() => router.push("/docs")}
+            className="btn-outline flex items-center gap-2 rounded-2xl px-7 py-4 text-sm font-bold cursor-pointer"
+            style={{ color: "var(--foreground)", background: "var(--surface)" }}
+          >
+            <DocsIcon className="w-4 h-4 text-violet-400" /> Read DSL Language Specs
+          </button>
+        </div>
+
+        {/* Hero Interactive Diagram Preview */}
+        <div className="fade-up mt-14 rounded-3xl border border-[var(--border)] bg-[var(--surface)]/70 p-3 shadow-2xl backdrop-blur" style={{ animationDelay: ".2s" }}>
+          <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)]/40 text-xs font-mono text-[color:var(--foreground)]/50">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-rose-500/80" />
+              <span className="w-3 h-3 rounded-full bg-amber-500/80" />
+              <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
+              <span className="ml-2 font-bold text-[color:var(--foreground)]">demo-cluster.flow</span>
             </div>
-
-            <h1 className="text-5xl font-extrabold leading-[1.06] tracking-[-0.02em] md:text-6xl lg:text-[4rem]">
-              <span className="grad-text">FlowFrame</span>
-            </h1>
-
-            <p className="mt-3 text-xl font-medium" style={{ color: "var(--foreground)", opacity: 0.85 }}>
-              See your backend architecture run.
-            </p>
-            <p className="mt-3 max-w-lg text-base leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.58 }}>
-              FlowFrame simulates distributed system patterns — load balancing, caching, API gateways — and plays them back frame by frame. Not just diagrams. Actual running logic you can pause, inspect, and learn from.
-            </p>
-
-            {/* who it's for */}
-            <div className="mt-5 flex flex-wrap gap-2">
-              {["Engineers", "System Design learners", "Tech interviewees", "Educators"].map(r => (
-                <span key={r} className="rounded-full border border-[var(--border)]/50 bg-[var(--surface)]/60 px-3 py-1 text-xs font-semibold"
-                  style={{ color: "var(--foreground)", opacity: 0.7 }}>
-                  {r}
-                </span>
-              ))}
+            <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+              <span className="status-dot" /> Round-Robin Load Balancing
             </div>
-
-            {/* CTAs */}
-            <div className="mt-8 flex flex-wrap gap-3">
-              <button onClick={() => router.push("/docs")}
-                className="btn-primary rounded-2xl px-7 py-3.5 text-sm font-bold text-white shadow-lg">
-                📖 Read DSL Docs (/docs) →
-              </button>
-              <button onClick={() => router.push("/workspace")}
-                className="btn-outline rounded-2xl px-7 py-3.5 text-sm font-bold"
-                style={{ color: "var(--foreground)", background: "var(--surface)" }}>
-                ⚡ Open Workspace
-              </button>
-              <button onClick={() => router.push("/scenarios")}
-                className="btn-outline rounded-2xl px-7 py-3.5 text-sm font-bold"
-                style={{ color: "var(--foreground)", background: "var(--surface)" }}>
-                Explore Scenarios
-              </button>
-            </div>
-
-            {/* v2 callout */}
-            <p className="mt-6 text-[11px] font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>
-              v2.0.0 — FlowFrame DSL Engine + Monaco Code Editor · API Gateway, Load Balancers, RabbitMQ & PubSub Brokers · 8 Component Nodes
-            </p>
           </div>
-
-          {/* right: live sim */}
-          <div className="slide-r" style={{ animationDelay: ".15s" }}>
-            <div className="mb-2 flex items-center justify-between px-1">
-              <span className="text-xs font-semibold" style={{ color: "var(--foreground)", opacity: 0.45 }}>Live simulation preview</span>
-              <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                <span className="status-dot" /> Running
-              </span>
-            </div>
-            <HeroSim />
-            <p className="mt-2 text-center text-[10px]" style={{ color: "var(--foreground)", opacity: 0.3 }}>
-              Round Robin · 3 servers · Real engine output
-            </p>
+          <div className="h-[360px] w-full rounded-2xl overflow-hidden dot-grid">
+            <ReactFlow
+              nodes={initialNodes}
+              edges={initialEdges}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              fitView
+              fitViewOptions={{ padding: 0.2 }}
+              preventScrolling
+              nodesDraggable={false}
+              nodesConnectable={false}
+              zoomOnScroll={false}
+              panOnDrag={false}
+            >
+              <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
+            </ReactFlow>
           </div>
         </div>
       </section>
 
-      {/* Featured On Section */}
-      {/* Social Proof */}
-      <div className="mt-1 mb-8 flex flex-wrap items-center justify-center gap-4">
-        <span className="text-sm text-gray-500 dark:text-gray-400">
-          Trusted by developers on
-        </span>
-
-        <a
-          href="https://peerlist.io/ndk18/project/flowframe--distributed-systems-simulator"
-          target="_blank"
-          rel="noreferrer"
-          className="transition-transform hover:scale-105"
-        >
-          <img
-            src={`https://peerlist.io/api/v1/projects/embed/PRJH9OBK9MBOPLMJ8FD6ABOL8LRR6R?showUpvote=false&theme=${theme}`}
-            alt="Peerlist"
-            className="h-12 md:h-14 w-auto"
-          />
-        </a>
-
-        <a
-          href="https://www.producthunt.com/products/flowframe/reviews/new"
-          target="_blank"
-          rel="noreferrer"
-          className="transition-transform hover:scale-105"
-        >
-          <img
-            src={`https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=1247866&theme=${theme}`}
-            alt="Product Hunt"
-            className="h-10 md:h-12 w-auto"
-          />
-        </a>
-      </div>
-              
-      {/* ── TICKER ── */}
+      {/* Ticker bar */}
       <Ticker />
 
-      {/* ── SECTIONS ── */}
+      {/* What It Does */}
       <WhatItDoes />
-      <V1Scenarios />
-      <LearnAndSandbox />
-      <V1Status />
-      <CTA />
 
+      {/* Scenarios */}
+      <V1Scenarios />
+
+      {/* Learn & Sandbox */}
+      <LearnAndSandbox />
+
+      {/* Footer */}
       <SiteFooter />
-    </main>
+    </div>
   );
 }

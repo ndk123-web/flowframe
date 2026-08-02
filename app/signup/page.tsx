@@ -60,7 +60,7 @@ export default function SignUpPage() {
       setAuth(res.access_token, res.user);
       showToast("Account created successfully!", "success");
       // Redirect ONLY after backend sync succeeds!
-      router.push("/workspace");
+      router.push("/dashboard");
     } catch (err: any) {
       console.error("Backend DB sync error:", err);
       showToast("Backend server unreachable. Unable to sync profile with database.", "error");

@@ -1886,6 +1886,8 @@ function WorkspaceInner() {
   const [hideResponse, setHideResponse] = useState(false);
   const [parallelResponse, setParallelResponse] = useState(false);
   const [debugEnabled, setDebugEnabled] = useState(true);
+  const [bgPattern, setBgPattern] = useState<"dots" | "lines" | "cross" | "none">("dots");
+  const [bgOpacity, setBgOpacity] = useState<number>(0.18);
 
   // Raw generated simulation frames list
   const [rawSimulationFrames, setRawSimulationFrames] = useState<any[]>([]);
@@ -4564,12 +4566,24 @@ connect s1 -> r1
               maxZoom={2.5}
               style={{ width: "100%", height: "100%" }}
             >
-              <Background
-                variant={BackgroundVariant.Dots}
-                gap={20}
-                size={0.8}
-                color="rgba(148,163,184,0.18)"
-              />
+              {bgPattern !== "none" && (
+                <Background
+                  variant={
+                    bgPattern === "lines"
+                      ? BackgroundVariant.Lines
+                      : bgPattern === "cross"
+                      ? BackgroundVariant.Cross
+                      : BackgroundVariant.Dots
+                  }
+                  gap={20}
+                  size={0.8}
+                  color={
+                    theme === "dark"
+                      ? `rgba(148, 163, 184, ${bgOpacity})`
+                      : `rgba(15, 23, 42, ${bgOpacity})`
+                  }
+                />
+              )}
               {/* <MiniMap
                 nodeStrokeWidth={3}
                 zoomable
@@ -4775,6 +4789,57 @@ connect s1 -> r1
                   <span>⚡ Health & Load</span>
                 </button>
               ))}
+
+            {/* Canvas Background Pattern & Opacity Switcher Overlay */}
+            <div className="absolute top-4 right-4 z-20 flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-md p-1 shadow-lg pointer-events-auto">
+              {/* Pattern selector */}
+              <div className="flex items-center gap-0.5">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/40 px-1.5 select-none">
+                  Grid
+                </span>
+                {(["dots", "lines", "cross", "none"] as const).map((pattern) => (
+                  <button
+                    key={pattern}
+                    type="button"
+                    onClick={() => setBgPattern(pattern)}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-bold font-mono uppercase transition cursor-pointer ${
+                      bgPattern === pattern
+                        ? "bg-violet-500/20 text-violet-400 border border-violet-500/30 shadow-sm"
+                        : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                    }`}
+                    title={`Set grid pattern to ${pattern}`}
+                  >
+                    {pattern}
+                  </button>
+                ))}
+              </div>
+
+              {bgPattern !== "none" && (
+                <>
+                  <div className="h-4 w-px bg-[var(--border)] my-auto" />
+
+                  {/* Opacity slider */}
+                  <div className="flex items-center gap-1.5 px-1">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/40 select-none">
+                      Opacity
+                    </span>
+                    <input
+                      type="range"
+                      min="0.05"
+                      max="0.70"
+                      step="0.05"
+                      value={bgOpacity}
+                      onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
+                      className="w-16 h-1 rounded-lg bg-[var(--surface-muted)] appearance-none cursor-pointer accent-violet-500"
+                      title={`Adjust grid opacity: ${Math.round(bgOpacity * 100)}%`}
+                    />
+                    <span className="text-[9px] font-mono font-semibold text-violet-400 min-w-[24px]">
+                      {Math.round(bgOpacity * 100)}%
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Floating Warning Message */}
