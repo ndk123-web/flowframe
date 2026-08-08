@@ -277,17 +277,15 @@ const uid = new ShortUniqueId({ length: 6 });
 
 function buildDemoNodesAndEdges() {
   const nodes: Node[] = [
-    { id: "c1", type: "landingClient", position: { x: 40,  y: 40  }, data: { label: "Client 1", sub: "Web App" } },
-    { id: "c2", type: "landingClient", position: { x: 40,  y: 260 }, data: { label: "Client 2", sub: "Mobile"  } },
-    { id: "lb", type: "landingLB",     position: { x: 260, y: 150 }, data: { label: "Load Balancer", sub: "Round Robin" } },
-    { id: "s1", type: "landingServer", position: { x: 500, y: 20  }, data: { label: "Server A", sub: "Node.js", active: true  } },
-    { id: "s2", type: "landingServer", position: { x: 500, y: 150 }, data: { label: "Server B", sub: "Go App",  active: false } },
-    { id: "s3", type: "landingServer", position: { x: 500, y: 280 }, data: { label: "Server C", sub: "Rust Server", active: false } },
+    { id: "c1", type: "landingClient", position: { x: 30,  y: 150 }, data: { label: "Client", sub: "3 Requests Sent" } },
+    { id: "lb", type: "landingLB",     position: { x: 250, y: 150 }, data: { label: "Load Balancer", sub: "Round Robin (1 Req / Server)" } },
+    { id: "s1", type: "landingServer", position: { x: 520, y: 20  }, data: { label: "Server A", sub: "Req #1 Handled", active: true  } },
+    { id: "s2", type: "landingServer", position: { x: 520, y: 150 }, data: { label: "Server B", sub: "Req #2 Handled", active: true } },
+    { id: "s3", type: "landingServer", position: { x: 520, y: 280 }, data: { label: "Server C", sub: "Req #3 Handled", active: true } },
   ];
 
   const edges: Edge[] = [
     { id: "e-c1-lb", source: "c1", target: "lb", type: "animated", style: { stroke: "#6366f1", strokeWidth: 2 } },
-    { id: "e-c2-lb", source: "c2", target: "lb", type: "animated", style: { stroke: "#6366f1", strokeWidth: 2 } },
     { id: "e-lb-s1", source: "lb", target: "s1", type: "animated", style: { stroke: "#8b5cf6", strokeWidth: 2 } },
     { id: "e-lb-s2", source: "lb", target: "s2", type: "animated", style: { stroke: "#8b5cf6", strokeWidth: 2 } },
     { id: "e-lb-s3", source: "lb", target: "s3", type: "animated", style: { stroke: "#8b5cf6", strokeWidth: 2 } },
