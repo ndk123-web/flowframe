@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import UserDropdown from "@/components/UserDropdown";
 
@@ -27,6 +28,8 @@ export default function SiteHeader({
 }: SiteHeaderProps) {
   const [scrolled, setScrolled] = useState(false);
   const { isAuthenticated } = useAuthStore();
+  const pathname = usePathname();
+  const isDashboard = pathname?.startsWith("/dashboard");
 
   useEffect(() => {
     if (alwaysGlass) {
@@ -112,14 +115,16 @@ export default function SiteHeader({
           )}
 
           {isAuthenticated ? (
-            <div className="flex items-center gap-2">
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 px-2.5 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition hover:scale-105 whitespace-nowrap shrink-0"
-              >
-                <span>Dashboard</span>
-                <span>→</span>
-              </Link>
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {!isDashboard && (
+                <Link
+                  href="/dashboard"
+                  className="hidden sm:inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 px-2.5 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition hover:scale-105 whitespace-nowrap shrink-0"
+                >
+                  <span>Dashboard</span>
+                  <span>→</span>
+                </Link>
+              )}
               <UserDropdown theme={theme} onToggleTheme={onToggleTheme} />
             </div>
           ) : (
