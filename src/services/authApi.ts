@@ -24,7 +24,7 @@ export async function signInApi(credentials: AuthCredentials): Promise<AuthRespo
     type_of_signin: credentials.type_of_signin || "email",
   };
 
-  const response = await fetch(`${API_BASE_URL}/signin`, {
+  const response = await fetch(`${API_BASE_URL}/api/auth/signin`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -54,7 +54,7 @@ export async function signUpApi(credentials: AuthCredentials): Promise<AuthRespo
     type_of_signin: credentials.type_of_signin || "email",
   };
 
-  const response = await fetch(`${API_BASE_URL}/signup`, {
+  const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -78,7 +78,7 @@ export async function signUpApi(credentials: AuthCredentials): Promise<AuthRespo
 }
 
 export async function syncFirebaseUserApi(payload: FirebaseSyncPayload): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE_URL}/sync`, {
+  const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
