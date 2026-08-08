@@ -107,7 +107,7 @@ export default function PostmanDashboardPage() {
             description: dto.description || "",
             env: dto.env as any,
             diagrams_count: dto.diagrams_count,
-            updated_at: formatDate(dto.updated_at),
+            updated_at: dto.updated_at,
             starred: false,
             color: dto.color || "from-violet-500/20 to-indigo-500/20",
             iconType: (dto.icon_type as any) || "zap",
@@ -584,7 +584,7 @@ export default function PostmanDashboardPage() {
                         <DiagramIcon className="w-3.5 h-3.5 text-violet-400" /> {ws.diagrams_count} diagram{ws.diagrams_count !== 1 ? "s" : ""}
                       </span>
                       <span className="text-[10px] font-mono text-[color:var(--foreground)]/35">
-                        {ws.updated_at}
+                        {formatDate(ws.updated_at)}
                       </span>
                     </div>
                   </Link>
@@ -650,7 +650,7 @@ export default function PostmanDashboardPage() {
                         <DiagramIcon className="w-3.5 h-3.5 text-violet-400" /> {ws.diagrams_count}
                       </span>
                       <span className="text-[10px] font-mono text-[color:var(--foreground)]/35 hidden sm:inline">
-                        {ws.updated_at}
+                        {formatDate(ws.updated_at)}
                       </span>
                       <button
                         type="button"

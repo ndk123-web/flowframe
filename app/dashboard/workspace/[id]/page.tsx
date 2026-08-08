@@ -115,7 +115,7 @@ export default function WorkspaceDetailPage() {
             nodes_count: d.nodes_count,
             edges_count: d.edges_count,
             version: d.version,
-            updated_at: formatDate(d.updated_at),
+            updated_at: d.updated_at,
           }));
           setDiagrams(items);
         })
@@ -555,7 +555,7 @@ export default function WorkspaceDetailPage() {
                           <ZapIcon className="w-3 h-3 text-amber-400" /> {d.edges_count}
                         </span>
                       </div>
-                      <span className="text-[10px] font-mono text-[color:var(--foreground)]/30">{d.updated_at}</span>
+                      <span className="text-[10px] font-mono text-[color:var(--foreground)]/30">{formatDate(d.updated_at)}</span>
                     </div>
 
                     {/* Hover CTA */}
@@ -617,7 +617,7 @@ export default function WorkspaceDetailPage() {
                         <NodeLinkIcon className="w-3.5 h-3.5 text-cyan-400" /> {d.nodes_count} nodes
                       </span>
                       <span className="text-[10px] font-mono text-[color:var(--foreground)]/35 hidden sm:inline">
-                        {d.updated_at}
+                        {formatDate(d.updated_at)}
                       </span>
                       <button
                         type="button"
