@@ -1957,6 +1957,7 @@ function WorkspaceInner({
   const [debugEnabled, setDebugEnabled] = useState(true);
   const [bgPattern, setBgPattern] = useState<"dots" | "lines" | "cross" | "none">("dots");
   const [bgOpacity, setBgOpacity] = useState<number>(0.18);
+  const [showBgControls, setShowBgControls] = useState(true);
 
   // Raw generated simulation frames list
   const [rawSimulationFrames, setRawSimulationFrames] = useState<any[]>([]);
@@ -4860,52 +4861,63 @@ connect s1 -> r1
               ))}
 
             {/* Canvas Background Pattern & Opacity Switcher Overlay */}
-            <div className="absolute top-4 right-4 z-20 flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-md p-1 shadow-lg pointer-events-auto">
-              {/* Pattern selector */}
-              <div className="flex items-center gap-0.5">
-                <span className="text-[9px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/40 px-1.5 select-none">
-                  Grid
-                </span>
-                {(["dots", "lines", "cross", "none"] as const).map((pattern) => (
-                  <button
-                    key={pattern}
-                    type="button"
-                    onClick={() => setBgPattern(pattern)}
-                    className={`px-2 py-1 rounded-lg text-[10px] font-bold font-mono uppercase transition cursor-pointer ${
-                      bgPattern === pattern
-                        ? "bg-violet-500/20 text-violet-400 border border-violet-500/30 shadow-sm"
-                        : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
-                    }`}
-                    title={`Set grid pattern to ${pattern}`}
-                  >
-                    {pattern}
-                  </button>
-                ))}
-              </div>
+            <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex flex-wrap sm:flex-nowrap items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-md p-1 shadow-lg pointer-events-auto max-w-[92vw] sm:max-w-none">
+              {/* Toggle Hide/Show Controls */}
+              <button
+                type="button"
+                onClick={() => setShowBgControls((prev) => !prev)}
+                className="px-2 py-1 rounded-lg text-xs font-semibold text-[color:var(--foreground)]/60 hover:text-violet-400 hover:bg-[var(--surface-muted)] transition cursor-pointer flex items-center gap-1"
+                title={showBgControls ? "Hide Grid Pattern settings" : "Show Grid Pattern settings"}
+              >
+                <span>🎨</span>
+                <span className="hidden sm:inline text-[10px] font-mono uppercase">{showBgControls ? "Grid" : "Grid Controls"}</span>
+              </button>
 
-              {bgPattern !== "none" && (
+              {showBgControls && (
                 <>
-                  <div className="h-4 w-px bg-[var(--border)] my-auto" />
+                  <div className="h-4 w-px bg-[var(--border)] my-auto hidden sm:block" />
 
-                  {/* Opacity slider */}
-                  <div className="flex items-center gap-1.5 px-1">
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/40 select-none">
-                      Opacity
-                    </span>
-                    <input
-                      type="range"
-                      min="0.05"
-                      max="0.70"
-                      step="0.05"
-                      value={bgOpacity}
-                      onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
-                      className="w-16 h-1 rounded-lg bg-[var(--surface-muted)] appearance-none cursor-pointer accent-violet-500"
-                      title={`Adjust grid opacity: ${Math.round(bgOpacity * 100)}%`}
-                    />
-                    <span className="text-[9px] font-mono font-semibold text-violet-400 min-w-[24px]">
-                      {Math.round(bgOpacity * 100)}%
-                    </span>
+                  {/* Pattern selector */}
+                  <div className="flex items-center gap-0.5 overflow-x-auto">
+                    {(["dots", "lines", "cross", "none"] as const).map((pattern) => (
+                      <button
+                        key={pattern}
+                        type="button"
+                        onClick={() => setBgPattern(pattern)}
+                        className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-[9px] sm:text-[10px] font-bold font-mono uppercase transition cursor-pointer ${
+                          bgPattern === pattern
+                            ? "bg-violet-500/20 text-violet-400 border border-violet-500/30 shadow-sm"
+                            : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                        }`}
+                        title={`Set grid pattern to ${pattern}`}
+                      >
+                        {pattern}
+                      </button>
+                    ))}
                   </div>
+
+                  {bgPattern !== "none" && (
+                    <>
+                      <div className="h-4 w-px bg-[var(--border)] my-auto hidden sm:block" />
+
+                      {/* Opacity slider */}
+                      <div className="flex items-center gap-1 px-1">
+                        <input
+                          type="range"
+                          min="0.05"
+                          max="0.70"
+                          step="0.05"
+                          value={bgOpacity}
+                          onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
+                          className="w-12 sm:w-16 h-1 rounded-lg bg-[var(--surface-muted)] appearance-none cursor-pointer accent-violet-500"
+                          title={`Adjust grid opacity: ${Math.round(bgOpacity * 100)}%`}
+                        />
+                        <span className="text-[9px] font-mono font-semibold text-violet-400 min-w-[20px]">
+                          {Math.round(bgOpacity * 100)}%
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
 
@@ -4916,11 +4928,11 @@ connect s1 -> r1
                     type="button"
                     onClick={handleSaveDiagramToBackend}
                     disabled={isSaving}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/20 transition cursor-pointer disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/20 transition cursor-pointer disabled:opacity-50"
                     title="Save diagram to MongoDB (Ctrl+S / Cmd+S)"
                   >
                     <span>💾</span>
-                    <span>{isSaving ? "Saving..." : "Save Diagram"}</span>
+                    <span>{isSaving ? "Saving..." : "Save"}</span>
                   </button>
                 </>
               )}

@@ -388,6 +388,13 @@ export default function PostmanDashboardPage() {
                 Manage your system architecture projects and distributed diagrams.
               </p>
             </div>
+            <button
+              type="button"
+              onClick={() => setCreateModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-violet-500/20 transition cursor-pointer shrink-0 w-full sm:w-auto"
+            >
+              <PlusIcon className="w-4 h-4" /> New Workspace
+            </button>
           </div>
 
           {/* Search bar on mobile */}
@@ -404,7 +411,7 @@ export default function PostmanDashboardPage() {
           {/* Filter Bar & View Toggle */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             {/* Filter Tabs */}
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--surface-muted)]/80 border border-[var(--border)] self-start">
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--surface-muted)]/80 border border-[var(--border)] overflow-x-auto max-w-full">
               {[
                 { id: "all", label: "All Workspaces" },
                 { id: "starred", label: "Starred" },
@@ -415,7 +422,7 @@ export default function PostmanDashboardPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as FilterTab)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                     activeTab === tab.id
                       ? "bg-[var(--surface)] text-[color:var(--foreground)] shadow-sm border border-[var(--border)]"
                       : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]"
@@ -428,7 +435,7 @@ export default function PostmanDashboardPage() {
             </div>
 
             {/* View Mode Toggle */}
-            <div className="flex items-center gap-2 self-end sm:self-auto">
+            <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
               <span className="text-xs text-[color:var(--foreground)]/40 font-mono">
                 {filteredWorkspaces.length} result{filteredWorkspaces.length !== 1 ? "s" : ""}
               </span>
@@ -457,8 +464,27 @@ export default function PostmanDashboardPage() {
             </div>
           </div>
 
-          {/* Workspaces Grid / List View */}
-          {filteredWorkspaces.length > 0 ? (
+          {/* Workspaces Grid / List View / Skeleton Loader */}
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/40 p-5 space-y-4 animate-pulse">
+                  <div className="flex items-center justify-between">
+                    <div className="w-9 h-9 rounded-xl bg-[var(--surface-muted)]" />
+                    <div className="w-12 h-4 rounded bg-[var(--surface-muted)]" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="w-3/4 h-5 rounded bg-[var(--surface-muted)]" />
+                    <div className="w-full h-3 rounded bg-[var(--surface-muted)]" />
+                  </div>
+                  <div className="pt-3 border-t border-[var(--border)]/50 flex justify-between">
+                    <div className="w-20 h-3 rounded bg-[var(--surface-muted)]" />
+                    <div className="w-16 h-3 rounded bg-[var(--surface-muted)]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredWorkspaces.length > 0 ? (
             viewMode === "grid" ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredWorkspaces.map((ws) => (

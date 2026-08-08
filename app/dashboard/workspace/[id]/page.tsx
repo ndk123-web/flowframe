@@ -423,8 +423,27 @@ export default function WorkspaceDetailPage() {
             </div>
           </div>
 
-          {/* Diagram Cards (Grid vs List View) */}
-          {filteredDiagrams.length > 0 ? (
+          {/* Diagram Cards (Grid vs List View / Skeleton) */}
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/40 p-5 space-y-4 animate-pulse">
+                  <div className="flex items-center justify-between">
+                    <div className="w-9 h-9 rounded-xl bg-[var(--surface-muted)]" />
+                    <div className="w-12 h-4 rounded bg-[var(--surface-muted)]" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="w-3/4 h-5 rounded bg-[var(--surface-muted)]" />
+                    <div className="w-full h-3 rounded bg-[var(--surface-muted)]" />
+                  </div>
+                  <div className="pt-3 border-t border-[var(--border)]/50 flex justify-between">
+                    <div className="w-16 h-3 rounded bg-[var(--surface-muted)]" />
+                    <div className="w-16 h-3 rounded bg-[var(--surface-muted)]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredDiagrams.length > 0 ? (
             viewMode === "grid" ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredDiagrams.map((d) => (
