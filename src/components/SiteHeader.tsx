@@ -76,7 +76,7 @@ export default function SiteHeader({
 
           <div className="leading-tight min-w-0">
             <p className="text-sm sm:text-base font-semibold tracking-tight text-[color:var(--foreground)] truncate">FlowFrame</p>
-            <p className="hidden sm:block text-[10px] uppercase tracking-[0.2em] text-[color:var(--foreground)]/55 truncate max-w-[200px]">
+            <p className="hidden sm:block text-[10px] uppercase tracking-[0.18em] text-[color:var(--foreground)]/55 whitespace-nowrap">
               {badgeText}
             </p>
           </div>

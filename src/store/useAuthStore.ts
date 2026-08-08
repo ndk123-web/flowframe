@@ -21,6 +21,8 @@ interface AuthState {
   token: string | null;
   user: AuthUser | null;
   isAuthenticated: boolean;
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
   setAuth: (token: string, user: AuthUser) => void;
   logout: () => void;
 }
@@ -31,6 +33,9 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       user: null,
       isAuthenticated: false,
+      _hasHydrated: false,
+
+      setHasHydrated: (state: boolean) => set({ _hasHydrated: state }),
 
       setAuth: (token: string, user: AuthUser) =>
         set({
@@ -49,6 +54,9 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "flowframe-auth",
       storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

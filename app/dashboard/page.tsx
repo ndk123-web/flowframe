@@ -23,6 +23,10 @@ import {
   CreditCardIcon,
 } from "@/components/DashboardIcons";
 
+import { getUserWorkspaces, createWorkspace, WorkspaceDTO } from "@/services/workspaceApi";
+import { getRecentDiagrams, RecentDiagramDTO } from "@/services/diagramApi";
+import { formatDate } from "@/utils/formatDate";
+
 type Theme = "light" | "dark";
 type ViewMode = "grid" | "list";
 type FilterTab = "all" | "development" | "production" | "starred";
@@ -39,54 +43,13 @@ interface WorkspaceItem {
   iconType: "cart" | "chat" | "card" | "zap";
 }
 
-const INITIAL_WORKSPACES: WorkspaceItem[] = [
-  {
-    id: "ws-1",
-    name: "E-Commerce Platform",
-    description: "Scalable microservices architecture for online marketplace with Redis cache & Postgres DB",
-    env: "PROD",
-    diagrams_count: 5,
-    updated_at: "2 hours ago",
-    starred: true,
-    color: "from-violet-500/20 to-indigo-500/20",
-    iconType: "cart",
-  },
-  {
-    id: "ws-2",
-    name: "Chat Application",
-    description: "Real-time messaging with WebSocket gateway & Redis Pub/Sub event bus",
-    env: "DEV",
-    diagrams_count: 3,
-    updated_at: "Yesterday",
-    starred: false,
-    color: "from-cyan-500/20 to-blue-500/20",
-    iconType: "chat",
-  },
-  {
-    id: "ws-3",
-    name: "Payment Gateway",
-    description: "Secure payment processing pipeline with Stripe webhook idempotency & audit logger",
-    env: "STAGING",
-    diagrams_count: 2,
-    updated_at: "3 days ago",
-    starred: true,
-    color: "from-emerald-500/20 to-teal-500/20",
-    iconType: "card",
-  },
-];
-
-const RECENT_DIAGRAMS = [
-  { id: "d-1", name: "Auth Flow", workspace_name: "E-Commerce Platform", workspace_id: "ws-1", nodes_count: 12, env: "PROD", updated_at: "2 hours ago" },
-  { id: "d-2", name: "Message Queue Pipeline", workspace_name: "Chat Application", workspace_id: "ws-2", nodes_count: 8, env: "DEV", updated_at: "5 hours ago" },
-  { id: "d-3", name: "CDN & Storage", workspace_name: "E-Commerce Platform", workspace_id: "ws-1", nodes_count: 6, env: "PROD", updated_at: "Yesterday" },
-  { id: "d-4", name: "Payment Webhook", workspace_name: "Payment Gateway", workspace_id: "ws-3", nodes_count: 9, env: "STAGING", updated_at: "2 days ago" },
-];
-
 export default function PostmanDashboardPage() {
   const [theme, setTheme] = useState<Theme>("dark");
-  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>(INITIAL_WORKSPACES);
+  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
+  const [recentDiagrams, setRecentDiagrams] = useState<RecentDiagramDTO[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newWsName, setNewWsName] = useState("");
@@ -95,7 +58,7 @@ export default function PostmanDashboardPage() {
   const [activeSidebarNav, setActiveSidebarNav] = useState("workspaces");
 
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, token, isAuthenticated, _hasHydrated } = useAuthStore();
   const showToast = useToastStore((s) => s.showToast);
 
   useEffect(() => {
@@ -109,22 +72,47 @@ export default function PostmanDashboardPage() {
     localStorage.setItem("flowframe-theme", theme);
   }, [theme]);
 
-  // Auth Guard
+  // Auth Guard with Zustand Hydration check
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (_hasHydrated && !isAuthenticated) {
       router.replace("/signin");
     }
-  }, [isAuthenticated, router]);
+  }, [_hasHydrated, isAuthenticated, router]);
 
-  if (!isAuthenticated || !user) return null;
+  // Fetch workspaces & recent diagrams from Rust API
+  useEffect(() => {
+    if (token) {
+      setLoading(true);
+      Promise.all([
+        getUserWorkspaces(token),
+        getRecentDiagrams(token).catch(() => []),
+      ])
+        .then(([wsData, recentData]) => {
+          const items: WorkspaceItem[] = wsData.map((dto) => ({
+            id: dto.id,
+            name: dto.name,
+            description: dto.description || "",
+            env: dto.env as any,
+            diagrams_count: dto.diagrams_count,
+            updated_at: formatDate(dto.updated_at),
+            starred: false,
+            color: dto.color || "from-violet-500/20 to-indigo-500/20",
+            iconType: (dto.icon_type as any) || "zap",
+          }));
+          setWorkspaces(items);
+          setRecentDiagrams(recentData);
+        })
+        .catch((err) => {
+          console.error("Failed to load dashboard data:", err);
+          showToast("Failed to load dashboard data from server", "error");
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [token, showToast]);
 
-  const toggleStar = (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setWorkspaces((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, starred: !w.starred } : w))
-    );
-  };
+  const totalDiagramsCount = useMemo(() => {
+    return workspaces.reduce((acc, w) => acc + (w.diagrams_count || 0), 0);
+  }, [workspaces]);
 
   const filteredWorkspaces = useMemo(() => {
     return workspaces.filter((w) => {
@@ -139,29 +127,60 @@ export default function PostmanDashboardPage() {
     });
   }, [workspaces, searchQuery, activeTab]);
 
-  const handleCreateWorkspace = () => {
+  if (!_hasHydrated || !isAuthenticated || !user) return null;
+
+  const toggleStar = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setWorkspaces((prev) =>
+      prev.map((w) => (w.id === id ? { ...w, starred: !w.starred } : w))
+    );
+  };
+
+  const handleCreateWorkspace = async () => {
     if (!newWsName.trim()) {
       showToast("Please enter a workspace name.", "error");
       return;
     }
 
-    const newWs: WorkspaceItem = {
-      id: `ws-${Date.now()}`,
-      name: newWsName.trim(),
-      description: newWsDesc.trim() || "Custom system architecture workspace",
-      env: newWsEnv,
-      diagrams_count: 0,
-      updated_at: "Just now",
-      starred: false,
-      color: "from-violet-500/20 to-indigo-500/20",
-      iconType: "zap",
-    };
+    if (workspaces.length >= 5) {
+      showToast("Personal Plan limit reached (5/5 Workspaces). Upgrade your plan for more.", "error");
+      return;
+    }
 
-    setWorkspaces([newWs, ...workspaces]);
-    showToast(`Workspace "${newWsName}" created!`, "success");
-    setCreateModalOpen(false);
-    setNewWsName("");
-    setNewWsDesc("");
+    if (!token) return;
+
+    try {
+      const created = await createWorkspace(
+        {
+          name: newWsName.trim(),
+          description: newWsDesc.trim() || undefined,
+          env: newWsEnv,
+          icon_type: "zap",
+        },
+        token
+      );
+
+      const newItem: WorkspaceItem = {
+        id: created.id,
+        name: created.name,
+        description: created.description || "",
+        env: created.env as any,
+        diagrams_count: 0,
+        updated_at: "Just now",
+        starred: false,
+        color: "from-violet-500/20 to-indigo-500/20",
+        iconType: "zap",
+      };
+
+      setWorkspaces([newItem, ...workspaces]);
+      showToast(`Workspace "${created.name}" created!`, "success");
+      setCreateModalOpen(false);
+      setNewWsName("");
+      setNewWsDesc("");
+    } catch (err: any) {
+      showToast(err.message || "Failed to create workspace", "error");
+    }
   };
 
   const renderIcon = (type: WorkspaceItem["iconType"]) => {
@@ -256,9 +275,9 @@ export default function PostmanDashboardPage() {
             {/* Quick Stats Banner */}
             <div className="p-3 rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-indigo-500/5 space-y-1">
               <p className="text-[10px] uppercase font-bold tracking-wider text-violet-400">Personal Plan</p>
-              <p className="text-xs font-semibold">{workspaces.length} / 10 Workspaces</p>
+              <p className="text-xs font-semibold">{workspaces.length} / 5 Workspaces</p>
               <div className="w-full bg-[var(--surface-muted)] h-1.5 rounded-full overflow-hidden mt-1">
-                <div className="bg-violet-500 h-full rounded-full" style={{ width: `${(workspaces.length / 10) * 100}%` }} />
+                <div className="bg-violet-500 h-full rounded-full" style={{ width: `${Math.min(100, (workspaces.length / 5) * 100)}%` }} />
               </div>
             </div>
 
@@ -266,9 +285,8 @@ export default function PostmanDashboardPage() {
             <nav className="space-y-1">
               {[
                 { id: "workspaces", label: "Workspaces", icon: <FolderIcon className="w-4 h-4 text-violet-400" />, count: workspaces.length },
-                { id: "diagrams", label: "All Diagrams", icon: <DiagramIcon className="w-4 h-4 text-cyan-400" />, count: 12 },
+                { id: "diagrams", label: "All Diagrams", icon: <DiagramIcon className="w-4 h-4 text-cyan-400" />, count: totalDiagramsCount },
                 { id: "starred", label: "Starred", icon: <StarIcon className="w-4 h-4 text-amber-400" />, count: workspaces.filter((w) => w.starred).length },
-                { id: "templates", label: "Templates", icon: <ZapIcon className="w-4 h-4 text-emerald-400" />, count: "New" },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -534,27 +552,33 @@ export default function PostmanDashboardPage() {
               <ZapIcon className="w-4 h-4 text-cyan-400" /> Recent Diagrams
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {RECENT_DIAGRAMS.map((d) => (
-                <Link
-                  key={d.id}
-                  href={`/dashboard/workspace/${d.workspace_id}/${d.id}`}
-                  className="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 hover:bg-[var(--surface)] hover:border-cyan-500/30 transition group"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold group-hover:text-cyan-400 transition-colors truncate flex items-center gap-1.5">
-                      <DiagramIcon className="w-3.5 h-3.5 text-cyan-400" /> {d.name}
-                    </span>
-                    <span className="text-[9px] font-mono text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">
-                      {d.env}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-[color:var(--foreground)]/40 truncate">
-                    {d.workspace_name}
-                  </p>
-                </Link>
-              ))}
-            </div>
+            {recentDiagrams.length === 0 ? (
+              <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--surface)]/30 text-center text-xs text-[color:var(--foreground)]/40">
+                No recent diagrams yet. Create a diagram inside any workspace to see it here!
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {recentDiagrams.map((d) => (
+                  <Link
+                    key={d.id}
+                    href={`/dashboard/workspace/${d.workspace_id}/${d.id}`}
+                    className="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 hover:bg-[var(--surface)] hover:border-cyan-500/30 transition group"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold group-hover:text-cyan-400 transition-colors truncate flex items-center gap-1.5">
+                        <DiagramIcon className="w-3.5 h-3.5 text-cyan-400" /> {d.title}
+                      </span>
+                      <span className="text-[9px] font-mono text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">
+                        {d.env}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-[color:var(--foreground)]/40 truncate">
+                      {d.workspace_name}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </main>
       </div>

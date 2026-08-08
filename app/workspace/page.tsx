@@ -58,6 +58,10 @@ import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
 import Ipv4Generator from "@/utils/generateRandomIp";
 import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 
+// Auth & API
+import { useAuthStore } from "@/store/useAuthStore";
+import { getDiagramById, updateDiagram } from "@/services/diagramApi";
+
 // Header
 import SiteHeader from "@/components/SiteHeader";
 import {
@@ -1846,9 +1850,40 @@ const edgeTypes = {
 };
 
 // The actual workspace content — extracted so useReactFlow() hook works
-function WorkspaceInner() {
+function WorkspaceInner({
+  workspaceId,
+  diagramId,
+}: {
+  workspaceId?: string;
+  diagramId?: string;
+}) {
   const { screenToFlowPosition, fitView } = useReactFlow();
+  const { token } = useAuthStore();
   const [theme, setTheme] = useState<Theme>("dark");
+  const [diagramTitle, setDiagramTitle] = useState<string>("");
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // Load diagram from backend if workspaceId and diagramId are provided
+  useEffect(() => {
+    if (workspaceId && diagramId && token) {
+      getDiagramById(workspaceId, diagramId, token)
+        .then((dto) => {
+          setDiagramTitle(dto.title);
+          if (Array.isArray(dto.nodes) && dto.nodes.length > 0) {
+            setNodes(dto.nodes);
+          }
+          if (Array.isArray(dto.edges)) {
+            setEdges(dto.edges);
+          }
+          if (dto.configs && typeof dto.configs === "object") {
+            setNodeConfigs(dto.configs);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to load diagram from server:", err);
+        });
+    }
+  }, [workspaceId, diagramId, token]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(
@@ -1876,6 +1911,40 @@ function WorkspaceInner() {
   // Node Configurations State
   const [nodeConfigs, setNodeConfigs] = useState<Record<string, any>>({});
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  const handleSaveDiagramToBackend = async () => {
+    if (!workspaceId || !diagramId || !token) return;
+    try {
+      setIsSaving(true);
+      await updateDiagram(
+        workspaceId,
+        diagramId,
+        {
+          nodes,
+          edges,
+          configs: nodeConfigs,
+        },
+        token
+      );
+      setSuccessToast("Diagram saved to MongoDB successfully! 💾");
+    } catch (err: any) {
+      setValidationWarning(err.message || "Failed to save diagram");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Keyboard shortcut Ctrl+S / Cmd+S for quick save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        handleSaveDiagramToBackend();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [workspaceId, diagramId, token, nodes, edges, nodeConfigs]);
 
   // Playback Simulation States
   const [isPlaying, setIsPlaying] = useState(false);
@@ -4837,6 +4906,22 @@ connect s1 -> r1
                       {Math.round(bgOpacity * 100)}%
                     </span>
                   </div>
+                </>
+              )}
+
+              {workspaceId && diagramId && (
+                <>
+                  <div className="h-4 w-px bg-[var(--border)] my-auto" />
+                  <button
+                    type="button"
+                    onClick={handleSaveDiagramToBackend}
+                    disabled={isSaving}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/20 transition cursor-pointer disabled:opacity-50"
+                    title="Save diagram to MongoDB (Ctrl+S / Cmd+S)"
+                  >
+                    <span>💾</span>
+                    <span>{isSaving ? "Saving..." : "Save Diagram"}</span>
+                  </button>
                 </>
               )}
             </div>
@@ -7976,10 +8061,16 @@ connect s1 -> r1
 }
 
 // Wrap in ReactFlowProvider so useReactFlow() works inside WorkspaceInner
-export default function WorkspacePage() {
+export default function WorkspacePage({
+  workspaceId,
+  diagramId,
+}: {
+  workspaceId?: string;
+  diagramId?: string;
+}) {
   return (
     <ReactFlowProvider>
-      <WorkspaceInner />
+      <WorkspaceInner workspaceId={workspaceId} diagramId={diagramId} />
     </ReactFlowProvider>
   );
 }

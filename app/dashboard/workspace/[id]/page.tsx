@@ -20,17 +20,14 @@ import {
   NodeLinkIcon,
 } from "@/components/DashboardIcons";
 
+import { getWorkspaceById, WorkspaceDTO } from "@/services/workspaceApi";
+import { getWorkspaceDiagrams, createDiagram, DiagramDTO } from "@/services/diagramApi";
+import { formatDate } from "@/utils/formatDate";
+
 type Theme = "light" | "dark";
 type ViewMode = "grid" | "list";
 
-// Mock data (will be replaced with API calls)
-const ALL_WORKSPACES: Record<string, { name: string; description: string; iconType: "cart" | "chat" | "card" | "zap" }> = {
-  "ws-1": { name: "E-Commerce Platform", description: "Scalable microservices architecture for online marketplace", iconType: "cart" },
-  "ws-2": { name: "Chat Application", description: "Real-time messaging with WebSocket & Redis Pub/Sub", iconType: "chat" },
-  "ws-3": { name: "Payment Gateway", description: "Secure payment processing pipeline with Stripe integration", iconType: "card" },
-};
-
-const MOCK_DIAGRAMS: Record<string, Array<{
+interface DiagramItem {
   id: string;
   name: string;
   description: string;
@@ -38,28 +35,14 @@ const MOCK_DIAGRAMS: Record<string, Array<{
   edges_count: number;
   version: string;
   updated_at: string;
-}>> = {
-  "ws-1": [
-    { id: "d-1", name: "Auth Flow", description: "User authentication and session management architecture", nodes_count: 12, edges_count: 15, version: "1.2", updated_at: "2 hours ago" },
-    { id: "d-2", name: "Order Processing Pipeline", description: "End-to-end order lifecycle with payment and fulfillment", nodes_count: 18, edges_count: 22, version: "1.0", updated_at: "Yesterday" },
-    { id: "d-3", name: "CDN & Storage Architecture", description: "Asset delivery and media storage with S3 and CloudFront", nodes_count: 6, edges_count: 8, version: "1.0", updated_at: "3 days ago" },
-    { id: "d-4", name: "Search Engine", description: "Elasticsearch indexing pipeline with Redis caching layer", nodes_count: 9, edges_count: 11, version: "1.1", updated_at: "5 days ago" },
-    { id: "d-5", name: "Notification System", description: "Push, email, SMS multi-channel notification dispatch", nodes_count: 7, edges_count: 9, version: "1.0", updated_at: "1 week ago" },
-  ],
-  "ws-2": [
-    { id: "d-6", name: "Message Queue Pipeline", description: "Real-time message routing with Redis Pub/Sub", nodes_count: 8, edges_count: 10, version: "1.0", updated_at: "5 hours ago" },
-    { id: "d-7", name: "WebSocket Gateway", description: "Connection management and message broadcasting", nodes_count: 10, edges_count: 14, version: "1.1", updated_at: "2 days ago" },
-    { id: "d-8", name: "User Presence Service", description: "Online/offline status tracking with heartbeat", nodes_count: 5, edges_count: 6, version: "1.0", updated_at: "4 days ago" },
-  ],
-  "ws-3": [
-    { id: "d-9", name: "Payment Webhook Handler", description: "Stripe webhook processing with idempotency", nodes_count: 9, edges_count: 12, version: "1.0", updated_at: "2 days ago" },
-    { id: "d-10", name: "Refund Pipeline", description: "Automated refund processing with audit logging", nodes_count: 6, edges_count: 7, version: "1.0", updated_at: "1 week ago" },
-  ],
-};
+}
 
 export default function WorkspaceDetailPage() {
   const [theme, setTheme] = useState<Theme>("dark");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [workspace, setWorkspace] = useState<WorkspaceDTO | null>(null);
+  const [diagrams, setDiagrams] = useState<DiagramItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [createDiagramOpen, setCreateDiagramOpen] = useState(false);
   const [newDiagramName, setNewDiagramName] = useState("");
   const [newDiagramDesc, setNewDiagramDesc] = useState("");
@@ -67,12 +50,10 @@ export default function WorkspaceDetailPage() {
 
   const params = useParams();
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, token, isAuthenticated, _hasHydrated } = useAuthStore();
   const showToast = useToastStore((s) => s.showToast);
 
   const workspaceId = params.id as string;
-  const workspace = ALL_WORKSPACES[workspaceId];
-  const diagrams = MOCK_DIAGRAMS[workspaceId] || [];
 
   const filteredDiagrams = useMemo(() => {
     if (!searchQuery.trim()) return diagrams;
@@ -95,11 +76,80 @@ export default function WorkspaceDetailPage() {
     localStorage.setItem("flowframe-theme", theme);
   }, [theme]);
 
+  // Auth Guard with Zustand Hydration check
   useEffect(() => {
-    if (!isAuthenticated) router.replace("/signin");
-  }, [isAuthenticated, router]);
+    if (_hasHydrated && !isAuthenticated) router.replace("/signin");
+  }, [_hasHydrated, isAuthenticated, router]);
 
-  if (!isAuthenticated || !user) return null;
+  // Fetch Workspace and Diagrams from Rust API
+  useEffect(() => {
+    if (token && workspaceId) {
+      setLoading(true);
+      Promise.all([
+        getWorkspaceById(workspaceId, token),
+        getWorkspaceDiagrams(workspaceId, token),
+      ])
+        .then(([wsData, diagramsData]) => {
+          setWorkspace(wsData);
+          const items: DiagramItem[] = diagramsData.map((d) => ({
+            id: d.id,
+            name: d.title,
+            description: d.description || "",
+            nodes_count: d.nodes_count,
+            edges_count: d.edges_count,
+            version: d.version,
+            updated_at: formatDate(d.updated_at),
+          }));
+          setDiagrams(items);
+        })
+        .catch((err) => {
+          console.error("Failed to load workspace details:", err);
+          showToast("Failed to load workspace details from server", "error");
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [workspaceId, token, showToast]);
+
+  const handleCreateDiagram = async () => {
+    if (!newDiagramName.trim()) {
+      showToast("Please enter a diagram name.", "error");
+      return;
+    }
+
+    if (diagrams.length >= 5) {
+      showToast("Diagram limit reached (5/5 for this workspace). Upgrade your plan for more.", "error");
+      return;
+    }
+
+    if (!token || !workspaceId) return;
+
+    try {
+      const created = await createDiagram(
+        workspaceId,
+        {
+          title: newDiagramName.trim(),
+          description: newDiagramDesc.trim() || undefined,
+          version: "1.0",
+          nodes: [],
+          edges: [],
+          configs: {},
+        },
+        token
+      );
+
+      showToast(`Diagram "${created.title}" created!`, "success");
+      setCreateDiagramOpen(false);
+      setNewDiagramName("");
+      setNewDiagramDesc("");
+
+      // Navigate directly into canvas editor
+      router.push(`/dashboard/workspace/${workspaceId}/${created.id}`);
+    } catch (err: any) {
+      showToast(err.message || "Failed to create diagram", "error");
+    }
+  };
+
+  if (!_hasHydrated || !isAuthenticated || !user) return null;
 
   if (!workspace) {
     return (
@@ -193,7 +243,7 @@ export default function WorkspaceDetailPage() {
         <section className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex items-start gap-4 min-w-0">
             <div className="shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/15 to-indigo-500/15 border border-violet-500/15 flex items-center justify-center shadow-sm">
-              {renderIcon(workspace.iconType)}
+              {renderIcon((workspace.icon_type as any) || "zap")}
             </div>
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{workspace.name}</h1>
@@ -203,19 +253,24 @@ export default function WorkspaceDetailPage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setCreateDiagramOpen(true)}
-            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-violet-500/20 transition-all hover:shadow-violet-500/30 hover:scale-105 active:scale-95 cursor-pointer self-start"
-          >
-            <PlusIcon className="w-4 h-4" /> New Diagram
-          </button>
+          <div className="flex items-center gap-3 self-start shrink-0">
+            <span className="text-[11px] font-mono font-semibold text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2.5 py-2 rounded-xl">
+              {diagrams.length} / 5 Diagrams
+            </span>
+            <button
+              type="button"
+              onClick={() => setCreateDiagramOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-violet-500/20 transition-all hover:shadow-violet-500/30 hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              <PlusIcon className="w-4 h-4" /> New Diagram
+            </button>
+          </div>
         </section>
 
         {/* Stats Strip */}
         <section className="grid grid-cols-3 gap-3">
           {[
-            { label: "Diagrams", value: diagrams.length, icon: <DiagramIcon className="w-4 h-4 text-violet-400" /> },
+            { label: "Diagrams Limit", value: `${diagrams.length} / 5`, icon: <DiagramIcon className="w-4 h-4 text-violet-400" /> },
             { label: "Total Nodes", value: totalNodes, icon: <NodeLinkIcon className="w-4 h-4 text-cyan-400" /> },
             { label: "Total Edges", value: totalEdges, icon: <ZapIcon className="w-4 h-4 text-emerald-400" /> },
           ].map((s) => (
@@ -457,16 +512,7 @@ export default function WorkspaceDetailPage() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (!newDiagramName.trim()) {
-                    showToast("Please enter a diagram name.", "error");
-                    return;
-                  }
-                  showToast(`Diagram "${newDiagramName}" created!`, "success");
-                  setCreateDiagramOpen(false);
-                  setNewDiagramName("");
-                  setNewDiagramDesc("");
-                }}
+                onClick={handleCreateDiagram}
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-semibold text-white shadow-md shadow-violet-500/20 transition cursor-pointer"
               >
                 Create Diagram
