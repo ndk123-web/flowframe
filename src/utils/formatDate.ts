@@ -1,5 +1,5 @@
 export function formatDate(dateString?: string): string {
-  if (!dateString) return "Just now";
+  if (!dateString) return "Recently";
 
   const lower = dateString.toLowerCase().trim();
   // If already formatted like "Just now", "Yesterday", "X ago", return as is
@@ -14,11 +14,17 @@ export function formatDate(dateString?: string): string {
 
   try {
     // Standardize MongoDB / Rust BSON datetime strings:
-    // e.g. "2026-08-08 07:46:44.123 UTC" -> "2026-08-08T07:46:44.123Z"
-    let cleanStr = dateString
-      .trim()
-      .replace(/\s+UTC$/i, "Z")
-      .replace(/\s+/g, "T");
+    // e.g. "2026-08-08 8:53:08.464 +00:00:00" -> "2026-08-08T08:53:08.464Z"
+    let cleanStr = dateString.trim();
+
+    // Remove +00:00:00 or UTC timezone indicator and standardize to Z
+    cleanStr = cleanStr
+      .replace(/\+00:00:00$/i, "Z")
+      .replace(/\+00:00$/i, "Z")
+      .replace(/\s+UTC$/i, "Z");
+
+    // Replace first space between YYYY-MM-DD and HH:MM:SS with T
+    cleanStr = cleanStr.replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{1,2}:\d{2}:\d{2})/, "$1T$2");
 
     let date = new Date(cleanStr);
     if (isNaN(date.getTime())) {
@@ -34,15 +40,14 @@ export function formatDate(dateString?: string): string {
     }
 
     if (isNaN(date.getTime())) {
-      return "Just now";
+      return "Recently";
     }
 
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
-    const absDiffMs = Math.abs(diffMs);
 
-    // If less than 1 minute (or slight clock skew), show "Just now"
-    if (absDiffMs < 60 * 1000) {
+    // If date is in very recent past or slight clock skew (< 1 min), show "Just now"
+    if (diffMs < 60 * 1000 && diffMs > -60 * 1000) {
       return "Just now";
     }
 
@@ -70,6 +75,6 @@ export function formatDate(dateString?: string): string {
       year: "numeric",
     });
   } catch {
-    return "Just now";
+    return "Recently";
   }
 }

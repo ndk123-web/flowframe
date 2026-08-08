@@ -23,7 +23,7 @@ import {
   CreditCardIcon,
 } from "@/components/DashboardIcons";
 
-import { getUserWorkspaces, createWorkspace, updateWorkspace, WorkspaceDTO } from "@/services/workspaceApi";
+import { getUserWorkspaces, createWorkspace, updateWorkspace, deleteWorkspace, WorkspaceDTO } from "@/services/workspaceApi";
 import { getRecentDiagrams, RecentDiagramDTO } from "@/services/diagramApi";
 import { formatDate } from "@/utils/formatDate";
 
@@ -62,6 +62,11 @@ export default function PostmanDashboardPage() {
   const [editWsName, setEditWsName] = useState("");
   const [editWsDesc, setEditWsDesc] = useState("");
   const [editWsEnv, setEditWsEnv] = useState<"DEV" | "PROD" | "STAGING">("DEV");
+
+  // Delete Workspace modal states
+  const [deleteWsModalOpen, setDeleteWsModalOpen] = useState(false);
+  const [deletingWs, setDeletingWs] = useState<WorkspaceItem | null>(null);
+  const [isDeletingWs, setIsDeletingWs] = useState(false);
 
   const [activeSidebarNav, setActiveSidebarNav] = useState("workspaces");
 
@@ -232,6 +237,29 @@ export default function PostmanDashboardPage() {
       setEditingWsId(null);
     } catch (err: any) {
       showToast(err.message || "Failed to update workspace", "error");
+    }
+  };
+
+  const openDeleteWorkspaceModal = (ws: WorkspaceItem, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDeletingWs(ws);
+    setDeleteWsModalOpen(true);
+  };
+
+  const handleDeleteWorkspace = async () => {
+    if (!deletingWs || !token) return;
+    try {
+      setIsDeletingWs(true);
+      await deleteWorkspace(deletingWs.id, token);
+      setWorkspaces((prev) => prev.filter((w) => w.id !== deletingWs.id));
+      showToast(`Workspace "${deletingWs.name}" deleted successfully!`, "success");
+      setDeleteWsModalOpen(false);
+      setDeletingWs(null);
+    } catch (err: any) {
+      showToast(err.message || "Failed to delete workspace", "error");
+    } finally {
+      setIsDeletingWs(false);
     }
   };
 
@@ -523,6 +551,14 @@ export default function PostmanDashboardPage() {
                         </button>
                         <button
                           type="button"
+                          onClick={(e) => openDeleteWorkspaceModal(ws, e)}
+                          className="p-1 rounded-lg text-[color:var(--foreground)]/40 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                          title="Delete workspace"
+                        >
+                          🗑️
+                        </button>
+                        <button
+                          type="button"
                           onClick={(e) => toggleStar(ws.id, e)}
                           className={`transition-all hover:scale-125 cursor-pointer ${
                             ws.starred ? "text-amber-400 opacity-100" : "text-[color:var(--foreground)]/30 opacity-40 group-hover:opacity-100"
@@ -623,6 +659,14 @@ export default function PostmanDashboardPage() {
                         title="Edit workspace"
                       >
                         ✏️
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => openDeleteWorkspaceModal(ws, e)}
+                        className="p-1 rounded-lg text-[color:var(--foreground)]/40 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                        title="Delete workspace"
+                      >
+                        🗑️
                       </button>
                       <button
                         type="button"
@@ -859,6 +903,54 @@ export default function PostmanDashboardPage() {
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-semibold text-white shadow-md shadow-violet-500/20 transition cursor-pointer"
               >
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Workspace Confirmation Modal */}
+      {deleteWsModalOpen && deletingWs && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md p-6 rounded-2xl border border-rose-500/30 bg-[var(--surface)] text-[color:var(--foreground)] shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-400">
+              <span className="text-2xl">⚠️</span>
+              <h3 className="text-lg font-bold">Delete Workspace</h3>
+            </div>
+
+            <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
+              Are you sure you want to delete <strong className="text-[color:var(--foreground)] font-semibold">&quot;{deletingWs.name}&quot;</strong>? This will permanently delete all diagrams and canvas data associated with this workspace.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border)]">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteWsModalOpen(false);
+                  setDeletingWs(null);
+                }}
+                disabled={isDeletingWs}
+                className="px-4 py-2 rounded-xl text-xs font-semibold hover:bg-[var(--surface-muted)] transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteWorkspace}
+                disabled={isDeletingWs}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20 transition cursor-pointer disabled:opacity-50 flex items-center gap-2"
+              >
+                {isDeletingWs ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  "Delete Workspace"
+                )}
               </button>
             </div>
           </div>
