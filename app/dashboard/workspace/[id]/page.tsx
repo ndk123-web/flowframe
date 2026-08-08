@@ -20,8 +20,8 @@ import {
   NodeLinkIcon,
 } from "@/components/DashboardIcons";
 
-import { getWorkspaceById, WorkspaceDTO } from "@/services/workspaceApi";
-import { getWorkspaceDiagrams, createDiagram, DiagramDTO } from "@/services/diagramApi";
+import { getWorkspaceById, updateWorkspace, WorkspaceDTO } from "@/services/workspaceApi";
+import { getWorkspaceDiagrams, createDiagram, updateDiagram, DiagramDTO } from "@/services/diagramApi";
 import { formatDate } from "@/utils/formatDate";
 
 type Theme = "light" | "dark";
@@ -47,6 +47,18 @@ export default function WorkspaceDetailPage() {
   const [newDiagramName, setNewDiagramName] = useState("");
   const [newDiagramDesc, setNewDiagramDesc] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Edit Workspace modal states
+  const [editWsOpen, setEditWsOpen] = useState(false);
+  const [editWsName, setEditWsName] = useState("");
+  const [editWsDesc, setEditWsDesc] = useState("");
+  const [editWsEnv, setEditWsEnv] = useState<"DEV" | "PROD" | "STAGING">("DEV");
+
+  // Edit Diagram modal states
+  const [editDiagramOpen, setEditDiagramOpen] = useState(false);
+  const [editingDiagramId, setEditingDiagramId] = useState<string | null>(null);
+  const [editDiagramTitle, setEditDiagramTitle] = useState("");
+  const [editDiagramDesc, setEditDiagramDesc] = useState("");
 
   const params = useParams();
   const router = useRouter();
@@ -149,6 +161,76 @@ export default function WorkspaceDetailPage() {
     }
   };
 
+  const openEditWorkspaceModal = () => {
+    if (!workspace) return;
+    setEditWsName(workspace.name);
+    setEditWsDesc(workspace.description || "");
+    setEditWsEnv(workspace.env as any);
+    setEditWsOpen(true);
+  };
+
+  const handleUpdateWorkspace = async () => {
+    if (!workspaceId || !editWsName.trim() || !token) return;
+    try {
+      const updated = await updateWorkspace(
+        workspaceId,
+        {
+          name: editWsName.trim(),
+          description: editWsDesc.trim() || undefined,
+          env: editWsEnv,
+        },
+        token
+      );
+      setWorkspace(updated);
+      showToast("Workspace updated successfully!", "success");
+      setEditWsOpen(false);
+    } catch (err: any) {
+      showToast(err.message || "Failed to update workspace", "error");
+    }
+  };
+
+  const openEditDiagramModal = (d: DiagramItem, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingDiagramId(d.id);
+    setEditDiagramTitle(d.name);
+    setEditDiagramDesc(d.description);
+    setEditDiagramOpen(true);
+  };
+
+  const handleUpdateDiagram = async () => {
+    if (!workspaceId || !editingDiagramId || !editDiagramTitle.trim() || !token) return;
+    try {
+      const updated = await updateDiagram(
+        workspaceId,
+        editingDiagramId,
+        {
+          title: editDiagramTitle.trim(),
+          description: editDiagramDesc.trim() || undefined,
+        },
+        token
+      );
+
+      setDiagrams((prev) =>
+        prev.map((d) =>
+          d.id === editingDiagramId
+            ? {
+                ...d,
+                name: updated.title,
+                description: updated.description || "",
+              }
+            : d
+        )
+      );
+
+      showToast(`Diagram "${updated.title}" updated!`, "success");
+      setEditDiagramOpen(false);
+      setEditingDiagramId(null);
+    } catch (err: any) {
+      showToast(err.message || "Failed to update diagram", "error");
+    }
+  };
+
   if (!_hasHydrated || !isAuthenticated || !user) return null;
 
   if (!workspace) {
@@ -246,7 +328,17 @@ export default function WorkspaceDetailPage() {
               {renderIcon((workspace.icon_type as any) || "zap")}
             </div>
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{workspace.name}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{workspace.name}</h1>
+                <button
+                  type="button"
+                  onClick={openEditWorkspaceModal}
+                  className="px-2 py-0.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] text-[10px] font-semibold text-[color:var(--foreground)]/60 hover:text-violet-400 hover:bg-violet-500/10 transition cursor-pointer shrink-0"
+                  title="Edit workspace"
+                >
+                  ✏️ Edit
+                </button>
+              </div>
               <p className="text-xs sm:text-sm text-[color:var(--foreground)]/50 mt-0.5 line-clamp-2">
                 {workspace.description}
               </p>
@@ -348,9 +440,19 @@ export default function WorkspaceDetailPage() {
                       <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/12 to-blue-500/12 border border-cyan-500/10 flex items-center justify-center">
                         <DiagramIcon className="w-5 h-5 text-cyan-400" />
                       </div>
-                      <span className="inline-flex items-center rounded-md bg-emerald-500/10 border border-emerald-500/15 px-1.5 py-0.5 text-[10px] font-mono text-emerald-400">
-                        v{d.version}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => openEditDiagramModal(d, e)}
+                          className="p-1 rounded-lg text-[color:var(--foreground)]/40 hover:text-cyan-400 hover:bg-cyan-500/10 transition cursor-pointer"
+                          title="Edit diagram name & description"
+                        >
+                          ✏️
+                        </button>
+                        <span className="inline-flex items-center rounded-md bg-emerald-500/10 border border-emerald-500/15 px-1.5 py-0.5 text-[10px] font-mono text-emerald-400">
+                          v{d.version}
+                        </span>
+                      </div>
                     </div>
 
                     <h3 className="text-sm font-bold mb-1 group-hover:text-cyan-400 transition-colors truncate">
@@ -516,6 +618,160 @@ export default function WorkspaceDetailPage() {
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-semibold text-white shadow-md shadow-violet-500/20 transition cursor-pointer"
               >
                 Create Diagram
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Workspace Modal */}
+      {editWsOpen && workspace && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          onClick={() => setEditWsOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold tracking-tight">Edit Workspace</h2>
+              <p className="text-xs text-[color:var(--foreground)]/50">
+                Update details for <span className="font-semibold text-violet-400">{workspace.name}</span>.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+                  Workspace Name
+                </label>
+                <input
+                  type="text"
+                  value={editWsName}
+                  onChange={(e) => setEditWsName(e.target.value)}
+                  placeholder="Workspace Name"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-xs text-[color:var(--foreground)] focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+                  Environment Tag
+                </label>
+                <div className="flex gap-2">
+                  {(["DEV", "STAGING", "PROD"] as const).map((env) => (
+                    <button
+                      key={env}
+                      type="button"
+                      onClick={() => setEditWsEnv(env)}
+                      className={`flex-1 py-1.5 rounded-xl text-xs font-bold font-mono transition border cursor-pointer ${
+                        editWsEnv === env
+                          ? "bg-violet-500/15 border-violet-500 text-violet-400"
+                          : "border-[var(--border)] text-[color:var(--foreground)]/50 hover:bg-[var(--surface-muted)]"
+                      }`}
+                    >
+                      {env}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+                  Description
+                </label>
+                <textarea
+                  value={editWsDesc}
+                  onChange={(e) => setEditWsDesc(e.target.value)}
+                  placeholder="Brief description..."
+                  rows={3}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-xs text-[color:var(--foreground)] focus:outline-none focus:ring-2 focus:ring-violet-500/40 resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setEditWsOpen(false)}
+                className="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-semibold text-[color:var(--foreground)]/60 hover:bg-[var(--surface-muted)] transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdateWorkspace}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-semibold text-white shadow-md shadow-violet-500/20 transition cursor-pointer"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Diagram Modal */}
+      {editDiagramOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          onClick={() => setEditDiagramOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold tracking-tight">Edit Diagram</h2>
+              <p className="text-xs text-[color:var(--foreground)]/50">
+                Update diagram title and description.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+                  Diagram Title
+                </label>
+                <input
+                  type="text"
+                  value={editDiagramTitle}
+                  onChange={(e) => setEditDiagramTitle(e.target.value)}
+                  placeholder="Diagram Title"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-xs text-[color:var(--foreground)] focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+                  Description
+                </label>
+                <textarea
+                  value={editDiagramDesc}
+                  onChange={(e) => setEditDiagramDesc(e.target.value)}
+                  placeholder="Brief description of the diagram..."
+                  rows={3}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-xs text-[color:var(--foreground)] focus:outline-none focus:ring-2 focus:ring-cyan-500/40 resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setEditDiagramOpen(false)}
+                className="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-semibold text-[color:var(--foreground)]/60 hover:bg-[var(--surface-muted)] transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdateDiagram}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-xs font-semibold text-white shadow-md shadow-cyan-500/20 transition cursor-pointer"
+              >
+                Save Changes
               </button>
             </div>
           </div>

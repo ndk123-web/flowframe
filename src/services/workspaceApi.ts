@@ -21,6 +21,14 @@ export interface CreateWorkspacePayload {
   icon_type?: string;
 }
 
+export interface UpdateWorkspacePayload {
+  name?: string;
+  description?: string;
+  env?: "DEV" | "PROD" | "STAGING";
+  color?: string;
+  icon_type?: string;
+}
+
 export async function getUserWorkspaces(token: string): Promise<WorkspaceDTO[]> {
   const res = await fetch(`${API_BASE_URL}/api/workspaces`, {
     method: "GET",
@@ -71,6 +79,28 @@ export async function createWorkspace(
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.error || "Failed to create workspace");
+  }
+
+  return res.json();
+}
+
+export async function updateWorkspace(
+  workspaceId: string,
+  payload: UpdateWorkspacePayload,
+  token: string
+): Promise<WorkspaceDTO> {
+  const res = await fetch(`${API_BASE_URL}/api/workspaces/${workspaceId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to update workspace");
   }
 
   return res.json();

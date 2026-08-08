@@ -112,7 +112,15 @@ export default function SiteHeader({
           )}
 
           {isAuthenticated ? (
-            <UserDropdown theme={theme} onToggleTheme={onToggleTheme} />
+            <div className="flex items-center gap-2">
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition hover:scale-105"
+              >
+                Dashboard →
+              </Link>
+              <UserDropdown theme={theme} onToggleTheme={onToggleTheme} />
+            </div>
           ) : (
             <>
               <Link

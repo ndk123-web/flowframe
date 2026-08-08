@@ -13,6 +13,7 @@ import ClientModel from "@/engine/models/Client";
 import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
 import ShortUniqueId from "short-unique-id";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/useAuthStore";
 import {
   ReactFlow,
   BaseEdge,
@@ -570,6 +571,7 @@ function LearnAndSandbox() {
 export default function LandingPage() {
   const [theme, setTheme] = useState<Theme>("dark");
   const router = useRouter();
+  const { user, isAuthenticated, _hasHydrated } = useAuthStore();
 
   useEffect(() => {
     const saved = localStorage.getItem("flowframe-theme") as Theme | null;
@@ -600,12 +602,16 @@ export default function LandingPage() {
         {/* Glow backdrop */}
         <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-violet-600/15 blur-[120px]" />
 
-        {/* v1.0 Badge */}
+        {/* Dynamic Auth Badge */}
         <div className="fade-up inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-1.5 text-xs font-semibold text-violet-300 shadow-sm backdrop-blur mb-8">
           <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-[11px] uppercase tracking-wider text-violet-400 font-bold">FlowFrame v2.0.0 Live</span>
+          <span className="text-[11px] uppercase tracking-wider text-violet-400 font-bold">FlowFrame v2.0 Live</span>
           <span className="text-violet-400/60 font-normal">|</span>
-          <span className="text-violet-200">Monaco DSL Compiler & Interactive Engine</span>
+          <span className="text-violet-200">
+            {_hasHydrated && isAuthenticated
+              ? `Logged in as ${user?.email || "User"} — Workspaces Ready`
+              : "Monaco DSL Compiler & Interactive Engine"}
+          </span>
         </div>
 
         {/* Hero Title */}
@@ -621,22 +627,41 @@ export default function LandingPage() {
           FlowFrame is an interactive visual simulator for distributed architecture logic. Watch requests route through API Gateways, load balancers, server pools, Redis caches, and message queues in real time.
         </p>
 
-        {/* CTAs */}
+        {/* Smart CTAs */}
         <div className="fade-up mt-10 flex flex-wrap items-center justify-center gap-4" style={{ animationDelay: ".15s" }}>
-          <button
-            onClick={() => router.push("/workspace")}
-            className="btn-primary flex items-center gap-2 rounded-2xl px-8 py-4 text-sm font-bold text-white shadow-xl cursor-pointer"
-          >
-            <ZapIcon className="w-4 h-4 text-white" /> Open Sandbox Studio
-            <span className="text-xs opacity-75 font-mono">(/workspace)</span>
-          </button>
-          <button
-            onClick={() => router.push("/docs")}
-            className="btn-outline flex items-center gap-2 rounded-2xl px-7 py-4 text-sm font-bold cursor-pointer"
-            style={{ color: "var(--foreground)", background: "var(--surface)" }}
-          >
-            <DocsIcon className="w-4 h-4 text-violet-400" /> Read DSL Language Specs
-          </button>
+          {_hasHydrated && isAuthenticated ? (
+            <>
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="btn-primary flex items-center gap-2.5 rounded-2xl px-8 py-4 text-base font-bold text-white shadow-xl shadow-violet-500/25 hover:scale-105 transition-all duration-300 cursor-pointer"
+              >
+                <ZapIcon className="w-5 h-5 text-amber-300" /> Go to Dashboard →
+              </button>
+              <button
+                onClick={() => router.push("/workspace")}
+                className="btn-outline flex items-center gap-2 rounded-2xl px-7 py-4 text-sm font-bold cursor-pointer hover:bg-[var(--surface-muted)] transition"
+                style={{ color: "var(--foreground)", background: "var(--surface)" }}
+              >
+                <SandboxIcon className="w-4 h-4 text-cyan-400" /> Open Sandbox Studio
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => router.push("/signin")}
+                className="btn-primary flex items-center gap-2.5 rounded-2xl px-8 py-4 text-base font-bold text-white shadow-xl shadow-violet-500/25 hover:scale-105 transition-all duration-300 cursor-pointer"
+              >
+                Get Started Free →
+              </button>
+              <button
+                onClick={() => router.push("/workspace")}
+                className="btn-outline flex items-center gap-2 rounded-2xl px-7 py-4 text-sm font-bold cursor-pointer hover:bg-[var(--surface-muted)] transition"
+                style={{ color: "var(--foreground)", background: "var(--surface)" }}
+              >
+                <ZapIcon className="w-4 h-4 text-cyan-400" /> Open Sandbox Studio
+              </button>
+            </>
+          )}
         </div>
 
         {/* Hero Interactive Diagram Preview */}

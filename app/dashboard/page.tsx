@@ -23,7 +23,7 @@ import {
   CreditCardIcon,
 } from "@/components/DashboardIcons";
 
-import { getUserWorkspaces, createWorkspace, WorkspaceDTO } from "@/services/workspaceApi";
+import { getUserWorkspaces, createWorkspace, updateWorkspace, WorkspaceDTO } from "@/services/workspaceApi";
 import { getRecentDiagrams, RecentDiagramDTO } from "@/services/diagramApi";
 import { formatDate } from "@/utils/formatDate";
 
@@ -55,6 +55,14 @@ export default function PostmanDashboardPage() {
   const [newWsName, setNewWsName] = useState("");
   const [newWsDesc, setNewWsDesc] = useState("");
   const [newWsEnv, setNewWsEnv] = useState<"DEV" | "PROD" | "STAGING">("DEV");
+
+  // Edit Workspace modal states
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingWsId, setEditingWsId] = useState<string | null>(null);
+  const [editWsName, setEditWsName] = useState("");
+  const [editWsDesc, setEditWsDesc] = useState("");
+  const [editWsEnv, setEditWsEnv] = useState<"DEV" | "PROD" | "STAGING">("DEV");
+
   const [activeSidebarNav, setActiveSidebarNav] = useState("workspaces");
 
   const router = useRouter();
@@ -180,6 +188,50 @@ export default function PostmanDashboardPage() {
       setNewWsDesc("");
     } catch (err: any) {
       showToast(err.message || "Failed to create workspace", "error");
+    }
+  };
+
+  const openEditWorkspaceModal = (ws: WorkspaceItem, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingWsId(ws.id);
+    setEditWsName(ws.name);
+    setEditWsDesc(ws.description);
+    setEditWsEnv(ws.env);
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateWorkspace = async () => {
+    if (!editingWsId || !editWsName.trim() || !token) return;
+    try {
+      const updated = await updateWorkspace(
+        editingWsId,
+        {
+          name: editWsName.trim(),
+          description: editWsDesc.trim() || undefined,
+          env: editWsEnv,
+        },
+        token
+      );
+
+      setWorkspaces((prev) =>
+        prev.map((w) =>
+          w.id === editingWsId
+            ? {
+                ...w,
+                name: updated.name,
+                description: updated.description || "",
+                env: updated.env as any,
+              }
+            : w
+        )
+      );
+
+      showToast(`Workspace "${updated.name}" updated successfully!`, "success");
+      setEditModalOpen(false);
+      setEditingWsId(null);
+    } catch (err: any) {
+      showToast(err.message || "Failed to update workspace", "error");
     }
   };
 
@@ -434,16 +486,26 @@ export default function PostmanDashboardPage() {
                         </span>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={(e) => toggleStar(ws.id, e)}
-                        className={`transition-all hover:scale-125 cursor-pointer ${
-                          ws.starred ? "text-amber-400 opacity-100" : "text-[color:var(--foreground)]/30 opacity-40 group-hover:opacity-100"
-                        }`}
-                        title={ws.starred ? "Unstar" : "Star workspace"}
-                      >
-                        <StarIcon className="w-4 h-4" filled={ws.starred} />
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => openEditWorkspaceModal(ws, e)}
+                          className="p-1 rounded-lg text-[color:var(--foreground)]/40 hover:text-violet-400 hover:bg-violet-500/10 transition cursor-pointer"
+                          title="Edit workspace name & description"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => toggleStar(ws.id, e)}
+                          className={`transition-all hover:scale-125 cursor-pointer ${
+                            ws.starred ? "text-amber-400 opacity-100" : "text-[color:var(--foreground)]/30 opacity-40 group-hover:opacity-100"
+                          }`}
+                          title={ws.starred ? "Unstar" : "Star workspace"}
+                        >
+                          <StarIcon className="w-4 h-4" filled={ws.starred} />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="space-y-1 mb-4">
@@ -665,6 +727,94 @@ export default function PostmanDashboardPage() {
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-semibold text-white shadow-md shadow-violet-500/20 transition cursor-pointer"
               >
                 Create Workspace
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Workspace Modal */}
+      {editModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          onClick={() => setEditModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold tracking-tight">Edit Workspace</h2>
+              <p className="text-xs text-[color:var(--foreground)]/50">
+                Update workspace details in MongoDB.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+                  Workspace Name
+                </label>
+                <input
+                  type="text"
+                  value={editWsName}
+                  onChange={(e) => setEditWsName(e.target.value)}
+                  placeholder="Workspace Name"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-xs text-[color:var(--foreground)] focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+                  Environment Tag
+                </label>
+                <div className="flex gap-2">
+                  {(["DEV", "STAGING", "PROD"] as const).map((env) => (
+                    <button
+                      key={env}
+                      type="button"
+                      onClick={() => setEditWsEnv(env)}
+                      className={`flex-1 py-1.5 rounded-xl text-xs font-bold font-mono transition border cursor-pointer ${
+                        editWsEnv === env
+                          ? "bg-violet-500/15 border-violet-500 text-violet-400"
+                          : "border-[var(--border)] text-[color:var(--foreground)]/50 hover:bg-[var(--surface-muted)]"
+                      }`}
+                    >
+                      {env}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+                  Description
+                </label>
+                <textarea
+                  value={editWsDesc}
+                  onChange={(e) => setEditWsDesc(e.target.value)}
+                  placeholder="Brief description..."
+                  rows={3}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-xs text-[color:var(--foreground)] focus:outline-none focus:ring-2 focus:ring-violet-500/40 resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-semibold text-[color:var(--foreground)]/60 hover:bg-[var(--surface-muted)] transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdateWorkspace}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-semibold text-white shadow-md shadow-violet-500/20 transition cursor-pointer"
+              >
+                Save Changes
               </button>
             </div>
           </div>
