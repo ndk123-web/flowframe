@@ -21,7 +21,7 @@ import {
 } from "@/components/DashboardIcons";
 
 import { getWorkspaceById, updateWorkspace, WorkspaceDTO } from "@/services/workspaceApi";
-import { getWorkspaceDiagrams, createDiagram, updateDiagram, DiagramDTO } from "@/services/diagramApi";
+import { getWorkspaceDiagrams, createDiagram, updateDiagram, deleteDiagram, DiagramDTO } from "@/services/diagramApi";
 import { formatDate } from "@/utils/formatDate";
 
 type Theme = "light" | "dark";
@@ -59,6 +59,11 @@ export default function WorkspaceDetailPage() {
   const [editingDiagramId, setEditingDiagramId] = useState<string | null>(null);
   const [editDiagramTitle, setEditDiagramTitle] = useState("");
   const [editDiagramDesc, setEditDiagramDesc] = useState("");
+
+  // Delete Diagram modal states
+  const [deleteDiagramModalOpen, setDeleteDiagramModalOpen] = useState(false);
+  const [deletingDiagram, setDeletingDiagram] = useState<DiagramItem | null>(null);
+  const [isDeletingDiagram, setIsDeletingDiagram] = useState(false);
 
   const params = useParams();
   const router = useRouter();
@@ -228,6 +233,29 @@ export default function WorkspaceDetailPage() {
       setEditingDiagramId(null);
     } catch (err: any) {
       showToast(err.message || "Failed to update diagram", "error");
+    }
+  };
+
+  const openDeleteDiagramModal = (d: DiagramItem, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDeletingDiagram(d);
+    setDeleteDiagramModalOpen(true);
+  };
+
+  const handleDeleteDiagram = async () => {
+    if (!workspaceId || !deletingDiagram || !token) return;
+    try {
+      setIsDeletingDiagram(true);
+      await deleteDiagram(workspaceId, deletingDiagram.id, token);
+      setDiagrams((prev) => prev.filter((item) => item.id !== deletingDiagram.id));
+      showToast(`Diagram "${deletingDiagram.name}" deleted successfully!`, "success");
+      setDeleteDiagramModalOpen(false);
+      setDeletingDiagram(null);
+    } catch (err: any) {
+      showToast(err.message || "Failed to delete diagram", "error");
+    } finally {
+      setIsDeletingDiagram(false);
     }
   };
 
@@ -497,6 +525,14 @@ export default function WorkspaceDetailPage() {
                         >
                           ✏️
                         </button>
+                        <button
+                          type="button"
+                          onClick={(e) => openDeleteDiagramModal(d, e)}
+                          className="p-1 rounded-lg text-[color:var(--foreground)]/40 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                          title="Delete diagram"
+                        >
+                          🗑️
+                        </button>
                         <span className="inline-flex items-center rounded-md bg-emerald-500/10 border border-emerald-500/15 px-1.5 py-0.5 text-[10px] font-mono text-emerald-400">
                           v{d.version}
                         </span>
@@ -590,6 +626,14 @@ export default function WorkspaceDetailPage() {
                         title="Edit diagram"
                       >
                         ✏️
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => openDeleteDiagramModal(d, e)}
+                        className="p-1 rounded-lg text-[color:var(--foreground)]/40 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                        title="Delete diagram"
+                      >
+                        🗑️
                       </button>
                       <span className="text-xs text-cyan-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
                         Open →
@@ -828,6 +872,54 @@ export default function WorkspaceDetailPage() {
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-xs font-semibold text-white shadow-md shadow-cyan-500/20 transition cursor-pointer"
               >
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Diagram Confirmation Modal */}
+      {deleteDiagramModalOpen && deletingDiagram && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md p-6 rounded-2xl border border-rose-500/30 bg-[var(--surface)] text-[color:var(--foreground)] shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-400">
+              <span className="text-2xl">⚠️</span>
+              <h3 className="text-lg font-bold">Delete Diagram</h3>
+            </div>
+
+            <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
+              Are you sure you want to delete <strong className="text-[color:var(--foreground)] font-semibold">&quot;{deletingDiagram.name}&quot;</strong>? This will permanently delete this architecture flow and all its saved nodes.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border)]">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteDiagramModalOpen(false);
+                  setDeletingDiagram(null);
+                }}
+                disabled={isDeletingDiagram}
+                className="px-4 py-2 rounded-xl text-xs font-semibold hover:bg-[var(--surface-muted)] transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteDiagram}
+                disabled={isDeletingDiagram}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20 transition cursor-pointer disabled:opacity-50 flex items-center gap-2"
+              >
+                {isDeletingDiagram ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  "Delete Diagram"
+                )}
               </button>
             </div>
           </div>
