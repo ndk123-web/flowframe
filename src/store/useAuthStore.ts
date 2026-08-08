@@ -1,0 +1,62 @@
+"use client";
+
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  type_of_signin: string;
+  firebase_uid?: string;
+  name?: string;
+  avatar?: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  user: AuthUser;
+}
+
+interface AuthState {
+  token: string | null;
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
+  setAuth: (token: string, user: AuthUser) => void;
+  logout: () => void;
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      token: null,
+      user: null,
+      isAuthenticated: false,
+      _hasHydrated: false,
+
+      setHasHydrated: (state: boolean) => set({ _hasHydrated: state }),
+
+      setAuth: (token: string, user: AuthUser) =>
+        set({
+          token,
+          user,
+          isAuthenticated: true,
+        }),
+
+      logout: () =>
+        set({
+          token: null,
+          user: null,
+          isAuthenticated: false,
+        }),
+    }),
+    {
+      name: "flowframe-auth",
+      storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+    }
+  )
+);

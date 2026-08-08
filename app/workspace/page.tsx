@@ -58,6 +58,10 @@ import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
 import Ipv4Generator from "@/utils/generateRandomIp";
 import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 
+// Auth & API
+import { useAuthStore } from "@/store/useAuthStore";
+import { getDiagramById, updateDiagram } from "@/services/diagramApi";
+
 // Header
 import SiteHeader from "@/components/SiteHeader";
 import {
@@ -1846,9 +1850,40 @@ const edgeTypes = {
 };
 
 // The actual workspace content — extracted so useReactFlow() hook works
-function WorkspaceInner() {
+function WorkspaceInner({
+  workspaceId,
+  diagramId,
+}: {
+  workspaceId?: string;
+  diagramId?: string;
+}) {
   const { screenToFlowPosition, fitView } = useReactFlow();
+  const { token } = useAuthStore();
   const [theme, setTheme] = useState<Theme>("dark");
+  const [diagramTitle, setDiagramTitle] = useState<string>("");
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // Load diagram from backend if workspaceId and diagramId are provided
+  useEffect(() => {
+    if (workspaceId && diagramId && token) {
+      getDiagramById(workspaceId, diagramId, token)
+        .then((dto) => {
+          setDiagramTitle(dto.title);
+          if (Array.isArray(dto.nodes) && dto.nodes.length > 0) {
+            setNodes(dto.nodes);
+          }
+          if (Array.isArray(dto.edges)) {
+            setEdges(dto.edges);
+          }
+          if (dto.configs && typeof dto.configs === "object") {
+            setNodeConfigs(dto.configs);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to load diagram from server:", err);
+        });
+    }
+  }, [workspaceId, diagramId, token]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(
@@ -1877,6 +1912,40 @@ function WorkspaceInner() {
   const [nodeConfigs, setNodeConfigs] = useState<Record<string, any>>({});
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
+  const handleSaveDiagramToBackend = async () => {
+    if (!workspaceId || !diagramId || !token) return;
+    try {
+      setIsSaving(true);
+      await updateDiagram(
+        workspaceId,
+        diagramId,
+        {
+          nodes,
+          edges,
+          configs: nodeConfigs,
+        },
+        token
+      );
+      setSuccessToast("Diagram saved to MongoDB successfully! 💾");
+    } catch (err: any) {
+      setValidationWarning(err.message || "Failed to save diagram");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Keyboard shortcut Ctrl+S / Cmd+S for quick save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        handleSaveDiagramToBackend();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [workspaceId, diagramId, token, nodes, edges, nodeConfigs]);
+
   // Playback Simulation States
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -1886,6 +1955,8 @@ function WorkspaceInner() {
   const [hideResponse, setHideResponse] = useState(false);
   const [parallelResponse, setParallelResponse] = useState(false);
   const [debugEnabled, setDebugEnabled] = useState(true);
+  const [bgPattern, setBgPattern] = useState<"dots" | "lines" | "cross" | "none">("dots");
+  const [bgOpacity, setBgOpacity] = useState<number>(0.18);
 
   // Raw generated simulation frames list
   const [rawSimulationFrames, setRawSimulationFrames] = useState<any[]>([]);
@@ -4564,12 +4635,24 @@ connect s1 -> r1
               maxZoom={2.5}
               style={{ width: "100%", height: "100%" }}
             >
-              <Background
-                variant={BackgroundVariant.Dots}
-                gap={20}
-                size={0.8}
-                color="rgba(148,163,184,0.18)"
-              />
+              {bgPattern !== "none" && (
+                <Background
+                  variant={
+                    bgPattern === "lines"
+                      ? BackgroundVariant.Lines
+                      : bgPattern === "cross"
+                      ? BackgroundVariant.Cross
+                      : BackgroundVariant.Dots
+                  }
+                  gap={20}
+                  size={0.8}
+                  color={
+                    theme === "dark"
+                      ? `rgba(148, 163, 184, ${bgOpacity})`
+                      : `rgba(15, 23, 42, ${bgOpacity})`
+                  }
+                />
+              )}
               {/* <MiniMap
                 nodeStrokeWidth={3}
                 zoomable
@@ -4775,6 +4858,73 @@ connect s1 -> r1
                   <span>⚡ Health & Load</span>
                 </button>
               ))}
+
+            {/* Canvas Background Pattern & Opacity Switcher Overlay */}
+            <div className="absolute top-4 right-4 z-20 flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-md p-1 shadow-lg pointer-events-auto">
+              {/* Pattern selector */}
+              <div className="flex items-center gap-0.5">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/40 px-1.5 select-none">
+                  Grid
+                </span>
+                {(["dots", "lines", "cross", "none"] as const).map((pattern) => (
+                  <button
+                    key={pattern}
+                    type="button"
+                    onClick={() => setBgPattern(pattern)}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-bold font-mono uppercase transition cursor-pointer ${
+                      bgPattern === pattern
+                        ? "bg-violet-500/20 text-violet-400 border border-violet-500/30 shadow-sm"
+                        : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                    }`}
+                    title={`Set grid pattern to ${pattern}`}
+                  >
+                    {pattern}
+                  </button>
+                ))}
+              </div>
+
+              {bgPattern !== "none" && (
+                <>
+                  <div className="h-4 w-px bg-[var(--border)] my-auto" />
+
+                  {/* Opacity slider */}
+                  <div className="flex items-center gap-1.5 px-1">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/40 select-none">
+                      Opacity
+                    </span>
+                    <input
+                      type="range"
+                      min="0.05"
+                      max="0.70"
+                      step="0.05"
+                      value={bgOpacity}
+                      onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
+                      className="w-16 h-1 rounded-lg bg-[var(--surface-muted)] appearance-none cursor-pointer accent-violet-500"
+                      title={`Adjust grid opacity: ${Math.round(bgOpacity * 100)}%`}
+                    />
+                    <span className="text-[9px] font-mono font-semibold text-violet-400 min-w-[24px]">
+                      {Math.round(bgOpacity * 100)}%
+                    </span>
+                  </div>
+                </>
+              )}
+
+              {workspaceId && diagramId && (
+                <>
+                  <div className="h-4 w-px bg-[var(--border)] my-auto" />
+                  <button
+                    type="button"
+                    onClick={handleSaveDiagramToBackend}
+                    disabled={isSaving}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/20 transition cursor-pointer disabled:opacity-50"
+                    title="Save diagram to MongoDB (Ctrl+S / Cmd+S)"
+                  >
+                    <span>💾</span>
+                    <span>{isSaving ? "Saving..." : "Save Diagram"}</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Floating Warning Message */}
@@ -7911,10 +8061,16 @@ connect s1 -> r1
 }
 
 // Wrap in ReactFlowProvider so useReactFlow() works inside WorkspaceInner
-export default function WorkspacePage() {
+export default function WorkspacePage({
+  workspaceId,
+  diagramId,
+}: {
+  workspaceId?: string;
+  diagramId?: string;
+}) {
   return (
     <ReactFlowProvider>
-      <WorkspaceInner />
+      <WorkspaceInner workspaceId={workspaceId} diagramId={diagramId} />
     </ReactFlowProvider>
   );
 }
