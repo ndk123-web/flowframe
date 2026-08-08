@@ -233,6 +233,35 @@ export default function WorkspaceDetailPage() {
 
   if (!_hasHydrated || !isAuthenticated || !user) return null;
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[var(--background)] text-[color:var(--foreground)] flex items-center justify-center p-6">
+        <div className="w-full max-w-5xl space-y-8 animate-pulse">
+          {/* Header Skeleton */}
+          <div className="flex items-center justify-between pb-6 border-b border-[var(--border)]/60">
+            <div className="space-y-3">
+              <div className="w-48 h-8 rounded-xl bg-[var(--surface-muted)]" />
+              <div className="w-80 h-4 rounded-lg bg-[var(--surface-muted)]" />
+            </div>
+            <div className="w-32 h-10 rounded-xl bg-[var(--surface-muted)]" />
+          </div>
+          {/* Stats Skeleton */}
+          <div className="grid grid-cols-3 gap-4">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="h-20 rounded-xl bg-[var(--surface-muted)]" />
+            ))}
+          </div>
+          {/* Cards Grid Skeleton */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="h-40 rounded-2xl bg-[var(--surface-muted)]" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!workspace) {
     return (
       <div className="min-h-screen bg-[var(--background)] text-[color:var(--foreground)] flex items-center justify-center">
@@ -547,13 +576,21 @@ export default function WorkspaceDetailPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 shrink-0">
+                    <div className="flex items-center gap-3 shrink-0">
                       <span className="text-xs font-mono text-[color:var(--foreground)]/50 flex items-center gap-1">
                         <NodeLinkIcon className="w-3.5 h-3.5 text-cyan-400" /> {d.nodes_count} nodes
                       </span>
-                      <span className="text-[10px] font-mono text-[color:var(--foreground)]/35">
+                      <span className="text-[10px] font-mono text-[color:var(--foreground)]/35 hidden sm:inline">
                         {d.updated_at}
                       </span>
+                      <button
+                        type="button"
+                        onClick={(e) => openEditDiagramModal(d, e)}
+                        className="p-1 rounded-lg text-[color:var(--foreground)]/40 hover:text-cyan-400 hover:bg-cyan-500/10 transition cursor-pointer"
+                        title="Edit diagram"
+                      >
+                        ✏️
+                      </button>
                       <span className="text-xs text-cyan-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
                         Open →
                       </span>

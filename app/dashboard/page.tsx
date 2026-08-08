@@ -609,13 +609,31 @@ export default function PostmanDashboardPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 shrink-0">
+                    <div className="flex items-center gap-3 shrink-0">
                       <span className="text-xs font-mono text-[color:var(--foreground)]/50 flex items-center gap-1">
                         <DiagramIcon className="w-3.5 h-3.5 text-violet-400" /> {ws.diagrams_count}
                       </span>
-                      <span className="text-[10px] font-mono text-[color:var(--foreground)]/35">
+                      <span className="text-[10px] font-mono text-[color:var(--foreground)]/35 hidden sm:inline">
                         {ws.updated_at}
                       </span>
+                      <button
+                        type="button"
+                        onClick={(e) => openEditWorkspaceModal(ws, e)}
+                        className="p-1 rounded-lg text-[color:var(--foreground)]/40 hover:text-violet-400 hover:bg-violet-500/10 transition cursor-pointer"
+                        title="Edit workspace"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => toggleStar(ws.id, e)}
+                        className={`transition-all cursor-pointer ${
+                          ws.starred ? "text-amber-400 opacity-100" : "text-[color:var(--foreground)]/30 opacity-40 group-hover:opacity-100"
+                        }`}
+                        title={ws.starred ? "Unstar" : "Star workspace"}
+                      >
+                        <StarIcon className="w-4 h-4" filled={ws.starred} />
+                      </button>
                       <span className="text-xs text-violet-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
                         Open →
                       </span>
