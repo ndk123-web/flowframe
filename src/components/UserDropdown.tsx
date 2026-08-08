@@ -48,12 +48,12 @@ export default function UserDropdown({ theme, onToggleTheme }: UserDropdownProps
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative shrink-0" ref={dropdownRef}>
       {/* Avatar Button */}
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="group relative flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/80 hover:bg-[var(--surface)] p-1.5 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+        className="group relative flex items-center gap-1.5 sm:gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/80 hover:bg-[var(--surface)] p-1 sm:p-1.5 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/40 shrink-0"
       >
         <div className="relative">
           {user.avatar ? (
@@ -80,7 +80,7 @@ export default function UserDropdown({ theme, onToggleTheme }: UserDropdownProps
 
       {/* Popover Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-2xl shadow-2xl z-50 p-2 space-y-1.5 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-1.5rem)] rounded-2xl border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-2xl shadow-2xl z-50 p-2 space-y-1.5 animate-in fade-in zoom-in-95 duration-150">
           {/* Profile Header */}
           <div className="p-3 rounded-xl bg-[var(--surface-muted)]/60 border border-[var(--border)]/50 space-y-1">
             <div className="flex items-center gap-2.5">
