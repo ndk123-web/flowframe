@@ -1862,10 +1862,12 @@ function WorkspaceInner({
   const [theme, setTheme] = useState<Theme>("dark");
   const [diagramTitle, setDiagramTitle] = useState<string>("");
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isLoadingDiagram, setIsLoadingDiagram] = useState<boolean>(Boolean(workspaceId && diagramId));
 
   // Load diagram from backend if workspaceId and diagramId are provided
   useEffect(() => {
     if (workspaceId && diagramId && token) {
+      setIsLoadingDiagram(true);
       getDiagramById(workspaceId, diagramId, token)
         .then((dto) => {
           setDiagramTitle(dto.title);
@@ -1881,6 +1883,9 @@ function WorkspaceInner({
         })
         .catch((err) => {
           console.error("Failed to load diagram from server:", err);
+        })
+        .finally(() => {
+          setIsLoadingDiagram(false);
         });
     }
   }, [workspaceId, diagramId, token]);
@@ -4618,6 +4623,25 @@ connect s1 -> r1
                 </div>
               </div>
             )}
+
+            {/* Canvas Loading Overlay */}
+            {isLoadingDiagram && (
+              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[var(--background)]/80 backdrop-blur-md transition-all">
+                <div className="flex flex-col items-center gap-3 p-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 shadow-2xl">
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full border-4 border-violet-500/20 border-t-violet-500 animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center text-xs">
+                      ⚡
+                    </div>
+                  </div>
+                  <div className="text-center space-y-1">
+                    <p className="text-sm font-bold text-[color:var(--foreground)] tracking-tight">Loading Architecture Diagram...</p>
+                    <p className="text-xs text-[color:var(--foreground)]/50 font-mono">Fetching nodes & configurations from database</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <ReactFlow
               nodes={styledNodes}
               edges={animatedEdges}
