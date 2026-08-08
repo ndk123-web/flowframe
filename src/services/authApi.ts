@@ -1,6 +1,6 @@
 import { AuthResponse } from "@/store/useAuthStore";
 
-const API_BASE_URL = "http://127.0.0.1:8000/api/auth";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 export interface AuthCredentials {
   email: string;
