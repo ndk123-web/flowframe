@@ -2,9 +2,9 @@ name: CI / Automated Tests
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "feature/**", "feature/*" ]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "feature/**", "feature/*" ]
 
 jobs:
   test:
@@ -12,25 +12,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # it will clone the repo in ubuntu latest
+      # Clone repository
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # it will setup nodejs version 20 and cache the npm packages
+      # Setup Node.js v20 with npm caching
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
 
-    # it will install the dependencies
+      # Install dependencies cleanly
       - name: Install Dependencies
         run: npm ci
 
-      # it will run the vitest unit tests
+      # Run Vitest unit tests
       - name: Run Vitest Unit Tests
         run: npm test
 
-      # It will verify the next.js build
+      # Verify Next.js build using GitHub Repository Secrets
       - name: Verify Next.js Build
+        env:
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDERID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDERID }}
+          NEXT_PUBLIC_FIREBASE_APPID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APPID }}
+          NEXT_PUBLIC_FIREBASE_MEASUREMENTID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MEASUREMENTID }}
         run: npm run build
