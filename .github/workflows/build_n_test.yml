@@ -10,6 +10,7 @@ jobs:
   test:
     name: Run Unit Tests & Build Verification
     runs-on: ubuntu-latest
+    environment: Production
 
     steps:
       # Clone repository
@@ -31,7 +32,7 @@ jobs:
       - name: Run Vitest Unit Tests
         run: npm test
 
-      # Verify Next.js build using GitHub Repository Secrets
+      # Verify Next.js build using GitHub Production Environment Secrets
       - name: Verify Next.js Build
         env:
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
