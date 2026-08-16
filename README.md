@@ -1,347 +1,277 @@
 # FlowFrame
 
 <p align="center">
-	<img
-		src="public/logo/flow-frame-dark.png"
-		alt="FlowFrame Logo"
-		width="150"
-		style="border-radius: 50%; border: 1px solid #2a2a2a; padding: 8px;"
-	/>
+  <img src="public/logo/flow-frame-dark.png" alt="FlowFrame Logo" width="140" />
 </p>
 
-Interactive distributed system simulator.
+<b>
+<p align="center">
+  Interactive distributed systems simulator to design, test, and understand architecture behavior frame by frame.
+</p>
+</b>
 
-## Quick Links
+## Overview
 
-- [Goal](#goal)
-- [How Engine Works](#how-engine-works)
-- [Simulation Flow (Simple English)](#simulation-flow-simple-english)
-- [Cache Internals (Payload, IPv4, Forward/Backward)](#cache-internals-payload-ipv4-forwardbackward)
-- [Actual Flow With Code](#actual-flow-with-code)
-- [Scenario Route](#scenario-route)
-- [Run](#run)
-- [Tech](#tech)
+FlowFrame is a full-stack platform for visualizing distributed systems behavior through simulation rather than static diagrams.
+It combines a modern Next.js frontend with a high-performance Rust Axum backend for authentication, workspace management,
+diagram persistence, and recent activity feeds.
 
-## Goal
+Primary use cases:
 
-Build a developer-first tool to visually understand distributed system behavior,
-not just draw architecture diagrams.
+- Learn distributed systems with interactive scenarios
+- Prototype architecture designs in a visual canvas
+- Simulate request traversal and observe component-level behavior
+- Persist and manage diagrams across workspaces
 
-## How Engine Works
+## Quick Referral Links
 
-1. GraphManager
+- Product demo: https://youtu.be/3Tezcle9FUY
+- Rust backend repository: https://github.com/ndk123-web/flowframe-backend
+- Frontend setup guide: [Local Setup](#local-setup)
+- Backend integration notes: [Backend Integration (Rust Axum)](#backend-integration-rust-axum)
+- License: [License](#license)
 
-- Stores architecture as nodes + edges.
-- Example path: Client -> LoadBalancer -> Server1/Server2/Server3.
+## Product Demo
 
-2. NodeRegistry
+- YouTube demo: https://youtu.be/3Tezcle9FUY
 
-- Maps nodeId -> actual class instance.
-- Graph only knows structure; NodeRegistry gives behavior (LoadBalancerModel, ServerModel, ClientModel).
-- Simulation uses this to detect node type and run node-specific logic.
+## Screenshots
 
-3. Strategy Layer (RoundRobinStrategy)
+Sample screenshots are available in the public folder:
 
-- Load balancer asks strategy: "next server konsa?"
-- Pointer rotates over available servers for fair distribution.
+![FlowFrame Workspace Overview](public/app-1.png)
+![FlowFrame Sandbox Editor](public/app-2.png)
+![FlowFrame Landing Page](public/app-3.png)
+![FlowFrame Learning Section](public/app-4.png)
 
-4. SimulationManager
+## Architecture
 
-- Runs request step-by-step.
-- Each hop becomes a frame object:
-  { requestId, from, to, timestamp }
-- Frames are generated in order and stored for UI playback.
+FlowFrame is split into two repositories:
 
-5. UI Playback
+- Frontend (this repository): Next.js app, simulation UI, engine, and learning experience
+- Backend (Rust + Axum): API, auth, workspace and diagram persistence
 
-- UI reads frames array and moves frameIndex over time.
-- Current frame decides active server highlight.
-- Animated packets + controls (Play/Pause/Next/Speed) visualize the same engine output.
+Backend repository:
 
-## Simulation Flow (Simple English)
+- https://github.com/ndk123-web/flowframe-backend
 
-This is the simple end-to-end flow of one simulation request.
+## FlowFrame DSL (Domain-Specific Language)
 
-1. Start from scenario file
+FlowFrame includes a separate, purpose-built DSL for defining distributed architectures declaratively.
+This DSL is designed for system modeling, not general-purpose programming.
 
-- A scenario creates `GraphManager`, `NodeRegistry`, and `SimulationManager`.
-- Then it calls `simulation.runSimulation("client-1")` one or more times.
-- This is where simulation starts.
+What you can express in `.flow` scripts:
 
-2. Create a request object
+- Infrastructure node definitions using `define <TYPE> <id> { ... }`
+- Directed topology using `connect a -> b -> c` or direct arrow chains
+- Runtime-related configs such as routes, endpoints, capacities, cache data, topics, and queue behavior
 
-- `runSimulation` creates a unique request id.
-- It stores current node (`client-1` initially), payload, and direction (`forward` by default).
+Supported high-level node types include:
 
-3. Move hop-by-hop using graph + registry
+- CLIENT
+- SERVER
+- GATEWAY
+- LOADBALANCER
+- REDIS
+- POSTGRES
+- MESSAGEQUEUE
+- PUBSUB
 
-- Graph tells: what are the next connected nodes.
-- Registry tells: what kind of node this is (Client, Load Balancer, Server, Redis, Postgres).
-- Based on node type, simulation decides next step.
+### DSL Compilation Pipeline
 
-4. Save every hop as a frame
+The DSL compiler entry point is implemented in `src/DSL/index.ts` as `compileDSL(sourceCode)`.
 
-- Every movement is stored in `frames` as:
-	`{ requestId, from, to, timestamp, action }`
-- These frames are the source of truth for UI animation.
+Compilation flow:
 
-5. Forward phase
+1. Lexing: source text to tokens
+2. Parsing: tokens to AST
+3. Semantic analysis: AST validation and normalization
+4. Interpretation: semantic AST to graph output consumed by FlowFrame
 
-- Client sends request to next node.
-- Load balancer picks one server (using strategy).
-- Server can call Redis first.
-- If Redis miss happens, server forwards to Postgres.
+Implementation modules:
 
-6. Backward phase (response path)
+- Lexer: `src/DSL/flow-interpreter/src/flowLexer/lexer.ts`
+- Parser: `src/DSL/flow-interpreter/src/flowParser/parser.ts`
+- Semantic analyzer: `src/DSL/flow-interpreter/src/flowSemantic/semantic`
+- Interpreter: `src/DSL/flow-interpreter/src/flowInterpreter/interpreterFlow`
 
-- When data is found (Redis hit or Postgres return), request direction becomes `backward`.
-- Simulation walks back through the traversal path and pushes response frames.
-- Response eventually returns to client.
+Reference documentation:
 
-### Minimal Code Sample (How it starts)
+- `src/DSL/README.md`
 
-```ts
-const graph = new GraphManager("graph-cache");
-const registry = new NodeRegistry("registry-cache");
+Minimal example:
 
-// Register node behavior instances (Client, Server, Redis, Postgres)
-registry.register("client-1", clientInstance);
-registry.register("server-1", serverInstance);
-
-// Connect architecture in graph
-graph.addEdge("client-1", "server-1");
-
-const simulation = new SimulationManager(
-	graph,
-	registry,
-	payload,
-	ipv4Generator.getRandomIpv4() as string,
-);
-
-// Simulation starts here
-simulation.runSimulation("client-1");
-
-// UI consumes these frames for packet animation
-const frames = simulation.getFrames();
-```
-
-### Tiny Internal Logic Sample (inside SimulationManager)
-
-```ts
-// One forward hop example: Client -> next node
-if (nodeType === "CLIENT") {
-	const toNodeId = nextNodes[0];
-	this.pushFrame(request.id, currentNodeId, toNodeId, "CLIENT_SEND_REQUEST");
-	traversalPath.push(toNodeId);
-	currentNodeId = toNodeId;
+```flow
+define CLIENT c1 {
+  label: "Mobile Client",
+  requests: [
+    {
+      endpoint: "/api/v1/posts",
+      allowedMethods: ["GET"],
+      key: "rohan"
+    }
+  ]
 }
-```
 
-## Cache Internals (Payload, IPv4, Forward/Backward)
-
-This section explains your exact simple-cache setup in plain English.
-
-### 1) What we pass into SimulationManager
-
-```ts
-const dataToPass = {
-	redis: {
-		data: [{ rohan: "cached data for rohan" }],
-	},
-	testCasesForRedis: {
-		// deterministic order in simulation: hit -> db fallback -> invalid key
-		data: ["rohan", "doe", "invalid-user"],
-	},
-};
-
-const simulation = new SimulationManager(
-	graph,
-	registry,
-	dataToPass,
-	ipv4Instance.getRandomIpv4() as string,
-);
-```
-
-- `dataToPass` goes into each new request as request context/payload.
-- `ipv4` is attached to the request object so each request can carry a client IP identity.
-
-### 2) What happens when `runSimulation("client-1")` is called
-
-- `SimulationManager` creates a new request id (unique).
-- It sets `currentNodeId = "client-1"`.
-- It initializes direction as forward (`request.direction` is forward unless changed).
-- It picks a Redis lookup key from `testCasesForRedis.data` using a cursor:
-	first run -> `rohan`, second run -> `doe`, third run -> `invalid-user`.
-
-### 3) How frames are generated internally
-
-Every hop calls `pushFrame(...)` and stores:
-
-```ts
-{ requestId, from, to, timestamp, action }
-```
-
-So engine is not drawing UI directly. It only creates ordered frames.
-UI reads these frames and animates edges.
-
-### 4) Forward vs Backward logic
-
-Forward means request is still traveling deeper into the system.
-Backward means response is returning to previous nodes.
-
-High-level rules:
-
-- CLIENT node: send to next node (server/lb), create forward frame.
-- SERVER node:
-	- if Redis lookup not done: forward to Redis.
-	- if Redis miss happened and DB lookup is pending: forward to Postgres.
-	- otherwise switch to backward.
-- REDIS node:
-	- if key found: emit `REDIS_CACHE_HIT`, then switch to backward.
-	- if key not found: emit `REDIS_CACHE_MISS`, mark DB lookup pending, continue forward.
-- POSTGRES node:
-	- emit `POSTGRES_RETURN_DATA`, then switch to backward.
-
-Backward movement uses traversal path stack and emits response frames while popping nodes.
-
-### 5) Example sequence for your 3 deterministic test keys
-
-1. Key = `rohan` (cache hit)
-
-- Client -> Server (`CLIENT_SEND_REQUEST`)
-- Server -> Redis (`SERVER_FORWARD_REQUEST_TO_REDIS`)
-- Redis -> Server (`REDIS_CACHE_HIT`)
-- Server -> Client (`SERVER_SEND_RESPONSE`)
-
-2. Key = `doe` (cache miss, db fallback)
-
-- Client -> Server (`CLIENT_SEND_REQUEST`)
-- Server -> Redis (`SERVER_FORWARD_REQUEST_TO_REDIS`)
-- Redis -> Server (`REDIS_CACHE_MISS`)
-- Server -> Postgres (`SERVER_FORWARD_REQUEST_TO_POSTGRES`)
-- Postgres -> Server (`POSTGRES_RETURN_DATA`)
-- Server -> Client (`SERVER_SEND_RESPONSE`)
-
-3. Key = `invalid-user` (miss, no useful db data path in this simplified setup)
-
-- Client -> Server
-- Server -> Redis
-- Redis miss -> Server
-- Server tries DB path if connected, then returns backward based on current context flags.
-
-### 6) Why this is deterministic
-
-- `redisLookupCursor` is incremented every run.
-- Key is selected by modulo over `testCasesForRedis.data`.
-- So run order is predictable and repeatable for demos.
-
-## Actual Flow With Code
-
-### 1) Scenario bundle engine output banata hai
-
-Source: [src/scenarios/simple-load-balancer.ts](src/scenarios/simple-load-balancer.ts)
-
-```ts
-export function createSimpleLoadBalancerSimulationBundle(): SimBundle {
-	const graph = new GraphManager("graph-1");
-	const registry = new NodeRegistry("registry-1");
-	const simulation = new SimulationManager(graph, registry);
-
-	// nodes + edges + registry wiring ...
-
-	for (let i = 0; i < 8; i++) {
-		simulation.runTest("client-1");
-	}
-
-	return {
-		frames: simulation.getFrames() as Frame[],
-		nodes: flowNodes,
-		edges: flowEdges,
-	};
+define SERVER s1 {
+  label: "Posts Service",
+  acceptedEndpoints: [
+    {
+      endpoint: "/api/v1/posts",
+      allowedMethod: ["GET"]
+    }
+  ]
 }
+
+connect c1 -> s1
 ```
 
-### 2) Page scenarioId ke basis pe bundle pick karta hai
+## Core Features
 
-Source: [app/scenarios/[scenarioId]/page.tsx](app/scenarios/[scenarioId]/page.tsx)
+- Interactive system-design canvas with reusable components
+- Frame-based simulation engine with deterministic playback
+- Animated request path visualization over graph edges
+- Separate domain-specific language (DSL) for architecture definitions
+- Scenario library for common distributed architecture patterns
+- Authenticated workspaces and diagram persistence
+- Recent diagrams feed and full CRUD operations
 
-```ts
-const { scenarioId } = use(params);
-const createSimulationBundle = ALL_SCENARIOS.get(scenarioId);
-const [{ frames, nodes, edges }] = useState<SimBundle>(createSimulationBundle);
+## Backend Integration (Rust Axum)
+
+The frontend uses NEXT_PUBLIC_API_URL to call the Rust backend. If not set, it defaults to:
+
+- http://127.0.0.1:8000
+
+Client service modules calling backend APIs:
+
+- src/services/authApi.ts
+- src/services/workspaceApi.ts
+- src/services/diagramApi.ts
+
+Key API groups consumed by frontend:
+
+- Auth: /api/auth/signup, /api/auth/signin, /api/auth/sync
+- Workspaces: /api/workspaces
+- Diagrams: /api/workspaces/:id/diagrams, /api/diagrams/recent
+
+## Tech Stack
+
+Frontend:
+
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- React Flow (@xyflow/react)
+- Framer Motion
+- Firebase Auth
+- Vitest
+
+Backend (separate repo):
+
+- Rust
+- Axum
+- Tokio
+- MongoDB
+- JWT-based auth middleware
+
+## Project Structure
+
+```text
+app/                 Next.js App Router pages
+public/              Static assets and screenshots
+src/components/      UI and visualization components
+src/engine/          Simulation core and routing strategies
+src/scenarios/       Scenario builders and registry map
+src/services/        Frontend API clients for Rust backend
+tests/               Unit tests
 ```
 
-### 3) Current frame se active edge calculate hoti hai
+## Local Setup
 
-```ts
-const currentFrame = frames[frameIndex] ?? null;
+### Prerequisites
 
-const animatedEdges = useMemo(() => {
-	if (!currentFrame) return edges;
+- Node.js 20+
+- npm 10+
+- Rust toolchain (for backend repository)
+- MongoDB instance (for backend repository)
 
-	const activeEdgeId = `${currentFrame.from}->${currentFrame.to}`;
+### 1) Run Backend (Rust Axum)
 
-	return edges.map((edge) => ({
-		...edge,
-		data: {
-			...edge.data,
-			active: edge.id === activeEdgeId,
-			packetDuration: edge.id === activeEdgeId ? 1 / speed : 2.2,
-		},
-	}));
-}, [currentFrame, edges, speed]);
+Clone and start backend from:
+
+- https://github.com/ndk123-web/flowframe-backend
+
+Typical backend environment values:
+
+```env
+MONGODB_URI=mongodb://localhost:27017
+DATABASE_NAME=flowframe
+JWT_SECRET=change_me
+HOST=0.0.0.0
+PORT=8000
+FRONTEND_URL=http://localhost:3000
 ```
 
-### 4) ReactFlow custom edge renderer use karta hai
+Then run backend:
 
-```tsx
-const edgeTypes = { packet: PacketEdge };
-
-<ReactFlow
-	nodes={nodes}
-	edges={animatedEdges}
-	edgeTypes={edgeTypes}
-/>
+```bash
+cargo check
+cargo run
 ```
 
-`type: "packet"` wali har edge ke liye `PacketEdge` call hota hai.
+### 2) Run Frontend (this repository)
 
-### 5) PacketEdge BaseEdge draw karta hai + active edge par packet animate karta hai
+Create .env.local in this repository:
 
-```tsx
-function PacketEdge(props: EdgeProps) {
-	const isActive = Boolean(props.data?.active);
+```env
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-	return (
-		<>
-			<BaseEdge path={edgePath} markerEnd={props.markerEnd} style={props.style} />
-
-			{isActive && (
-				<circle r="5" fill="#8b5cf6">
-					<animateMotion dur={`${packetDuration}s`} repeatCount="indefinite" path={edgePath} />
-				</circle>
-			)}
-		</>
-	);
-}
+# Firebase client config
+NEXT_PUBLIC_FIREBASE_API_KEY=your_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_bucket
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDERID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APPID=your_app_id
+NEXT_PUBLIC_FIREBASE_MEASUREMENTID=your_measurement_id
 ```
 
-## Scenario Route
-
-- Main scenario page: [http://localhost:3000/scenarios/simple-load-balancer](http://localhost:3000/scenarios/simple-load-balancer)
-- Scenario registry map: [src/scenarios/all.ts](src/scenarios/all.ts)
-
-## Run
+Install and run:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000
+Open:
 
-## Tech
+- http://localhost:3000
 
-- Next.js
-- Tailwind CSS
-- Framer Motion
+## Available Scripts
+
+- npm run dev: Start development server
+- npm run build: Build for production
+- npm run start: Start production build
+- npm run lint: Run lint checks
+- npm run test: Run test suite once
+- npm run test:watch: Run tests in watch mode
+
+## Routes
+
+- Home: /
+- Dashboard: /dashboard
+- Workspaces: /workspace
+- Scenarios: /scenarios
+- Learning Hub: /learn
+- Docs: /docs
+
+## License
+
+This frontend repository is licensed under PolyForm Noncommercial License 1.0.0.
+
+- License file: [LICENSE.txt](LICENSE.txt)
+- Official text: https://polyformproject.org/licenses/noncommercial/1.0.0
+
+Noncommercial usage is allowed under the license terms.
