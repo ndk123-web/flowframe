@@ -565,6 +565,282 @@ function LearnAndSandbox() {
   );
 }
 
+// ─── YOUTUBE VIDEO SHOWCASE ──────────────────────────────────────────────
+function YouTubeShowcase() {
+  return (
+    <Reveal>
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="relative overflow-hidden rounded-3xl border border-violet-500/30 bg-gradient-to-br from-violet-950/30 via-[var(--surface)]/90 to-indigo-950/20 p-6 sm:p-10 shadow-2xl backdrop-blur-xl">
+          <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-rose-500/10 blur-[90px]" />
+          <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-violet-500/10 blur-[90px]" />
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+            {/* Left Content */}
+            <div className="lg:col-span-5 space-y-5 text-left">
+              <div className="inline-flex items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/10 px-3.5 py-1 text-xs font-bold text-rose-400">
+                <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping" />
+                <span>Featured Architecture Deep Dive</span>
+              </div>
+
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={{ color: "var(--foreground)" }}>
+                Building Event-Driven Microservices <span className="grad-text">From Scratch</span>
+              </h2>
+
+              <p className="text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.7 }}>
+                See FlowFrame in action as we construct a complete event-driven microservices architecture — routing requests through API Gateways, load balancers, server clusters, RabbitMQ message queues, and Postgres connection pools.
+              </p>
+
+              <div className="space-y-2.5 pt-2">
+                {[
+                  "Complete producer-consumer & PubSub fan-out pipeline",
+                  "Cache-aside pattern with Redis hits vs misses",
+                  "TCP connection pool exhaustion & waiting queues",
+                  "Step-by-step live simulation frame playback",
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-start gap-2.5 text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.85 }}>
+                    <svg className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-3 flex flex-wrap items-center gap-3">
+                <a
+                  href="https://www.youtube.com/watch?v=XQxFZg6RcTI"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white px-5 py-2.5 text-xs sm:text-sm font-bold shadow-lg shadow-rose-600/25 transition hover:scale-105"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                  </svg>
+                  <span>Watch on YouTube</span>
+                </a>
+                <Link
+                  href="/workspace"
+                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] px-4 py-2.5 text-xs sm:text-sm font-semibold transition"
+                  style={{ color: "var(--foreground)" }}
+                >
+                  <span>Try on Canvas →</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Right Video Embed */}
+            <div className="lg:col-span-7">
+              <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl bg-black/60 group">
+                <iframe
+                  className="w-full h-full"
+                  src="https://www.youtube.com/embed/XQxFZg6RcTI"
+                  title="FlowFrame - Microservices Event Driven Architecture"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </Reveal>
+  );
+}
+
+// ─── SYSTEM SIMULATION RULES ──────────────────────────────────────────────
+function SystemSimulationRules() {
+  const rules = [
+    {
+      badge: "Rule 1",
+      title: "Cache-First Precedence",
+      icon: (
+        <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7zM9 4v16M15 4v16M4 12h16" />
+        </svg>
+      ),
+      accent: "from-red-500/20 to-amber-500/20 border-red-500/30 text-red-400",
+      description: "When a Server is connected to both Redis and PostgreSQL, it always queries Redis first. Only upon CACHE_MISS does it initiate database fallback.",
+    },
+    {
+      badge: "Rule 2",
+      title: "Postgres Connection Pool Bounds",
+      icon: (
+        <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <ellipse cx="12" cy="5" rx="9" ry="3" />
+          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+        </svg>
+      ),
+      accent: "from-blue-500/20 to-indigo-500/20 border-blue-500/30 text-blue-400",
+      description: "Server's `tcpConnectionsToPostgres` enforces the TCP pool size. If active connections are full, incoming requests wait in queue (`POSTGRES_POOL_WAIT`).",
+    },
+    {
+      badge: "Rule 3",
+      title: "Load Balancer Health Check",
+      icon: (
+        <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l9-4 9 4v6c0 5.5-3.8 10.7-9 12-5.2-1.3-9-6.5-9-12V6z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
+        </svg>
+      ),
+      accent: "from-cyan-500/20 to-teal-500/20 border-cyan-500/30 text-cyan-400",
+      description: "Load balancers filter out overloaded servers before dispatching traffic. If all downstream servers are at maximum capacity, it returns a 503 error.",
+    },
+    {
+      badge: "Rule 4",
+      title: "Endpoint & Method Contracts",
+      icon: (
+        <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      ),
+      accent: "from-emerald-500/20 to-green-500/20 border-emerald-500/30 text-emerald-400",
+      description: "Servers validate requested URL paths and HTTP verbs (GET, POST, PUT, DELETE) against their `acceptedEndpoints` list. Unmatched routes fail with 404 or 405.",
+    },
+    {
+      badge: "Rule 5",
+      title: "Message Queue & Async Response",
+      icon: (
+        <svg className="w-5 h-5 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+        </svg>
+      ),
+      accent: "from-pink-500/20 to-rose-500/20 border-pink-500/30 text-pink-400",
+      description: "Publishing to a MessageQueue returns an immediate 202 Accepted acknowledgement to the client while consumer servers process messages asynchronously.",
+    },
+    {
+      badge: "Rule 6",
+      title: "PubSub Event Fan-Out",
+      icon: (
+        <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="2" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14" />
+        </svg>
+      ),
+      accent: "from-indigo-500/20 to-violet-500/20 border-indigo-500/30 text-indigo-400",
+      description: "When an event is published to a PubSub broker, it fans out to all microservice workers registered to that topic channel.",
+    },
+    {
+      badge: "Rule 7",
+      title: "Valet Key Pre-Signed Uploads",
+      icon: (
+        <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+        </svg>
+      ),
+      accent: "from-amber-500/20 to-yellow-500/20 border-amber-500/30 text-amber-400",
+      description: "Clients first request a pre-signed URL from the authorization Server, then upload heavy media assets directly to Cloud Storage bypassing API bottlenecks.",
+    },
+    {
+      badge: "Rule 8",
+      title: "Queue Overflow Handling",
+      icon: (
+        <svg className="w-5 h-5 text-fuchsia-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      ),
+      accent: "from-fuchsia-500/20 to-purple-500/20 border-fuchsia-500/30 text-fuchsia-400",
+      description: "When MessageQueue reaches capacity, overflow behavior dictates execution: `BLOCK` halts producer until consumer frees space, or `REJECT` fails fast.",
+    },
+  ];
+
+  return (
+    <Reveal>
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="text-center space-y-4 mb-14">
+          <div className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-1.5 text-xs font-bold text-violet-400">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+            </svg>
+            <span>Engine Architecture Specifications</span>
+          </div>
+          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight" style={{ color: "var(--foreground)" }}>
+            Engine Simulation <span className="grad-text">Rules & Behavior</span>
+          </h2>
+          <p className="max-w-2xl mx-auto text-sm sm:text-base leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.65 }}>
+            Every distributed system in FlowFrame executes according to deterministic engine rules that mirror real-world production infrastructure.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {rules.map((r, i) => (
+            <div
+              key={i}
+              className="card-glow rounded-2xl border border-[var(--border)] bg-[var(--surface)]/70 p-5 space-y-3 backdrop-blur transition-all duration-300 hover:-translate-y-1"
+            >
+              <div className="flex items-center justify-between">
+                <div className="p-2 rounded-xl bg-[var(--surface-muted)] border border-[var(--border)]/70">
+                  {r.icon}
+                </div>
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border bg-gradient-to-br ${r.accent}`}>
+                  {r.badge}
+                </span>
+              </div>
+              <h3 className="text-sm font-bold text-[color:var(--foreground)]">
+                {r.title}
+              </h3>
+              <p className="text-xs text-[color:var(--foreground)]/60 leading-relaxed">
+                {r.description}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-10 text-center">
+          <Link
+            href="/docs"
+            className="inline-flex items-center gap-2 rounded-xl border border-violet-500/40 bg-violet-500/10 hover:bg-violet-500/20 px-5 py-2.5 text-xs sm:text-sm font-bold text-violet-400 transition"
+          >
+            <span>Read Complete System Rules & Language Reference in Docs</span>
+            <span>→</span>
+          </Link>
+        </div>
+      </section>
+    </Reveal>
+  );
+}
+
+// ─── OPEN SOURCE & LICENSE BANNER ──────────────────────────────────────────
+function OpenSourceLicenseBanner() {
+  return (
+    <Reveal>
+      <section className="mx-auto max-w-6xl px-6 py-10">
+        <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)]/60 p-6 sm:p-8 backdrop-blur flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/30 flex items-center justify-center shrink-0">
+              <svg className="w-6 h-6 text-violet-400" viewBox="0 0 24 24" fill="currentColor">
+                <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-[color:var(--foreground)]">
+                Open Source & Non-Commercial License
+              </h3>
+              <p className="text-xs text-[color:var(--foreground)]/60 mt-0.5">
+                FlowFrame is released under the <strong className="text-[color:var(--foreground)]">PolyForm Noncommercial License 1.0.0</strong>. Free for education, personal learning, and non-commercial research.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <a
+              href="https://github.com/ndk123-web/flowframe"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 text-xs font-semibold shadow-md shadow-violet-600/20 transition hover:scale-105"
+            >
+              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+              <span>Star on GitHub</span>
+            </a>
+          </div>
+        </div>
+      </section>
+    </Reveal>
+  );
+}
+
 // ─── MAIN LANDING PAGE ────────────────────────────────────────────────────────
 export default function LandingPage() {
   const [theme, setTheme] = useState<Theme>("dark");
@@ -701,11 +977,20 @@ export default function LandingPage() {
       {/* What It Does */}
       <WhatItDoes />
 
+      {/* YouTube Video Showcase */}
+      <YouTubeShowcase />
+
+      {/* System Simulation Rules Section */}
+      <SystemSimulationRules />
+
       {/* Scenarios */}
       <V1Scenarios />
 
       {/* Learn & Sandbox */}
       <LearnAndSandbox />
+
+      {/* Open Source & License Banner */}
+      <OpenSourceLicenseBanner />
 
       {/* Footer */}
       <SiteFooter />

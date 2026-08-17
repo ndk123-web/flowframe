@@ -464,6 +464,12 @@ export default function DocsPage() {
                   Overview
                 </a>
                 <a
+                  href="#system-rules"
+                  className="block rounded-lg px-3 py-2 text-violet-400 bg-violet-500/10 hover:bg-violet-500/15 transition font-semibold"
+                >
+                  ⚙️ System Simulation Rules
+                </a>
+                <a
                   href="#syntax-rules"
                   className="block rounded-lg px-3 py-2 text-[color:var(--foreground)]/80 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition font-medium"
                 >
@@ -482,14 +488,31 @@ export default function DocsPage() {
                   Flagship Enterprise Blueprint
                 </a>
                 <a
+                  href="#video-deepdive"
+                  className="block rounded-lg px-3 py-2 text-rose-400/90 hover:text-rose-400 hover:bg-[var(--surface-muted)] transition font-medium"
+                >
+                  ▶ Video Deep Dive (YouTube)
+                </a>
+                <a
                   href="#error-diagnostics"
                   className="block rounded-lg px-3 py-2 text-[color:var(--foreground)]/80 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition font-medium"
                 >
-                  Error Diagnostics
+                  Error Diagnostics & License
                 </a>
               </nav>
 
-              <div className="pt-2 border-t border-[var(--border)]">
+              <div className="pt-2 border-t border-[var(--border)] space-y-2">
+                <a
+                  href="https://github.com/ndk123-web/flowframe"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] py-2 text-xs font-semibold transition text-[color:var(--foreground)]"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+                  </svg>
+                  <span>GitHub Repository</span>
+                </a>
                 <Link
                   href="/workspace"
                   className="flex items-center justify-center gap-1.5 w-full rounded-xl bg-violet-600 hover:bg-violet-500 text-white py-2 text-xs font-bold transition shadow-md cursor-pointer"
@@ -514,6 +537,134 @@ export default function DocsPage() {
               <p className="text-sm sm:text-base text-[color:var(--foreground)]/70 leading-relaxed">
                 FlowFrame Domain Specific Language (<code className="text-violet-400 font-mono">.flow</code>) is a declarative infrastructure-as-code language built to design, compile, visualize, and simulate complex distributed systems and microservices architectures in real time.
               </p>
+            </section>
+
+            {/* ── SYSTEM SIMULATION RULES ────────────────────────────────────── */}
+            <section id="system-rules" className="space-y-6 pt-6 border-t border-[var(--border)]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                    <span>⚙️</span>
+                    <span>System Simulation Rules & Runtime Behavior</span>
+                  </h2>
+                  <p className="text-xs sm:text-sm text-[color:var(--foreground)]/70 mt-1">
+                    Every user building architectures in FlowFrame should understand these 8 core simulation rules enforced by the engine runtime:
+                  </p>
+                </div>
+                <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg bg-violet-500/10 text-violet-400 border border-violet-500/20 shrink-0">
+                  8 Engine Rules
+                </span>
+              </div>
+
+              <div className="space-y-4">
+                {/* Rule 1 */}
+                <div className="rounded-xl border border-rose-500/30 bg-[var(--surface)] p-5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-rose-400 flex items-center gap-2">
+                      <span>💾</span>
+                      <span>Rule 1: Cache-First Precedence (Redis + Postgres)</span>
+                    </h3>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 font-bold">
+                      Data Access
+                    </span>
+                  </div>
+                  <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
+                    When a Server node is connected to both a <strong>Redis</strong> cache and a <strong>PostgreSQL</strong> database, the engine <strong>always queries Redis first</strong>. If the lookup key exists in Redis (<code className="text-emerald-400 font-mono">CACHE_HIT</code>), the request backtracks immediately. Only on <code className="text-rose-400 font-mono">CACHE_MISS</code> does the server forward the request to Postgres.
+                  </p>
+                </div>
+
+                {/* Rule 2 */}
+                <div className="rounded-xl border border-blue-500/30 bg-[var(--surface)] p-5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-blue-400 flex items-center gap-2">
+                      <span>🗄️</span>
+                      <span>Rule 2: Postgres TCP Connection Pool Limits</span>
+                    </h3>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-bold">
+                      Database
+                    </span>
+                  </div>
+                  <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
+                    Each server maintains a bounded connection pool defined by <code className="text-blue-400 font-mono">tcpConnectionsToPostgres</code>. When concurrent requests exceed the pool size, excess queries enter a <code className="text-amber-400 font-mono">POSTGRES_POOL_WAIT</code> queue state until active connections are released.
+                  </p>
+                </div>
+
+                {/* Rule 3 */}
+                <div className="rounded-xl border border-cyan-500/30 bg-[var(--surface)] p-5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-cyan-400 flex items-center gap-2">
+                      <span>⚖️</span>
+                      <span>Rule 3: Load Balancer Health Verification</span>
+                    </h3>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 font-bold">
+                      Traffic Balancing
+                    </span>
+                  </div>
+                  <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
+                    Load balancers inspect downstream server <code className="text-cyan-400 font-mono">capacity</code>. If all server nodes in a pool are exhausted, the load balancer rejects the request with a <code className="text-rose-400 font-mono">503 Service Unavailable</code> error.
+                  </p>
+                </div>
+
+                {/* Rule 4 */}
+                <div className="rounded-xl border border-emerald-500/30 bg-[var(--surface)] p-5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-emerald-400 flex items-center gap-2">
+                      <span>🛣️</span>
+                      <span>Rule 4: Endpoint & Method Matching Contracts</span>
+                    </h3>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold">
+                      REST Routing
+                    </span>
+                  </div>
+                  <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
+                    Servers validate that incoming requests match one of their declared <code className="text-emerald-400 font-mono">acceptedEndpoints</code> and allowed HTTP verbs (<code className="font-mono">GET, POST, PUT, DELETE</code>). Unmatched paths trigger <code className="text-rose-400 font-mono">404 Not Found</code> or <code className="text-amber-400 font-mono">405 Method Not Allowed</code>.
+                  </p>
+                </div>
+
+                {/* Rule 5 & 6 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="rounded-xl border border-pink-500/30 bg-[var(--surface)] p-4 space-y-2">
+                    <h4 className="text-sm font-bold text-pink-400 flex items-center gap-1.5">
+                      <span>📬</span>
+                      <span>Rule 5: Async Message Queue Ack</span>
+                    </h4>
+                    <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
+                      Publishing to a MessageQueue sends an immediate <code className="text-pink-400 font-mono">202 Accepted</code> ack back to the client while worker servers process messages in the background.
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-indigo-500/30 bg-[var(--surface)] p-4 space-y-2">
+                    <h4 className="text-sm font-bold text-indigo-400 flex items-center gap-1.5">
+                      <span>📡</span>
+                      <span>Rule 6: PubSub Event Fan-Out</span>
+                    </h4>
+                    <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
+                      PubSub brokers broadcast published event messages to all subscribed servers registered with the matching <code className="text-indigo-400 font-mono">topic</code> channel.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Rule 7 & 8 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="rounded-xl border border-amber-500/30 bg-[var(--surface)] p-4 space-y-2">
+                    <h4 className="text-sm font-bold text-amber-400 flex items-center gap-1.5">
+                      <span>🔑</span>
+                      <span>Rule 7: Valet Key Pre-Signed Uploads</span>
+                    </h4>
+                    <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
+                      When <code className="text-amber-400 font-mono">valet: true</code>, the client first requests an upload token from the server, then streams data directly to cloud storage.
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-fuchsia-500/30 bg-[var(--surface)] p-4 space-y-2">
+                    <h4 className="text-sm font-bold text-fuchsia-400 flex items-center gap-1.5">
+                      <span>🛑</span>
+                      <span>Rule 8: Queue Overflow Controls</span>
+                    </h4>
+                    <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
+                      MessageQueue buffers that exceed <code className="text-fuchsia-400 font-mono">queueSize</code> adhere to <code className="font-mono">BLOCK</code> (producer waits) or <code className="font-mono">REJECT</code> (503 error).
+                    </p>
+                  </div>
+                </div>
+              </div>
             </section>
 
             {/* Syntax Rules */}
@@ -712,10 +863,43 @@ define PUBSUB postPubsub {
               <FlowCodeBlock code={FLAGSHIP_BLUEPRINT_CODE} />
             </section>
 
-            {/* Error Diagnostics */}
-            <section id="error-diagnostics" className="space-y-4 pt-6 border-t border-[var(--border)]">
+            {/* Video Deep Dive */}
+            <section id="video-deepdive" className="space-y-4 pt-6 border-t border-[var(--border)]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight text-rose-400 flex items-center gap-2">
+                    <span>▶</span>
+                    <span>Video Deep Dive — Event-Driven Architecture from Scratch</span>
+                  </h2>
+                  <p className="text-xs sm:text-sm text-[color:var(--foreground)]/70 mt-1">
+                    Watch the comprehensive full-stack walkthrough building and simulating a production-grade microservices system.
+                  </p>
+                </div>
+                <a
+                  href="https://www.youtube.com/watch?v=XQxFZg6RcTI"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-xl bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 text-xs font-bold transition shrink-0 hidden sm:inline-flex items-center gap-1.5"
+                >
+                  <span>Open on YouTube ↗</span>
+                </a>
+              </div>
+
+              <div className="aspect-video w-full rounded-2xl overflow-hidden border border-[var(--border)] bg-black/60 shadow-xl">
+                <iframe
+                  className="w-full h-full"
+                  src="https://www.youtube.com/embed/XQxFZg6RcTI"
+                  title="FlowFrame Event-Driven Architecture Walkthrough"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </section>
+
+            {/* Error Diagnostics & License */}
+            <section id="error-diagnostics" className="space-y-6 pt-6 border-t border-[var(--border)]">
               <h2 className="text-2xl font-bold tracking-tight">
-                Error Diagnostics & Validation Rules
+                Error Diagnostics & Open Source License
               </h2>
               <p className="text-xs sm:text-sm text-[color:var(--foreground)]/70">
                 The FlowFrame compiler performs strict Lexer, Parser, and Semantic checks prior to visual rendering or simulation execution.
@@ -740,6 +924,27 @@ define PUBSUB postPubsub {
                     Enforces valid property names per node type using <code className="font-mono">ALLOWED_VARIABLES</code> dictionary.
                   </p>
                 </div>
+              </div>
+
+              {/* License Card */}
+              <div className="rounded-2xl border border-violet-500/30 bg-gradient-to-r from-violet-950/20 to-[var(--surface)] p-6 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-[color:var(--foreground)] flex items-center gap-2">
+                    <span>📜</span>
+                    <span>PolyForm Noncommercial License 1.0.0</span>
+                  </h3>
+                  <a
+                    href="https://github.com/ndk123-web/flowframe"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-violet-400 hover:underline font-mono"
+                  >
+                    ndk123-web/flowframe
+                  </a>
+                </div>
+                <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
+                  FlowFrame source code is available for educational, personal, and non-commercial research purposes under the PolyForm Noncommercial License 1.0.0. Feel free to inspect the Rust backend, TypeScript compiler pipeline, and simulation runtime.
+                </p>
               </div>
             </section>
           </main>

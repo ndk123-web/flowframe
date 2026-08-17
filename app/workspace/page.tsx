@@ -60,7 +60,7 @@ import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 
 // Auth & API
 import { useAuthStore } from "@/store/useAuthStore";
-import { getDiagramById, updateDiagram } from "@/services/diagramApi";
+import { getDiagramById, updateDiagram, getSharedDiagram } from "@/services/diagramApi";
 
 // Header
 import SiteHeader from "@/components/SiteHeader";
@@ -958,7 +958,7 @@ function CustomNode({ id, data, selected }: any) {
             <div className="min-w-0 flex-1 leading-tight">
               <p
                 className="font-semibold text-[color:var(--foreground)] truncate"
-                style={{ fontSize: isDiamond ? "10px" : "12.5px" }}
+                style={{ fontSize: typeof data.fontSize === "number" ? `${data.fontSize}px` : (isDiamond ? "10px" : "12.5px") }}
               >
                 {data.label}
               </p>
@@ -1713,6 +1713,8 @@ function ShapeNode({ data, selected }: any) {
       : hexToRgba(color, 0.45);
   const labelColor = hexToRgba(color, 0.9);
 
+  const customFontSize = typeof data.fontSize === "number" ? data.fontSize : undefined;
+
   return (
     <div
       className="w-full h-full relative group"
@@ -1750,7 +1752,7 @@ function ShapeNode({ data, selected }: any) {
             <span
               className="select-none font-semibold w-full break-words"
               style={{
-                fontSize: 15,
+                fontSize: customFontSize ?? 15,
                 color: "var(--foreground)",
                 pointerEvents: "none",
                 textAlign: textAlign,
@@ -1781,8 +1783,9 @@ function ShapeNode({ data, selected }: any) {
         >
           {data.label && (
             <span
-              className="text-xs font-semibold select-none leading-snug break-words w-full"
+              className="font-semibold select-none leading-snug break-words w-full"
               style={{
+                fontSize: customFontSize ?? 12,
                 color: labelColor,
                 pointerEvents: "none",
                 textAlign: textAlign,
@@ -1822,8 +1825,9 @@ function ShapeNode({ data, selected }: any) {
               }}
             >
               <span
-                className="text-[11px] font-bold truncate select-none"
+                className="font-bold truncate select-none"
                 style={{
+                  fontSize: customFontSize ?? 11,
                   color: labelColor,
                   pointerEvents: "none",
                   textAlign: textAlign,
@@ -1853,20 +1857,49 @@ const edgeTypes = {
 function WorkspaceInner({
   workspaceId,
   diagramId,
+  shareId,
+  isSharedView = false,
 }: {
   workspaceId?: string;
   diagramId?: string;
+  shareId?: string;
+  isSharedView?: boolean;
 }) {
   const { screenToFlowPosition, fitView } = useReactFlow();
   const { token } = useAuthStore();
   const [theme, setTheme] = useState<Theme>("dark");
   const [diagramTitle, setDiagramTitle] = useState<string>("");
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [isLoadingDiagram, setIsLoadingDiagram] = useState<boolean>(Boolean(workspaceId && diagramId));
+  const [isLoadingDiagram, setIsLoadingDiagram] = useState<boolean>(Boolean((workspaceId && diagramId) || shareId));
 
-  // Load diagram from backend if workspaceId and diagramId are provided
+  // Load diagram from backend if workspaceId and diagramId are provided, or if shareId is provided
   useEffect(() => {
-    if (workspaceId && diagramId && token) {
+    if (shareId) {
+      setIsLoadingDiagram(true);
+      getSharedDiagram(shareId)
+        .then((dto) => {
+          setDiagramTitle(dto.title);
+          if (Array.isArray(dto.nodes) && dto.nodes.length > 0) {
+            setNodes(dto.nodes);
+          }
+          if (Array.isArray(dto.edges)) {
+            setEdges(dto.edges);
+          }
+          if (dto.configs && typeof dto.configs === "object") {
+            setNodeConfigs(dto.configs);
+          }
+          setTimeout(() => {
+            fitView({ duration: 600 });
+          }, 150);
+        })
+        .catch((err) => {
+          console.error("Failed to load shared diagram:", err);
+          setValidationWarning(err.message || "Failed to load shared diagram");
+        })
+        .finally(() => {
+          setIsLoadingDiagram(false);
+        });
+    } else if (workspaceId && diagramId && token) {
       setIsLoadingDiagram(true);
       getDiagramById(workspaceId, diagramId, token)
         .then((dto) => {
@@ -1880,6 +1913,9 @@ function WorkspaceInner({
           if (dto.configs && typeof dto.configs === "object") {
             setNodeConfigs(dto.configs);
           }
+          setTimeout(() => {
+            fitView({ duration: 600 });
+          }, 150);
         })
         .catch((err) => {
           console.error("Failed to load diagram from server:", err);
@@ -1888,7 +1924,7 @@ function WorkspaceInner({
           setIsLoadingDiagram(false);
         });
     }
-  }, [workspaceId, diagramId, token]);
+  }, [workspaceId, diagramId, shareId, token, fitView]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(
@@ -1994,7 +2030,7 @@ function WorkspaceInner({
 
   // Floating Panel Visibility States
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [showWelcomeModal, setShowWelcomeModal] = useState(true);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(!Boolean(workspaceId && diagramId));
   const [showHelpModal, setShowHelpModal] = useState(false);
 
   // Redesigned Sidebar Accordions & Search states
@@ -3208,11 +3244,14 @@ connect s1 -> r1
     [setNodes, setEdges, handleStartSimulation],
   );
 
-  // Open template selection picker modal on load
+  // Open template selection picker modal ONLY on standalone sandbox load (not inside workspace diagrams or share view)
   useEffect(() => {
-    setShowWelcomeModal(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!workspaceId && !diagramId && !shareId) {
+      setShowWelcomeModal(true);
+    } else {
+      setShowWelcomeModal(false);
+    }
+  }, [workspaceId, diagramId, shareId]);
 
   // Add Component to Canvas — used both by click and drag-drop
   const addComponent = useCallback(
@@ -5192,6 +5231,104 @@ connect s1 -> r1
                                 : align === "right"
                                   ? "➡️ Right"
                                   : "↕️ Center"}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Font Size Picker */}
+                    <div className="mt-3.5 pt-3 border-t border-[var(--border)]/60">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55">
+                          Font Size
+                        </label>
+                        <span className="text-[11px] font-mono text-violet-400 font-bold bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20">
+                          {((selectedNode.data.fontSize as number) || (selectedNode.data.shapeId === "text" ? 15 : selectedNode.data.shapeId === "sticky" ? 12 : 11))}px
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min={9}
+                          max={36}
+                          step={1}
+                          value={((selectedNode.data.fontSize as number) || (selectedNode.data.shapeId === "text" ? 15 : selectedNode.data.shapeId === "sticky" ? 12 : 11))}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setNodes((nds) =>
+                              nds.map((n) =>
+                                n.id === selectedNodeId
+                                  ? { ...n, data: { ...n.data, fontSize: val } }
+                                  : n,
+                              ),
+                            );
+                          }}
+                          className="flex-1 accent-violet-500 cursor-pointer h-1.5 bg-[var(--surface-muted)] rounded-lg"
+                        />
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const curr = (selectedNode.data.fontSize as number) || (selectedNode.data.shapeId === "text" ? 15 : selectedNode.data.shapeId === "sticky" ? 12 : 11);
+                              const next = Math.max(8, curr - 2);
+                              setNodes((nds) =>
+                                nds.map((n) =>
+                                  n.id === selectedNodeId
+                                    ? { ...n, data: { ...n.data, fontSize: next } }
+                                    : n,
+                                ),
+                              );
+                            }}
+                            className="w-6 h-6 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs font-bold hover:bg-[var(--surface-muted)] flex items-center justify-center transition cursor-pointer"
+                            title="Decrease font size"
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const curr = (selectedNode.data.fontSize as number) || (selectedNode.data.shapeId === "text" ? 15 : selectedNode.data.shapeId === "sticky" ? 12 : 11);
+                              const next = Math.min(48, curr + 2);
+                              setNodes((nds) =>
+                                nds.map((n) =>
+                                  n.id === selectedNodeId
+                                    ? { ...n, data: { ...n.data, fontSize: next } }
+                                    : n,
+                                ),
+                              );
+                            }}
+                            className="w-6 h-6 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs font-bold hover:bg-[var(--surface-muted)] flex items-center justify-center transition cursor-pointer"
+                            title="Increase font size"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                      {/* Quick font presets */}
+                      <div className="flex items-center gap-1.5 mt-2">
+                        {[10, 12, 14, 16, 20, 24].map((sz) => {
+                          const isCur = ((selectedNode.data.fontSize as number) || (selectedNode.data.shapeId === "text" ? 15 : selectedNode.data.shapeId === "sticky" ? 12 : 11)) === sz;
+                          return (
+                            <button
+                              key={sz}
+                              type="button"
+                              onClick={() => {
+                                setNodes((nds) =>
+                                  nds.map((n) =>
+                                    n.id === selectedNodeId
+                                      ? { ...n, data: { ...n.data, fontSize: sz } }
+                                      : n,
+                                  ),
+                                );
+                              }}
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-mono transition cursor-pointer border ${
+                                isCur
+                                  ? "border-violet-500/70 bg-violet-500/20 text-violet-400 font-bold shadow-sm"
+                                  : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+                              }`}
+                            >
+                              {sz}px
                             </button>
                           );
                         })}
@@ -7968,10 +8105,46 @@ connect s1 -> r1
 
               <div className="h-px bg-[var(--border)]/70 w-full" />
 
+              {/* Public Shareable Link */}
+              {(diagramId || shareId) && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-violet-400 font-mono">
+                      Public Share Link
+                    </p>
+                    <span className="text-[10px] text-emerald-400 font-mono font-semibold">
+                      Public Access Ready
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={`${typeof window !== "undefined" ? window.location.origin : ""}/share/${diagramId || shareId}`}
+                      className="flex-1 rounded-xl border border-violet-500/30 bg-[var(--surface-muted)] px-3 py-2 text-xs font-mono text-violet-400 select-all outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = `${typeof window !== "undefined" ? window.location.origin : ""}/share/${diagramId || shareId}`;
+                        navigator.clipboard.writeText(url);
+                        setSuccessToast("Public share link copied to clipboard!");
+                      }}
+                      className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition shadow-sm cursor-pointer whitespace-nowrap"
+                    >
+                      Copy Link
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-[color:var(--foreground)]/50">
+                    Anyone with this link can view, inspect, and run simulations on this architecture.
+                  </p>
+                </div>
+              )}
+
               {/* Save Image / PNG Export Section */}
               <div className="space-y-2">
                 <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45">
-                  1. Export Diagram Image
+                  Export Image
                 </p>
                 <button
                   type="button"
@@ -8100,13 +8273,22 @@ connect s1 -> r1
 export default function WorkspacePage({
   workspaceId,
   diagramId,
+  shareId,
+  isSharedView = false,
 }: {
   workspaceId?: string;
   diagramId?: string;
+  shareId?: string;
+  isSharedView?: boolean;
 }) {
   return (
     <ReactFlowProvider>
-      <WorkspaceInner workspaceId={workspaceId} diagramId={diagramId} />
+      <WorkspaceInner
+        workspaceId={workspaceId}
+        diagramId={diagramId}
+        shareId={shareId}
+        isSharedView={isSharedView}
+      />
     </ReactFlowProvider>
   );
 }
