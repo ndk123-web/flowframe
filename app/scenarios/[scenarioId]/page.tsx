@@ -694,24 +694,25 @@ function Controls({
 
         <div className="h-6 w-px bg-[var(--border)] hidden sm:block" />
 
-        <div className="flex items-center gap-1 sm:gap-2">
-          <label
-            className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}
-          >
-            <span className="hidden sm:inline">Speed: </span>
-            <span className="font-semibold">{speed?.toFixed(1)}x</span>
-          </label>
+        <label
+          title="Toggle live simulation logs"
+          className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition whitespace-nowrap font-medium ${
+            debugEnabled
+              ? "border-violet-500/50 bg-violet-500/15 text-violet-300 shadow-sm"
+              : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:border-violet-500/30"
+          }`}
+        >
           <input
-            type="range"
-            min="0.5"
-            max="2"
-            step="0.1"
-            value={speed}
-            onChange={(e) => onSpeedChange(Number(e.target.value))}
-            className="w-16 sm:w-20"
-            style={{ accentColor: "#8b5cf6" }}
+            type="checkbox"
+            checked={debugEnabled}
+            onChange={onDebugToggle}
+            className="accent-violet-500 cursor-pointer"
           />
-        </div>
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span>Logs</span>
+        </label>
       </div>
     </div>
   );
@@ -2112,8 +2113,11 @@ function DebugPanel({
 
   if (currentFrames.length === 0) {
     return (
-      <div className="font-mono text-xs p-1">
-        <p className={textColor}>No active frames</p>
+      <div className="font-mono text-xs p-2 text-center sm:text-left flex items-center gap-2">
+        <span className="inline-block w-2 h-2 rounded-full bg-violet-400/60 animate-ping shrink-0" />
+        <span className={textColor}>
+          Simulation logs ready — click <strong className="text-violet-400">Play ▶</strong> to stream live execution logs.
+        </span>
       </div>
     );
   }

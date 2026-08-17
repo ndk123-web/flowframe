@@ -2,11 +2,13 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useAuthStore } from "@/store/useAuthStore";
 import WorkspacePage from "../../workspace/page";
 
 export default function SharedDiagramPage() {
   const params = useParams();
   const diagramId = params?.id as string;
+  const { isAuthenticated, user, _hasHydrated } = useAuthStore();
 
   if (!diagramId) {
     return (
@@ -47,16 +49,39 @@ export default function SharedDiagramPage() {
         <div className="flex items-center gap-2">
           <Link
             href="/workspace"
-            className="rounded-lg bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 px-3 py-1 text-[11px] font-semibold transition"
+            className="rounded-lg bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 px-3 py-1 text-[11px] font-semibold transition hidden sm:inline-block"
           >
-            Open Sandbox Studio
+            Sandbox Studio
           </Link>
-          <Link
-            href="/signup"
-            className="rounded-lg bg-violet-600 hover:bg-violet-500 text-white px-3 py-1 text-[11px] font-bold transition shadow-sm"
-          >
-            Sign Up Free
-          </Link>
+
+          {_hasHydrated && isAuthenticated ? (
+            <Link
+              href="/dashboard"
+              className="rounded-lg bg-violet-600 hover:bg-violet-500 text-white px-3 py-1 text-[11px] font-bold transition shadow-sm flex items-center gap-1.5"
+            >
+              <span>Dashboard</span>
+              {user?.email && (
+                <span className="text-violet-200/80 font-normal text-[10px] hidden md:inline">
+                  ({user.email.split("@")[0]})
+                </span>
+              )}
+            </Link>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <Link
+                href="/signin"
+                className="rounded-lg bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 px-2.5 py-1 text-[11px] font-semibold transition"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/signup"
+                className="rounded-lg bg-violet-600 hover:bg-violet-500 text-white px-3 py-1 text-[11px] font-bold transition shadow-sm"
+              >
+                Sign Up Free
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
