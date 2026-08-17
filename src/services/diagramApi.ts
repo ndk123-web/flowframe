@@ -176,3 +176,19 @@ export async function deleteDiagram(
     throw new Error(errorData.error || "Failed to delete diagram");
   }
 }
+
+export async function getSharedDiagram(diagramId: string): Promise<DiagramDTO> {
+  const res = await fetch(`${API_BASE_URL}/api/share/${diagramId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to fetch shared diagram");
+  }
+
+  return res.json();
+}
