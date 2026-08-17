@@ -1468,8 +1468,11 @@ function DebugPanel({
 
   if (currentFrames.length === 0) {
     return (
-      <div className="font-mono text-xs p-1">
-        <p className={textColor}>No active frames</p>
+      <div className="font-mono text-xs p-2 text-center sm:text-left flex items-center gap-2">
+        <span className="inline-block w-2 h-2 rounded-full bg-violet-400/60 animate-ping shrink-0" />
+        <span className={textColor}>
+          Simulation logs ready — click <strong className="text-violet-400">Play ▶</strong> or <strong className="text-violet-400">Reframe 🔄</strong> to stream live execution logs.
+        </span>
       </div>
     );
   }
@@ -7632,8 +7635,12 @@ connect s1 -> r1
                     </label>
 
                     <label
-                      title="Show detailed logs panel under graph"
-                      className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-emerald-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+                      title="Toggle live simulation logs & console"
+                      className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition whitespace-nowrap font-medium ${
+                        debugEnabled
+                          ? "border-violet-500/50 bg-violet-500/15 text-violet-300 shadow-sm"
+                          : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:border-violet-500/30"
+                      }`}
                     >
                       <input
                         type="checkbox"
@@ -7641,9 +7648,10 @@ connect s1 -> r1
                         onChange={() => setDebugEnabled((prev) => !prev)}
                         className="accent-violet-500 cursor-pointer"
                       />
-                      <span className="group-hover:text-emerald-300">
-                        Debug logs
-                      </span>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>Logs</span>
                     </label>
                   </div>
                 </div>
@@ -7658,16 +7666,21 @@ connect s1 -> r1
                   theme={theme}
                 />
 
-                {debugEnabled && simulationFrames.length > 0 && (
+                {debugEnabled && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className="min-h-0 flex-1"
                   >
                     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 p-3 mt-1 shadow-inner">
-                      <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/50 mb-2">
-                        Simulation Debug Console
-                      </p>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-violet-400">
+                          Simulation Execution Logs
+                        </p>
+                        <span className="text-[10px] font-mono text-[color:var(--foreground)]/40">
+                          Frame {simulationFrames.length > 0 ? frameIndex + 1 : 0} / {simulationFrames.length}
+                        </span>
+                      </div>
                       <DebugPanel
                         currentFrames={accumulatedFrames}
                         frameIndex={frameIndex}

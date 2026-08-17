@@ -651,96 +651,96 @@ function YouTubeShowcase() {
 function SystemSimulationRules() {
   const rules = [
     {
-      badge: "Rule 1",
+      num: "01",
+      category: "Data Access",
       title: "Cache-First Precedence",
       icon: (
-        <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7zM9 4v16M15 4v16M4 12h16" />
         </svg>
       ),
-      accent: "from-red-500/20 to-amber-500/20 border-red-500/30 text-red-400",
-      description: "When a Server is connected to both Redis and PostgreSQL, it always queries Redis first. Only upon CACHE_MISS does it initiate database fallback.",
+      description: "When a Server is connected to both Redis and PostgreSQL, it always queries Redis first. Only upon CACHE_MISS does it fallback to PostgreSQL.",
     },
     {
-      badge: "Rule 2",
-      title: "Postgres Connection Pool Bounds",
+      num: "02",
+      category: "Database Pool",
+      title: "Postgres TCP Pool Limits",
       icon: (
-        <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <ellipse cx="12" cy="5" rx="9" ry="3" />
           <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
           <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
         </svg>
       ),
-      accent: "from-blue-500/20 to-indigo-500/20 border-blue-500/30 text-blue-400",
-      description: "Server's `tcpConnectionsToPostgres` enforces the TCP pool size. If active connections are full, incoming requests wait in queue (`POSTGRES_POOL_WAIT`).",
+      description: "Server's tcpConnectionsToPostgres sets maximum active connections. Saturated requests wait in a POSTGRES_POOL_WAIT queue until freed.",
     },
     {
-      badge: "Rule 3",
-      title: "Load Balancer Health Check",
+      num: "03",
+      category: "Traffic Routing",
+      title: "Load Balancer Health Filter",
       icon: (
-        <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l9-4 9 4v6c0 5.5-3.8 10.7-9 12-5.2-1.3-9-6.5-9-12V6z" />
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
         </svg>
       ),
-      accent: "from-cyan-500/20 to-teal-500/20 border-cyan-500/30 text-cyan-400",
-      description: "Load balancers filter out overloaded servers before dispatching traffic. If all downstream servers are at maximum capacity, it returns a 503 error.",
+      description: "Balancers evaluate server capacity and filter out overloaded targets. If all downstream servers are at capacity, it returns a 503 error.",
     },
     {
-      badge: "Rule 4",
-      title: "Endpoint & Method Contracts",
+      num: "04",
+      category: "REST Contracts",
+      title: "Endpoint & Method Matching",
       icon: (
-        <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       ),
-      accent: "from-emerald-500/20 to-green-500/20 border-emerald-500/30 text-emerald-400",
-      description: "Servers validate requested URL paths and HTTP verbs (GET, POST, PUT, DELETE) against their `acceptedEndpoints` list. Unmatched routes fail with 404 or 405.",
+      description: "Servers validate incoming requests against declared acceptedEndpoints and HTTP verbs. Unmatched paths immediately trigger 404 or 405.",
     },
     {
-      badge: "Rule 5",
-      title: "Message Queue & Async Response",
+      num: "05",
+      category: "Async Messaging",
+      title: "Message Queue & 202 Ack",
       icon: (
-        <svg className="w-5 h-5 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
         </svg>
       ),
-      accent: "from-pink-500/20 to-rose-500/20 border-pink-500/30 text-pink-400",
-      description: "Publishing to a MessageQueue returns an immediate 202 Accepted acknowledgement to the client while consumer servers process messages asynchronously.",
+      description: "Publishing to a MessageQueue returns an immediate 202 Accepted ack to the client while consumer servers process messages in the background.",
     },
     {
-      badge: "Rule 6",
+      num: "06",
+      category: "Event Streaming",
       title: "PubSub Event Fan-Out",
       icon: (
-        <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <circle cx="12" cy="12" r="2" />
           <path strokeLinecap="round" strokeLinejoin="round" d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14" />
         </svg>
       ),
-      accent: "from-indigo-500/20 to-violet-500/20 border-indigo-500/30 text-indigo-400",
-      description: "When an event is published to a PubSub broker, it fans out to all microservice workers registered to that topic channel.",
+      description: "When an event is published to a PubSub broker, it broadcasts to all microservice workers registered to that topic channel.",
     },
     {
-      badge: "Rule 7",
+      num: "07",
+      category: "Security",
       title: "Valet Key Pre-Signed Uploads",
       icon: (
-        <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
         </svg>
       ),
-      accent: "from-amber-500/20 to-yellow-500/20 border-amber-500/30 text-amber-400",
-      description: "Clients first request a pre-signed URL from the authorization Server, then upload heavy media assets directly to Cloud Storage bypassing API bottlenecks.",
+      description: "Clients request a pre-signed token from the auth server, then upload heavy media assets directly to Cloud Storage bypassing server proxies.",
     },
     {
-      badge: "Rule 8",
+      num: "08",
+      category: "Flow Control",
       title: "Queue Overflow Handling",
       icon: (
-        <svg className="w-5 h-5 text-fuchsia-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
       ),
-      accent: "from-fuchsia-500/20 to-purple-500/20 border-fuchsia-500/30 text-fuchsia-400",
-      description: "When MessageQueue reaches capacity, overflow behavior dictates execution: `BLOCK` halts producer until consumer frees space, or `REJECT` fails fast.",
+      description: "When MessageQueue reaches capacity, overflow behavior dictates execution: BLOCK halts producer until space frees, or REJECT fails fast.",
     },
   ];
 
@@ -763,24 +763,29 @@ function SystemSimulationRules() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Clean 2-Column Structured Specifications List */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {rules.map((r, i) => (
             <div
               key={i}
-              className="card-glow rounded-2xl border border-[var(--border)] bg-[var(--surface)]/70 p-5 space-y-3 backdrop-blur transition-all duration-300 hover:-translate-y-1"
+              className="group rounded-2xl border border-[var(--border)] bg-[var(--surface)]/70 p-5 space-y-3 backdrop-blur transition-all duration-300 hover:border-violet-500/40 hover:bg-[var(--surface)] hover:-translate-y-0.5"
             >
               <div className="flex items-center justify-between">
-                <div className="p-2 rounded-xl bg-[var(--surface-muted)] border border-[var(--border)]/70">
-                  {r.icon}
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 shrink-0">
+                    {r.icon}
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono font-bold text-violet-400 block tracking-wider uppercase">
+                      Rule {r.num} · {r.category}
+                    </span>
+                    <h3 className="text-sm font-bold text-[color:var(--foreground)]">
+                      {r.title}
+                    </h3>
+                  </div>
                 </div>
-                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border bg-gradient-to-br ${r.accent}`}>
-                  {r.badge}
-                </span>
               </div>
-              <h3 className="text-sm font-bold text-[color:var(--foreground)]">
-                {r.title}
-              </h3>
-              <p className="text-xs text-[color:var(--foreground)]/60 leading-relaxed">
+              <p className="text-xs text-[color:var(--foreground)]/65 leading-relaxed pl-1">
                 {r.description}
               </p>
             </div>

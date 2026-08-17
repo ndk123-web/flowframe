@@ -467,7 +467,7 @@ export default function DocsPage() {
                   href="#system-rules"
                   className="block rounded-lg px-3 py-2 text-violet-400 bg-violet-500/10 hover:bg-violet-500/15 transition font-semibold"
                 >
-                  ⚙️ System Simulation Rules
+                  System Simulation Rules
                 </a>
                 <a
                   href="#syntax-rules"
@@ -489,9 +489,9 @@ export default function DocsPage() {
                 </a>
                 <a
                   href="#video-deepdive"
-                  className="block rounded-lg px-3 py-2 text-rose-400/90 hover:text-rose-400 hover:bg-[var(--surface-muted)] transition font-medium"
+                  className="block rounded-lg px-3 py-2 text-[color:var(--foreground)]/80 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition font-medium"
                 >
-                  ▶ Video Deep Dive (YouTube)
+                  Video Deep Dive (YouTube)
                 </a>
                 <a
                   href="#error-diagnostics"
@@ -517,7 +517,9 @@ export default function DocsPage() {
                   href="/workspace"
                   className="flex items-center justify-center gap-1.5 w-full rounded-xl bg-violet-600 hover:bg-violet-500 text-white py-2 text-xs font-bold transition shadow-md cursor-pointer"
                 >
-                  <span>▶</span>
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
                   <span>Launch Workspace</span>
                 </Link>
               </div>
@@ -531,7 +533,7 @@ export default function DocsPage() {
               <div className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-400">
                 <span>FlowFrame DSL Specifications v2.0.0</span>
               </div>
-              <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+              <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-[color:var(--foreground)]">
                 FlowFrame Architecture DSL Reference
               </h1>
               <p className="text-sm sm:text-base text-[color:var(--foreground)]/70 leading-relaxed">
@@ -543,8 +545,11 @@ export default function DocsPage() {
             <section id="system-rules" className="space-y-6 pt-6 border-t border-[var(--border)]">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                    <span>⚙️</span>
+                  <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] flex items-center gap-2">
+                    <svg className="w-5 h-5 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="3" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+                    </svg>
                     <span>System Simulation Rules & Runtime Behavior</span>
                   </h2>
                   <p className="text-xs sm:text-sm text-[color:var(--foreground)]/70 mt-1">
@@ -558,109 +563,109 @@ export default function DocsPage() {
 
               <div className="space-y-4">
                 {/* Rule 1 */}
-                <div className="rounded-xl border border-rose-500/30 bg-[var(--surface)] p-5 space-y-2.5">
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-2.5 transition hover:border-violet-500/40">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-rose-400 flex items-center gap-2">
-                      <span>💾</span>
-                      <span>Rule 1: Cache-First Precedence (Redis + Postgres)</span>
+                    <h3 className="text-sm font-bold text-[color:var(--foreground)] flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">01</span>
+                      <span>Cache-First Precedence (Redis + Postgres)</span>
                     </h3>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 font-bold">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 font-bold">
                       Data Access
                     </span>
                   </div>
                   <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
-                    When a Server node is connected to both a <strong>Redis</strong> cache and a <strong>PostgreSQL</strong> database, the engine <strong>always queries Redis first</strong>. If the lookup key exists in Redis (<code className="text-emerald-400 font-mono">CACHE_HIT</code>), the request backtracks immediately. Only on <code className="text-rose-400 font-mono">CACHE_MISS</code> does the server forward the request to Postgres.
+                    When a Server node is connected to both a <strong>Redis</strong> cache and a <strong>PostgreSQL</strong> database, the engine <strong>always queries Redis first</strong>. If the lookup key exists in Redis (<code className="text-violet-400 font-mono">CACHE_HIT</code>), the request backtracks immediately. Only on <code className="text-violet-400 font-mono">CACHE_MISS</code> does the server forward the request to Postgres.
                   </p>
                 </div>
 
                 {/* Rule 2 */}
-                <div className="rounded-xl border border-blue-500/30 bg-[var(--surface)] p-5 space-y-2.5">
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-2.5 transition hover:border-violet-500/40">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-blue-400 flex items-center gap-2">
-                      <span>🗄️</span>
-                      <span>Rule 2: Postgres TCP Connection Pool Limits</span>
+                    <h3 className="text-sm font-bold text-[color:var(--foreground)] flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">02</span>
+                      <span>Postgres TCP Connection Pool Limits</span>
                     </h3>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-bold">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 font-bold">
                       Database
                     </span>
                   </div>
                   <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
-                    Each server maintains a bounded connection pool defined by <code className="text-blue-400 font-mono">tcpConnectionsToPostgres</code>. When concurrent requests exceed the pool size, excess queries enter a <code className="text-amber-400 font-mono">POSTGRES_POOL_WAIT</code> queue state until active connections are released.
+                    Each server maintains a bounded connection pool defined by <code className="text-violet-400 font-mono">tcpConnectionsToPostgres</code>. When concurrent requests exceed the pool size, excess queries enter a <code className="text-violet-400 font-mono">POSTGRES_POOL_WAIT</code> queue state until active connections are released.
                   </p>
                 </div>
 
                 {/* Rule 3 */}
-                <div className="rounded-xl border border-cyan-500/30 bg-[var(--surface)] p-5 space-y-2.5">
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-2.5 transition hover:border-violet-500/40">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-cyan-400 flex items-center gap-2">
-                      <span>⚖️</span>
-                      <span>Rule 3: Load Balancer Health Verification</span>
+                    <h3 className="text-sm font-bold text-[color:var(--foreground)] flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">03</span>
+                      <span>Load Balancer Health Verification</span>
                     </h3>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 font-bold">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 font-bold">
                       Traffic Balancing
                     </span>
                   </div>
                   <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
-                    Load balancers inspect downstream server <code className="text-cyan-400 font-mono">capacity</code>. If all server nodes in a pool are exhausted, the load balancer rejects the request with a <code className="text-rose-400 font-mono">503 Service Unavailable</code> error.
+                    Load balancers inspect downstream server <code className="text-violet-400 font-mono">capacity</code>. If all server nodes in a pool are exhausted, the load balancer rejects the request with a <code className="text-violet-400 font-mono">503 Service Unavailable</code> error.
                   </p>
                 </div>
 
                 {/* Rule 4 */}
-                <div className="rounded-xl border border-emerald-500/30 bg-[var(--surface)] p-5 space-y-2.5">
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-2.5 transition hover:border-violet-500/40">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-emerald-400 flex items-center gap-2">
-                      <span>🛣️</span>
-                      <span>Rule 4: Endpoint & Method Matching Contracts</span>
+                    <h3 className="text-sm font-bold text-[color:var(--foreground)] flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">04</span>
+                      <span>Endpoint & Method Matching Contracts</span>
                     </h3>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 font-bold">
                       REST Routing
                     </span>
                   </div>
                   <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
-                    Servers validate that incoming requests match one of their declared <code className="text-emerald-400 font-mono">acceptedEndpoints</code> and allowed HTTP verbs (<code className="font-mono">GET, POST, PUT, DELETE</code>). Unmatched paths trigger <code className="text-rose-400 font-mono">404 Not Found</code> or <code className="text-amber-400 font-mono">405 Method Not Allowed</code>.
+                    Servers validate that incoming requests match one of their declared <code className="text-violet-400 font-mono">acceptedEndpoints</code> and allowed HTTP verbs (<code className="font-mono">GET, POST, PUT, DELETE</code>). Unmatched paths trigger <code className="text-violet-400 font-mono">404 Not Found</code> or <code className="text-violet-400 font-mono">405 Method Not Allowed</code>.
                   </p>
                 </div>
 
                 {/* Rule 5 & 6 */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="rounded-xl border border-pink-500/30 bg-[var(--surface)] p-4 space-y-2">
-                    <h4 className="text-sm font-bold text-pink-400 flex items-center gap-1.5">
-                      <span>📬</span>
-                      <span>Rule 5: Async Message Queue Ack</span>
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-2 transition hover:border-violet-500/40">
+                    <h4 className="text-sm font-bold text-[color:var(--foreground)] flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">05</span>
+                      <span>Async Message Queue Ack</span>
                     </h4>
                     <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
-                      Publishing to a MessageQueue sends an immediate <code className="text-pink-400 font-mono">202 Accepted</code> ack back to the client while worker servers process messages in the background.
+                      Publishing to a MessageQueue sends an immediate <code className="text-violet-400 font-mono">202 Accepted</code> ack back to the client while worker servers process messages in the background.
                     </p>
                   </div>
-                  <div className="rounded-xl border border-indigo-500/30 bg-[var(--surface)] p-4 space-y-2">
-                    <h4 className="text-sm font-bold text-indigo-400 flex items-center gap-1.5">
-                      <span>📡</span>
-                      <span>Rule 6: PubSub Event Fan-Out</span>
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-2 transition hover:border-violet-500/40">
+                    <h4 className="text-sm font-bold text-[color:var(--foreground)] flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">06</span>
+                      <span>PubSub Event Fan-Out</span>
                     </h4>
                     <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
-                      PubSub brokers broadcast published event messages to all subscribed servers registered with the matching <code className="text-indigo-400 font-mono">topic</code> channel.
+                      PubSub brokers broadcast published event messages to all subscribed servers registered with the matching <code className="text-violet-400 font-mono">topic</code> channel.
                     </p>
                   </div>
                 </div>
 
                 {/* Rule 7 & 8 */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="rounded-xl border border-amber-500/30 bg-[var(--surface)] p-4 space-y-2">
-                    <h4 className="text-sm font-bold text-amber-400 flex items-center gap-1.5">
-                      <span>🔑</span>
-                      <span>Rule 7: Valet Key Pre-Signed Uploads</span>
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-2 transition hover:border-violet-500/40">
+                    <h4 className="text-sm font-bold text-[color:var(--foreground)] flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">07</span>
+                      <span>Valet Key Pre-Signed Uploads</span>
                     </h4>
                     <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
-                      When <code className="text-amber-400 font-mono">valet: true</code>, the client first requests an upload token from the server, then streams data directly to cloud storage.
+                      When <code className="text-violet-400 font-mono">valet: true</code>, the client first requests an upload token from the server, then streams data directly to cloud storage.
                     </p>
                   </div>
-                  <div className="rounded-xl border border-fuchsia-500/30 bg-[var(--surface)] p-4 space-y-2">
-                    <h4 className="text-sm font-bold text-fuchsia-400 flex items-center gap-1.5">
-                      <span>🛑</span>
-                      <span>Rule 8: Queue Overflow Controls</span>
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-2 transition hover:border-violet-500/40">
+                    <h4 className="text-sm font-bold text-[color:var(--foreground)] flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">08</span>
+                      <span>Queue Overflow Controls</span>
                     </h4>
                     <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
-                      MessageQueue buffers that exceed <code className="text-fuchsia-400 font-mono">queueSize</code> adhere to <code className="font-mono">BLOCK</code> (producer waits) or <code className="font-mono">REJECT</code> (503 error).
+                      MessageQueue buffers that exceed <code className="text-violet-400 font-mono">queueSize</code> adhere to <code className="font-mono text-violet-400">BLOCK</code> (producer waits) or <code className="font-mono text-violet-400">REJECT</code> (503 error).
                     </p>
                   </div>
                 </div>
@@ -669,7 +674,7 @@ export default function DocsPage() {
 
             {/* Syntax Rules */}
             <section id="syntax-rules" className="space-y-4 pt-6 border-t border-[var(--border)]">
-              <h2 className="text-2xl font-bold tracking-tight">
+              <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)]">
                 Syntax & Token Rules
               </h2>
               <p className="text-xs sm:text-sm text-[color:var(--foreground)]/70">
@@ -696,7 +701,7 @@ define CLIENT c1 {
                 </div>
 
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-2">
-                  <h3 className="text-sm font-bold text-sky-400">
+                  <h3 className="text-sm font-bold text-violet-400">
                     Connection Syntax
                   </h3>
                   <FlowCodeBlock
@@ -708,7 +713,7 @@ connect lb1 -> s2`}
                   />
                   <ul className="text-xs text-[color:var(--foreground)]/60 space-y-1 list-disc list-inside mt-2">
                     <li>Chained connections (<code className="font-mono">{"a -> b -> c"}</code>) split into directed edges (<code className="font-mono">{"a -> b"}</code> and <code className="font-mono">{"b -> c"}</code>).</li>
-                    <li>The <code className="font-mono text-sky-400">connect</code> keyword is optional.</li>
+                    <li>The <code className="font-mono text-violet-400">connect</code> keyword is optional.</li>
                   </ul>
                 </div>
               </div>
@@ -716,7 +721,7 @@ connect lb1 -> s2`}
 
             {/* Node Schemas */}
             <section id="node-schemas" className="space-y-6 pt-6 border-t border-[var(--border)]">
-              <h2 className="text-2xl font-bold tracking-tight">
+              <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)]">
                 Supported Node Schemas (8 Components)
               </h2>
               <p className="text-xs sm:text-sm text-[color:var(--foreground)]/70">
@@ -759,10 +764,10 @@ define SERVER s1 {
                 {/* Gateway & LoadBalancer */}
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-base font-bold text-sky-400">
+                    <h3 className="text-base font-bold text-violet-400">
                       3. GATEWAY & 4. LOADBALANCER
                     </h3>
-                    <span className="text-[10px] font-mono bg-sky-500/10 text-sky-400 px-2 py-0.5 rounded border border-sky-500/20">
+                    <span className="text-[10px] font-mono bg-violet-500/10 text-violet-400 px-2 py-0.5 rounded border border-violet-500/20">
                       Traffic Management
                     </span>
                   </div>
@@ -788,10 +793,10 @@ define LOADBALANCER lb1 {
                 {/* Redis & Postgres */}
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-base font-bold text-emerald-400">
+                    <h3 className="text-base font-bold text-violet-400">
                       5. REDIS & 6. POSTGRES
                     </h3>
-                    <span className="text-[10px] font-mono bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">
+                    <span className="text-[10px] font-mono bg-violet-500/10 text-violet-400 px-2 py-0.5 rounded border border-violet-500/20">
                       State & Storage
                     </span>
                   </div>
@@ -814,10 +819,10 @@ define POSTGRES db1 {
                 {/* Queue & PubSub */}
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-base font-bold text-amber-400">
+                    <h3 className="text-base font-bold text-violet-400">
                       7. MESSAGEQUEUE & 8. PUBSUB
                     </h3>
-                    <span className="text-[10px] font-mono bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">
+                    <span className="text-[10px] font-mono bg-violet-500/10 text-violet-400 px-2 py-0.5 rounded border border-violet-500/20">
                       Asynchronous Messaging
                     </span>
                   </div>
@@ -844,7 +849,7 @@ define PUBSUB postPubsub {
             <section id="flagship-blueprint" className="space-y-4 pt-6 border-t border-[var(--border)]">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold tracking-tight">
+                  <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)]">
                     Flagship Enterprise Microservices Blueprint
                   </h2>
                   <p className="text-xs sm:text-sm text-[color:var(--foreground)]/70">
@@ -856,7 +861,7 @@ define PUBSUB postPubsub {
                   onClick={handleCopyCode}
                   className="rounded-xl bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 border border-violet-500/30 px-3.5 py-2 text-xs font-bold transition cursor-pointer shrink-0"
                 >
-                  {copied ? "Copied! ✓" : "Copy Script"}
+                  {copied ? "Copied" : "Copy Script"}
                 </button>
               </div>
 
@@ -867,8 +872,10 @@ define PUBSUB postPubsub {
             <section id="video-deepdive" className="space-y-4 pt-6 border-t border-[var(--border)]">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold tracking-tight text-rose-400 flex items-center gap-2">
-                    <span>▶</span>
+                  <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] flex items-center gap-2">
+                    <svg className="w-5 h-5 text-violet-400 fill-current" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
                     <span>Video Deep Dive — Event-Driven Architecture from Scratch</span>
                   </h2>
                   <p className="text-xs sm:text-sm text-[color:var(--foreground)]/70 mt-1">
@@ -879,9 +886,9 @@ define PUBSUB postPubsub {
                   href="https://www.youtube.com/watch?v=XQxFZg6RcTI"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-xl bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 text-xs font-bold transition shrink-0 hidden sm:inline-flex items-center gap-1.5"
+                  className="rounded-xl bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 text-xs font-bold transition shrink-0 hidden sm:inline-flex items-center gap-1.5"
                 >
-                  <span>Open on YouTube ↗</span>
+                  <span>Open on YouTube</span>
                 </a>
               </div>
 
@@ -898,7 +905,7 @@ define PUBSUB postPubsub {
 
             {/* Error Diagnostics & License */}
             <section id="error-diagnostics" className="space-y-6 pt-6 border-t border-[var(--border)]">
-              <h2 className="text-2xl font-bold tracking-tight">
+              <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)]">
                 Error Diagnostics & Open Source License
               </h2>
               <p className="text-xs sm:text-sm text-[color:var(--foreground)]/70">
@@ -913,13 +920,13 @@ define PUBSUB postPubsub {
                   </p>
                 </div>
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-1">
-                  <h4 className="font-bold text-sky-400">Duplicate Checks</h4>
+                  <h4 className="font-bold text-violet-400">Duplicate Checks</h4>
                   <p className="text-[color:var(--foreground)]/60">
                     Prevents re-declaration of duplicate node identifier names.
                   </p>
                 </div>
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-1">
-                  <h4 className="font-bold text-emerald-400">Strict Schema Rules</h4>
+                  <h4 className="font-bold text-violet-400">Strict Schema Rules</h4>
                   <p className="text-[color:var(--foreground)]/60">
                     Enforces valid property names per node type using <code className="font-mono">ALLOWED_VARIABLES</code> dictionary.
                   </p>
@@ -930,7 +937,9 @@ define PUBSUB postPubsub {
               <div className="rounded-2xl border border-violet-500/30 bg-gradient-to-r from-violet-950/20 to-[var(--surface)] p-6 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-[color:var(--foreground)] flex items-center gap-2">
-                    <span>📜</span>
+                    <svg className="w-4 h-4 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                     <span>PolyForm Noncommercial License 1.0.0</span>
                   </h3>
                   <a
