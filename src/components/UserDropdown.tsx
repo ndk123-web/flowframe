@@ -121,6 +121,27 @@ export default function UserDropdown({ theme, onToggleTheme }: UserDropdownProps
             </Link>
 
             <Link
+              href="/scenarios"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between px-3 py-2 rounded-xl text-[color:var(--foreground)]/80 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition"
+            >
+              <span className="flex items-center gap-2.5">
+                <ZapIcon className="w-4 h-4 text-violet-400" /> Scenarios Library
+              </span>
+              <span className="text-[9px] font-bold uppercase tracking-wider text-violet-400 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded">
+                Sim
+              </span>
+            </Link>
+
+            <Link
+              href="/learn"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[color:var(--foreground)]/80 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition"
+            >
+              <DocsIcon className="w-4 h-4 text-indigo-400" /> Learn Guides
+            </Link>
+
+            <Link
               href="/workspace"
               onClick={() => setIsOpen(false)}
               className="flex items-center justify-between px-3 py-2 rounded-xl text-[color:var(--foreground)]/80 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition"
