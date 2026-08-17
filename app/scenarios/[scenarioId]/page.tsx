@@ -354,6 +354,14 @@ function CustomNode({ id, data, selected }: any) {
           <p className="text-xs font-bold text-[color:var(--foreground)] truncate max-w-[100px]">
             {data.label}
           </p>
+          {data.type === "client" && (
+            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-violet-400 font-mono tracking-tight mt-0.5 bg-violet-500/10 px-1 py-0.2 rounded border border-violet-500/20">
+              <svg className="w-2 h-2 fill-current" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+              <span>Click to Run</span>
+            </span>
+          )}
           {data.status === "error" && (
             <p className="text-[9px] font-bold text-rose-400 mt-0.5 animate-pulse flex items-center gap-0.5">
               <span>⚠️</span>{" "}
@@ -460,9 +468,28 @@ function GraphCanvas({
     theme === "dark" ? "rgba(100,116,139,0.23)" : "rgba(148,163,184,0.15)";
 
   const [showMetrics, setShowMetrics] = useState(true);
+  const [showCanvasTip, setShowCanvasTip] = useState(true);
 
   return (
     <div className="relative w-full h-full">
+      {/* Interactive Canvas Tip / First-Time Hint Banner */}
+      {showCanvasTip && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full border border-violet-500/30 bg-[var(--surface)]/90 backdrop-blur-md px-3.5 py-1.5 shadow-lg text-xs animate-fade-in pointer-events-auto max-w-[90vw]">
+          <span className="flex h-2 w-2 rounded-full bg-violet-400 animate-pulse shrink-0" />
+          <span className="text-[color:var(--foreground)]/85 text-[11px] truncate">
+            <strong className="text-violet-400 font-semibold">Tip:</strong> Click any <strong>Client node</strong> directly on the canvas to trigger request simulations!
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowCanvasTip(false)}
+            className="text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)] ml-1 text-sm font-bold cursor-pointer shrink-0"
+            title="Dismiss tip"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -478,14 +505,7 @@ function GraphCanvas({
         zoomOnScroll
         zoomOnPinch
         style={{ background: bgColor }}
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={16}
-          size={0.7}
-          color={gridColor}
-        />
-      </ReactFlow>
+      />
 
       {/* System Health & Load Monitor Overlay */}
       {systemMetrics && (

@@ -280,12 +280,12 @@ export default function PostmanDashboardPage() {
     <div className="min-h-screen flex flex-col bg-[var(--background)] text-[color:var(--foreground)] transition-colors duration-300">
       {/* ── TOPBAR HEADER ──────────────────────────────────────── */}
       <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-xl">
-        <div className="flex items-center justify-between px-4 py-2.5 sm:px-6">
+        <div className="flex items-center justify-between px-3 py-2 sm:px-6 sm:py-2.5 max-w-full gap-2">
           {/* Left: Brand + Scope Switcher */}
-          <div className="flex items-center gap-3">
-            <Link href="/" className="group flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <Link href="/" className="group flex items-center gap-2 shrink-0">
               <div className="rounded-full bg-gradient-to-br from-cyan-500/35 to-blue-500/35 p-[2px] transition-transform duration-300 group-hover:scale-105">
-                <div className="relative h-8 w-8 overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                <div className="relative h-7 w-7 sm:h-8 sm:w-8 overflow-hidden rounded-full bg-[var(--surface-muted)]">
                   <Image
                     src={theme === "dark" ? "/logo/flow-frame-dark.png" : "/logo/flow-frame-light.png"}
                     alt="FlowFrame"
@@ -299,10 +299,10 @@ export default function PostmanDashboardPage() {
               <span className="font-bold text-sm tracking-tight hidden sm:inline">FlowFrame</span>
             </Link>
 
-            <span className="text-[color:var(--foreground)]/20 font-light">/</span>
+            <span className="text-[color:var(--foreground)]/20 font-light hidden md:inline">/</span>
 
             {/* Scope / Workspace Dropdown Tag */}
-            <div className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs font-semibold">
+            <div className="hidden md:flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs font-semibold">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[color:var(--foreground)]/90 truncate max-w-[130px] sm:max-w-[180px]">
                 {user.name || user.email.split("@")[0]}&apos;s Workspace
@@ -312,7 +312,7 @@ export default function PostmanDashboardPage() {
           </div>
 
           {/* Center: Command-K Search */}
-          <div className="hidden md:flex items-center flex-1 max-w-md mx-6">
+          <div className="hidden lg:flex items-center flex-1 max-w-md mx-4">
             <div className="relative w-full">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[color:var(--foreground)]/40" />
               <input
@@ -329,13 +329,38 @@ export default function PostmanDashboardPage() {
           </div>
 
           {/* Right: Actions + User Profile Dropdown */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <Link
+              href="/scenarios"
+              className="inline-flex items-center gap-1 sm:gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 px-2 sm:px-3 py-1.5 text-xs font-semibold text-violet-400 transition"
+              title="Explore simulation scenarios"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="hidden sm:inline">Scenarios</span>
+            </Link>
+
+            <Link
+              href="/learn"
+              className="inline-flex items-center gap-1 sm:gap-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 px-2 sm:px-3 py-1.5 text-xs font-semibold text-indigo-400 transition"
+              title="Interactive system design guides"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              <span className="hidden sm:inline">Learn</span>
+            </Link>
+
             <button
               type="button"
               onClick={() => setCreateModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 px-3.5 py-1.5 text-xs font-semibold text-white shadow-md shadow-violet-500/20 transition hover:scale-105 active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1 sm:gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 px-2.5 sm:px-3.5 py-1.5 text-xs font-semibold text-white shadow-md shadow-violet-500/20 transition hover:scale-105 active:scale-95 cursor-pointer shrink-0"
             >
-              <PlusIcon className="w-4 h-4" /> New Workspace
+              <PlusIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">New Workspace</span>
+              <span className="sm:hidden">New</span>
             </button>
 
             {/* User Dropdown with Avatar & Logout inside */}
@@ -384,6 +409,46 @@ export default function PostmanDashboardPage() {
                   <span className="text-[10px] font-mono opacity-50">{item.count}</span>
                 </button>
               ))}
+
+              <div className="pt-2 border-t border-[var(--border)] space-y-1">
+                <Link
+                  href="/scenarios"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[color:var(--foreground)]/70 hover:bg-violet-500/10 hover:text-violet-400 transition"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <svg className="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Scenarios</span>
+                  </span>
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-bold">LIVE</span>
+                </Link>
+
+                <Link
+                  href="/learn"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[color:var(--foreground)]/70 hover:bg-indigo-500/10 hover:text-indigo-400 transition"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <svg className="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    <span>Learn Center</span>
+                  </span>
+                </Link>
+
+                <Link
+                  href="/docs"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[color:var(--foreground)]/70 hover:bg-[var(--surface-muted)] hover:text-[color:var(--foreground)] transition"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>DSL Docs</span>
+                  </span>
+                </Link>
+              </div>
             </nav>
           </div>
 

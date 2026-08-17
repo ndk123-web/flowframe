@@ -331,7 +331,7 @@ export default function WorkspaceDetailPage() {
       {/* ── HEADER ─────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--surface)]/78 backdrop-blur-xl shadow-sm">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/75 to-transparent animate-pulse" />
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-2.5 sm:px-6 sm:py-3">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-3 py-2 sm:px-6 sm:py-3 gap-2">
           {/* Left: Back + Logo */}
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Link
@@ -341,14 +341,14 @@ export default function WorkspaceDetailPage() {
             >
               ←
             </Link>
-            <Link href="/" className="group flex items-center gap-2 min-w-0">
+            <Link href="/" className="group flex items-center gap-2 shrink-0">
               <div className="shrink-0 rounded-full bg-gradient-to-br from-cyan-500/35 via-sky-500/20 to-blue-500/35 p-[2px] transition-transform duration-300 group-hover:scale-105">
-                <div className="relative h-7 w-7 sm:h-9 sm:w-9 overflow-hidden rounded-full bg-[var(--surface-muted)] ring-1 ring-[var(--border)]/90">
+                <div className="relative h-7 w-7 sm:h-8 sm:w-8 overflow-hidden rounded-full bg-[var(--surface-muted)] ring-1 ring-[var(--border)]/90">
                   <Image
                     src={theme === "dark" ? "/logo/flow-frame-dark.png" : "/logo/flow-frame-light.png"}
                     alt="FlowFrame"
-                    width={36}
-                    height={36}
+                    width={32}
+                    height={32}
                     priority
                     className="h-full w-full rounded-full object-cover"
                   />
@@ -362,31 +362,56 @@ export default function WorkspaceDetailPage() {
                 Dashboard
               </Link>
               <span className="shrink-0">/</span>
-              <span className="text-[color:var(--foreground)] truncate max-w-[150px] sm:max-w-[250px]">
+              <span className="text-[color:var(--foreground)] truncate max-w-[90px] sm:max-w-[200px]">
                 {workspace.name}
               </span>
             </div>
           </div>
 
-          {/* Right: User Profile Dropdown */}
-          <UserDropdown
-            theme={theme}
-            onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-          />
+          {/* Right: Actions + User Profile Dropdown */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <Link
+              href="/scenarios"
+              className="inline-flex items-center gap-1 sm:gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 px-2 sm:px-3 py-1.5 text-xs font-semibold text-violet-400 transition"
+              title="Explore simulation scenarios"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="hidden sm:inline">Scenarios</span>
+            </Link>
+
+            <Link
+              href="/learn"
+              className="inline-flex items-center gap-1 sm:gap-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 px-2 sm:px-3 py-1.5 text-xs font-semibold text-indigo-400 transition"
+              title="Interactive system design guides"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              <span className="hidden sm:inline">Learn</span>
+            </Link>
+
+            <UserDropdown
+              theme={theme}
+              onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+            />
+          </div>
         </div>
       </header>
 
       {/* ── MAIN ─────────────────────────────────────────── */}
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-8 sm:py-10 space-y-8">
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
         {/* Workspace Header */}
-        <section className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div className="flex items-start gap-4 min-w-0">
-            <div className="shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/15 to-indigo-500/15 border border-violet-500/15 flex items-center justify-center shadow-sm">
+        <section className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-[var(--border)]/60 pb-6">
+          <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+            <div className="shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-violet-500/15 to-indigo-500/15 border border-violet-500/15 flex items-center justify-center shadow-sm">
               {renderIcon((workspace.icon_type as any) || "zap")}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{workspace.name}</h1>
+                <h1 className="text-lg sm:text-2xl font-bold tracking-tight truncate">{workspace.name}</h1>
                 <button
                   type="button"
                   onClick={openEditWorkspaceModal}
@@ -402,14 +427,14 @@ export default function WorkspaceDetailPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 self-start shrink-0">
+          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full sm:w-auto shrink-0">
             <span className="text-[11px] font-mono font-semibold text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2.5 py-2 rounded-xl">
               {diagrams.length} / 5 Diagrams
             </span>
             <button
               type="button"
               onClick={() => setCreateDiagramOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-violet-500/20 transition-all hover:shadow-violet-500/30 hover:scale-105 active:scale-95 cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold text-white shadow-lg shadow-violet-500/20 transition-all hover:shadow-violet-500/30 hover:scale-105 active:scale-95 cursor-pointer flex-1 sm:flex-initial"
             >
               <PlusIcon className="w-4 h-4" /> New Diagram
             </button>
@@ -417,7 +442,7 @@ export default function WorkspaceDetailPage() {
         </section>
 
         {/* Stats Strip */}
-        <section className="grid grid-cols-3 gap-3">
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { label: "Diagrams Limit", value: `${diagrams.length} / 5`, icon: <DiagramIcon className="w-4 h-4 text-violet-400" /> },
             { label: "Total Nodes", value: totalNodes, icon: <NodeLinkIcon className="w-4 h-4 text-cyan-400" /> },

@@ -472,14 +472,7 @@ function GraphCanvas({
         zoomOnScroll
         zoomOnPinch
         style={{ background: bgColor }}
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={16}
-          size={0.7}
-          color={gridColor}
-        />
-      </ReactFlow>
+      />
 
       {/* System Health & Load Monitor Overlay */}
       {systemMetrics && (
