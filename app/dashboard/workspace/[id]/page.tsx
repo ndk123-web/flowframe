@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useToastStore } from "@/store/useToastStore";
+import { useThemeStore } from "@/store/useThemeStore";
 import UserDropdown from "@/components/UserDropdown";
 import {
   DiagramIcon,
@@ -24,7 +25,6 @@ import { getWorkspaceById, updateWorkspace, WorkspaceDTO } from "@/services/work
 import { getWorkspaceDiagrams, createDiagram, updateDiagram, deleteDiagram, DiagramDTO } from "@/services/diagramApi";
 import { formatDate } from "@/utils/formatDate";
 
-type Theme = "light" | "dark";
 type ViewMode = "grid" | "list";
 
 interface DiagramItem {
@@ -38,7 +38,7 @@ interface DiagramItem {
 }
 
 export default function WorkspaceDetailPage() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const { theme, toggleTheme } = useThemeStore();
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [workspace, setWorkspace] = useState<WorkspaceDTO | null>(null);
   const [diagrams, setDiagrams] = useState<DiagramItem[]>([]);
@@ -65,15 +65,14 @@ export default function WorkspaceDetailPage() {
   const [deletingDiagram, setDeletingDiagram] = useState<DiagramItem | null>(null);
   const [isDeletingDiagram, setIsDeletingDiagram] = useState(false);
 
-  const params = useParams();
   const router = useRouter();
+  const params = useParams();
+  const workspaceId = params?.id as string;
+
   const { user, token, isAuthenticated, _hasHydrated } = useAuthStore();
   const showToast = useToastStore((s) => s.showToast);
 
-  const workspaceId = params.id as string;
-
   const filteredDiagrams = useMemo(() => {
-    if (!searchQuery.trim()) return diagrams;
     const q = searchQuery.toLowerCase();
     return diagrams.filter(
       (d) =>
@@ -81,17 +80,6 @@ export default function WorkspaceDetailPage() {
         d.description.toLowerCase().includes(q)
     );
   }, [diagrams, searchQuery]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("flowframe-theme") as Theme | null;
-    if (saved === "light" || saved === "dark") setTheme(saved);
-    else if (window.matchMedia?.("(prefers-color-scheme: light)").matches) setTheme("light");
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("flowframe-theme", theme);
-  }, [theme]);
 
   // Auth Guard with Zustand Hydration check
   useEffect(() => {
@@ -395,7 +383,7 @@ export default function WorkspaceDetailPage() {
 
             <UserDropdown
               theme={theme}
-              onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+              onToggleTheme={toggleTheme}
             />
           </div>
         </div>

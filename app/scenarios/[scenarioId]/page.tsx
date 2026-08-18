@@ -20,6 +20,7 @@ import { ALL_SCENARIOS } from "@/scenarios/all";
 import Link from "next/link";
 import SiteHeader from "@/components/SiteHeader";
 import { ComponentIcon } from "@/components/ComponentIcons";
+import { useThemeStore } from "@/store/useThemeStore";
 
 type Frame = {
   requestId: string;
@@ -2261,8 +2262,7 @@ function createDefaultConfig(type: string, id: string, label: string) {
 
 export default function ScenarioPage({ params }: ScenarioPropsPage) {
   const { scenarioId } = use(params);
-
-  const [theme, setTheme] = useState<Theme>("dark");
+  const { theme, toggleTheme, setTheme } = useThemeStore();
 
   const [hideResponse, setHideResponse] = useState(false);
   const [parallelResponse, setParallelResponse] = useState(false);
@@ -2422,23 +2422,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
   }, [isDragging]);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    window.localStorage.setItem("flowframe-theme", theme);
-  }, [theme]);
-
-  useEffect(() => {
     setIsMounted(true);
-    const saved = window.localStorage.getItem(
-      "flowframe-theme",
-    ) as Theme | null;
-    if (saved === "light" || saved === "dark") {
-      setTheme(saved);
-    } else if (
-      window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: light)").matches
-    ) {
-      setTheme("light");
-    }
   }, []);
 
   const { frames, nodes, edges, debug } = useMemo(
@@ -2853,9 +2837,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
     <main className="min-h-screen bg-[var(--background)] text-[color:var(--foreground)]">
       <SiteHeader
         theme={theme}
-        onToggleTheme={() =>
-          setTheme((prev) => (prev === "dark" ? "light" : "dark"))
-        }
+        onToggleTheme={toggleTheme}
         showHomeLink
         badgeText="Simulator"
         alwaysGlass={true}

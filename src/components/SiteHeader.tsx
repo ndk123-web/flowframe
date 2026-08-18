@@ -153,14 +153,18 @@ export default function SiteHeader({
               <button
                 type="button"
                 onClick={onToggleTheme}
-                className="group relative inline-flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-gradient-to-r from-[var(--surface)]/90 to-[var(--surface)]/70 px-0.5 py-0.5 transition hover:shadow-[0_4px_16px_var(--glow)] active:scale-95 cursor-pointer"
+                className="group relative inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-muted)]/80 p-1 transition hover:bg-[var(--surface)] active:scale-95 cursor-pointer shadow-sm"
                 title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
               >
-                <span className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full transition-all text-sm ${theme === "dark" ? "bg-[var(--surface-muted)] shadow-sm" : "opacity-60"}`}>
-                  ☀️
+                <span className={`flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full transition-all ${theme === "light" ? "bg-[var(--surface)] text-amber-500 shadow-sm" : "text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)]"}`}>
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
                 </span>
-                <span className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full transition-all text-sm ${theme === "light" ? "bg-[var(--surface-muted)] shadow-sm" : "opacity-60"}`}>
-                  🌙
+                <span className={`flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full transition-all ${theme === "dark" ? "bg-[var(--surface)] text-indigo-400 shadow-sm" : "text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)]"}`}>
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
                 </span>
               </button>
             </>

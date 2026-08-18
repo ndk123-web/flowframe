@@ -5,8 +5,7 @@ import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
-
-type Theme = "light" | "dark";
+import { useThemeStore } from "@/store/useThemeStore";
 
 type ScenarioCard = {
 	id: string;
@@ -180,21 +179,7 @@ function ScenarioCard({ scenario, index }: { scenario: ScenarioCard; index: numb
 }
 
 export default function ScenariosPage() {
-	const [theme, setTheme] = useState<Theme>("dark");
-
-	useEffect(() => {
-		const saved = window.localStorage.getItem("flowframe-theme") as Theme | null;
-		if (saved === "light" || saved === "dark") {
-			setTheme(saved);
-		} else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
-			setTheme("light");
-		}
-	}, []);
-
-	useEffect(() => {
-		document.documentElement.setAttribute("data-theme", theme);
-		window.localStorage.setItem("flowframe-theme", theme);
-	}, [theme]);
+	const { theme, toggleTheme } = useThemeStore();
 
 	const stats = useMemo(() => ({
 		total: SCENARIOS.length,
@@ -215,7 +200,7 @@ export default function ScenariosPage() {
 				theme={theme}
 				showHomeLink
 				badgeText="Simulation Library"
-				onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+				onToggleTheme={toggleTheme}
 			/>
 
 			{/* ── Hero ─────────────────────────────────────────────────── */}

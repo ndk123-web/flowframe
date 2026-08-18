@@ -6,8 +6,7 @@ import SiteHeader from "@/components/SiteHeader";
 import { LEARN_TOPICS, LearnTopic } from "@/learn/topics";
 import { ComponentIcon } from "@/components/ComponentIcons";
 import { motion } from "framer-motion";
-
-type Theme = "light" | "dark";
+import { useThemeStore } from "@/store/useThemeStore";
 
 const TOPIC_META: Record<string, {
   color: string;
@@ -63,18 +62,7 @@ const DIFFICULTY_COLORS = {
 };
 
 export default function LearnOverviewPage() {
-  const [theme, setTheme] = useState<Theme>("dark");
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem("flowframe-theme") as Theme | null;
-    if (saved === "light" || saved === "dark") setTheme(saved);
-    else if (window.matchMedia?.("(prefers-color-scheme: light)").matches) setTheme("light");
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    window.localStorage.setItem("flowframe-theme", theme);
-  }, [theme]);
+  const { theme, toggleTheme } = useThemeStore();
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[color:var(--foreground)] relative overflow-x-hidden">
@@ -84,7 +72,7 @@ export default function LearnOverviewPage() {
 
       <SiteHeader
         theme={theme}
-        onToggleTheme={() => setTheme(p => p === "dark" ? "light" : "dark")}
+        onToggleTheme={toggleTheme}
         showHomeLink
         badgeText="Learn Academy"
         alwaysGlass

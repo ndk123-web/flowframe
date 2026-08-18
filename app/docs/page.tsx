@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
-
-type Theme = "light" | "dark";
+import { useThemeStore } from "@/store/useThemeStore";
 
 const FLAGSHIP_BLUEPRINT_CODE = `// ==========================================
 // FLOWFRAME ARCHITECTURE DSL v2.0.0
@@ -405,26 +404,8 @@ function FlowCodeBlock({ code }: { code: string }) {
 }
 
 export default function DocsPage() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const { theme, toggleTheme } = useThemeStore();
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    const s = localStorage.getItem("flowframe-theme") as Theme | null;
-    if (s === "light" || s === "dark") {
-      setTheme(s);
-    } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
-      setTheme("light");
-    }
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("flowframe-theme", theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((p) => (p === "dark" ? "light" : "dark"));
-  };
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(FLAGSHIP_BLUEPRINT_CODE);

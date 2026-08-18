@@ -4,8 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import SiteHeader from "@/components/SiteHeader";
-
-type Theme = "light" | "dark";
+import { useThemeStore } from "@/store/useThemeStore";
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 interface Endpoint {
@@ -386,7 +385,7 @@ function ConceptCard({ c, active, onClick }: { c: typeof CONCEPTS[0]; active: bo
 }
 
 export default function ServerLearnPage() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const { theme, toggleTheme } = useThemeStore();
   const [activeEp, setActiveEp] = useState<Endpoint>(ALL_ENDPOINTS[0]);
   const [activeConcept, setActiveConcept] = useState<string>("what-is-server");
   const [bodyStr, setBodyStr] = useState(JSON.stringify(ALL_ENDPOINTS[0].body ?? {}, null, 2));
@@ -399,10 +398,6 @@ export default function ServerLearnPage() {
   const responseRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("flowframe-theme") as Theme | null;
-    if (saved === "light" || saved === "dark") setTheme(saved);
-    else if (window.matchMedia?.("(prefers-color-scheme: light)").matches) setTheme("light");
-
     try {
       const savedChallenges = window.localStorage.getItem("FF_COMPLETED_CHALLENGES");
       if (savedChallenges) {
@@ -412,11 +407,6 @@ export default function ServerLearnPage() {
       // Ignored
     }
   }, []);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    window.localStorage.setItem("flowframe-theme", theme);
-  }, [theme]);
 
   const selectEndpoint = (ep: Endpoint) => {
     setActiveEp(ep);
@@ -477,7 +467,7 @@ export default function ServerLearnPage() {
       <div className="pointer-events-none absolute inset-0 -z-10 technical-grid opacity-20" />
       <div className="pointer-events-none absolute -left-32 top-0 -z-10 h-[500px] w-[500px] rounded-full bg-emerald-500/5 blur-[120px]" />
 
-      <SiteHeader theme={theme} onToggleTheme={() => setTheme(p => p === "dark" ? "light" : "dark")} showHomeLink badgeText="Learn Academy" alwaysGlass />
+      <SiteHeader theme={theme} onToggleTheme={toggleTheme} showHomeLink badgeText="Learn Academy" alwaysGlass />
 
       {/* Breadcrumb */}
       <div className="border-b border-[var(--border)]/60 bg-[var(--surface)]/40 backdrop-blur shrink-0">

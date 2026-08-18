@@ -14,6 +14,7 @@ import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
 import ShortUniqueId from "short-unique-id";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useThemeStore } from "@/store/useThemeStore";
 import {
   ReactFlow,
   BaseEdge,
@@ -205,21 +206,21 @@ function LandingClientNode({ data }: { data: { label: string; sub: string } }) {
   return (
     <div className="relative flex flex-col items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-lg backdrop-blur min-w-[130px] transition hover:scale-105">
       <Handle type="source" position={Position.Right} className="!bg-indigo-400 !w-2.5 !h-2.5" />
-      <ComponentIcon type="client" className="h-6 w-6 text-indigo-400 mb-1" />
+      <ComponentIcon type="client" className="h-6 w-6 text-indigo-500 dark:text-indigo-400 mb-1" />
       <span className="text-xs font-bold text-[color:var(--foreground)]">{data.label}</span>
-      <span className="text-[10px] text-[color:var(--foreground)]/50 font-mono">{data.sub}</span>
+      <span className="text-[10px] text-[color:var(--foreground)]/60 font-mono">{data.sub}</span>
     </div>
   );
 }
 
 function LandingLBNode({ data }: { data: { label: string; sub: string } }) {
   return (
-    <div className="relative flex flex-col items-center justify-center rounded-2xl border border-indigo-500/40 bg-indigo-500/10 p-3 shadow-lg backdrop-blur min-w-[140px] transition hover:scale-105">
-      <Handle type="target" position={Position.Left} className="!bg-indigo-400 !w-2.5 !h-2.5" />
-      <Handle type="source" position={Position.Right} className="!bg-indigo-400 !w-2.5 !h-2.5" />
-      <ComponentIcon type="load-balancer" className="h-6 w-6 text-indigo-400 mb-1" />
-      <span className="text-xs font-bold text-indigo-300">{data.label}</span>
-      <span className="text-[10px] text-indigo-200/60 font-mono">{data.sub}</span>
+    <div className="relative flex flex-col items-center justify-center rounded-2xl border border-violet-500/40 bg-violet-500/10 p-3 shadow-lg backdrop-blur min-w-[140px] transition hover:scale-105">
+      <Handle type="target" position={Position.Left} className="!bg-violet-400 !w-2.5 !h-2.5" />
+      <Handle type="source" position={Position.Right} className="!bg-violet-400 !w-2.5 !h-2.5" />
+      <ComponentIcon type="load-balancer" className="h-6 w-6 text-violet-500 dark:text-violet-400 mb-1" />
+      <span className="text-xs font-bold text-[color:var(--foreground)]">{data.label}</span>
+      <span className="text-[10px] text-[color:var(--foreground)]/60 font-mono">{data.sub}</span>
     </div>
   );
 }
@@ -230,9 +231,9 @@ function LandingServerNode({ data }: { data: { label: string; sub: string; activ
       data.active ? "border-emerald-500/50 bg-emerald-500/10" : "border-[var(--border)] bg-[var(--surface)]"
     }`}>
       <Handle type="target" position={Position.Left} className="!bg-violet-400 !w-2.5 !h-2.5" />
-      <ComponentIcon type="server" className={`h-6 w-6 mb-1 ${data.active ? "text-emerald-400" : "text-violet-400"}`} />
+      <ComponentIcon type="server" className={`h-6 w-6 mb-1 ${data.active ? "text-emerald-500 dark:text-emerald-400" : "text-violet-500 dark:text-violet-400"}`} />
       <span className="text-xs font-bold text-[color:var(--foreground)]">{data.label}</span>
-      <span className="text-[10px] text-[color:var(--foreground)]/50 font-mono">{data.sub}</span>
+      <span className="text-[10px] text-[color:var(--foreground)]/60 font-mono">{data.sub}</span>
     </div>
   );
 }
@@ -848,20 +849,9 @@ function OpenSourceLicenseBanner() {
 
 // ─── MAIN LANDING PAGE ────────────────────────────────────────────────────────
 export default function LandingPage() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const { theme, toggleTheme } = useThemeStore();
   const router = useRouter();
   const { user, isAuthenticated, _hasHydrated } = useAuthStore();
-
-  useEffect(() => {
-    const saved = localStorage.getItem("flowframe-theme") as Theme | null;
-    if (saved === "light" || saved === "dark") setTheme(saved);
-    else if (window.matchMedia?.("(prefers-color-scheme: light)").matches) setTheme("light");
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("flowframe-theme", theme);
-  }, [theme]);
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => buildDemoNodesAndEdges(), []);
 
@@ -872,7 +862,7 @@ export default function LandingPage() {
       {/* Header */}
       <SiteHeader
         theme={theme}
-        onToggleTheme={() => setTheme(t => (t === "dark" ? "light" : "dark"))}
+        onToggleTheme={toggleTheme}
         showHomeLink={false}
       />
 
@@ -882,11 +872,11 @@ export default function LandingPage() {
         <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-violet-600/15 blur-[120px]" />
 
         {/* Dynamic Auth Badge */}
-        <div className="fade-up inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-1.5 text-xs font-semibold text-violet-300 shadow-sm backdrop-blur mb-8">
-          <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-[11px] uppercase tracking-wider text-violet-400 font-bold">FlowFrame v2.0 Live</span>
-          <span className="text-violet-400/60 font-normal">|</span>
-          <span className="text-violet-200">
+        <div className="fade-up inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-1.5 text-xs font-semibold shadow-sm backdrop-blur mb-8 text-[color:var(--foreground)]">
+          <span className="flex h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
+          <span className="text-[11px] uppercase tracking-wider text-violet-700 dark:text-violet-300 font-bold">FlowFrame v2.0 Live</span>
+          <span className="text-[color:var(--foreground)]/30 font-normal">|</span>
+          <span className="text-[color:var(--foreground)]/80 font-medium">
             {_hasHydrated && isAuthenticated
               ? `Logged in as ${user?.email || "User"} — Workspaces Ready`
               : "Monaco DSL Compiler & Interactive Engine"}
@@ -952,7 +942,7 @@ export default function LandingPage() {
               <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
               <span className="ml-2 font-bold text-[color:var(--foreground)]">demo-cluster.flow</span>
             </div>
-            <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+            <div className="flex items-center gap-2 text-emerald-500 dark:text-emerald-400 font-semibold">
               <span className="status-dot" /> Round-Robin Load Balancing
             </div>
           </div>
@@ -970,7 +960,7 @@ export default function LandingPage() {
               zoomOnScroll={false}
               panOnDrag={false}
             >
-              <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
+              <Background variant={BackgroundVariant.Dots} gap={24} size={1} color={theme === "dark" ? "rgba(148,163,184,0.12)" : "rgba(100,116,139,0.22)"} />
             </ReactFlow>
           </div>
         </div>

@@ -20,6 +20,7 @@ import type { SimDebug, ScenarioRunOptions } from "@/engine/types";
 import { ALL_SCENARIOS } from "@/scenarios/all";
 import SiteHeader from "@/components/SiteHeader";
 import { ComponentIcon } from "@/components/ComponentIcons";
+import { useThemeStore } from "@/store/useThemeStore";
 import {
   LEARN_TOPICS,
   LearnTopic,
@@ -2738,7 +2739,7 @@ function renderMarkdown(text: string) {
 export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
   const { topicId } = use(params);
 
-  const [theme, setTheme] = useState<Theme>("dark");
+  const { theme, toggleTheme, setTheme } = useThemeStore();
 
   const [hideResponse, setHideResponse] = useState(false);
   const [parallelResponse, setParallelResponse] = useState(false);
@@ -2976,25 +2977,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
   }, [isResizingDocs]);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    window.localStorage.setItem("flowframe-theme", theme);
-  }, [theme]);
-
-  useEffect(() => {
     setIsMounted(true);
-
-    // Theme initialization
-    const saved = window.localStorage.getItem(
-      "flowframe-theme",
-    ) as Theme | null;
-    if (saved === "light" || saved === "dark") {
-      setTheme(saved);
-    } else if (
-      window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: light)").matches
-    ) {
-      setTheme("light");
-    }
 
     // showDocs initialization
     if (window.innerWidth < 1024) {
@@ -3414,9 +3397,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
     <main className="min-h-screen h-[100dvh] flex flex-col bg-[var(--background)] text-[color:var(--foreground)] overflow-hidden">
       <SiteHeader
         theme={theme}
-        onToggleTheme={() =>
-          setTheme((prev) => (prev === "dark" ? "light" : "dark"))
-        }
+        onToggleTheme={toggleTheme}
         showHomeLink
         badgeText="Learn Academy"
         alwaysGlass={true}

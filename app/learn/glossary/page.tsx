@@ -4,8 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import SiteHeader from "@/components/SiteHeader";
-
-type Theme = "light" | "dark";
+import { useThemeStore } from "@/store/useThemeStore";
 
 interface GlossaryTerm {
   id: string;
@@ -522,21 +521,10 @@ function TermCard({ term, expanded, onToggle }: { term: GlossaryTerm; expanded: 
 }
 
 export default function GlossaryPage() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const { theme, toggleTheme } = useThemeStore();
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem("flowframe-theme") as Theme | null;
-    if (saved === "light" || saved === "dark") setTheme(saved);
-    else if (window.matchMedia?.("(prefers-color-scheme: light)").matches) setTheme("light");
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    window.localStorage.setItem("flowframe-theme", theme);
-  }, [theme]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -560,7 +548,7 @@ export default function GlossaryPage() {
 
       <SiteHeader
         theme={theme}
-        onToggleTheme={() => setTheme(p => p === "dark" ? "light" : "dark")}
+        onToggleTheme={toggleTheme}
         showHomeLink
         badgeText="Learn Academy"
         alwaysGlass

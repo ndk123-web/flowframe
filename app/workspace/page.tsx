@@ -60,6 +60,7 @@ import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 
 // Auth & API
 import { useAuthStore } from "@/store/useAuthStore";
+import { useThemeStore } from "@/store/useThemeStore";
 import { getDiagramById, updateDiagram, getSharedDiagram } from "@/services/diagramApi";
 
 // Header
@@ -1878,7 +1879,7 @@ function WorkspaceInner({
 }) {
   const { screenToFlowPosition, fitView } = useReactFlow();
   const { token } = useAuthStore();
-  const [theme, setTheme] = useState<Theme>("dark");
+  const { theme, toggleTheme, setTheme } = useThemeStore();
   const [diagramTitle, setDiagramTitle] = useState<string>("");
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isLoadingDiagram, setIsLoadingDiagram] = useState<boolean>(Boolean((workspaceId && diagramId) || shareId));
@@ -1936,25 +1937,6 @@ function WorkspaceInner({
         });
     }
   }, [workspaceId, diagramId, shareId, token, fitView]);
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem(
-      "flowframe-theme",
-    ) as Theme | null;
-    if (saved === "light" || saved === "dark") {
-      setTheme(saved);
-    } else if (
-      window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: light)").matches
-    ) {
-      setTheme("light");
-    }
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    window.localStorage.setItem("flowframe-theme", theme);
-  }, [theme]);
 
   // React Flow States
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -4022,9 +4004,7 @@ connect s1 -> r1
 
       <SiteHeader
         theme={theme}
-        onToggleTheme={() =>
-          setTheme((prev) => (prev === "dark" ? "light" : "dark"))
-        }
+        onToggleTheme={toggleTheme}
         showHomeLink
         badgeText="Interactive Sandbox Workspace"
         hideSandboxLink={true}

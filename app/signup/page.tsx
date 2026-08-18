@@ -8,12 +8,11 @@ import { auth, googleProvider } from "@/config/firebase";
 import SiteHeader from "@/components/SiteHeader";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useToastStore } from "@/store/useToastStore";
+import { useThemeStore } from "@/store/useThemeStore";
 import { syncFirebaseUserApi } from "@/services/authApi";
 
-type Theme = "light" | "dark";
-
 export default function SignUpPage() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const { theme, toggleTheme } = useThemeStore();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,20 +21,6 @@ export default function SignUpPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
   const showToast = useToastStore((state) => state.showToast);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("flowframe-theme") as Theme | null;
-    if (saved === "light" || saved === "dark") {
-      setTheme(saved);
-    } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
-      setTheme("light");
-    }
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("flowframe-theme", theme);
-  }, [theme]);
 
   // Handler: Firebase Auth -> Strict Backend Sync -> Zustand Store -> Redirect ONLY IF SYNC SUCCEEDS
   const handleFirebaseUserSync = async (fbUser: any, typeOfSignin: string) => {
@@ -109,7 +94,7 @@ export default function SignUpPage() {
     <div className="min-h-screen bg-[var(--background)] text-[color:var(--foreground)] flex flex-col justify-between transition-colors duration-300">
       <SiteHeader
         theme={theme}
-        onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+        onToggleTheme={toggleTheme}
         showHomeLink={true}
         badgeText="Firebase Authentication"
         alwaysGlass={true}

@@ -15,16 +15,22 @@ import {
   ZapIcon,
 } from "./DashboardIcons";
 
+import { useThemeStore } from "@/store/useThemeStore";
+
 interface UserDropdownProps {
-  theme: "light" | "dark";
-  onToggleTheme: () => void;
+  theme?: "light" | "dark";
+  onToggleTheme?: () => void;
 }
 
-export default function UserDropdown({ theme, onToggleTheme }: UserDropdownProps) {
+export default function UserDropdown({ theme: propTheme, onToggleTheme: propOnToggle }: UserDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuthStore();
+  const { theme: storeTheme, toggleTheme: storeToggleTheme } = useThemeStore();
   const router = useRouter();
+
+  const theme = propTheme || storeTheme;
+  const onToggleTheme = propOnToggle || storeToggleTheme;
 
   // Close dropdown on outside click
   useEffect(() => {

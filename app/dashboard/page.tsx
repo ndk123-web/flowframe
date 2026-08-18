@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useToastStore } from "@/store/useToastStore";
+import { useThemeStore } from "@/store/useThemeStore";
 import UserDropdown from "@/components/UserDropdown";
 import {
   FolderIcon,
@@ -44,7 +45,7 @@ interface WorkspaceItem {
 }
 
 export default function PostmanDashboardPage() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const { theme, toggleTheme } = useThemeStore();
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
   const [recentDiagrams, setRecentDiagrams] = useState<RecentDiagramDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,17 +74,6 @@ export default function PostmanDashboardPage() {
   const router = useRouter();
   const { user, token, isAuthenticated, _hasHydrated } = useAuthStore();
   const showToast = useToastStore((s) => s.showToast);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("flowframe-theme") as Theme | null;
-    if (saved === "light" || saved === "dark") setTheme(saved);
-    else if (window.matchMedia?.("(prefers-color-scheme: light)").matches) setTheme("light");
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("flowframe-theme", theme);
-  }, [theme]);
 
   // Auth Guard with Zustand Hydration check
   useEffect(() => {
@@ -366,7 +356,7 @@ export default function PostmanDashboardPage() {
             {/* User Dropdown with Avatar & Logout inside */}
             <UserDropdown
               theme={theme}
-              onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+              onToggleTheme={toggleTheme}
             />
           </div>
         </div>

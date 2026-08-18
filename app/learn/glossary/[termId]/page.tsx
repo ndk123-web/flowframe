@@ -4,9 +4,8 @@ import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import SiteHeader from "@/components/SiteHeader";
+import { useThemeStore } from "@/store/useThemeStore";
 import { TERMS } from "../page";
-
-type Theme = "light" | "dark";
 
 interface Section {
   title: string;
@@ -1130,18 +1129,8 @@ function renderBody(text: string) {
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function TermDetailPage({ params }: { params: Promise<{ termId: string }> }) {
   const { termId } = use(params);
-  const [theme, setTheme] = useState<Theme>("dark");
+  const { theme, toggleTheme } = useThemeStore();
   const [openSection, setOpenSection] = useState<number>(0);
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem("flowframe-theme") as Theme | null;
-    if (saved === "light" || saved === "dark") setTheme(saved);
-    else if (window.matchMedia?.("(prefers-color-scheme: light)").matches) setTheme("light");
-  }, []);
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    window.localStorage.setItem("flowframe-theme", theme);
-  }, [theme]);
 
   let term = TERM_MAP[termId];
 
@@ -1173,7 +1162,7 @@ export default function TermDetailPage({ params }: { params: Promise<{ termId: s
   if (!term) {
     return (
       <main className="min-h-screen bg-[var(--background)] text-[color:var(--foreground)] flex flex-col items-center justify-center gap-4">
-        <SiteHeader theme={theme} onToggleTheme={() => setTheme(p => p === "dark" ? "light" : "dark")} showHomeLink badgeText="Learn Academy" alwaysGlass />
+        <SiteHeader theme={theme} onToggleTheme={toggleTheme} showHomeLink badgeText="Learn Academy" alwaysGlass />
         <p className="text-lg font-bold">Term not found: {termId}</p>
         <Link href="/learn/glossary" className="text-violet-400 underline text-sm">← Back to Glossary</Link>
       </main>
@@ -1185,7 +1174,7 @@ export default function TermDetailPage({ params }: { params: Promise<{ termId: s
       <div className="pointer-events-none absolute inset-0 -z-10 technical-grid opacity-20" />
       <div className="pointer-events-none absolute -left-32 top-0 -z-10 h-[500px] w-[500px] rounded-full bg-violet-500/5 blur-[120px]" />
 
-      <SiteHeader theme={theme} onToggleTheme={() => setTheme(p => p === "dark" ? "light" : "dark")} showHomeLink badgeText="Learn Academy" alwaysGlass />
+      <SiteHeader theme={theme} onToggleTheme={toggleTheme} showHomeLink badgeText="Learn Academy" alwaysGlass />
 
       {/* Breadcrumb */}
       <div className="border-b border-[var(--border)]/60 bg-[var(--surface)]/40 backdrop-blur">
