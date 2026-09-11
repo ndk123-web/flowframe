@@ -40,7 +40,7 @@ const STATUS_COLOR = (s: number) => {
 const ENDPOINT_GROUPS = [
   {
     label: "Users",
-    color: "border-violet-500/25",
+    color: "border-blue-500/25",
     endpoints: [
       { method: "GET"    as HttpMethod, path: "/api/v1/users",       desc: "List all users" },
       { method: "POST"   as HttpMethod, path: "/api/v1/users",       desc: "Create a new user", body: { name: "Rohan Sharma", email: "rohan@example.com", role: "user" } },
@@ -196,12 +196,12 @@ function FlowDiagram({ activeEp, isLoading, response }: { activeEp: Endpoint; is
               return (
                 <div
                   key={i}
-                  className={`flex items-center gap-1.5 px-2 py-0.5 transition-colors duration-150 ${isActive ? "bg-violet-500/15" : ""}`}
+                  className={`flex items-center gap-1.5 px-2 py-0.5 transition-colors duration-150 ${isActive ? "bg-blue-500/15" : ""}`}
                 >
                   <span className={`text-[7px] font-bold font-mono w-8 text-center shrink-0 ${METHOD_COLORS[ep.method].cls.split(" ")[0]}`}>
                     {ep.method}
                   </span>
-                  <span className={`text-[7px] font-mono truncate ${isActive ? "text-violet-400" : "text-[color:var(--foreground)]/35"}`}>
+                  <span className={`text-[7px] font-mono truncate ${isActive ? "text-blue-400" : "text-[color:var(--foreground)]/35"}`}>
                     {ep.path}
                   </span>
                 </div>
@@ -238,7 +238,7 @@ function parseTextWithLinks(text: string) {
       parts.push(
         <code
           key={key++}
-          className="font-mono text-[0.82em] bg-[var(--surface-muted)] px-1 py-0.5 rounded border border-[var(--border)] text-violet-400"
+          className="font-mono text-[0.82em] bg-[var(--surface-muted)] px-1 py-0.5 rounded border border-[var(--border)] text-blue-400"
         >
           {match[3]}
         </code>
@@ -251,7 +251,7 @@ function parseTextWithLinks(text: string) {
           href={match[5]}
           target={isExternal ? "_blank" : undefined}
           rel={isExternal ? "noopener noreferrer" : undefined}
-          className="text-violet-400 hover:text-violet-300 underline font-semibold transition-colors duration-150"
+          className="text-blue-400 hover:text-blue-300 underline font-semibold transition-colors duration-150"
         >
           {match[4]}
         </Link>
@@ -365,16 +365,16 @@ function ConceptCard({ c, active, onClick }: { c: typeof CONCEPTS[0]; active: bo
     return <p key={i} className="text-[0.82em] text-[color:var(--foreground)]/60 leading-relaxed">{parts}</p>;
   };
   return (
-    <button type="button" onClick={onClick} className={`w-full text-left rounded-xl border p-3.5 transition-all duration-200 ${active ? "border-violet-500/40 bg-violet-500/8" : "border-[var(--border)] bg-[var(--surface)]/40 hover:bg-[var(--surface)]/70"}`}>
+    <button type="button" onClick={onClick} className={`w-full text-left rounded-xl border p-3.5 transition-all duration-200 ${active ? "border-blue-500/40 bg-blue-500/8" : "border-[var(--border)] bg-[var(--surface)]/40 hover:bg-[var(--surface)]/70"}`}>
       <div className="flex items-center gap-2 mb-1">
         <span className="text-base">{c.icon}</span>
-        <span className={`text-xs font-bold ${active ? "text-violet-400" : "text-[color:var(--foreground)]"} transition-colors`}>{c.title}</span>
+        <span className={`text-xs font-bold ${active ? "text-blue-400" : "text-[color:var(--foreground)]"} transition-colors`}>{c.title}</span>
         <span className={`ml-auto text-[color:var(--foreground)]/25 transition-transform duration-200 text-xs ${active ? "rotate-90" : ""}`}>▶</span>
       </div>
       <AnimatePresence>
         {active && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22, ease: "easeInOut" }} className="overflow-hidden">
-            <div className="pt-2.5 space-y-1 border-t border-violet-500/15 mt-1.5">
+            <div className="pt-2.5 space-y-1 border-t border-blue-500/15 mt-1.5">
               {c.content.split("\n").map((l, i) => renderLine(l, i))}
             </div>
           </motion.div>
@@ -470,7 +470,7 @@ export default function ServerLearnPage() {
       <SiteHeader theme={theme} onToggleTheme={toggleTheme} showHomeLink badgeText="Learn Academy" alwaysGlass />
 
       {/* Breadcrumb */}
-      <div className="border-b border-[var(--border)]/60 bg-[var(--surface)]/40 backdrop-blur shrink-0">
+      <div className="border-b border-[var(--border)]/60 bg-[var(--surface)] shrink-0">
         <div className="mx-auto max-w-[1600px] px-4 sm:px-6 h-10 flex items-center text-xs text-[color:var(--foreground)]/40 font-mono">
           <div className="flex items-center gap-2">
             <Link href="/learn" className="hover:text-emerald-400 transition-colors">← Learn</Link>
@@ -487,7 +487,7 @@ export default function ServerLearnPage() {
           onClick={() => setMobileView("academy")}
           className={`flex-1 text-center py-2 text-xs font-bold rounded-lg border transition-all ${
             mobileView === "academy"
-              ? "bg-violet-500/15 text-violet-400 border-violet-500/30"
+              ? "bg-blue-500/15 text-blue-400 border-blue-500/30"
               : "border-transparent text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]/70"
           }`}
         >
@@ -572,7 +572,7 @@ export default function ServerLearnPage() {
                   <ConceptCard key={c.id} c={c} active={activeConcept === c.id} onClick={() => setActiveConcept(p => p === c.id ? "" : c.id)} />
                 ))}
                 <div className="pt-2">
-                  <Link href="/learn/glossary" className="flex items-center justify-between gap-2 rounded-xl border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/10 hover:border-violet-500/40 px-3 py-2.5 text-xs font-bold text-violet-400 transition-all duration-200">
+                  <Link href="/learn/glossary" className="flex items-center justify-between gap-2 rounded-xl border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/40 px-3 py-2.5 text-xs font-bold text-blue-400 transition-all duration-200">
                     <span>📖 Systems Glossary</span>
                     <span>→</span>
                   </Link>
@@ -614,7 +614,7 @@ export default function ServerLearnPage() {
                           <button
                             type="button"
                             onClick={() => loadChallenge(ch)}
-                            className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-violet-500/20 bg-violet-500/5 text-violet-400 hover:bg-violet-500/10 cursor-pointer"
+                            className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-blue-500/20 bg-blue-500/5 text-blue-400 hover:bg-blue-500/10 cursor-pointer"
                           >
                             Load
                           </button>

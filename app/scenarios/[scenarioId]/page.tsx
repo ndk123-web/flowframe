@@ -303,8 +303,8 @@ function PacketEdge(props: EdgeProps) {
 
 function CustomNode({ id, data, selected }: any) {
   const typeColors: any = {
-    client: "border-l-violet-500 shadow-violet-500/10",
-    "api-gateway": "border-l-fuchsia-500 shadow-fuchsia-500/10",
+    client: "border-l-sky-500 shadow-sky-500/10",
+    "api-gateway": "border-l-indigo-500 shadow-indigo-500/10",
     "load-balancer": "border-l-blue-500 shadow-blue-500/10",
     server: "border-l-emerald-500 shadow-emerald-500/10",
     redis: "border-l-amber-500 shadow-amber-500/10",
@@ -333,7 +333,7 @@ function CustomNode({ id, data, selected }: any) {
     <div
       className={`relative rounded-xl border border-l-4 bg-[var(--surface)] px-4 py-3 shadow-md transition-all duration-300 ${borderClass} ${colorClass} ${
         selected
-          ? "ring-2 ring-violet-500 scale-105"
+          ? "ring-2 ring-blue-500 scale-105"
           : "hover:border-[var(--border)]/80"
       } min-w-[145px]`}
     >
@@ -356,7 +356,7 @@ function CustomNode({ id, data, selected }: any) {
             {data.label}
           </p>
           {data.type === "client" && (
-            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-violet-400 font-mono tracking-tight mt-0.5 bg-violet-500/10 px-1 py-0.2 rounded border border-violet-500/20">
+            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-blue-400 font-mono tracking-tight mt-0.5 bg-blue-500/10 px-1 py-0.2 rounded border border-blue-500/20">
               <svg className="w-2 h-2 fill-current" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
               </svg>
@@ -420,7 +420,7 @@ function CustomNode({ id, data, selected }: any) {
                 ? "bg-rose-400"
                 : data.status === "warning"
                   ? "bg-amber-400"
-                  : "bg-violet-400"
+                  : "bg-blue-400"
             }`}
           ></span>
           <span
@@ -429,7 +429,7 @@ function CustomNode({ id, data, selected }: any) {
                 ? "bg-rose-500"
                 : data.status === "warning"
                   ? "bg-amber-500"
-                  : "bg-violet-500"
+                  : "bg-blue-500"
             }`}
           ></span>
         </span>
@@ -475,10 +475,10 @@ function GraphCanvas({
     <div className="relative w-full h-full">
       {/* Interactive Canvas Tip / First-Time Hint Banner */}
       {showCanvasTip && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full border border-violet-500/30 bg-[var(--surface)]/90 backdrop-blur-md px-3.5 py-1.5 shadow-lg text-xs animate-fade-in pointer-events-auto max-w-[90vw]">
-          <span className="flex h-2 w-2 rounded-full bg-violet-400 animate-pulse shrink-0" />
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full border border-blue-500/30 bg-[var(--surface)]/90  px-3.5 py-1.5 shadow-lg text-xs animate-fade-in pointer-events-auto max-w-[90vw]">
+          <span className="flex h-2 w-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
           <span className="text-[color:var(--foreground)]/85 text-[11px] truncate">
-            <strong className="text-violet-400 font-semibold">Tip:</strong> Click any <strong>Client node</strong> directly on the canvas to trigger request simulations!
+            <strong className="text-blue-400 font-semibold">Tip:</strong> Click any <strong>Client node</strong> directly on the canvas to trigger request simulations!
           </span>
           <button
             type="button"
@@ -511,7 +511,7 @@ function GraphCanvas({
       {/* System Health & Load Monitor Overlay */}
       {systemMetrics && (
         showMetrics ? (
-          <div className="absolute top-4 left-4 z-10 w-72 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md shadow-lg p-3 flex flex-col gap-2.5 font-sans select-none pointer-events-auto">
+          <div className="absolute top-4 left-4 z-10 w-72 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80  shadow-lg p-3 flex flex-col gap-2.5 font-sans select-none pointer-events-auto">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-1.5">
                 <span className="relative flex h-2 w-2">
@@ -719,15 +719,15 @@ function Controls({
           title="Toggle live simulation logs"
           className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition whitespace-nowrap font-medium ${
             debugEnabled
-              ? "border-violet-500/50 bg-violet-500/15 text-violet-300 shadow-sm"
-              : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:border-violet-500/30"
+              ? "border-blue-500/50 bg-blue-500/15 text-blue-300 shadow-sm"
+              : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:border-blue-500/30"
           }`}
         >
           <input
             type="checkbox"
             checked={debugEnabled}
             onChange={onDebugToggle}
-            className="accent-violet-500 cursor-pointer"
+            className="accent-blue-500 cursor-pointer"
           />
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -778,7 +778,7 @@ function Timeline({
         max={Math.max(frameGroups.length - 1, 0)}
         value={Math.min(frameIndex, Math.max(frameGroups.length - 1, 0))}
         onChange={(event) => onSeek(Number(event.target.value))}
-        className="w-full accent-violet-500"
+        className="w-full accent-blue-500"
       />
 
       <div className="flex gap-1 overflow-x-auto pb-1 max-h-12 scrollbar-thin">
@@ -792,7 +792,7 @@ function Timeline({
               onClick={() => onSeek(index)}
               className={`shrink-0 rounded-sm border px-2 py-1.5 text-[11px] transition ${
                 isActive
-                  ? "border-violet-400 bg-violet-500/25 text-violet-100"
+                  ? "border-blue-400 bg-blue-500/25 text-blue-100"
                   : `${inactiveBg} ${inactiveHover}`
               }`}
               title={`t=${group.timestamp} (${group.frames.length} frame${group.frames.length > 1 ? "s" : ""})`}
@@ -884,10 +884,10 @@ function NodeInspectorPanel({
           {/* Node Config Options */}
           {nodeConfigs && nodeConfigs[selectedNode.id] && (
             <div
-              className={`rounded-xl border border-violet-500/25 bg-violet-500/5 p-3.5 space-y-3 shadow-inner`}
+              className={`rounded-xl border border-blue-500/25 bg-blue-500/5 p-3.5 space-y-3 shadow-inner`}
             >
               <p
-                className={`text-[10px] uppercase tracking-widest text-violet-400 font-bold font-mono`}
+                className={`text-[10px] uppercase tracking-widest text-blue-400 font-bold font-mono`}
               >
                 Configure
               </p>
@@ -915,7 +915,7 @@ function NodeInspectorPanel({
                             onClick={() => setActiveReqIdx(idx)}
                             className={`text-[10px] px-2.5 py-1 rounded-t-md font-medium transition cursor-pointer border-t border-x shrink-0 ${
                               idx === activeIdx
-                                ? "bg-[var(--surface-muted)] border-[var(--border)] text-violet-400 font-bold -mb-[7px] pb-[7px]"
+                                ? "bg-[var(--surface-muted)] border-[var(--border)] text-blue-400 font-bold -mb-[7px] pb-[7px]"
                                 : "border-transparent text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]/50"
                             }`}
                           >
@@ -941,7 +941,7 @@ function NodeInspectorPanel({
                             });
                             setActiveReqIdx(nextReqs.length - 1);
                           }}
-                          className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer shrink-0 ml-auto"
+                          className="text-[9px] bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded transition cursor-pointer shrink-0 ml-auto"
                         >
                           + Add
                         </button>
@@ -967,7 +967,7 @@ function NodeInspectorPanel({
                               Remove ×
                             </button>
                           )}
-                          <div className="text-[10px] font-bold text-violet-400">
+                          <div className="text-[10px] font-bold text-blue-400">
                             Editing Request #{activeIdx + 1}
                           </div>
 
@@ -1136,7 +1136,7 @@ function NodeInspectorPanel({
                           strategy: e.target.value,
                         })
                       }
-                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none cursor-pointer focus:border-violet-500"
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none cursor-pointer focus:border-blue-500"
                     >
                       <option value="ROUND_ROBIN">Round Robin</option>
                       <option value="RANDOM">Random Dispatch</option>
@@ -1165,7 +1165,7 @@ function NodeInspectorPanel({
                             routes: nextRoutes,
                           });
                         }}
-                        className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer"
+                        className="text-[9px] bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded transition cursor-pointer"
                       >
                         + Add Rule
                       </button>
@@ -1312,7 +1312,7 @@ function NodeInspectorPanel({
                           capacity: Number(e.target.value),
                         })
                       }
-                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500"
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-blue-500"
                     />
                   </div>
 
@@ -1366,7 +1366,7 @@ function NodeInspectorPanel({
                             endpoints: nextEndpoints,
                           });
                         }}
-                        className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer"
+                        className="text-[9px] bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded transition cursor-pointer"
                       >
                         + Add Endpoint
                       </button>
@@ -1432,7 +1432,7 @@ function NodeInspectorPanel({
                                     endpoints: nextEndpoints,
                                   });
                                 }}
-                                className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500 text-xs"
+                                className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-blue-500 text-xs"
                               />
                             </div>
 
@@ -1583,7 +1583,7 @@ function NodeInspectorPanel({
                           table: e.target.value,
                         })
                       }
-                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-mono outline-none focus:border-violet-500"
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-mono outline-none focus:border-blue-500"
                     />
                   </div>
 
@@ -1746,7 +1746,7 @@ function NodeInspectorPanel({
                 <div className="mt-2 space-y-1.5">
                   {redisStoreEntries.map(([key, value]) => (
                     <div key={key} className="text-xs">
-                      <p className="truncate text-violet-400">{key}</p>
+                      <p className="truncate text-blue-400">{key}</p>
                       <p className={`truncate ${textColor}`}>{String(value)}</p>
                     </div>
                   ))}
@@ -1886,7 +1886,7 @@ function NodeInspectorPanel({
                       key={frame.requestId}
                       className={`rounded border ${borderColor} ${theme === "dark" ? "bg-slate-950" : "bg-slate-100"} p-1.5`}
                     >
-                      <p className="font-mono text-[11px] text-violet-400">
+                      <p className="font-mono text-[11px] text-blue-400">
                         {frame.requestId.slice(0, 8)}
                       </p>
                       <p className={`mt-0.5 text-[10px] ${textColor}`}>
@@ -1918,7 +1918,7 @@ function NodeInspectorPanel({
                         key={bucketName}
                         className={`rounded border ${borderColor} ${theme === "dark" ? "bg-slate-950" : "bg-slate-100"} p-2`}
                       >
-                        <p className="font-mono text-[11px] text-violet-400">
+                        <p className="font-mono text-[11px] text-blue-400">
                           {bucketName}
                         </p>
                         <p className={`mt-1 text-[10px] ${textColor}`}>
@@ -2135,9 +2135,9 @@ function DebugPanel({
   if (currentFrames.length === 0) {
     return (
       <div className="font-mono text-xs p-2 text-center sm:text-left flex items-center gap-2">
-        <span className="inline-block w-2 h-2 rounded-full bg-violet-400/60 animate-ping shrink-0" />
+        <span className="inline-block w-2 h-2 rounded-full bg-blue-400/60 animate-ping shrink-0" />
         <span className={textColor}>
-          Simulation logs ready — click <strong className="text-violet-400">Play ▶</strong> to stream live execution logs.
+          Simulation logs ready — click <strong className="text-blue-400">Play ▶</strong> to stream live execution logs.
         </span>
       </div>
     );
@@ -2165,7 +2165,7 @@ function DebugPanel({
             <span className="text-[color:var(--foreground)]/35 select-none">
               [t={frame.timestamp}]
             </span>
-            <span className="text-violet-400 font-bold select-none">&gt;</span>
+            <span className="text-blue-400 font-bold select-none">&gt;</span>
             <span className={colors[formatted.type] || colors.default}>
               {formatted.text}
             </span>
@@ -2847,7 +2847,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
         data-resizable-container
       >
         {/* Top Bar — compact on mobile */}
-        <header className="border-b border-[var(--border)] bg-[var(--surface)]/50 px-3 sm:px-4 py-2 sm:py-3 backdrop-blur">
+        <header className="border-b border-[var(--border)] bg-[var(--surface)]/50 px-3 sm:px-4 py-2 sm:py-3 ">
           <div className="flex items-center justify-between gap-2">
             {/* Left: scenario name */}
             <div className="min-w-0">
@@ -2864,15 +2864,15 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
               {/* Checkboxes — icon-only on mobile */}
               <label
                 title="Hide the response/return packets flowing back from servers"
-                className="flex cursor-pointer items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-violet-500/50 group"
+                className="flex cursor-pointer items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-blue-500/50 group"
               >
                 <input
                   type="checkbox"
                   checked={hideResponse}
                   onChange={() => setHideResponse((prev) => !prev)}
-                  className="accent-violet-500 cursor-pointer w-3 h-3"
+                  className="accent-blue-500 cursor-pointer w-3 h-3"
                 />
-                <span className="hidden sm:inline group-hover:text-violet-300 whitespace-nowrap">
+                <span className="hidden sm:inline group-hover:text-blue-300 whitespace-nowrap">
                   Hide Response
                 </span>
                 <span className="sm:hidden font-mono text-[10px]">↔</span>
@@ -2886,7 +2886,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                   type="checkbox"
                   checked={parallelResponse}
                   onChange={() => setParallelResponse((prev) => !prev)}
-                  className="accent-violet-500 cursor-pointer w-3 h-3"
+                  className="accent-blue-500 cursor-pointer w-3 h-3"
                 />
                 <span className="hidden sm:inline group-hover:text-blue-300">
                   Parallel
@@ -2902,7 +2902,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                   type="checkbox"
                   checked={debugEnabled}
                   onChange={() => setDebugEnabled((prev) => !prev)}
-                  className="accent-violet-500 cursor-pointer w-3 h-3"
+                  className="accent-blue-500 cursor-pointer w-3 h-3"
                 />
                 <span className="hidden sm:inline group-hover:text-emerald-300">
                   Debug
@@ -2927,7 +2927,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
           {/* Info grid — desktop only */}
           <div className="mt-2 hidden sm:grid grid-cols-3 gap-3 text-[11px] text-[color:var(--foreground)]/60 border-t border-[var(--border)]/30 pt-2">
             <div className="flex items-start gap-2">
-              <span className="text-violet-400 font-mono">↔</span>
+              <span className="text-blue-400 font-mono">↔</span>
               <span>
                 <strong>Hide Response:</strong> Toggle response packets from
                 servers
@@ -3006,7 +3006,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             className="lg:hidden flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold border-t border-[var(--border)] bg-[var(--surface)]/60 hover:bg-[var(--surface)] transition text-[color:var(--foreground)]/70 w-full"
           >
             <span
-              className={`h-1.5 w-1.5 rounded-full ${inspectorVisible ? "bg-violet-400" : "bg-[color:var(--foreground)]/30"}`}
+              className={`h-1.5 w-1.5 rounded-full ${inspectorVisible ? "bg-blue-400" : "bg-[color:var(--foreground)]/30"}`}
             />
             {inspectorVisible ? "Hide Inspector" : "Inspect Node"}
           </button>
@@ -3040,13 +3040,13 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
         {/* Bottom Playback Panel - Resizable */}
         <div
           style={{ height: debugEnabled ? `${panelHeight}px` : "auto" }}
-          className="flex flex-col border-t border-[var(--border)] bg-[var(--surface)]/30 transition-all duration-150 backdrop-blur overflow-hidden"
+          className="flex flex-col border-t border-[var(--border)] bg-[var(--surface)]/30 transition-all duration-150  overflow-hidden"
         >
           {/* Drag Handle */}
           {debugEnabled && (
             <div
               onMouseDown={() => setIsDragging(true)}
-              className="h-1 w-full cursor-row-resize bg-[var(--border)] hover:bg-violet-500/50 transition-colors"
+              className="h-1 w-full cursor-row-resize bg-[var(--border)] hover:bg-blue-500/50 transition-colors"
               title="Drag to resize debug panel"
             />
           )}

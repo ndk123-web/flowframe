@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
 import { useThemeStore } from "@/store/useThemeStore";
@@ -9,244 +9,227 @@ import { useThemeStore } from "@/store/useThemeStore";
 type ScenarioCard = {
   id: string;
   title: string;
-  description: string;
+  problemStatement: string;
+  concept: string;
+  investigation: string;
   href: string;
   difficulty: "Beginner" | "Intermediate" | "Advanced";
   focus: string[];
   expectedFrames: number;
-  updatedAt: string;
   flowDiagram: string;
-  systemBehavior: string;
 };
 
 const SCENARIOS: ScenarioCard[] = [
   {
     id: "simple-load-balancer",
     title: "Simple Load Balancer",
-    description: "Watch round-robin request routing across multiple backend servers and inspect each frame in the sequence.",
+    problemStatement: "How do you distribute high-volume web traffic across multiple backend servers without creating single points of failure?",
+    concept: "Round-Robin L7 Traffic Balancing",
+    investigation: "Inspect how sequential incoming HTTP requests alternate between Server 1, Server 2, and Server 3 in deterministic order.",
     href: "/scenarios/simple-load-balancer",
     difficulty: "Beginner",
-    focus: ["Round Robin", "Request Routing", "Traffic Visualization"],
+    focus: ["Round Robin", "Request Routing", "Traffic Distribution"],
     expectedFrames: 16,
-    updatedAt: "2026-03-12",
-    flowDiagram: "Client → Load Balancer → Server 1/2/3",
-    systemBehavior: "Requests distribute across servers in round-robin order. Each server handles requests sequentially.",
+    flowDiagram: "Client → Load Balancer → Server 1 / 2 / 3",
   },
   {
     id: "simple-cache",
     title: "Simple Cache (Redis + Postgres)",
-    description: "Observe cache hit, cache miss fallback to Postgres, and invalid-key lookups with per-frame debug details.",
+    problemStatement: "How can a system avoid hitting the primary database on every read request while maintaining cache consistency?",
+    concept: "Cache-Aside Pattern & DB Fallback",
+    investigation: "Observe cache hits returning instantly from Redis memory versus cache misses that query PostgreSQL and backfill the cache.",
     href: "/scenarios/simple-cache",
     difficulty: "Beginner",
     focus: ["Cache Aside", "Redis Hit/Miss", "DB Fallback"],
     expectedFrames: 6,
-    updatedAt: "2026-03-13",
-    flowDiagram: "Client → Redis ↔ Postgres",
-    systemBehavior: "Requests check Redis first. On miss, they fallback to Postgres and update the cache.",
+    flowDiagram: "Client → Redis Cache ↔ Postgres DB",
   },
   {
     id: "simple-api-gateway",
     title: "Simple API Gateway (Routing + Cache)",
-    description: "Track endpoint-based routing from API Gateway to backend services with Redis/Postgres flow snapshots.",
+    problemStatement: "How do client applications communicate with multiple microservices through a unified, secure entry point?",
+    concept: "Unified Path Routing & Microservices Gateway",
+    investigation: "Track URL path matching (/api/users/* vs /api/orders/*), downstream routing, and cached response multiplexing.",
     href: "/scenarios/simple-api-gateway",
     difficulty: "Intermediate",
-    focus: ["Endpoint Routing", "Round Robin", "Gateway + Data Stores"],
+    focus: ["Path Routing", "Gateway Proxy", "Microservices"],
     expectedFrames: 7,
-    updatedAt: "2026-03-22",
-    flowDiagram: "Client → API Gateway → LB → Servers, Cache, DB",
-    systemBehavior: "Gateway routes endpoints to appropriate services. Full chain with caching and persistence.",
+    flowDiagram: "Client → API Gateway → LB → Services",
   },
   {
     id: "simple-valet-key",
     title: "Simple Valet Key (Direct Upload)",
-    description: "Simulate signed URL upload flow where server issues a valet key and client uploads directly to cloud storage.",
+    problemStatement: "How can clients upload large multimedia files directly to cloud storage without overwhelming backend application servers?",
+    concept: "Pre-Signed Valet Keys & Storage Offload",
+    investigation: "Step through client token negotiation, signed URL generation, and direct client-to-storage binary streaming.",
     href: "/scenarios/simple-valet-key",
     difficulty: "Intermediate",
     focus: ["Signed URL", "Direct Upload", "Storage Offload"],
     expectedFrames: 24,
-    updatedAt: "2026-03-29",
-    flowDiagram: "Client → Server → signedURL → Client → Storage",
-    systemBehavior: "Client gets a signed URL from server, then uploads directly to storage, offloading traffic from server.",
+    flowDiagram: "Client → Auth Server → Pre-Signed URL → Cloud Storage",
   },
 ];
 
 const DIFFICULTY_STYLE: Record<string, string> = {
-  Beginner:     "bg-[var(--green-muted)] text-[color:var(--green)] border-[var(--green)]/25",
-  Intermediate: "bg-[var(--amber-muted)] text-[color:var(--amber)] border-[var(--amber)]/25",
-  Advanced:     "bg-[var(--red-muted)] text-[color:var(--red)] border-[var(--red)]/25",
+  Beginner: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  Intermediate: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  Advanced: "bg-red-500/10 text-red-400 border-red-500/20",
 };
-
-function ScenarioCard({ scenario, index }: { scenario: ScenarioCard; index: number }) {
-  const [showFlow, setShowFlow] = useState(false);
-
-  return (
-    <article
-      className="group flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)]/35 hover:-translate-y-0.5 transition-all duration-200"
-      style={{
-        opacity: 1,
-        animation: `fadeIn 0.4s cubic-bezier(.22,1,.36,1) ${index * 0.07}s both`,
-      }}
-      onMouseEnter={() => setShowFlow(true)}
-      onMouseLeave={() => setShowFlow(false)}
-    >
-      <div className="p-5 flex flex-col flex-1">
-        {/* Header row */}
-        <div className="flex items-start justify-between mb-4">
-          <span className="text-[10px] font-mono font-bold text-[color:var(--muted)]">
-            {String(index + 1).padStart(2, "0")}
-          </span>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${DIFFICULTY_STYLE[scenario.difficulty]}`}>
-            {scenario.difficulty}
-          </span>
-        </div>
-
-        {/* Title + description */}
-        <div className="flex-1 mb-4">
-          <h2 className="text-sm font-bold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors mb-1.5">
-            {scenario.title}
-          </h2>
-          <p className="text-xs text-[color:var(--muted)] leading-relaxed">
-            {scenario.description}
-          </p>
-        </div>
-
-        {/* System flow — on hover */}
-        <div
-          style={{
-            maxHeight: showFlow ? "80px" : "0",
-            opacity: showFlow ? 1 : 0,
-            overflow: "hidden",
-            transition: "max-height 0.2s ease, opacity 0.2s ease",
-          }}
-          className="mb-3"
-        >
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--muted)] mb-1">Flow</p>
-            <p className="text-[10px] font-mono text-[color:var(--foreground)]/80">{scenario.flowDiagram}</p>
-          </div>
-        </div>
-
-        {/* Focus tags */}
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {scenario.focus.map((tag) => (
-            <span
-              key={tag}
-              className="text-[10px] font-medium px-2 py-0.5 rounded-md border border-[var(--border)] bg-[var(--bg-elevated)] text-[color:var(--muted)]"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-
-        {/* Footer meta */}
-        <div className="flex items-center justify-between border-t border-[var(--border)] pt-3 text-[10px] text-[color:var(--muted)] mb-4">
-          <span>{scenario.expectedFrames} frames</span>
-          <span>Updated {scenario.updatedAt}</span>
-        </div>
-
-        {/* CTA */}
-        <Link
-          href={scenario.href}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-muted)] px-4 py-2 text-xs font-semibold text-white transition-all duration-150 active:scale-[0.97]"
-        >
-          <span>Run Simulation</span>
-          <span className="transition-transform group-hover:translate-x-0.5">→</span>
-        </Link>
-      </div>
-
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(14px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-    </article>
-  );
-}
 
 export default function ScenariosPage() {
   const { theme, toggleTheme } = useThemeStore();
+  const [filterDifficulty, setFilterDifficulty] = useState<string>("All");
 
-  const stats = {
-    total: SCENARIOS.length,
-    beginner: SCENARIOS.filter(s => s.difficulty === "Beginner").length,
-    avgFrames: Math.round(SCENARIOS.reduce((sum, s) => sum + s.expectedFrames, 0) / SCENARIOS.length),
-  };
+  const filteredScenarios = useMemo(() => {
+    if (filterDifficulty === "All") return SCENARIOS;
+    return SCENARIOS.filter((s) => s.difficulty === filterDifficulty);
+  }, [filterDifficulty]);
 
   return (
-    <main className="min-h-screen bg-[var(--bg)] text-[color:var(--foreground)]">
-      <div className="pointer-events-none fixed inset-0 -z-10 technical-grid opacity-30" />
+    <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[color:var(--foreground)] transition-colors duration-200">
+      <SiteHeader theme={theme} onToggleTheme={toggleTheme} showHomeLink={false} />
 
-      <SiteHeader
-        theme={theme}
-        showHomeLink
-        badgeText="Simulation Library"
-        onToggleTheme={toggleTheme}
-      />
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14 space-y-10">
+        {/* ── Header / Hero ─────────────────────────────────────────── */}
+        <section className="space-y-4 max-w-3xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1 text-xs font-mono text-[color:var(--muted)] shadow-xs">
+            <span className="font-semibold text-[color:var(--foreground)]">System Design Lab</span>
+            <span>/</span>
+            <span className="text-[color:var(--accent)] font-medium">Interactive Scenarios</span>
+          </div>
 
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-6xl px-5 sm:px-6 pt-12 pb-8">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-7 sm:p-9">
-          <p className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[color:var(--muted)] mb-5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
-            Scenario Library
-          </p>
-
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[color:var(--foreground)] mb-3">
-            Pre-built System Simulations
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[color:var(--foreground)] leading-tight">
+            Practical system-design experiments.
           </h1>
 
-          <p className="max-w-xl text-sm text-[color:var(--muted)] leading-relaxed mb-8">
-            Explore pre-configured distributed system scenarios. Hover any card to preview the system flow, then launch it to watch network packets travel across components in real time.
+          <p className="text-sm sm:text-base text-[color:var(--muted)] leading-relaxed">
+            Step through pre-configured distributed architectures. Run real request sequences, inspect
+            frame-by-frame state transitions, and observe how systems behave under real-world conditions.
           </p>
+        </section>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-3 max-w-sm">
-            {[
-              { label: "Total Scenarios", value: stats.total },
-              { label: "Beginner Tier", value: stats.beginner },
-              { label: "Avg Frames", value: stats.avgFrames },
-            ].map((s) => (
-              <div key={s.label} className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-3">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-[color:var(--muted)] mb-1">{s.label}</p>
-                <p className="text-2xl font-bold text-[color:var(--accent)]">{s.value}</p>
-              </div>
+        {/* ── Filters Bar ───────────────────────────────────────────── */}
+        <section className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[var(--border)]">
+          <div className="flex items-center gap-1.5">
+            {["All", "Beginner", "Intermediate"].map((diff) => (
+              <button
+                key={diff}
+                type="button"
+                onClick={() => setFilterDifficulty(diff)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+                  filterDifficulty === diff
+                    ? "bg-[var(--accent)]/10 text-[color:var(--accent)] border border-[var(--accent)]/25 font-semibold"
+                    : "text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface)] border border-transparent"
+                }`}
+              >
+                {diff}
+              </button>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* ── Scenario Cards Grid ───────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-6xl px-5 sm:px-6 pb-12">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--muted)] mb-5">
-          {SCENARIOS.length} scenarios available
-        </p>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {SCENARIOS.map((scenario, index) => (
-            <ScenarioCard key={scenario.id} scenario={scenario} index={index} />
+          <span className="text-xs font-mono text-[color:var(--muted)]">
+            Showing {filteredScenarios.length} scenario{filteredScenarios.length !== 1 ? "s" : ""}
+          </span>
+        </section>
+
+        {/* ── Scenarios Grid ────────────────────────────────────────── */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {filteredScenarios.map((scenario, index) => (
+            <article
+              key={scenario.id}
+              className="group flex flex-col justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 hover:border-[var(--accent)]/50 hover:-translate-y-0.5 transition-all duration-200 shadow-xs"
+            >
+              <div className="space-y-4">
+                {/* Header: Number & Difficulty */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold text-[color:var(--muted)]">
+                    Scenario {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-[color:var(--muted)]">
+                      {scenario.expectedFrames} frames
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded border ${
+                        DIFFICULTY_STYLE[scenario.difficulty]
+                      }`}
+                    >
+                      {scenario.difficulty}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div>
+                  <h2 className="text-base font-bold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors">
+                    {scenario.title}
+                  </h2>
+                  <p className="text-xs font-mono text-[color:var(--accent)] mt-0.5">
+                    {scenario.concept}
+                  </p>
+                </div>
+
+                {/* Problem Statement Box */}
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-3 space-y-1">
+                  <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
+                    Problem Statement
+                  </p>
+                  <p className="text-xs text-[color:var(--foreground)]/90 leading-relaxed">
+                    {scenario.problemStatement}
+                  </p>
+                </div>
+
+                {/* Investigation Details */}
+                <div className="space-y-1">
+                  <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
+                    What You Will Investigate
+                  </p>
+                  <p className="text-xs text-[color:var(--muted)] leading-relaxed">
+                    {scenario.investigation}
+                  </p>
+                </div>
+
+                {/* Architecture Preview Flow */}
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2">
+                  <p className="text-[9px] font-mono font-bold uppercase tracking-widest text-[color:var(--muted)] mb-0.5">
+                    Topology Preview
+                  </p>
+                  <p className="text-xs font-mono text-[color:var(--foreground)] font-semibold truncate">
+                    {scenario.flowDiagram}
+                  </p>
+                </div>
+
+                {/* Focus Tags */}
+                <div className="flex flex-wrap gap-1.5">
+                  {scenario.focus.map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-[10px] font-mono font-medium px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-[color:var(--muted)]"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-5 mt-5 border-t border-[var(--border)] flex items-center justify-between">
+                <span className="text-xs font-mono text-[color:var(--muted)]">
+                  Interactive Simulator
+                </span>
+                <Link
+                  href={scenario.href}
+                  className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm transition"
+                >
+                  Start Scenario →
+                </Link>
+              </div>
+            </article>
           ))}
-        </div>
-      </section>
-
-      {/* ── Sandbox CTA ──────────────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-6xl px-5 sm:px-6 pb-14">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold text-[color:var(--foreground)] mb-1">Want to design something custom?</p>
-            <p className="text-xs text-[color:var(--muted)]">
-              Use the Interactive Sandbox to draw any architecture from scratch and run your own simulation.
-            </p>
-          </div>
-          <Link
-            href="/workspace"
-            className="shrink-0 inline-flex items-center gap-2 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/8 px-4 py-2 text-sm font-semibold text-[color:var(--accent)] hover:bg-[var(--accent)]/15 transition-all duration-150 whitespace-nowrap"
-          >
-            Launch Workspace →
-          </Link>
-        </div>
-      </section>
+        </section>
+      </main>
 
       <SiteFooter />
-    </main>
+    </div>
   );
 }

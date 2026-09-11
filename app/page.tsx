@@ -80,7 +80,7 @@ interface DemoNodeData {
 function DemoNode({ data }: { data: DemoNodeData }) {
   return (
     <div
-      className={`relative flex flex-col rounded-xl border p-3 shadow-sm min-w-[136px] transition-all select-none ${
+      className={`relative flex flex-col rounded-xl border p-3 shadow-sm min-w-[130px] transition-all select-none ${
         data.active
           ? "border-[var(--accent)] bg-[var(--surface)] ring-1 ring-[var(--accent)]/25"
           : "border-[var(--border-strong)] bg-[var(--surface)]"
@@ -97,7 +97,7 @@ function DemoNode({ data }: { data: DemoNodeData }) {
         className="!bg-[var(--accent)] !w-2 !h-2 !border-0"
       />
 
-      <div className="flex items-center justify-between gap-1.5 mb-1.5">
+      <div className="flex items-center justify-between gap-1.5 mb-1">
         <div className="flex items-center gap-1.5 min-w-0">
           <ComponentIcon
             type={data.iconType}
@@ -119,116 +119,99 @@ function DemoNode({ data }: { data: DemoNodeData }) {
         )}
       </div>
 
-      <div className="text-[10px] font-mono text-[color:var(--muted)]">
-        <span className="truncate block">{data.subtitle}</span>
-      </div>
+      {data.subtitle && (
+        <div className="text-[10px] font-mono text-[color:var(--muted)]">
+          <span className="truncate block">{data.subtitle}</span>
+        </div>
+      )}
     </div>
   );
 }
 
 const nodeTypes = { demoNode: DemoNode };
 
-// ─── Single API Gateway Scenario Data (Cleaned: No IP addresses) ─────────────
-function buildApiGatewayDemo() {
+// ─── Single Load Balancer Scenario (Parallel Distribution, No Ports) ─────────
+function buildLoadBalancerDemo() {
   const nodes: Node[] = [
     {
-      id: "c1",
+      id: "client",
       type: "demoNode",
-      position: { x: 30, y: 130 },
+      position: { x: 30, y: 120 },
       data: {
         iconType: "client",
-        title: "Mobile Client",
-        subtitle: "POST /orders/checkout",
-        badge: "Client",
+        title: "Client",
+        subtitle: "2 Requests",
       },
     },
     {
-      id: "gw",
+      id: "lb",
       type: "demoNode",
-      position: { x: 260, y: 130 },
+      position: { x: 260, y: 120 },
       data: {
-        iconType: "api-gateway",
-        title: "API Gateway",
-        subtitle: "Path Routing Engine",
-        badge: "Port 443",
+        iconType: "load-balancer",
+        title: "Load Balancer",
+        subtitle: "Distributing",
         active: true,
       },
     },
     {
-      id: "auth",
+      id: "s1",
       type: "demoNode",
-      position: { x: 510, y: 20 },
+      position: { x: 500, y: 40 },
       data: {
         iconType: "server",
-        title: "Auth Service",
-        subtitle: "/api/auth/*",
-        badge: "JWT 200 OK",
-        badgeColor: "text-[color:var(--accent)] border-[var(--accent)]/25 bg-[var(--accent)]/10",
-      },
-    },
-    {
-      id: "orders",
-      type: "demoNode",
-      position: { x: 510, y: 130 },
-      data: {
-        iconType: "server",
-        title: "Order Service",
-        subtitle: "/api/orders/*",
-        badge: "Active Worker",
+        title: "Server 1",
+        subtitle: "Request #1",
+        badge: "Processing",
         badgeColor: "text-[color:var(--accent)] border-[var(--accent)]/25 bg-[var(--accent)]/10",
         active: true,
       },
     },
     {
-      id: "queue",
+      id: "s2",
       type: "demoNode",
-      position: { x: 510, y: 240 },
+      position: { x: 500, y: 190 },
       data: {
-        iconType: "message-queue",
-        title: "RabbitMQ",
-        subtitle: "orders.created",
-        badge: "202 Ack",
-        badgeColor: "text-[color:var(--amber)] border-[var(--amber)]/25 bg-[var(--amber-muted)]",
+        iconType: "server",
+        title: "Server 2",
+        subtitle: "Request #2",
+        badge: "Processing",
+        badgeColor: "text-[color:var(--accent)] border-[var(--accent)]/25 bg-[var(--accent)]/10",
+        active: true,
       },
     },
   ];
 
+  // 2 Parallel animated streams leaving the Load Balancer to Server 1 & Server 2
   const edges: Edge[] = [
     {
-      id: "e-c1-gw",
-      source: "c1",
-      target: "gw",
+      id: "e-client-lb",
+      source: "client",
+      target: "lb",
       type: "animated",
-      style: { stroke: "#3b82f6", strokeWidth: 2, strokeOpacity: 0.8 },
+      style: { stroke: "#3b82f6", strokeWidth: 2, strokeOpacity: 0.9 },
     },
     {
-      id: "e-gw-auth",
-      source: "gw",
-      target: "auth",
+      id: "e-lb-s1",
+      source: "lb",
+      target: "s1",
       type: "animated",
-      style: { stroke: "#3b82f6", strokeWidth: 1.5, strokeOpacity: 0.6 },
+      style: { stroke: "#3b82f6", strokeWidth: 2, strokeOpacity: 0.9 },
     },
     {
-      id: "e-gw-orders",
-      source: "gw",
-      target: "orders",
+      id: "e-lb-s2",
+      source: "lb",
+      target: "s2",
       type: "animated",
-      style: { stroke: "#3b82f6", strokeWidth: 2, strokeOpacity: 0.8 },
-    },
-    {
-      id: "e-orders-queue",
-      source: "orders",
-      target: "queue",
-      type: "animated",
-      style: { stroke: "#f59e0b", strokeWidth: 1.6, strokeOpacity: 0.75 },
+      style: { stroke: "#3b82f6", strokeWidth: 2, strokeOpacity: 0.9 },
     },
   ];
 
   const logs = [
-    { time: "00:00.090", src: "CLIENT", desc: "POST /api/orders/checkout dispatched to API Gateway" },
-    { time: "00:00.150", src: "GATEWAY", desc: "Validated session Bearer token via Auth Service [200 OK]" },
-    { time: "00:00.220", src: "GATEWAY", desc: "Matched path /api/orders/* → Forwarded to Order Service" },
-    { time: "00:00.310", src: "ORDER_SVC", desc: "Published event to RabbitMQ topic 'orders.created' [202 Accepted]" },
+    { time: "00:00.080", src: "CLIENT", desc: "Dispatched 2 concurrent requests to Load Balancer" },
+    { time: "00:00.120", src: "LOAD_BALANCER", desc: "Parallel dispatch → Request #1 to Server 1, Request #2 to Server 2" },
+    { time: "00:00.190", src: "SERVER_1", desc: "Server 1 processed Request #1 · HTTP 200 OK" },
+    { time: "00:00.205", src: "SERVER_2", desc: "Server 2 processed Request #2 · HTTP 200 OK" },
   ];
 
   return { nodes, edges, logs };
@@ -803,9 +786,9 @@ export default function LandingPage() {
   const router = useRouter();
   const { isAuthenticated, _hasHydrated } = useAuthStore();
 
-  // Single showcase: API Gateway (clean: no IPs, real logs)
+  // Single showcase: Load Balancer (clean, basic info, zero text clutter)
   const { nodes: demoNodes, edges: demoEdges, logs: demoLogs } = useMemo(
-    () => buildApiGatewayDemo(),
+    () => buildLoadBalancerDemo(),
     []
   );
 
@@ -819,7 +802,7 @@ export default function LandingPage() {
         {/* Subtle background glow */}
         <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[300px] bg-blue-500/10 rounded-full blur-3xl -z-10" />
 
-        {/* Status Badge (Clean, No AI green dot, No awkward email display) */}
+        {/* Status Badge */}
         <div className="fade-up inline-flex items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 py-1 text-xs font-mono text-[color:var(--muted)] mb-6 shadow-xs">
           <span className="font-semibold text-[color:var(--foreground)]">FlowFrame Engine</span>
           <span className="text-[var(--border-strong)]">/</span>
@@ -919,64 +902,38 @@ export default function LandingPage() {
           </span>
         </div>
 
-        {/* ── Single Hero Showcase: API Gateway & Microservices Pipeline ───── */}
+        {/* ── Single Hero Showcase: Load Balancer (Clean & Uncluttered) ───── */}
         <div
-          className="fade-up w-full max-w-5xl rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-2xl overflow-hidden text-left"
+          className="fade-up w-full max-w-4xl rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-2xl overflow-hidden text-left"
           style={{ animationDelay: ".18s" }}
         >
           {/* Top Window Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-elevated)]">
-            {/* Left: macOS dots & file */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-elevated)]">
+            {/* Left: macOS dots & filename */}
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-red-500/80" />
               <span className="w-3 h-3 rounded-full bg-amber-500/80" />
               <span className="w-3 h-3 rounded-full bg-green-500/80" />
-              <span className="ml-2 font-mono text-xs text-[color:var(--muted)] font-medium">
-                api-gateway-mesh.flow
+              <span className="ml-2 font-mono text-xs text-[color:var(--foreground)] font-medium">
+                load-balancer.flow
               </span>
             </div>
 
-            {/* Center: Single Scenario Label */}
-            <div className="hidden sm:flex items-center gap-2 font-mono text-xs text-[color:var(--muted)]">
-              <span className="font-semibold text-[color:var(--foreground)]">API Gateway</span>
-              <span className="text-[var(--border-strong)]">·</span>
-              <span>Microservices Routing & RabbitMQ Pipeline</span>
-            </div>
-
-            {/* Right: Engine status badge (No pulsing green dot) */}
-            <div className="flex items-center gap-2">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[color:var(--accent)] text-[10px] font-mono font-semibold">
-                Simulated Runtime
-              </div>
-            </div>
-          </div>
-
-          {/* Sub-header telemetry banner */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2 border-b border-[var(--border)] bg-[var(--surface-muted)] text-xs text-[color:var(--muted)] font-mono">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 text-[color:var(--foreground)] font-semibold">
-                <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />
-                Active Request: POST /api/orders/checkout
-              </span>
-            </div>
-            <div className="flex items-center gap-4 text-[11px]">
-              <span>Route: /api/orders/*</span>
-              <span className="text-[var(--border-strong)]">|</span>
-              <span>Target: Order Service</span>
-              <span className="text-[var(--border-strong)]">|</span>
-              <span className="text-[color:var(--accent)]">Hop: 14ms</span>
+            {/* Right: Clean status indicator */}
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[color:var(--accent)] text-[10px] font-mono font-semibold">
+              Parallel Routing Active
             </div>
           </div>
 
           {/* Canvas Preview Area */}
-          <div className="relative h-[340px] sm:h-[370px] w-full dot-grid bg-[var(--bg)]">
+          <div className="relative h-[320px] sm:h-[350px] w-full dot-grid bg-[var(--bg)]">
             <ReactFlow
               nodes={demoNodes}
               edges={demoEdges}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               fitView
-              fitViewOptions={{ padding: 0.18 }}
+              fitViewOptions={{ padding: 0.2 }}
               preventScrolling
               nodesDraggable={false}
               nodesConnectable={false}
@@ -992,27 +949,21 @@ export default function LandingPage() {
             </ReactFlow>
           </div>
 
-          {/* Bottom Execution Trace Console (Kept as requested!) */}
+          {/* Bottom Execution Trace Console */}
           <div className="border-t border-[var(--border)] bg-[var(--bg-elevated)] p-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 pb-2 border-b border-[var(--border)]">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
-                  Live Execution Trace
-                </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[var(--surface)] text-[color:var(--accent)] border border-[var(--border)]">
-                  4 hops recorded
-                </span>
-              </div>
+            <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-[var(--border)]">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
+                Live Execution Trace
+              </span>
               <button
-                onClick={() => router.push("/scenarios/simple-api-gateway")}
+                onClick={() => router.push("/scenarios/simple-load-balancer")}
                 className="inline-flex items-center gap-1 text-xs font-semibold text-[color:var(--accent)] hover:underline cursor-pointer"
               >
-                Open in Workspace
-                <span>→</span>
+                Open in Workspace →
               </button>
             </div>
 
-            <div className="space-y-1 font-mono text-[11px] text-[color:var(--muted)]">
+            <div className="space-y-1 font-mono text-[11px]">
               {demoLogs.map((log, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <span className="text-[color:var(--muted)] shrink-0">{log.time}</span>
@@ -1037,12 +988,6 @@ export default function LandingPage() {
             className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
           >
             <span>📄 Blank Canvas</span>
-          </Link>
-          <Link
-            href="/scenarios/simple-api-gateway"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
-          >
-            <span>🚪 API Gateway</span>
           </Link>
           <Link
             href="/scenarios/simple-load-balancer"

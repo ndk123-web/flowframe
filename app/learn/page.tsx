@@ -57,7 +57,7 @@ export default function LearnOverviewPage() {
         {/* ── Hero ──────────────────────────────────── */}
         <div className="text-center space-y-4 max-w-2xl mx-auto">
           <span className="inline-flex items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-[color:var(--accent)] font-mono shadow-xs">
-            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
             Interactive Learning Center
           </span>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.15]">

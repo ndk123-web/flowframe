@@ -456,6 +456,43 @@ export default function WorkspaceDetailPage() {
           ))}
         </section>
 
+        {/* Quick Architecture Template Starters */}
+        <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
+              Quick Architecture Starters
+            </span>
+            <span className="text-[10px] text-[color:var(--muted)] font-mono">1-click template initialization</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {[
+              { title: "Load Balancer", desc: "Round-robin traffic distribution", icon: "⚖️" },
+              { title: "Cache-Aside", desc: "Redis hit/miss with DB fallback", icon: "⚡" },
+              { title: "API Gateway", desc: "Microservices path routing", icon: "🚪" },
+              { title: "Blank Canvas", desc: "Design from scratch", icon: "📄" },
+            ].map((tmpl) => (
+              <button
+                key={tmpl.title}
+                type="button"
+                onClick={() => {
+                  setNewDiagramName(tmpl.title === "Blank Canvas" ? "New Architecture" : `${tmpl.title} Cluster`);
+                  setNewDiagramDesc(tmpl.desc);
+                  setCreateDiagramOpen(true);
+                }}
+                className="flex items-center gap-2.5 p-3 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] hover:border-[var(--accent)] hover:bg-[var(--surface-muted)] text-left transition cursor-pointer group"
+              >
+                <span className="text-lg group-hover:scale-110 transition-transform">{tmpl.icon}</span>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors truncate">
+                    {tmpl.title}
+                  </p>
+                  <p className="text-[10px] text-[color:var(--muted)] truncate">{tmpl.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+
         {/* Search, Filter & View Toggle */}
         <section className="space-y-4">
           <div className="flex items-center justify-between gap-3">
