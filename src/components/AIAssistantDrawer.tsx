@@ -3,6 +3,23 @@
 import React, { useState, useMemo } from "react";
 import { compileDSL } from "@/DSL";
 import type { Node, Edge } from "@xyflow/react";
+import {
+  FiZap,
+  FiSliders,
+  FiShield,
+  FiInbox,
+  FiGlobe,
+  FiAlertTriangle,
+  FiCheckCircle,
+  FiCpu,
+  FiTool,
+  FiInfo,
+  FiX,
+  FiPlay,
+  FiCheck,
+  FiArrowRight,
+} from "react-icons/fi";
+
 
 interface AIAssistantDrawerProps {
   isOpen: boolean;
@@ -37,7 +54,7 @@ export default function AIAssistantDrawer({
       id: "cache-aside",
       title: "Cache-Aside Pattern",
       badge: "High Throughput",
-      icon: "⚡",
+      icon: "zap",
       desc: "Client routes through API Server with Redis in-memory cache and Postgres DB fallback.",
       dsl: `// Cache-Aside Architecture Template
 define CLIENT web_client {
@@ -80,7 +97,7 @@ connect api_server -> postgres_db
       id: "load-balanced",
       title: "Load-Balanced Cluster",
       badge: "High Availability",
-      icon: "⚖️",
+      icon: "sliders",
       desc: "Client traffic distributed across multiple server instances via Round-Robin Load Balancer.",
       dsl: `// High Availability Load-Balanced Cluster
 define CLIENT mobile_client {
@@ -131,7 +148,7 @@ connect app_server_2 -> shared_db
       id: "microservices-gateway",
       title: "API Gateway Microservices",
       badge: "Scalability",
-      icon: "🛡️",
+      icon: "shield",
       desc: "Central API Gateway routing traffic to User and Payment microservices with independent databases.",
       dsl: `// API Gateway Microservices Architecture
 define CLIENT client_apps {
@@ -189,7 +206,7 @@ connect order_service -> order_db
       id: "event-driven-queue",
       title: "Event-Driven Async Queue",
       badge: "Decoupled",
-      icon: "📬",
+      icon: "inbox",
       desc: "Asynchronous background ingestion using Message Queue and worker processing.",
       dsl: `// Event-Driven Async Architecture
 define CLIENT ingest_client {
@@ -238,7 +255,7 @@ connect worker_node -> cold_storage
       id: "cdn-edge",
       title: "Global CDN Edge Architecture",
       badge: "Low Latency",
-      icon: "🌐",
+      icon: "globe",
       desc: "Cloudflare CDN Edge caching static assets with Origin fallback.",
       dsl: `// Global CDN Edge Architecture
 define CLIENT global_visitor {
@@ -430,11 +447,11 @@ connect origin_server -> storage_bucket
       {/* Header */}
       <div className="p-4 border-b border-[var(--border)] bg-[var(--surface)] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 text-sm">
-            ✨
+          <div className="w-8 h-8 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-sm">
+            <FiCpu className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-sm font-bold tracking-tight">AI Architecture Assistant</h2>
+            <h2 className="text-sm font-bold tracking-tight">Architecture Assistant</h2>
             <p className="text-[10px] text-[color:var(--foreground)]/50">
               Grounded system design & live simulation engine
             </p>
@@ -447,7 +464,7 @@ connect origin_server -> storage_bucket
           className="h-7 w-7 rounded-full hover:bg-[var(--surface-muted)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] flex items-center justify-center text-sm font-bold transition cursor-pointer"
           aria-label="Close AI Assistant"
         >
-          ✕
+          ×
         </button>
       </div>
 
@@ -456,10 +473,10 @@ connect origin_server -> storage_bucket
         <div className="grid grid-cols-4 gap-1 p-0.5 bg-[var(--surface-muted)] rounded-xl border border-[var(--border)]">
           {(
             [
-              { id: "create", label: "Create", icon: "🏗️" },
-              { id: "modify", label: "Modify", icon: "🔧" },
-              { id: "fix", label: "Audit", icon: "⚡" },
-              { id: "explain", label: "Explain", icon: "📖" },
+              { id: "create", label: "Create", iconType: "create" },
+              { id: "modify", label: "Modify", iconType: "modify" },
+              { id: "fix", label: "Audit", iconType: "fix" },
+              { id: "explain", label: "Explain", iconType: "explain" },
             ] as const
           ).map((mode) => (
             <button
@@ -472,7 +489,10 @@ connect origin_server -> storage_bucket
                   : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
               }`}
             >
-              <span>{mode.icon}</span>
+              {mode.iconType === "create" && <FiCpu className="w-3.5 h-3.5 text-blue-400" />}
+              {mode.iconType === "modify" && <FiTool className="w-3.5 h-3.5 text-cyan-400" />}
+              {mode.iconType === "fix" && <FiAlertTriangle className="w-3.5 h-3.5 text-amber-400" />}
+              {mode.iconType === "explain" && <FiInfo className="w-3.5 h-3.5 text-purple-400" />}
               <span>{mode.label}</span>
             </button>
           ))}
@@ -490,7 +510,7 @@ connect origin_server -> storage_bucket
               onClick={() => setLastActionResult(null)}
               className="text-blue-400 hover:text-blue-200 ml-2 font-bold"
             >
-              ✕
+              ×
             </button>
           </div>
         )}
@@ -501,7 +521,7 @@ connect origin_server -> storage_bucket
             {/* Natural language query prompt */}
             <form onSubmit={handleCustomPromptSubmit} className="space-y-2">
               <label className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70 flex items-center gap-1.5">
-                <span>Prompt AI Architect</span>
+                <span>Architecture Assistant Input</span>
                 <span className="text-[9px] font-mono text-blue-400 font-normal">DSL-Grounded</span>
               </label>
               <div className="relative">
@@ -519,7 +539,7 @@ connect origin_server -> storage_bucket
                 disabled={isGenerating || !customPrompt.trim()}
                 className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white shadow-md shadow-blue-500/20 transition cursor-pointer flex items-center justify-center gap-2"
               >
-                <span>{isGenerating ? "Compiling..." : "⚡ Generate & Simulate"}</span>
+                <span>{isGenerating ? "Compiling..." : "Generate Architecture"}</span>
               </button>
             </form>
 
@@ -540,7 +560,13 @@ connect origin_server -> storage_bucket
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-base">{preset.icon}</span>
+                        <span className="p-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                          {preset.icon === "zap" && <FiZap className="w-3.5 h-3.5" />}
+                          {preset.icon === "sliders" && <FiSliders className="w-3.5 h-3.5" />}
+                          {preset.icon === "shield" && <FiShield className="w-3.5 h-3.5" />}
+                          {preset.icon === "inbox" && <FiInbox className="w-3.5 h-3.5" />}
+                          {preset.icon === "globe" && <FiGlobe className="w-3.5 h-3.5" />}
+                        </span>
                         <h3 className="text-xs font-bold text-[color:var(--foreground)] group-hover:text-blue-400 transition">
                           {preset.title}
                         </h3>
@@ -556,7 +582,7 @@ connect origin_server -> storage_bucket
 
                     <div className="flex items-center justify-between pt-1 text-[10px] text-blue-400 font-semibold group-hover:translate-x-0.5 transition-transform">
                       <span>Click to compile & run simulation</span>
-                      <span>➔</span>
+                      <FiArrowRight className="w-3 h-3 text-blue-400" />
                     </div>
                   </div>
                 ))}
@@ -582,7 +608,7 @@ connect origin_server -> storage_bucket
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold flex items-center gap-1.5">
-                    <span>⚡</span> Insert Redis Caching Layer
+                    <FiZap className="w-3 h-3 text-amber-400" /> Insert Redis Caching Layer
                   </span>
                   <span className="text-[9px] font-mono text-emerald-400">Low Latency</span>
                 </div>
@@ -600,7 +626,7 @@ connect origin_server -> storage_bucket
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold flex items-center gap-1.5">
-                    <span>⚖️</span> Scale Horizontally with Load Balancer
+                    <FiSliders className="w-3 h-3 text-blue-400" /> Scale Horizontally with Load Balancer
                   </span>
                   <span className="text-[9px] font-mono text-blue-400">High Availability</span>
                 </div>
@@ -618,7 +644,7 @@ connect origin_server -> storage_bucket
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold flex items-center gap-1.5">
-                    <span>🌐</span> Deploy Cloudflare CDN Edge
+                    <FiGlobe className="w-3 h-3 text-cyan-400" /> Deploy Cloudflare CDN Edge
                   </span>
                   <span className="text-[9px] font-mono text-cyan-400">Edge Caching</span>
                 </div>
@@ -636,7 +662,7 @@ connect origin_server -> storage_bucket
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold flex items-center gap-1.5">
-                    <span>📬</span> Add Async Worker Message Queue
+                    <FiInbox className="w-3 h-3 text-emerald-400" /> Add Async Worker Message Queue
                   </span>
                   <span className="text-[9px] font-mono text-pink-400">Decoupled</span>
                 </div>
@@ -700,7 +726,7 @@ connect origin_server -> storage_bucket
                         }}
                         className="w-full py-1.5 px-2.5 rounded-xl text-[11px] font-bold bg-blue-600 hover:bg-blue-500 text-white shadow transition cursor-pointer flex items-center justify-center gap-1.5"
                       >
-                        <span>⚡</span>
+                        <FiZap className="w-3 h-3 text-amber-400" />
                         <span>{audit.actionLabel || "Apply Recommended Fix"}</span>
                       </button>
                     )}
@@ -716,7 +742,7 @@ connect origin_server -> storage_bucket
           <div className="space-y-3">
             <div className="p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/40 space-y-2">
               <h4 className="text-xs font-bold text-[color:var(--foreground)] flex items-center gap-1.5">
-                <span>🔍</span> Architecture Structure Overview
+                <FiInfo className="w-3 h-3 text-blue-400" /> Architecture Structure Overview
               </h4>
               <div className="grid grid-cols-2 gap-2 text-center pt-1">
                 <div className="bg-[var(--surface)] p-2 rounded-xl border border-[var(--border)]">
@@ -732,7 +758,7 @@ connect origin_server -> storage_bucket
 
             <div className="p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/40 space-y-2">
               <h4 className="text-xs font-bold text-[color:var(--foreground)] flex items-center gap-1.5">
-                <span>⚡</span> Request Flow Dynamics
+                <FiZap className="w-3 h-3 text-amber-400" /> Request Flow Dynamics
               </h4>
               <p className="text-[11px] text-[color:var(--foreground)]/70 leading-relaxed">
                 When a client initiates a request, FlowFrame executes chronological packet hops:
@@ -752,7 +778,7 @@ connect origin_server -> storage_bucket
 
             <div className="p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/40 space-y-2">
               <h4 className="text-xs font-bold text-[color:var(--foreground)] flex items-center gap-1.5">
-                <span>💡</span> Latency & Scaling Advice
+                <FiInfo className="w-3 h-3 text-emerald-400" /> Latency & Scaling Advice
               </h4>
               <p className="text-[11px] text-[color:var(--foreground)]/70 leading-relaxed">
                 To minimize round-trip packet latency:

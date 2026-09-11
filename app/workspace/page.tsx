@@ -94,6 +94,16 @@ import {
   FiSidebar,
   FiRefreshCw,
   FiXCircle,
+  FiSettings,
+  FiZoomIn,
+  FiZoomOut,
+  FiMaximize2,
+  FiGrid,
+  FiSend,
+  FiArrowRight,
+  FiArrowLeft,
+  FiPlus,
+  FiZap,
 } from "react-icons/fi";
 
 type Theme = "light" | "dark";
@@ -974,7 +984,7 @@ function CustomNode({ id, data, selected }: any) {
                 </p>
                 <span
                   className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                    data.isActive ? "bg-emerald-400 animate-pulse" : "bg-slate-500/40"
+                    data.isActive ? "bg-emerald-400" : "bg-slate-500/40"
                   }`}
                   title={data.isActive ? "Active in simulation" : "Idle"}
                 />
@@ -1007,19 +1017,7 @@ function CustomNode({ id, data, selected }: any) {
         </div>
       </div>
 
-      {/* Active status pulse dot */}
-      {data.isActive && (
-        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 pointer-events-none">
-          <span
-            className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-            style={{ background: colors.dot }}
-          />
-          <span
-            className="relative inline-flex rounded-full h-2.5 w-2.5"
-            style={{ background: colors.dot }}
-          />
-        </span>
-      )}
+{/* Active indicator represented via 1.5px border highlight */}
 
       {/* Source handles (Right & Bottom) */}
       {hasSource && (
@@ -1069,12 +1067,14 @@ function PacketEdge(props: EdgeProps) {
     targetY,
     sourcePosition,
     targetPosition,
-    borderRadius: 10,
+    borderRadius: 8,
   });
 
   const isActive = Boolean(data?.active);
-  const duration = Number(data?.packetDuration ?? 1.2);
+  const duration = Math.max(0.6, Number(data?.packetDuration ?? 1.2));
   const isReverseMotion = Boolean(data?.reverseMotion);
+  const frameIndex = Number(data?.frameIndex ?? 0);
+  const color = packetColor(isReverseMotion);
 
   return (
     <>
@@ -1083,65 +1083,85 @@ function PacketEdge(props: EdgeProps) {
         markerEnd={markerEnd}
         style={{
           ...style,
-          stroke: isActive ? packetColor(isReverseMotion) : style?.stroke,
+          stroke: isActive ? color : style?.stroke,
           strokeWidth: isActive ? 2.5 : 1.8,
           strokeOpacity: isActive ? 1 : 0.45,
-          transition: "stroke-opacity 150ms ease, stroke-width 150ms ease",
+          transition: "stroke 150ms ease, stroke-width 150ms ease",
         }}
       />
       {isActive && (
-        <g>
-          {/* Glowing outer halo */}
+        <g key={`packet-${props.id}-${frameIndex}-${isReverseMotion}`}>
+          {/* Subtle outer glow halo */}
           <circle
             r={7}
-            fill={packetColor(isReverseMotion)}
+            fill={color}
             opacity={0.35}
             style={{
-              filter: isReverseMotion
-                ? "drop-shadow(0 0 6px rgba(245,158,11,0.9))"
-                : "drop-shadow(0 0 6px rgba(59,130,246,0.9))",
+              filter: `drop-shadow(0 0 6px ${color})`,
             }}
           >
-            <animateMotion
-              dur={`${duration}s`}
-              repeatCount="indefinite"
-              path={edgePath}
-              keyPoints={isReverseMotion ? "1;0" : "0;1"}
-              keyTimes="0;1"
-              calcMode="linear"
-            />
+            {isReverseMotion ? (
+              <animateMotion
+                dur={`${duration}s`}
+                repeatCount="indefinite"
+                path={edgePath}
+                keyPoints="1;0"
+                keyTimes="0;1"
+                calcMode="linear"
+              />
+            ) : (
+              <animateMotion
+                dur={`${duration}s`}
+                repeatCount="indefinite"
+                path={edgePath}
+              />
+            )}
           </circle>
 
-          {/* Main radiant request packet */}
+          {/* Solid traveling packet body */}
           <circle
             r={4.5}
-            fill={packetColor(isReverseMotion)}
+            fill={color}
             style={{
-              filter: isReverseMotion
-                ? "drop-shadow(0 0 8px rgba(245,158,11,1))"
-                : "drop-shadow(0 0 8px rgba(59,130,246,1))",
+              filter: `drop-shadow(0 0 3px ${color})`,
             }}
           >
-            <animateMotion
-              dur={`${duration}s`}
-              repeatCount="indefinite"
-              path={edgePath}
-              keyPoints={isReverseMotion ? "1;0" : "0;1"}
-              keyTimes="0;1"
-              calcMode="linear"
-            />
+            {isReverseMotion ? (
+              <animateMotion
+                dur={`${duration}s`}
+                repeatCount="indefinite"
+                path={edgePath}
+                keyPoints="1;0"
+                keyTimes="0;1"
+                calcMode="linear"
+              />
+            ) : (
+              <animateMotion
+                dur={`${duration}s`}
+                repeatCount="indefinite"
+                path={edgePath}
+              />
+            )}
           </circle>
 
-          {/* Bright white energy core */}
+          {/* High-contrast crisp center dot */}
           <circle r={2} fill="#ffffff">
-            <animateMotion
-              dur={`${duration}s`}
-              repeatCount="indefinite"
-              path={edgePath}
-              keyPoints={isReverseMotion ? "1;0" : "0;1"}
-              keyTimes="0;1"
-              calcMode="linear"
-            />
+            {isReverseMotion ? (
+              <animateMotion
+                dur={`${duration}s`}
+                repeatCount="indefinite"
+                path={edgePath}
+                keyPoints="1;0"
+                keyTimes="0;1"
+                calcMode="linear"
+              />
+            ) : (
+              <animateMotion
+                dur={`${duration}s`}
+                repeatCount="indefinite"
+                path={edgePath}
+              />
+            )}
           </circle>
         </g>
       )}
@@ -1887,7 +1907,8 @@ function WorkspaceInner({
   shareId?: string;
   isSharedView?: boolean;
 }) {
-  const { screenToFlowPosition, fitView } = useReactFlow();
+  const { screenToFlowPosition, fitView, zoomIn, zoomOut } = useReactFlow();
+  const [snapToGrid, setSnapToGrid] = useState<boolean>(true);
   const { token } = useAuthStore();
   const { theme, toggleTheme, setTheme } = useThemeStore();
   const [diagramTitle, setDiagramTitle] = useState<string>("");
@@ -1984,7 +2005,7 @@ function WorkspaceInner({
         },
         token
       );
-      setSuccessToast("Diagram saved to MongoDB successfully! 💾");
+      setSuccessToast("Diagram saved to MongoDB successfully!");
     } catch (err: any) {
       setValidationWarning(err.message || "Failed to save diagram");
     } finally {
@@ -2059,10 +2080,38 @@ function WorkspaceInner({
   const [isDraggingTerminal, setIsDraggingTerminal] = useState(false);
 
   // Floating Panel Visibility States
-  const [showCanvasTip, setShowCanvasTip] = useState(true);
+  const [showCanvasTip, setShowCanvasTip] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [showWelcomeModal, setShowWelcomeModal] = useState(!Boolean(workspaceId && diagramId));
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [activeMethod, setActiveMethod] = useState<string>("GET");
+  const [activeEndpoint, setActiveEndpoint] = useState<string>("/api/v1/posts");
+
+  // Show Welcome Modal only on first visit to sandbox
+  useEffect(() => {
+    if (!workspaceId && !diagramId && !shareId) {
+      try {
+        const seen = typeof window !== "undefined" ? localStorage.getItem("flowframe_sandbox_welcome_seen") : "true";
+        if (!seen) {
+          setShowWelcomeModal(true);
+        }
+      } catch (e) {
+        // ignore localStorage access errors
+      }
+    }
+  }, [workspaceId, diagramId, shareId]);
+
+  const closeWelcomeModal = useCallback(() => {
+    setShowWelcomeModal(false);
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("flowframe_sandbox_welcome_seen", "true");
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
 
   // Redesigned Sidebar Accordions & Search states
   const [isTemplatesExpanded, setIsTemplatesExpanded] = useState(true);
@@ -2760,6 +2809,42 @@ connect s1 -> r1
     [nodes, nodeConfigs, edges],
   );
 
+  // Direct Request Execution from Canvas Toolbar or Inspector
+  const handleExecuteRequest = useCallback(
+    (method: string, endpoint: string) => {
+      const clientNodes = nodes.filter((n) => n.data.type === "client");
+      if (clientNodes.length === 0) {
+        setValidationWarning("Please add a Client node to the canvas to execute requests.");
+        return;
+      }
+      const targetClient = clientNodes.find((n) => n.id === selectedNodeId) || clientNodes[0];
+      const currentClientConfig = nodeConfigs[targetClient.id] || createDefaultConfig("client", targetClient.id, (targetClient.data.label as string) || "Client");
+      const updatedConfigs = {
+        ...nodeConfigs,
+        [targetClient.id]: {
+          ...currentClientConfig,
+          method,
+          endpoint,
+          requests: [
+            {
+              method,
+              endpoint,
+              lookupKey: currentClientConfig.lookupKey || "rohan",
+              fileName: currentClientConfig.fileName || "file.png",
+              isThereFileToUpload: false,
+              body: currentClientConfig.body || "",
+            },
+          ],
+        },
+      };
+      setNodeConfigs(updatedConfigs);
+      handleStartSimulation(targetClient.id, nodes, edges, updatedConfigs);
+      setFrameIndex(0);
+      setIsPlaying(true);
+    },
+    [nodes, edges, nodeConfigs, selectedNodeId, handleStartSimulation],
+  );
+
   // Apply AI Generated FlowFrame DSL Architecture
   const handleApplyAIDsl = useCallback(
     (code: string, explanation: string) => {
@@ -2779,7 +2864,7 @@ connect s1 -> r1
         setNodeConfigs(output.nodeConfigs);
         setDslCode(code);
         setValidationWarning(null);
-        setSuccessToast(explanation || "Architecture generated by AI Architect! ⚡");
+        setSuccessToast(explanation || "Architecture generated successfully.");
 
         const firstClient = output.nodes.find((n: any) => n.data?.type === "client");
         if (firstClient) {
@@ -2812,7 +2897,7 @@ connect s1 -> r1
       setEdges(output.edges);
       setNodeConfigs(output.nodeConfigs);
       setValidationWarning(null);
-      setSuccessToast("DSL compiled & architecture generated! ⚡");
+      setSuccessToast("DSL compiled & architecture generated.");
 
       const firstClient = output.nodes.find((n: any) => n.data?.type === "client");
       if (firstClient) {
@@ -3315,7 +3400,7 @@ connect s1 -> r1
     if (!workspaceId && !diagramId && !shareId) {
       setShowWelcomeModal(true);
     } else {
-      setShowWelcomeModal(false);
+      closeWelcomeModal();
     }
   }, [workspaceId, diagramId, shareId]);
 
@@ -3791,11 +3876,12 @@ connect s1 -> r1
     if (currentFrames.length === 0) {
       return edges.map((edge) => ({
         ...edge,
+        type: "packet",
         style: {
           stroke: inactiveStroke,
           strokeWidth: 1.8,
         },
-        data: { active: false },
+        data: { active: false, frameIndex },
       }));
     }
 
@@ -3825,16 +3911,6 @@ connect s1 -> r1
           reverseMotion: true,
           packetCount: 1,
         });
-      } else if (frame.from && frame.to && frame.from === frame.to) {
-        // Internal node processing step (e.g. Server processing, Cache check)
-        // Keep the incoming edge to this node active so the request packet stays visible!
-        const incomingEdge = edges.find((e) => e.target === frame.from);
-        if (incomingEdge && !edgeState.has(incomingEdge.id)) {
-          edgeState.set(incomingEdge.id, {
-            reverseMotion: false,
-            packetCount: 1,
-          });
-        }
       }
     }
 
@@ -3862,15 +3938,12 @@ connect s1 -> r1
     });
   }, [currentFrames, edges, theme, speed, isPlaying, frameIndex]);
 
-  // Click handler to run client node directly
+  // Click handler to select node and open inspector
   const onNodeClick = useCallback(
     (_: any, node: Node) => {
       setSelectedNodeId(node.id);
-      if (node.data.type === "client") {
-        handleStartSimulation(node.id);
-      }
     },
-    [handleStartSimulation],
+    [],
   );
 
   // Pane click handler to clear selections
@@ -4062,7 +4135,7 @@ connect s1 -> r1
         a.setAttribute("download", `flow-frame-architecture-${new Date().toISOString().split("T")[0]}.png`);
         a.setAttribute("href", dataUrl);
         a.click();
-        setSuccessToast("Architecture image downloaded successfully! 📸");
+        setSuccessToast("Architecture image downloaded successfully.");
       })
       .catch((error) => {
         console.error("Failed to download canvas image:", error);
@@ -4126,7 +4199,7 @@ connect s1 -> r1
                     : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
                 }`}
               >
-                <span>🎨</span>
+                <FiFolder className="w-3.5 h-3.5" />
                 <span>Library</span>
               </button>
               <button
@@ -4138,7 +4211,7 @@ connect s1 -> r1
                     : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
                 }`}
               >
-                <span>⚡</span>
+                <FiFileText className="w-3.5 h-3.5" />
                 <span>Code Editor</span>
               </button>
               <button
@@ -4181,7 +4254,7 @@ connect s1 -> r1
                     type="button"
                     onClick={() => {
                       navigator.clipboard.writeText(dslCode);
-                      setSuccessToast("Code copied to clipboard! 📋");
+                      setSuccessToast("Code copied to clipboard.");
                     }}
                     className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-2 py-1 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] transition cursor-pointer"
                     title="Copy Code"
@@ -4707,8 +4780,10 @@ connect s1 -> r1
           )}
         </aside>
 
-        {/* Right Canvas Area (Fills the rest of screen) */}
-        <div className="flex-1 h-full min-w-0 flex flex-col relative z-0">
+        {/* Right Workspace Main Row: Canvas on Left, Anchored Inspector on Right */}
+        <div className="flex-1 h-full min-w-0 flex flex-row relative z-0 overflow-hidden">
+          {/* Canvas Viewport Column */}
+          <div className="flex-1 h-full min-w-0 flex flex-col relative z-0">
           {/* Mobile Sidebar Hamburger Toggle */}
           <button
             type="button"
@@ -4716,7 +4791,7 @@ connect s1 -> r1
             className="md:hidden absolute top-4 left-4 z-20 bg-[var(--surface)] border border-[var(--border)] p-2.5 rounded-xl shadow-lg hover:bg-[var(--surface-muted)] cursor-pointer flex items-center justify-center text-sm font-bold"
             title="Open Shapes Library"
           >
-            ☰
+            <FiSidebar className="w-4 h-4 text-blue-400" />
           </button>
 
           {/* Floating Open Sidebar Button (Visible when desktop sidebar is collapsed) */}
@@ -4762,7 +4837,7 @@ connect s1 -> r1
                   <div className="relative">
                     <div className="w-12 h-12 rounded-full border-4 border-blue-500/20 border-t-blue-500 animate-spin" />
                     <div className="absolute inset-0 flex items-center justify-center text-xs">
-                      ⚡
+                      <FiCpu className="w-5 h-5 text-blue-400" />
                     </div>
                   </div>
                   <div className="text-center space-y-1">
@@ -4804,7 +4879,7 @@ connect s1 -> r1
                       onClick={() => loadTemplate("cacheAside")}
                       className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25 transition cursor-pointer flex items-center justify-center gap-2"
                     >
-                      <span>📄</span>
+                      <FiFolder className="w-3.5 h-3.5" />
                       <span>Load Template</span>
                     </button>
 
@@ -4813,8 +4888,8 @@ connect s1 -> r1
                       onClick={() => setIsAIAssistantOpen(true)}
                       className="w-full py-2.5 px-4 rounded-xl text-xs font-bold border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 transition cursor-pointer flex items-center justify-center gap-2"
                     >
-                      <span>✨</span>
-                      <span>Ask AI Architect</span>
+                      <FiCpu className="w-3.5 h-3.5" />
+                      <span>Architecture Assistant</span>
                     </button>
                   </div>
 
@@ -4899,7 +4974,7 @@ connect s1 -> r1
               onPaneClick={onPaneClick}
               fitView
               fitViewOptions={{ padding: 0.2 }}
-              snapToGrid
+              snapToGrid={snapToGrid}
               snapGrid={[20, 20]}
               minZoom={0.2}
               maxZoom={2.5}
@@ -4987,7 +5062,7 @@ connect s1 -> r1
                         className="text-xs text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)]/70 transition p-1 hover:bg-[var(--surface-muted)] rounded cursor-pointer leading-none flex items-center justify-center w-5 h-5 border border-transparent"
                         title="Collapse Overlay"
                       >
-                        ✕
+                        ×
                       </button>
                     </div>
                   </div>
@@ -5027,7 +5102,7 @@ connect s1 -> r1
                   {systemMetrics.queuedRequests.length > 0 && (
                     <div className="flex flex-col gap-1 rounded-xl bg-rose-500/5 border border-rose-500/15 p-2">
                       <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
-                        <span>⏳</span> Bottleneck: Database Wait
+                        <FiAlertTriangle className="w-3 h-3 text-amber-400 shrink-0" /> Bottleneck: Database Wait
                       </p>
                       <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
                         {systemMetrics.queuedRequests.map(
@@ -5132,101 +5207,274 @@ connect s1 -> r1
                 </button>
               ))}
 
-            {/* Canvas Background Pattern & Opacity Switcher Overlay */}
-            <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex flex-wrap sm:flex-nowrap items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 p-1 shadow-lg pointer-events-auto max-w-[92vw] sm:max-w-none">
-              {/* Toggle Hide/Show Controls */}
-              <button
-                type="button"
-                onClick={() => setShowBgControls((prev) => !prev)}
-                className="px-2 py-1 rounded-lg text-xs font-semibold text-[color:var(--foreground)]/60 hover:text-blue-400 hover:bg-[var(--surface-muted)] transition cursor-pointer flex items-center gap-1.5"
-                title={showBgControls ? "Hide Grid Pattern settings" : "Show Grid Pattern settings"}
-              >
-                <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-                <span className="text-[10px] font-mono uppercase">{showBgControls ? "Grid" : "Grid Controls"}</span>
-              </button>
+            {/* Minimal Technical Canvas Toolbar */}
+            <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none gap-2">
+              {/* Left Group: Primary Simulation Controls & Request Dispatcher */}
+              <div className="flex items-center gap-2 pointer-events-auto flex-wrap">
+                {/* Simulation Controls */}
+                <div className="flex items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md p-1 shadow-md">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (simulationFrames.length === 0) {
+                        handleStartSimulation();
+                      } else {
+                        setIsPlaying((prev) => !prev);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition cursor-pointer"
+                    title={isPlaying ? "Pause Simulation (Space)" : "Run / Resume Simulation (Space)"}
+                  >
+                    {isPlaying ? <FiPause className="w-3.5 h-3.5 fill-current" /> : <FiPlay className="w-3.5 h-3.5 fill-current" />}
+                    <span>{isPlaying ? "Pause" : simulationFrames.length === 0 ? "Run" : "Resume"}</span>
+                  </button>
 
-              {showBgControls && (
-                <>
-                  <div className="h-4 w-px bg-[var(--border)] my-auto hidden sm:block" />
+                  <button
+                    type="button"
+                    onClick={goToPreviousFrame}
+                    disabled={frameIndex <= 0 || simulationFrames.length === 0}
+                    className="p-1.5 rounded-lg text-xs border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                    title="Previous Step"
+                  >
+                    <FiChevronLeft className="w-3.5 h-3.5" />
+                  </button>
 
-                  {/* Pattern selector */}
-                  <div className="flex items-center gap-0.5 overflow-x-auto">
-                    {(["dots", "lines", "cross", "none"] as const).map((pattern) => (
+                  <button
+                    type="button"
+                    onClick={goToNextFrame}
+                    disabled={frameIndex >= frameGroups.length - 1 || simulationFrames.length === 0}
+                    className="p-1.5 rounded-lg text-xs border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                    title="Next Step"
+                  >
+                    <FiChevronRight className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={resetPlayback}
+                    className="p-1.5 rounded-lg text-xs border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] transition cursor-pointer"
+                    title="Reset Simulation"
+                  >
+                    <FiRotateCcw className="w-3.5 h-3.5" />
+                  </button>
+
+                  <div className="h-4 w-px bg-[var(--border)]" />
+
+                  {/* Speed Selector */}
+                  <div className="flex items-center gap-0.5 bg-[var(--surface-muted)] p-0.5 rounded-lg">
+                    {[1, 2, 4].map((s) => (
                       <button
-                        key={pattern}
+                        key={s}
                         type="button"
-                        onClick={() => setBgPattern(pattern)}
-                        className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-[9px] sm:text-[10px] font-bold font-mono uppercase transition cursor-pointer ${
-                          bgPattern === pattern
-                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-sm"
-                            : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                        onClick={() => setSpeed(s)}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition cursor-pointer ${
+                          speed === s
+                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                            : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]"
                         }`}
-                        title={`Set grid pattern to ${pattern}`}
+                        title={`Speed ${s}x`}
                       >
-                        {pattern}
+                        {s}x
                       </button>
                     ))}
                   </div>
+                </div>
 
-                  {bgPattern !== "none" && (
-                    <>
-                      <div className="h-4 w-px bg-[var(--border)] my-auto hidden sm:block" />
+                {/* Request Dispatcher */}
+                <div className="hidden lg:flex items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md p-1 shadow-md">
+                  <select
+                    value={activeMethod}
+                    onChange={(e) => setActiveMethod(e.target.value)}
+                    className="rounded-lg bg-[var(--surface-muted)] px-2 py-1 text-[11px] font-mono font-semibold text-blue-400 border border-[var(--border)] outline-none cursor-pointer"
+                  >
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                  </select>
 
-                      {/* Opacity slider */}
-                      <div className="flex items-center gap-1 px-1">
-                        <input
-                          type="range"
-                          min="0.05"
-                          max="0.70"
-                          step="0.05"
-                          value={bgOpacity}
-                          onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
-                          className="w-12 sm:w-16 h-1 rounded-lg bg-[var(--surface-muted)] appearance-none cursor-pointer accent-blue-500"
-                          title={`Adjust grid opacity: ${Math.round(bgOpacity * 100)}%`}
-                        />
-                        <span className="text-[9px] font-mono font-semibold text-blue-400 min-w-[20px]">
-                          {Math.round(bgOpacity * 100)}%
-                        </span>
+                  <input
+                    type="text"
+                    value={activeEndpoint}
+                    onChange={(e) => setActiveEndpoint(e.target.value)}
+                    placeholder="/api/v1/posts"
+                    className="w-32 rounded-lg bg-[var(--surface-muted)] px-2 py-1 text-[11px] font-mono text-[color:var(--foreground)] border border-[var(--border)] outline-none"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => handleExecuteRequest(activeMethod, activeEndpoint)}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 transition cursor-pointer"
+                    title="Execute Request"
+                  >
+                    <FiPlay className="w-3 h-3 text-blue-400" />
+                    <span>Execute</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Group: Settings Popover, Assistant, Logs, Save */}
+              <div className="flex items-center gap-2 pointer-events-auto">
+                {/* Canvas Settings Menu Popover */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowSettingsMenu((prev) => !prev)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition cursor-pointer shadow-md text-xs font-semibold ${
+                      showSettingsMenu
+                        ? "border-blue-500/50 bg-blue-500/15 text-blue-400"
+                        : "border-[var(--border)] bg-[var(--surface)]/95 text-[color:var(--foreground)]/75 hover:bg-[var(--surface-muted)]"
+                    }`}
+                    title="Canvas & Grid Settings"
+                  >
+                    <FiSliders className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Settings</span>
+                  </button>
+
+                  {/* Settings Popover */}
+                  {showSettingsMenu && (
+                    <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3.5 shadow-2xl z-30 flex flex-col gap-3 animate-fade-in font-sans">
+                      <div className="flex items-center justify-between border-b border-[var(--border)] pb-2">
+                        <span className="text-xs font-bold text-[color:var(--foreground)]">Canvas Settings</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowSettingsMenu(false)}
+                          className="text-xs text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)]"
+                        >
+                          ×
+                        </button>
                       </div>
-                    </>
-                  )}
-                </>
-              )}
 
-              {workspaceId && diagramId && (
-                <>
-                  <div className="h-4 w-px bg-[var(--border)] my-auto" />
+                      {/* Grid Pattern */}
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] uppercase font-bold tracking-wider text-[color:var(--foreground)]/50 block">
+                          Grid Pattern
+                        </label>
+                        <div className="grid grid-cols-4 gap-1">
+                          {(["dots", "lines", "cross", "none"] as const).map((pattern) => (
+                            <button
+                              key={pattern}
+                              type="button"
+                              onClick={() => setBgPattern(pattern)}
+                              className={`py-1 rounded text-[10px] font-mono font-bold uppercase transition cursor-pointer ${
+                                bgPattern === pattern
+                                  ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-sm"
+                                  : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] bg-[var(--surface-muted)] border border-[var(--border)]"
+                              }`}
+                            >
+                              {pattern}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Grid Opacity */}
+                      {bgPattern !== "none" && (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[10px] text-[color:var(--foreground)]/60">
+                            <span>Grid Opacity</span>
+                            <span className="font-mono text-blue-400 font-semibold">{Math.round(bgOpacity * 100)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0.05"
+                            max="0.70"
+                            step="0.05"
+                            value={bgOpacity}
+                            onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
+                            className="w-full h-1 rounded-lg bg-[var(--surface-muted)] appearance-none cursor-pointer accent-blue-500"
+                          />
+                        </div>
+                      )}
+
+                      {/* Snap to Grid */}
+                      <div className="flex items-center justify-between pt-1 border-t border-[var(--border)]">
+                        <span className="text-xs text-[color:var(--foreground)]/70">Snap to Grid</span>
+                        <input
+                          type="checkbox"
+                          checked={snapToGrid}
+                          onChange={(e) => setSnapToGrid(e.target.checked)}
+                          className="rounded accent-blue-500 cursor-pointer"
+                        />
+                      </div>
+
+                      {/* Zoom Controls */}
+                      <div className="flex items-center gap-1.5 pt-1 border-t border-[var(--border)]">
+                        <button
+                          type="button"
+                          onClick={() => zoomIn?.({ duration: 300 })}
+                          className="flex-1 py-1 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] text-[10px] font-semibold flex items-center justify-center gap-1"
+                          title="Zoom In"
+                        >
+                          <FiZoomIn className="w-3 h-3" />
+                          <span>Zoom In</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => zoomOut?.({ duration: 300 })}
+                          className="flex-1 py-1 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] text-[10px] font-semibold flex items-center justify-center gap-1"
+                          title="Zoom Out"
+                        >
+                          <FiZoomOut className="w-3 h-3" />
+                          <span>Zoom Out</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => fitView?.({ duration: 400 })}
+                          className="py-1 px-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] text-[10px] font-semibold flex items-center justify-center"
+                          title="Fit View"
+                        >
+                          <FiMaximize2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Architecture Assistant */}
+                <button
+                  type="button"
+                  onClick={() => setIsAIAssistantOpen((prev) => !prev)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold shadow-md transition cursor-pointer ${
+                    isAIAssistantOpen
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400"
+                  }`}
+                  title="Architecture Assistant"
+                >
+                  <FiCpu className="w-3.5 h-3.5 text-blue-400" />
+                  <span className="hidden sm:inline">Architecture Assistant</span>
+                </button>
+
+                {/* Logs Drawer Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowLogsDrawer((prev) => !prev)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition cursor-pointer shadow-md text-xs font-semibold ${
+                    showLogsDrawer
+                      ? "border-blue-500/50 bg-blue-500/20 text-blue-400"
+                      : "border-[var(--border)] bg-[var(--surface)]/95 text-[color:var(--foreground)]/75 hover:bg-[var(--surface-muted)]"
+                  }`}
+                  title="Toggle Execution Logs"
+                >
+                  <FiTerminal className="w-3.5 h-3.5" />
+                  <span>Logs ({accumulatedFrames.length})</span>
+                </button>
+
+                {/* Save diagram */}
+                {workspaceId && diagramId && (
                   <button
                     type="button"
                     onClick={handleSaveDiagramToBackend}
                     disabled={isSaving}
-                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition cursor-pointer disabled:opacity-50"
-                    title="Save diagram to MongoDB (Ctrl+S / Cmd+S)"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition cursor-pointer disabled:opacity-50"
+                    title="Save diagram to MongoDB (Ctrl+S)"
                   >
                     <FiSave className="w-3.5 h-3.5" />
                     <span>{isSaving ? "Saving..." : "Save"}</span>
                   </button>
-                </>
-              )}
-
-              <div className="h-4 w-px bg-[var(--border)] my-auto hidden sm:block" />
-
-              {/* AI Architecture Assistant Trigger */}
-              <button
-                type="button"
-                onClick={() => setIsAIAssistantOpen((prev) => !prev)}
-                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
-                  isAIAssistantOpen
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                }`}
-                title="Architecture Assistant (Create, Modify, Audit, Explain)"
-              >
-                <FiCpu className="w-3.5 h-3.5 text-blue-400" />
-                <span className="hidden sm:inline">Architecture Assistant</span>
-              </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -5268,14 +5516,125 @@ connect s1 -> r1
             </div>
           )}
 
+          {/* Floating Simulation Control Dock */}
+          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-auto max-w-[96vw]">
+            {/* Timeline Path Breadcrumb (shown when simulation has frames) */}
+            {simulationFrames.length > 0 && currentFrames.length > 0 && (
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-blue-500/30 bg-[var(--surface)]/90 backdrop-blur-md shadow-lg text-[10px] font-mono text-blue-300 animate-fade-in">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                <span className="font-semibold text-white/90">Path:</span>
+                <div className="flex items-center gap-1">
+                  {currentFrames.slice(0, 2).map((f: any, i: number) => (
+                    <span key={i} className="flex items-center gap-1">
+                      <span className="text-slate-300">{nodes.find((n) => n.id === f.from)?.data?.label || f.from}</span>
+                      <span className="text-blue-400">──▶</span>
+                      <span className="text-emerald-300 font-bold">{nodes.find((n) => n.id === f.to)?.data?.label || f.to}</span>
+                      {f.action && <span className="text-amber-300/90 text-[9px]">({f.action})</span>}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+
+          </div>
+
+          {/* Slide-Up Logs & Events Drawer */}
+          {showLogsDrawer && (
+            <motion.div
+              initial={{ y: 150, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 150, opacity: 0 }}
+              className="absolute bottom-0 left-0 right-0 z-30 max-h-[42vh] flex flex-col rounded-t-xl border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl p-3.5 gap-2.5 overflow-hidden"
+            >
+              <div className="flex items-center justify-between border-b border-[var(--border)] pb-2.5 shrink-0">
+                <div className="flex items-center gap-2">
+                  <FiTerminal className="w-3.5 h-3.5 text-blue-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider font-mono text-[color:var(--foreground)]">
+                    Execution Trace Log
+                  </h3>
+                  <span className="text-[10px] font-mono text-[color:var(--muted)]">
+                    [Step {simulationFrames.length > 0 ? frameIndex + 1 : 0} of {simulationFrames.length}]
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1.5 text-[11px] text-[color:var(--foreground)]/70 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hideResponse}
+                      onChange={() => setHideResponse((prev) => !prev)}
+                      className="accent-blue-500"
+                    />
+                    <span>Hide Return Packets</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 text-[11px] text-[color:var(--foreground)]/70 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={parallelResponse}
+                      onChange={() => setParallelResponse((prev) => !prev)}
+                      className="accent-blue-500"
+                    />
+                    <span>Parallel</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowLogsDrawer(false)}
+                    className="h-6 w-6 rounded-md hover:bg-[var(--surface-muted)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] flex items-center justify-center transition cursor-pointer"
+                    aria-label="Close logs drawer"
+                  >
+                    <FiX className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Timeline scrubber */}
+              <Timeline
+                frameIndex={frameIndex}
+                frameGroups={frameGroups}
+                onSeek={(idx) => {
+                  setIsPlaying(false);
+                  setFrameIndex(idx);
+                }}
+                theme={theme}
+              />
+
+              {/* Log entries container */}
+              <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin rounded-lg border border-[var(--border)] bg-[#070c18] p-2.5">
+                <DebugPanel
+                  currentFrames={accumulatedFrames}
+                  frameIndex={frameIndex}
+                  theme={theme}
+                />
+              </div>
+            </motion.div>
+          )}
+
+          {/* AI Architecture Assistant Slide-Over Drawer */}
+          <AIAssistantDrawer
+            isOpen={isAIAssistantOpen}
+            onClose={() => setIsAIAssistantOpen(false)}
+            nodes={nodes}
+            edges={edges}
+            nodeConfigs={nodeConfigs}
+            onApplyDsl={handleApplyAIDsl}
+            onRunSimulation={() => {
+              handleStartSimulation();
+              setFrameIndex(0);
+              setIsPlaying(true);
+            }}
+            theme={theme}
+          />
+          </div>
+
+          {/* ── Anchored Right-Side Node Inspector ────────────────────────── */}
           {/* Floating Inspector Panel — bottom sheet on mobile, right side on desktop */}
           {selectedNode && (
             <aside
               className="
-              absolute z-20
-              bottom-0 left-0 right-0 max-h-[50vh] rounded-t-3xl rounded-b-none
-              md:bottom-auto md:top-4 md:right-4 md:left-auto md:w-80 md:rounded-2xl md:max-h-[calc(100vh-160px)]
-              border border-[var(--border)] bg-[var(--surface)]/90  shadow-2xl flex flex-col overflow-y-auto scrollbar-thin transition-all duration-300
+              fixed inset-x-0 bottom-0 max-h-[55vh] z-40 border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl
+              md:static md:w-80 md:h-full md:max-h-none md:border-t-0 md:border-l md:border-[var(--border)] md:shadow-none
+              flex flex-col shrink-0 overflow-y-auto scrollbar-thin transition-all duration-200
             "
             >
               <div className="p-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]/50">
@@ -5302,19 +5661,35 @@ connect s1 -> r1
               </div>
 
               <div className="p-4 flex-1 space-y-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleStartSimulation();
-                    setFrameIndex(0);
-                    setIsPlaying(true);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] text-[11px] font-bold transition cursor-pointer"
-                  title="Re-run simulation with current changes"
-                >
-                  <span>🔄</span>
-                  <span>Re-run Simulation</span>
-                </button>
+                {selectedNode.data.type === "client" ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleStartSimulation(selectedNode.id);
+                      setFrameIndex(0);
+                      setIsPlaying(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition cursor-pointer"
+                    title="Send HTTP request from this client"
+                  >
+                    <FiPlay className="w-3.5 h-3.5 fill-current" />
+                    <span>Send Request</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleStartSimulation();
+                      setFrameIndex(0);
+                      setIsPlaying(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] text-[11px] font-bold transition cursor-pointer"
+                    title="Re-run simulation with current changes"
+                  >
+                    <FiRefreshCw className="w-3 h-3" />
+                    <span>Re-run Simulation</span>
+                  </button>
+                )}
 
                 {/* Rename Node section */}
                 <div>
@@ -5458,9 +5833,9 @@ connect s1 -> r1
                               }}
                             >
                               {align === "left"
-                                ? "⬅️ Left"
+                                ? "Left"
                                 : align === "right"
-                                  ? "➡️ Right"
+                                  ? "Right"
                                   : "↕️ Center"}
                             </button>
                           );
@@ -5857,7 +6232,7 @@ connect s1 -> r1
                                           } catch (err: any) {
                                             return (
                                               <span className="text-[9px] text-rose-500 mt-1 block leading-normal font-mono">
-                                                ⚠ {err.message}
+                                                {err.message}
                                               </span>
                                             );
                                           }
@@ -6256,12 +6631,12 @@ connect s1 -> r1
                                     </span>
                                     {!isConnected && (
                                       <span className="text-[8px] text-amber-500 font-semibold bg-amber-500/10 px-1 rounded">
-                                        ⚠️ Unlinked
+                                        [UNLINKED]
                                       </span>
                                     )}
                                     {isConnectedBackwards && (
                                       <span className="text-[8px] text-rose-500 font-semibold bg-rose-500/10 px-1 rounded animate-pulse">
-                                        ⚠️ Reverse
+                                        [REVERSE]
                                       </span>
                                     )}
                                     {isConnectedCorrectly && (
@@ -6616,7 +6991,7 @@ connect s1 -> r1
                                         className={`text-[10px] font-mono font-bold ${info.exhausted ? "text-rose-400" : "text-cyan-400"}`}
                                       >
                                         {info.activeConnections}/{info.poolSize}
-                                        {info.exhausted ? " 🔴 WAIT" : ""}
+                                        {info.exhausted ? " [WAIT]" : ""}
                                       </span>
                                     </div>
                                     <div
@@ -6725,7 +7100,7 @@ connect s1 -> r1
                           </button>
 
                           <p className="text-[10px] font-bold text-indigo-400 font-mono">
-                            🌐 {domain}
+                            {domain}
                           </p>
 
                           <div className="space-y-2 pl-1.5 border-l border-[var(--border)]">
@@ -7769,6 +8144,75 @@ connect s1 -> r1
 
                 <div className="h-px bg-[var(--border)]/70 pt-2" />
 
+                {/* ── Connections Section ───────────────────────────────────── */}
+                <div className="pt-2 border-t border-[var(--border)]/70">
+                  <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                    Active Connections ({edges.filter((e) => e.source === selectedNodeId || e.target === selectedNodeId).length})
+                  </label>
+                  
+                  <div className="space-y-2.5">
+                    {/* Inbound Connections */}
+                    <div>
+                      <span className="text-[8.5px] font-mono text-[color:var(--foreground)]/45 uppercase tracking-wider block mb-1">Inbound (Source → This Node)</span>
+                      {(() => {
+                        const inEdges = edges.filter((e) => e.target === selectedNodeId);
+                        if (inEdges.length === 0) {
+                          return <p className="text-[10px] text-[color:var(--foreground)]/40 italic">No incoming connections</p>;
+                        }
+                        return (
+                          <div className="space-y-1">
+                            {inEdges.map((e) => {
+                              const srcNode = nodes.find((n) => n.id === e.source);
+                              const srcLabel = String((srcNode?.data as any)?.label || e.source);
+                              const srcType = String((srcNode?.data as any)?.type || "node");
+                              return (
+                                <div key={e.id} className="flex items-center justify-between p-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] text-[11px]">
+                                  <div className="flex items-center gap-1.5 truncate">
+                                    <FiArrowLeft className="w-3 h-3 text-blue-400 shrink-0" />
+                                    <span className="font-semibold text-[color:var(--foreground)] truncate">{srcLabel}</span>
+                                    <span className="text-[9px] font-mono text-[color:var(--foreground)]/45 shrink-0">({srcType})</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Outbound Connections */}
+                    <div>
+                      <span className="text-[8.5px] font-mono text-[color:var(--foreground)]/45 uppercase tracking-wider block mb-1">Outbound (This Node → Target)</span>
+                      {(() => {
+                        const outEdges = edges.filter((e) => e.source === selectedNodeId);
+                        if (outEdges.length === 0) {
+                          return <p className="text-[10px] text-[color:var(--foreground)]/40 italic">No outgoing connections</p>;
+                        }
+                        return (
+                          <div className="space-y-1">
+                            {outEdges.map((e) => {
+                              const tgtNode = nodes.find((n) => n.id === e.target);
+                              const tgtLabel = String((tgtNode?.data as any)?.label || e.target);
+                              const tgtType = String((tgtNode?.data as any)?.type || "node");
+                              return (
+                                <div key={e.id} className="flex items-center justify-between p-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] text-[11px]">
+                                  <div className="flex items-center gap-1.5 truncate">
+                                    <FiArrowRight className="w-3 h-3 text-emerald-400 shrink-0" />
+                                    <span className="font-semibold text-[color:var(--foreground)] truncate">{tgtLabel}</span>
+                                    <span className="text-[9px] font-mono text-[color:var(--foreground)]/45 shrink-0">({tgtType})</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-px bg-[var(--border)]/70 pt-1" />
+
                 {/* Delete component helper */}
                 <button
                   onClick={() => {
@@ -7791,271 +8235,8 @@ connect s1 -> r1
                 </button>
               </div>
             </aside>
+
           )}
-
-          {/* Floating Simulation Control Dock */}
-          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-auto max-w-[96vw]">
-            {/* Timeline Path Breadcrumb (shown when simulation has frames) */}
-            {simulationFrames.length > 0 && currentFrames.length > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-blue-500/30 bg-[var(--surface)]/90 backdrop-blur-md shadow-lg text-[10px] font-mono text-blue-300 animate-fade-in">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
-                <span className="font-semibold text-white/90">Path:</span>
-                <div className="flex items-center gap-1">
-                  {currentFrames.slice(0, 2).map((f: any, i: number) => (
-                    <span key={i} className="flex items-center gap-1">
-                      <span className="text-slate-300">{nodes.find((n) => n.id === f.from)?.data?.label || f.from}</span>
-                      <span className="text-blue-400">──▶</span>
-                      <span className="text-emerald-300 font-bold">{nodes.find((n) => n.id === f.to)?.data?.label || f.to}</span>
-                      {f.action && <span className="text-amber-300/90 text-[9px]">({f.action})</span>}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Main Control Toolbar */}
-            <div className="flex flex-wrap items-center gap-2 p-1.5 px-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xl">
-              {/* State Badge */}
-              <div
-                className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 border ${
-                  simulationFrames.length === 0
-                    ? "bg-slate-800/60 text-slate-400 border-slate-700/60"
-                    : isPlaying
-                    ? "bg-blue-500/15 text-blue-400 border-blue-500/30"
-                    : frameIndex >= frameGroups.length - 1
-                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                    : "bg-amber-500/15 text-amber-400 border-amber-500/30"
-                }`}
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    simulationFrames.length === 0
-                      ? "bg-slate-500"
-                      : isPlaying
-                      ? "bg-blue-400 animate-pulse"
-                      : frameIndex >= frameGroups.length - 1
-                      ? "bg-emerald-400"
-                      : "bg-amber-400"
-                  }`}
-                />
-                <span>
-                  {simulationFrames.length === 0
-                    ? "IDLE"
-                    : isPlaying
-                    ? `RUNNING ${frameGroups.length > 0 ? `(${frameIndex + 1}/${frameGroups.length})` : ""}`
-                    : frameIndex >= frameGroups.length - 1
-                    ? "COMPLETE"
-                    : `PAUSED (${frameIndex + 1}/${frameGroups.length})`}
-                </span>
-              </div>
-
-              <div className="h-4 w-px bg-[var(--border)] hidden sm:block" />
-
-              {/* Playback Buttons */}
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (simulationFrames.length === 0) {
-                      handleStartSimulation();
-                    } else {
-                      setIsPlaying((prev) => !prev);
-                    }
-                  }}
-                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition cursor-pointer flex items-center gap-1.5"
-                  title={isPlaying ? "Pause Simulation (Space)" : "Run / Resume Simulation (Space)"}
-                >
-                  {isPlaying ? (
-                    <>
-                      <FiPause className="w-3.5 h-3.5 fill-current" />
-                      <span>Pause</span>
-                    </>
-                  ) : (
-                    <>
-                      <FiPlay className="w-3.5 h-3.5 fill-current" />
-                      <span>{simulationFrames.length === 0 ? "Run Flow" : "Resume"}</span>
-                    </>
-                  )}
-                </button>
-
-                {/* Prev / Next Step Buttons */}
-                <button
-                  type="button"
-                  onClick={goToPreviousFrame}
-                  disabled={frameIndex <= 0 || simulationFrames.length === 0}
-                  className="p-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] text-[color:var(--foreground)] disabled:opacity-40 disabled:pointer-events-none transition cursor-pointer flex items-center justify-center"
-                  title="Previous Step"
-                  aria-label="Previous Step"
-                >
-                  <FiChevronLeft className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={goToNextFrame}
-                  disabled={frameIndex >= frameGroups.length - 1 || simulationFrames.length === 0}
-                  className="p-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] text-[color:var(--foreground)] disabled:opacity-40 disabled:pointer-events-none transition cursor-pointer flex items-center justify-center"
-                  title="Next Step"
-                  aria-label="Next Step"
-                >
-                  <FiChevronRight className="w-3.5 h-3.5" />
-                </button>
-
-                {/* Reset */}
-                <button
-                  type="button"
-                  onClick={resetPlayback}
-                  className="p-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center justify-center"
-                  title="Reset Simulation"
-                  aria-label="Reset Simulation"
-                >
-                  <FiRotateCcw className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <div className="h-4 w-px bg-[var(--border)] hidden sm:block" />
-
-              {/* Speed Selector */}
-              <div className="flex items-center gap-0.5 bg-[var(--surface-muted)] p-0.5 rounded-lg border border-[var(--border)]">
-                {[1, 2, 4].map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setSpeed(s)}
-                    className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition cursor-pointer ${
-                      speed === s
-                        ? "bg-blue-500/20 text-blue-400 border border-blue-500/40 shadow-sm"
-                        : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]"
-                    }`}
-                    title={`Set simulation speed to ${s}x`}
-                  >
-                    {s}x
-                  </button>
-                ))}
-              </div>
-
-              <div className="h-4 w-px bg-[var(--border)] hidden sm:block" />
-
-              {/* Instant Request Trigger */}
-              <button
-                type="button"
-                onClick={() => {
-                  handleStartSimulation();
-                  setFrameIndex(0);
-                  setIsPlaying(true);
-                }}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 transition cursor-pointer shadow-sm"
-                title="Execute new request query"
-              >
-                <FiPlay className="w-3 h-3 text-blue-400" />
-                <span className="hidden sm:inline">Execute Request</span>
-              </button>
-
-              <div className="h-4 w-px bg-[var(--border)] hidden sm:block" />
-
-              {/* Events Drawer Toggle */}
-              <button
-                type="button"
-                onClick={() => setShowLogsDrawer((prev) => !prev)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition cursor-pointer ${
-                  showLogsDrawer
-                    ? "bg-blue-500/20 text-blue-400 border-blue-500/50 shadow-sm"
-                    : "border-[var(--border)] bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
-                }`}
-                title={showLogsDrawer ? "Hide Execution Logs" : "Show Execution Logs"}
-              >
-                <FiTerminal className="w-3.5 h-3.5" />
-                <span>Logs ({accumulatedFrames.length})</span>
-                <span className="text-[10px]">{showLogsDrawer ? "▼" : "▲"}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Slide-Up Logs & Events Drawer */}
-          {showLogsDrawer && (
-            <motion.div
-              initial={{ y: 150, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 150, opacity: 0 }}
-              className="absolute bottom-0 left-0 right-0 z-30 max-h-[42vh] flex flex-col rounded-t-xl border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl p-3.5 gap-2.5 overflow-hidden"
-            >
-              <div className="flex items-center justify-between border-b border-[var(--border)] pb-2.5 shrink-0">
-                <div className="flex items-center gap-2">
-                  <FiTerminal className="w-3.5 h-3.5 text-blue-400" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider font-mono text-[color:var(--foreground)]">
-                    Execution Trace Log
-                  </h3>
-                  <span className="text-[10px] font-mono text-[color:var(--muted)]">
-                    [Step {simulationFrames.length > 0 ? frameIndex + 1 : 0} of {simulationFrames.length}]
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-1.5 text-[11px] text-[color:var(--foreground)]/70 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={hideResponse}
-                      onChange={() => setHideResponse((prev) => !prev)}
-                      className="accent-blue-500"
-                    />
-                    <span>Hide Return Packets</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 text-[11px] text-[color:var(--foreground)]/70 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={parallelResponse}
-                      onChange={() => setParallelResponse((prev) => !prev)}
-                      className="accent-blue-500"
-                    />
-                    <span>Parallel</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowLogsDrawer(false)}
-                    className="h-6 w-6 rounded-md hover:bg-[var(--surface-muted)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] flex items-center justify-center transition cursor-pointer"
-                    aria-label="Close logs drawer"
-                  >
-                    <FiX className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Timeline scrubber */}
-              <Timeline
-                frameIndex={frameIndex}
-                frameGroups={frameGroups}
-                onSeek={(idx) => {
-                  setIsPlaying(false);
-                  setFrameIndex(idx);
-                }}
-                theme={theme}
-              />
-
-              {/* Log entries container */}
-              <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin rounded-lg border border-[var(--border)] bg-[#070c18] p-2.5">
-                <DebugPanel
-                  currentFrames={accumulatedFrames}
-                  frameIndex={frameIndex}
-                  theme={theme}
-                />
-              </div>
-            </motion.div>
-          )}
-
-          {/* AI Architecture Assistant Slide-Over Drawer */}
-          <AIAssistantDrawer
-            isOpen={isAIAssistantOpen}
-            onClose={() => setIsAIAssistantOpen(false)}
-            nodes={nodes}
-            edges={edges}
-            nodeConfigs={nodeConfigs}
-            onApplyDsl={handleApplyAIDsl}
-            onRunSimulation={() => {
-              handleStartSimulation();
-              setFrameIndex(0);
-              setIsPlaying(true);
-            }}
-            theme={theme}
-          />
         </div>
 
         {/* Welcome Modal & Template Picker Dialog */}
@@ -8064,7 +8245,7 @@ connect s1 -> r1
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto scrollbar-thin z-50 relative flex flex-col gap-5">
               <button
                 type="button"
-                onClick={() => setShowWelcomeModal(false)}
+                onClick={() => closeWelcomeModal()}
                 className="absolute top-4 right-4 text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] h-8 w-8 rounded-full flex items-center justify-center font-bold transition cursor-pointer"
                 title="Close"
               >
@@ -8097,7 +8278,7 @@ connect s1 -> r1
                     type="button"
                     onClick={() => {
                       loadTemplate("cacheAside");
-                      setShowWelcomeModal(false);
+                      closeWelcomeModal();
                     }}
                     className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-blue-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
@@ -8134,7 +8315,7 @@ connect s1 -> r1
                     type="button"
                     onClick={() => {
                       loadTemplate("loadBalancing");
-                      setShowWelcomeModal(false);
+                      closeWelcomeModal();
                     }}
                     className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-blue-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
@@ -8164,7 +8345,7 @@ connect s1 -> r1
                     type="button"
                     onClick={() => {
                       loadTemplate("valetKey");
-                      setShowWelcomeModal(false);
+                      closeWelcomeModal();
                     }}
                     className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-yellow-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
@@ -8200,7 +8381,7 @@ connect s1 -> r1
                     type="button"
                     onClick={() => {
                       loadTemplate("apiGateway");
-                      setShowWelcomeModal(false);
+                      closeWelcomeModal();
                     }}
                     className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-indigo-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
@@ -8228,7 +8409,7 @@ connect s1 -> r1
                     type="button"
                     onClick={() => {
                       loadTemplate("messageQueue");
-                      setShowWelcomeModal(false);
+                      closeWelcomeModal();
                     }}
                     className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-emerald-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
@@ -8250,7 +8431,7 @@ connect s1 -> r1
                     type="button"
                     onClick={() => {
                       loadTemplate("pubSub");
-                      setShowWelcomeModal(false);
+                      closeWelcomeModal();
                     }}
                     className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-pink-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
@@ -8280,7 +8461,7 @@ connect s1 -> r1
                 </p>
                 <button
                   type="button"
-                  onClick={() => setShowWelcomeModal(false)}
+                  onClick={() => closeWelcomeModal()}
                   className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 hover:bg-[var(--surface-muted)] text-xs font-semibold px-4 py-2 transition cursor-pointer"
                 >
                   Start with Blank Canvas →

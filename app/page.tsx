@@ -664,63 +664,105 @@ function YouTubeShowcase() {
   return (
     <Reveal>
       <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-[var(--border)]">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+        {/* Section Heading */}
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
+            Architecture Walkthrough
+          </p>
+          <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
+            See Event-Driven Systems in Action
+          </h2>
+          <p className="mt-3 text-sm text-[color:var(--muted)] leading-relaxed">
+            Follow a full implementation of message queues, connection pools, and distributed request traces modeled in FlowFrame.
+          </p>
+        </div>
+
+        {/* Technical Window Card */}
+        <div className="rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-xl overflow-hidden">
+          {/* Top Window Bar */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--border)] bg-[var(--bg-elevated)]/70 text-xs font-mono">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--border-strong)]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--border-strong)]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--border-strong)]" />
+              </div>
+              <span className="text-[11px] text-[color:var(--muted)] ml-2">
+                demo // event-driven-microservices.sim
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-[var(--accent)]/10 text-[color:var(--accent)] border border-[var(--accent)]/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+                Live Architecture Trace
+              </span>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-            {/* Left Content */}
-            <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-center">
-              <div className="inline-flex items-center gap-2 rounded-md border border-[var(--red)]/25 bg-[var(--red-muted)] px-2.5 py-1 text-[10px] font-bold text-[color:var(--red)] mb-5 w-fit">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--red)]" />
-                Featured Deep Dive
-              </div>
+            {/* Left Content Column */}
+            <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-[var(--border)]">
+              <div>
+                <div className="inline-flex items-center gap-1.5 rounded-md border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-2.5 py-1 text-[10px] font-mono font-bold text-[color:var(--accent)] mb-4 w-fit">
+                  <span>SYSTEM DESIGN LAB</span>
+                </div>
 
-              <h2 className="text-xl font-bold tracking-tight text-[color:var(--foreground)] mb-3">
-                Building Event-Driven Microservices From Scratch
-              </h2>
+                <h3 className="text-xl font-bold tracking-tight text-[color:var(--foreground)] mb-3 leading-snug">
+                  Building Event-Driven Microservices From Scratch
+                </h3>
 
-              <p className="text-sm text-[color:var(--muted)] leading-relaxed mb-5">
-                Complete event-driven microservices architecture — routing through API Gateways, load balancers, RabbitMQ message queues, and Postgres connection pools.
-              </p>
+                <p className="text-xs text-[color:var(--muted)] leading-relaxed mb-6">
+                  Complete walkthrough covering API Gateway ingress, Round-Robin load distribution, RabbitMQ pub/sub fan-out, and PostgreSQL connection pool starvation.
+                </p>
 
-              <div className="space-y-2 mb-6">
-                {[
-                  "Complete producer-consumer & PubSub fan-out pipeline",
-                  "Cache-aside with Redis hits vs misses",
-                  "TCP connection pool exhaustion & waiting queues",
-                  "Step-by-step live simulation frame playback",
-                ].map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-2 text-xs text-[color:var(--muted)]">
-                    <svg className="w-3.5 h-3.5 text-[color:var(--green)] shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    {item}
+                {/* Architecture Highlights Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
+                  <div className="p-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex flex-col">
+                    <span className="text-[9px] font-mono uppercase text-[color:var(--muted)]">Message Broker</span>
+                    <span className="text-[11px] font-semibold text-[color:var(--foreground)] mt-0.5">RabbitMQ Fan-Out</span>
                   </div>
-                ))}
+                  <div className="p-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex flex-col">
+                    <span className="text-[9px] font-mono uppercase text-[color:var(--muted)]">Cache Tier</span>
+                    <span className="text-[11px] font-semibold text-[color:var(--foreground)] mt-0.5">Redis Cache-Aside</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex flex-col">
+                    <span className="text-[9px] font-mono uppercase text-[color:var(--muted)]">Persistence</span>
+                    <span className="text-[11px] font-semibold text-[color:var(--foreground)] mt-0.5">PostgreSQL Pool Limits</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex flex-col">
+                    <span className="text-[9px] font-mono uppercase text-[color:var(--muted)]">Telemetry</span>
+                    <span className="text-[11px] font-semibold text-[color:var(--foreground)] mt-0.5">Packet Frame Tracing</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+                <Link
+                  href="/workspace"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-muted)] text-white px-4 py-2.5 text-xs font-semibold shadow-sm transition-all duration-150 text-center"
+                >
+                  <SandboxIcon className="w-3.5 h-3.5" />
+                  Try on Canvas →
+                </Link>
+
                 <a
                   href="https://www.youtube.com/watch?v=XQxFZg6RcTI"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-red-600 hover:bg-red-500 text-white px-4 py-2 text-xs font-semibold shadow-sm transition-all duration-150"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg-elevated)] hover:bg-[var(--surface-muted)] text-[color:var(--foreground)] px-4 py-2.5 text-xs font-semibold transition-all duration-150 text-center group"
                 >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="w-3.5 h-3.5 text-[color:var(--muted)] group-hover:text-red-500 transition-colors" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                   </svg>
-                  Watch on YouTube
+                  Watch Deep Dive
                 </a>
-                <Link
-                  href="/workspace"
-                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg-elevated)] hover:bg-[var(--surface-muted)] px-4 py-2 text-xs font-semibold text-[color:var(--foreground)] transition-all duration-150"
-                >
-                  Try on Canvas →
-                </Link>
               </div>
             </div>
 
-            {/* Right Video */}
-            <div className="lg:col-span-7 border-t lg:border-t-0 lg:border-l border-[var(--border)]">
-              <div className="aspect-video w-full bg-black">
+            {/* Right Video Player Column */}
+            <div className="lg:col-span-7 p-3 sm:p-5 flex items-center justify-center bg-[var(--surface-muted)]/40">
+              <div className="w-full aspect-video rounded-xl overflow-hidden border border-[var(--border)] bg-black shadow-inner">
                 <iframe
                   className="w-full h-full"
                   src="https://www.youtube.com/embed/XQxFZg6RcTI"
