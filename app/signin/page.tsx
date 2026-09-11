@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
@@ -31,7 +31,7 @@ export default function SignInPage() {
     try {
       const idToken = await fbUser.getIdToken();
 
-      // Sync with Rust backend MongoDB
+      // Sync with backend API
       const res = await syncFirebaseUserApi({
         email: userEmail,
         firebase_uid: uid,
@@ -43,11 +43,10 @@ export default function SignInPage() {
 
       setAuth(res.access_token, res.user);
       showToast("Signed in successfully!", "success");
-      // Redirect ONLY after backend sync succeeds!
       router.push("/dashboard");
     } catch (err: any) {
       console.error("Backend DB sync error:", err);
-      showToast("Backend server unreachable. Unable to sync profile with database.", "error");
+      showToast("Backend server unreachable. Unable to sync profile.", "error");
     }
   };
 
@@ -82,21 +81,20 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[color:var(--foreground)] flex flex-col justify-between transition-colors duration-300">
+    <div className="min-h-screen bg-[var(--bg)] text-[color:var(--foreground)] flex flex-col justify-between transition-colors duration-200">
       <SiteHeader
         theme={theme}
         onToggleTheme={toggleTheme}
         showHomeLink={true}
-        badgeText="Firebase Authentication"
-        alwaysGlass={true}
+        badgeText="Authentication"
       />
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md p-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-2xl shadow-2xl space-y-6">
-          <div className="text-center space-y-2">
+        <div className="w-full max-w-md p-7 sm:p-8 rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-2xl space-y-6">
+          <div className="text-center space-y-1.5">
             <h1 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)]">Welcome Back</h1>
-            <p className="text-xs text-[color:var(--foreground)]/60">
-              Sign in to manage your workspace and flow diagrams
+            <p className="text-xs text-[color:var(--muted)]">
+              Sign in to manage your workspaces and architecture diagrams
             </p>
           </div>
 
@@ -105,9 +103,9 @@ export default function SignInPage() {
             type="button"
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] text-sm font-semibold text-[color:var(--foreground)] transition duration-200 cursor-pointer disabled:opacity-50 shadow-sm"
+            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-lg border border-[var(--border-strong)] bg-[var(--bg-elevated)] hover:bg-[var(--surface-muted)] text-xs font-semibold text-[color:var(--foreground)] transition duration-150 cursor-pointer disabled:opacity-50 shadow-xs"
           >
-            <svg className="h-5 w-5" viewBox="0 0 24 24">
+            <svg className="h-4 w-4" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -130,7 +128,7 @@ export default function SignInPage() {
 
           <div className="relative flex items-center justify-center">
             <span className="absolute inset-x-0 h-px bg-[var(--border)]" />
-            <span className="relative bg-[var(--surface)] px-3 text-[10px] uppercase font-mono tracking-widest text-[color:var(--foreground)]/40">
+            <span className="relative bg-[var(--surface)] px-3 text-[10px] uppercase font-mono tracking-widest text-[color:var(--muted)]">
               OR EMAIL
             </span>
           </div>
@@ -138,7 +136,7 @@ export default function SignInPage() {
           {/* Form */}
           <form onSubmit={handleEmailSignIn} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+              <label className="block text-xs font-semibold text-[color:var(--foreground)] mb-1.5">
                 Email Address
               </label>
               <input
@@ -147,12 +145,12 @@ export default function SignInPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
-                className="w-full px-3.5 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)]/80 text-sm text-[color:var(--foreground)] focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition"
+                className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)] transition"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+              <label className="block text-xs font-semibold text-[color:var(--foreground)] mb-1.5">
                 Password
               </label>
               <input
@@ -161,18 +159,18 @@ export default function SignInPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-3.5 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)]/80 text-sm text-[color:var(--foreground)] focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition"
+                className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)] transition"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-violet-500/25 transition cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+              className="btn-primary w-full py-2.5 px-4 rounded-lg text-white font-semibold text-xs shadow-sm cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
@@ -184,16 +182,16 @@ export default function SignInPage() {
             </button>
           </form>
 
-          <p className="text-center text-xs text-[color:var(--foreground)]/60">
-            Don't have an account?{" "}
-            <Link href="/signup" className="font-semibold text-violet-400 hover:underline">
+          <p className="text-center text-xs text-[color:var(--muted)]">
+            Don&apos;t have an account?{" "}
+            <Link href="/signup" className="font-semibold text-[color:var(--accent)] hover:underline">
               Sign Up
             </Link>
           </p>
         </div>
       </main>
 
-      <footer className="py-6 text-center text-xs text-[color:var(--foreground)]/40 border-t border-[var(--border)]/30">
+      <footer className="py-6 text-center text-xs text-[color:var(--muted)] border-t border-[var(--border)]">
         FlowFrame Architecture Simulator &copy; {new Date().getFullYear()} · All rights reserved.
       </footer>
     </div>

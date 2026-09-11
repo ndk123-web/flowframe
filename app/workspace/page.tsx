@@ -1042,7 +1042,7 @@ function CustomNode({ id, data, selected }: any) {
 
 // React Flow Custom Edge
 function packetColor(isReverseMotion: boolean) {
-  return isReverseMotion ? "#f59e0b" : "#8b5cf6";
+  return isReverseMotion ? "#f59e0b" : "#3b82f6";
 }
 
 function PacketEdge(props: EdgeProps) {
@@ -1206,7 +1206,7 @@ function Controls({
           <button
             type="button"
             onClick={onReframe}
-            className={`${buttonClass} bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 border-violet-500/30`}
+            className={`${buttonClass} bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] border-[var(--accent)]/30`}
             title="Re-run simulation with current changes"
           >
             🔄 Reframe
@@ -1229,7 +1229,7 @@ function Controls({
             step="0.1"
             value={speed}
             onChange={(e) => onSpeedChange(Number(e.target.value))}
-            className="w-16 sm:w-20 cursor-pointer accent-violet-500"
+            className="w-16 sm:w-20 cursor-pointer accent-blue-500"
           />
         </div>
       </div>
@@ -1280,7 +1280,7 @@ function Timeline({
         max={Math.max(frameGroups.length - 1, 0)}
         value={Math.min(frameIndex, Math.max(frameGroups.length - 1, 0))}
         onChange={(event) => onSeek(Number(event.target.value))}
-        className="w-full accent-violet-500 cursor-pointer"
+        className="w-full accent-blue-500 cursor-pointer"
       />
 
       <div className="flex gap-1 overflow-x-auto pb-1 max-h-12 scrollbar-thin">
@@ -1294,7 +1294,7 @@ function Timeline({
               onClick={() => onSeek(index)}
               className={`shrink-0 rounded-md border px-2.5 py-1 text-[10px] transition cursor-pointer font-medium ${
                 isActive
-                  ? "border-violet-400 bg-violet-500/25 text-violet-100 shadow-inner"
+                  ? "border-[var(--accent)]/60 bg-[var(--accent)]/20 text-[color:var(--accent)] shadow-inner"
                   : `${inactiveBg} ${inactiveHover}`
               }`}
               title={`t=${group.timestamp} (${group.frames.length} frame${group.frames.length > 1 ? "s" : ""})`}
@@ -3999,7 +3999,7 @@ connect s1 -> r1
   };
 
   return (
-    <main className="relative min-h-[100dvh] h-[100dvh] overflow-hidden flex flex-col bg-[var(--background)]">
+    <main className="relative min-h-[100dvh] h-[100dvh] overflow-hidden flex flex-col bg-[var(--bg)]">
       <div className="pointer-events-none absolute inset-0 -z-10 technical-grid opacity-35" />
 
       <SiteHeader
@@ -4038,7 +4038,7 @@ connect s1 -> r1
           {!isSidebarFloating && (
             <div
               onMouseDown={handleResizeMouseDown}
-              className="absolute right-0 top-0 bottom-0 w-1 hover:w-2 bg-transparent hover:bg-violet-500/30 cursor-col-resize transition-all z-20 max-md:hidden"
+              className="absolute right-0 top-0 bottom-0 w-1 hover:w-2 bg-transparent hover:bg-[var(--accent)]/25 cursor-col-resize transition-all z-20 max-md:hidden"
             />
           )}
 
@@ -4050,7 +4050,7 @@ connect s1 -> r1
                 onClick={() => setSidebarTab("library")}
                 className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
                   sidebarTab === "library"
-                    ? "bg-[var(--surface)] text-violet-400 shadow-sm border border-[var(--border)] font-bold"
+                    ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-sm border border-[var(--border)] font-bold"
                     : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
                 }`}
               >
@@ -4062,7 +4062,7 @@ connect s1 -> r1
                 onClick={() => setSidebarTab("editor")}
                 className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
                   sidebarTab === "editor"
-                    ? "bg-[var(--surface)] text-violet-400 shadow-sm border border-[var(--border)] font-bold"
+                    ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-sm border border-[var(--border)] font-bold"
                     : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
                 }`}
               >
@@ -4141,6 +4141,7 @@ connect s1 -> r1
                     quickSuggestions: true,
                     suggestOnTriggerCharacters: true,
                     acceptSuggestionOnEnter: "on",
+                    acceptSuggestionOnCommitCharacter: false,
                     tabCompletion: "on",
                   }}
                 />
@@ -4508,7 +4509,7 @@ connect s1 -> r1
                 setFrameIndex(0);
                 setIsPlaying(true);
               }}
-              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-violet-500/30 bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 text-[11px] font-bold transition cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] text-[11px] font-bold transition cursor-pointer"
               title="Re-run simulation with current changes"
             >
               <svg
@@ -5090,7 +5091,7 @@ connect s1 -> r1
                     setFrameIndex(0);
                     setIsPlaying(true);
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-violet-500/30 bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 text-[11px] font-bold transition cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] text-[11px] font-bold transition cursor-pointer"
                   title="Re-run simulation with current changes"
                 >
                   <span>🔄</span>

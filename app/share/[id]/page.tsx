@@ -35,21 +35,21 @@ export default function SharedDiagramPage() {
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-[var(--background)]">
       {/* Shared View Top Notification Banner */}
-      <div className="z-30 bg-gradient-to-r from-violet-950/80 via-slate-900/90 to-indigo-950/80 border-b border-violet-500/20 px-4 py-1.5 flex items-center justify-between text-xs backdrop-blur-md shrink-0">
+      <div className="z-30 bg-[var(--bg-elevated)] border-b border-[var(--border-strong)] px-4 py-1.5 flex items-center justify-between text-xs shrink-0">
         <div className="flex items-center gap-2">
-          <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-bold text-violet-300 text-[11px] tracking-wide">
+          <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />
+          <span className="font-bold text-[color:var(--foreground)] text-[11px] tracking-wide">
             Shared Architecture View
           </span>
-          <span className="text-[color:var(--foreground)]/40 hidden sm:inline">|</span>
-          <span className="text-[color:var(--foreground)]/60 text-[11px] hidden sm:inline">
+          <span className="text-[var(--border-strong)] hidden sm:inline">|</span>
+          <span className="text-[color:var(--muted)] text-[11px] hidden sm:inline">
             Interactive simulation & node inspection enabled
           </span>
         </div>
         <div className="flex items-center gap-2">
           <Link
             href="/workspace"
-            className="rounded-lg bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 px-3 py-1 text-[11px] font-semibold transition hidden sm:inline-block"
+            className="rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[color:var(--foreground)] border border-[var(--border)] px-3 py-1 text-[11px] font-semibold transition hidden sm:inline-block"
           >
             Sandbox Studio
           </Link>
@@ -57,11 +57,11 @@ export default function SharedDiagramPage() {
           {_hasHydrated && isAuthenticated ? (
             <Link
               href="/dashboard"
-              className="rounded-lg bg-violet-600 hover:bg-violet-500 text-white px-3 py-1 text-[11px] font-bold transition shadow-sm flex items-center gap-1.5"
+              className="rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-muted)] text-white px-3 py-1 text-[11px] font-bold transition shadow-sm flex items-center gap-1.5"
             >
               <span>Dashboard</span>
               {user?.email && (
-                <span className="text-violet-200/80 font-normal text-[10px] hidden md:inline">
+                <span className="text-white/80 font-normal text-[10px] hidden md:inline">
                   ({user.email.split("@")[0]})
                 </span>
               )}
@@ -70,13 +70,13 @@ export default function SharedDiagramPage() {
             <div className="flex items-center gap-1.5">
               <Link
                 href="/signin"
-                className="rounded-lg bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 px-2.5 py-1 text-[11px] font-semibold transition"
+                className="rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[color:var(--foreground)] border border-[var(--border)] px-2.5 py-1 text-[11px] font-semibold transition"
               >
                 Sign In
               </Link>
               <Link
                 href="/signup"
-                className="rounded-lg bg-violet-600 hover:bg-violet-500 text-white px-3 py-1 text-[11px] font-bold transition shadow-sm"
+                className="rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-muted)] text-white px-3 py-1 text-[11px] font-bold transition shadow-sm"
               >
                 Sign Up Free
               </Link>

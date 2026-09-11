@@ -24,11 +24,16 @@ import {
   CreditCardIcon,
 } from "@/components/DashboardIcons";
 
-import { getUserWorkspaces, createWorkspace, updateWorkspace, deleteWorkspace, WorkspaceDTO } from "@/services/workspaceApi";
+import {
+  getUserWorkspaces,
+  createWorkspace,
+  updateWorkspace,
+  deleteWorkspace,
+  WorkspaceDTO,
+} from "@/services/workspaceApi";
 import { getRecentDiagrams, RecentDiagramDTO } from "@/services/diagramApi";
 import { formatDate } from "@/utils/formatDate";
 
-type Theme = "light" | "dark";
 type ViewMode = "grid" | "list";
 type FilterTab = "all" | "development" | "production" | "starred";
 
@@ -44,14 +49,16 @@ interface WorkspaceItem {
   iconType: "cart" | "chat" | "card" | "zap";
 }
 
-export default function PostmanDashboardPage() {
+export default function DashboardPage() {
   const { theme, toggleTheme } = useThemeStore();
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
   const [recentDiagrams, setRecentDiagrams] = useState<RecentDiagramDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Create Workspace modal states
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newWsName, setNewWsName] = useState("");
   const [newWsDesc, setNewWsDesc] = useState("");
@@ -82,7 +89,7 @@ export default function PostmanDashboardPage() {
     }
   }, [_hasHydrated, isAuthenticated, router]);
 
-  // Fetch workspaces & recent diagrams from Rust API
+  // Fetch workspaces & recent diagrams from API
   useEffect(() => {
     if (token) {
       setLoading(true);
@@ -99,7 +106,7 @@ export default function PostmanDashboardPage() {
             diagrams_count: dto.diagrams_count,
             updated_at: dto.updated_at,
             starred: false,
-            color: dto.color || "from-violet-500/20 to-indigo-500/20",
+            color: dto.color || "accent",
             iconType: (dto.icon_type as any) || "zap",
           }));
           setWorkspaces(items);
@@ -147,7 +154,7 @@ export default function PostmanDashboardPage() {
     }
 
     if (workspaces.length >= 5) {
-      showToast("Personal Plan limit reached (5/5 Workspaces). Upgrade your plan for more.", "error");
+      showToast("Personal Plan limit reached (5/5 Workspaces).", "error");
       return;
     }
 
@@ -172,7 +179,7 @@ export default function PostmanDashboardPage() {
         diagrams_count: 0,
         updated_at: "Just now",
         starred: false,
-        color: "from-violet-500/20 to-indigo-500/20",
+        color: "accent",
         iconType: "zap",
       };
 
@@ -256,76 +263,75 @@ export default function PostmanDashboardPage() {
   const renderIcon = (type: WorkspaceItem["iconType"]) => {
     switch (type) {
       case "cart":
-        return <CartIcon className="w-5 h-5 text-violet-400" />;
+        return <CartIcon className="w-4 h-4 text-[color:var(--accent)]" />;
       case "chat":
-        return <ChatIcon className="w-5 h-5 text-cyan-400" />;
+        return <ChatIcon className="w-4 h-4 text-[color:var(--accent)]" />;
       case "card":
-        return <CreditCardIcon className="w-5 h-5 text-emerald-400" />;
+        return <CreditCardIcon className="w-4 h-4 text-[color:var(--accent)]" />;
       default:
-        return <ZapIcon className="w-5 h-5 text-amber-400" />;
+        return <ZapIcon className="w-4 h-4 text-[color:var(--accent)]" />;
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--background)] text-[color:var(--foreground)] transition-colors duration-300">
-      {/* ── TOPBAR HEADER ──────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-xl">
-        <div className="flex items-center justify-between px-3 py-2 sm:px-6 sm:py-2.5 max-w-full gap-2">
+    <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[color:var(--foreground)] transition-colors duration-200">
+      {/* ── TOPBAR HEADER (Flat, Technical, Minimal) ────────────────────── */}
+      <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--bg-elevated)]">
+        <div className="flex items-center justify-between px-4 py-2.5 sm:px-6 max-w-full gap-3">
           {/* Left: Brand + Scope Switcher */}
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <Link href="/" className="group flex items-center gap-2 shrink-0">
-              <div className="rounded-full bg-gradient-to-br from-cyan-500/35 to-blue-500/35 p-[2px] transition-transform duration-300 group-hover:scale-105">
-                <div className="relative h-7 w-7 sm:h-8 sm:w-8 overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                  <Image
-                    src={theme === "dark" ? "/logo/flow-frame-dark.png" : "/logo/flow-frame-light.png"}
-                    alt="FlowFrame"
-                    width={32}
-                    height={32}
-                    priority
-                    className="h-full w-full object-cover"
-                  />
-                </div>
+          <div className="flex items-center gap-3 min-w-0">
+            <Link href="/" className="group flex items-center gap-2.5 shrink-0">
+              <div className="relative h-8 w-8 overflow-hidden rounded-lg bg-[var(--surface)] ring-1 ring-[var(--border-strong)]">
+                <Image
+                  src={theme === "dark" ? "/logo/flow-frame-dark.png" : "/logo/flow-frame-light.png"}
+                  alt="FlowFrame"
+                  width={32}
+                  height={32}
+                  priority
+                  className="h-full w-full object-cover"
+                />
               </div>
-              <span className="font-bold text-sm tracking-tight hidden sm:inline">FlowFrame</span>
+              <span className="font-bold text-sm tracking-tight hidden sm:inline text-[color:var(--foreground)]">
+                FlowFrame
+              </span>
             </Link>
 
-            <span className="text-[color:var(--foreground)]/20 font-light hidden md:inline">/</span>
+            <span className="text-[color:var(--border-strong)] font-light hidden md:inline">/</span>
 
-            {/* Scope / Workspace Dropdown Tag */}
-            <div className="hidden md:flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs font-semibold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[color:var(--foreground)]/90 truncate max-w-[130px] sm:max-w-[180px]">
+            {/* Scope Badge */}
+            <div className="hidden md:flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--muted)]">
+              <span className="w-2 h-2 rounded-full bg-[var(--green)]" />
+              <span className="text-[color:var(--foreground)] font-semibold truncate max-w-[150px]">
                 {user.name || user.email.split("@")[0]}&apos;s Workspace
               </span>
-              <ChevronDownIcon className="w-3 h-3 text-[color:var(--foreground)]/40" />
             </div>
           </div>
 
-          {/* Center: Command-K Search */}
+          {/* Center: Search */}
           <div className="hidden lg:flex items-center flex-1 max-w-md mx-4">
             <div className="relative w-full">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[color:var(--foreground)]/40" />
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[color:var(--muted)]" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search workspaces, diagrams... (⌘K)"
-                className="w-full pl-9 pr-12 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--background)]/80 text-xs text-[color:var(--foreground)] focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition placeholder-[color:var(--foreground)]/30"
+                placeholder="Search workspaces or diagrams... (⌘K)"
+                className="w-full pl-8 pr-10 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)] focus:outline-none focus:border-[var(--accent)] transition"
               />
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded bg-[var(--surface-muted)] text-[9px] font-mono text-[color:var(--foreground)]/40 border border-[var(--border)]">
+              <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[9px] font-mono text-[color:var(--muted)] border border-[var(--border)]">
                 ⌘K
               </kbd>
             </div>
           </div>
 
           {/* Right: Actions + User Profile Dropdown */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <Link
               href="/scenarios"
-              className="inline-flex items-center gap-1 sm:gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 px-2 sm:px-3 py-1.5 text-xs font-semibold text-violet-400 transition"
-              title="Explore simulation scenarios"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)]/50 px-2.5 py-1.5 text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-all"
+              title="Explore simulation templates"
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <svg className="w-3.5 h-3.5 text-[color:var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -334,10 +340,10 @@ export default function PostmanDashboardPage() {
 
             <Link
               href="/learn"
-              className="inline-flex items-center gap-1 sm:gap-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 px-2 sm:px-3 py-1.5 text-xs font-semibold text-indigo-400 transition"
-              title="Interactive system design guides"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)]/50 px-2.5 py-1.5 text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-all"
+              title="Interactive learning center"
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <svg className="w-3.5 h-3.5 text-[color:var(--green)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
               <span className="hidden sm:inline">Learn</span>
@@ -346,18 +352,15 @@ export default function PostmanDashboardPage() {
             <button
               type="button"
               onClick={() => setCreateModalOpen(true)}
-              className="inline-flex items-center gap-1 sm:gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 px-2.5 sm:px-3.5 py-1.5 text-xs font-semibold text-white shadow-md shadow-violet-500/20 transition hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+              className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm cursor-pointer shrink-0"
             >
-              <PlusIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <PlusIcon className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">New Workspace</span>
               <span className="sm:hidden">New</span>
             </button>
 
-            {/* User Dropdown with Avatar & Logout inside */}
-            <UserDropdown
-              theme={theme}
-              onToggleTheme={toggleTheme}
-            />
+            {/* User Dropdown */}
+            <UserDropdown theme={theme} onToggleTheme={toggleTheme} />
           </div>
         </div>
       </header>
@@ -365,62 +368,91 @@ export default function PostmanDashboardPage() {
       {/* ── BODY: SIDEBAR + MAIN AREA ──────────────────────────── */}
       <div className="flex-1 flex overflow-hidden">
         {/* LEFT SIDEBAR */}
-        <aside className="w-56 shrink-0 border-r border-[var(--border)] bg-[var(--surface)]/40 hidden lg:flex flex-col justify-between p-3 space-y-6">
+        <aside className="w-56 shrink-0 border-r border-[var(--border)] bg-[var(--bg)] hidden lg:flex flex-col justify-between p-4 space-y-6">
           <div className="space-y-4">
             {/* Quick Stats Banner */}
-            <div className="p-3 rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-indigo-500/5 space-y-1">
-              <p className="text-[10px] uppercase font-bold tracking-wider text-violet-400">Personal Plan</p>
-              <p className="text-xs font-semibold">{workspaces.length} / 5 Workspaces</p>
-              <div className="w-full bg-[var(--surface-muted)] h-1.5 rounded-full overflow-hidden mt-1">
-                <div className="bg-violet-500 h-full rounded-full" style={{ width: `${Math.min(100, (workspaces.length / 5) * 100)}%` }} />
+            <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-[color:var(--muted)] font-mono">
+                  Personal Plan
+                </span>
+                <span className="text-[10px] font-mono text-[color:var(--accent)] font-semibold">
+                  {workspaces.length}/5
+                </span>
+              </div>
+              <p className="text-xs font-semibold text-[color:var(--foreground)]">
+                {workspaces.length} of 5 Workspaces
+              </p>
+              <div className="w-full bg-[var(--bg-elevated)] h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-[var(--accent)] h-full rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(100, (workspaces.length / 5) * 100)}%` }}
+                />
               </div>
             </div>
 
             {/* Sidebar Navigation */}
             <nav className="space-y-1">
               {[
-                { id: "workspaces", label: "Workspaces", icon: <FolderIcon className="w-4 h-4 text-violet-400" />, count: workspaces.length },
-                { id: "diagrams", label: "All Diagrams", icon: <DiagramIcon className="w-4 h-4 text-cyan-400" />, count: totalDiagramsCount },
-                { id: "starred", label: "Starred", icon: <StarIcon className="w-4 h-4 text-amber-400" />, count: workspaces.filter((w) => w.starred).length },
+                {
+                  id: "workspaces",
+                  label: "Workspaces",
+                  icon: <FolderIcon className="w-4 h-4 text-[color:var(--accent)]" />,
+                  count: workspaces.length,
+                },
+                {
+                  id: "diagrams",
+                  label: "All Diagrams",
+                  icon: <DiagramIcon className="w-4 h-4 text-[color:var(--muted)]" />,
+                  count: totalDiagramsCount,
+                },
+                {
+                  id: "starred",
+                  label: "Starred",
+                  icon: <StarIcon className="w-4 h-4 text-[color:var(--amber)]" />,
+                  count: workspaces.filter((w) => w.starred).length,
+                },
               ].map((item) => (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => setActiveSidebarNav(item.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
                     activeSidebarNav === item.id
-                      ? "bg-violet-500/15 border border-violet-500/25 text-violet-400"
-                      : "text-[color:var(--foreground)]/70 hover:bg-[var(--surface-muted)] hover:text-[color:var(--foreground)]"
+                      ? "bg-[var(--surface)] border border-[var(--border-strong)] text-[color:var(--foreground)] shadow-xs"
+                      : "text-[color:var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[color:var(--foreground)]"
                   }`}
                 >
                   <span className="flex items-center gap-2.5">
                     {item.icon} {item.label}
                   </span>
-                  <span className="text-[10px] font-mono opacity-50">{item.count}</span>
+                  <span className="text-[10px] font-mono text-[color:var(--muted)]">{item.count}</span>
                 </button>
               ))}
 
-              <div className="pt-2 border-t border-[var(--border)] space-y-1">
+              <div className="pt-3 mt-3 border-t border-[var(--border)] space-y-1">
                 <Link
                   href="/scenarios"
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[color:var(--foreground)]/70 hover:bg-violet-500/10 hover:text-violet-400 transition"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-[color:var(--muted)] hover:bg-[var(--surface)] hover:text-[color:var(--foreground)] transition"
                 >
                   <span className="flex items-center gap-2.5">
-                    <svg className="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <svg className="w-4 h-4 text-[color:var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <span>Scenarios</span>
                   </span>
-                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-bold">LIVE</span>
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[var(--accent)]/10 text-[color:var(--accent)] border border-[var(--accent)]/20 font-bold">
+                    LIVE
+                  </span>
                 </Link>
 
                 <Link
                   href="/learn"
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[color:var(--foreground)]/70 hover:bg-indigo-500/10 hover:text-indigo-400 transition"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-[color:var(--muted)] hover:bg-[var(--surface)] hover:text-[color:var(--foreground)] transition"
                 >
                   <span className="flex items-center gap-2.5">
-                    <svg className="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <svg className="w-4 h-4 text-[color:var(--green)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
                     <span>Learn Center</span>
@@ -429,10 +461,10 @@ export default function PostmanDashboardPage() {
 
                 <Link
                   href="/docs"
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-[color:var(--foreground)]/70 hover:bg-[var(--surface-muted)] hover:text-[color:var(--foreground)] transition"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-[color:var(--muted)] hover:bg-[var(--surface)] hover:text-[color:var(--foreground)] transition"
                 >
                   <span className="flex items-center gap-2.5">
-                    <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <svg className="w-4 h-4 text-[color:var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     <span>DSL Docs</span>
@@ -443,16 +475,16 @@ export default function PostmanDashboardPage() {
           </div>
 
           {/* Quick Sandbox Link */}
-          <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/50 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-semibold text-cyan-400">
-              <SandboxIcon className="w-4 h-4" /> Sandbox Mode
+          <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] space-y-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[color:var(--foreground)]">
+              <SandboxIcon className="w-4 h-4 text-[color:var(--accent)]" /> Sandbox Mode
             </div>
-            <p className="text-[10px] text-[color:var(--foreground)]/50 leading-relaxed">
-              Try the canvas simulator without saving to account.
+            <p className="text-[11px] text-[color:var(--muted)] leading-relaxed">
+              Launch simulator canvas instantly without project persistence.
             </p>
             <Link
               href="/workspace"
-              className="block w-full text-center py-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-xs font-semibold text-cyan-400 hover:bg-cyan-500/20 transition"
+              className="btn-secondary block w-full text-center py-1.5 rounded-lg text-xs font-semibold transition"
             >
               Open Sandbox
             </Link>
@@ -460,21 +492,21 @@ export default function PostmanDashboardPage() {
         </aside>
 
         {/* MAIN DASHBOARD CONTENT */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-8 bg-[var(--bg)]">
           {/* Welcome Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[var(--border)]/60 pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[var(--border)] pb-6">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[color:var(--foreground)]">
                 Workspaces Overview
               </h1>
-              <p className="text-xs text-[color:var(--foreground)]/55 mt-1">
-                Manage your system architecture projects and distributed diagrams.
+              <p className="text-xs text-[color:var(--muted)] mt-1">
+                Manage your system architecture projects, microservice clusters, and simulation topologies.
               </p>
             </div>
             <button
               type="button"
               onClick={() => setCreateModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-violet-500/20 transition cursor-pointer shrink-0 w-full sm:w-auto"
+              className="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-sm cursor-pointer shrink-0 w-full sm:w-auto"
             >
               <PlusIcon className="w-4 h-4" /> New Workspace
             </button>
@@ -487,14 +519,14 @@ export default function PostmanDashboardPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search workspaces..."
-              className="w-full px-3.5 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-xs text-[color:var(--foreground)] focus:outline-none"
+              className="w-full px-3.5 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)]"
             />
           </div>
 
           {/* Filter Bar & View Toggle */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             {/* Filter Tabs */}
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--surface-muted)]/80 border border-[var(--border)] overflow-x-auto max-w-full">
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] overflow-x-auto max-w-full">
               {[
                 { id: "all", label: "All Workspaces" },
                 { id: "starred", label: "Starred" },
@@ -505,10 +537,10 @@ export default function PostmanDashboardPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as FilterTab)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                     activeTab === tab.id
-                      ? "bg-[var(--surface)] text-[color:var(--foreground)] shadow-sm border border-[var(--border)]"
-                      : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]"
+                      ? "bg-[var(--accent)] text-white shadow-xs"
+                      : "text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
                   }`}
                 >
                   {tab.id === "starred" && <StarIcon className="w-3.5 h-3.5 text-amber-400" />}
@@ -518,16 +550,18 @@ export default function PostmanDashboardPage() {
             </div>
 
             {/* View Mode Toggle */}
-            <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-              <span className="text-xs text-[color:var(--foreground)]/40 font-mono">
+            <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+              <span className="text-xs text-[color:var(--muted)] font-mono">
                 {filteredWorkspaces.length} result{filteredWorkspaces.length !== 1 ? "s" : ""}
               </span>
-              <div className="flex items-center gap-0.5 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-1">
+              <div className="flex items-center gap-0.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-0.5">
                 <button
                   type="button"
                   onClick={() => setViewMode("grid")}
-                  className={`p-1.5 rounded-lg transition cursor-pointer ${
-                    viewMode === "grid" ? "bg-[var(--surface)] text-violet-400 shadow-sm" : "opacity-40"
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
+                    viewMode === "grid"
+                      ? "bg-[var(--bg-elevated)] text-[color:var(--accent)] shadow-xs"
+                      : "text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
                   }`}
                   title="Grid View"
                 >
@@ -536,8 +570,10 @@ export default function PostmanDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setViewMode("list")}
-                  className={`p-1.5 rounded-lg transition cursor-pointer ${
-                    viewMode === "list" ? "bg-[var(--surface)] text-violet-400 shadow-sm" : "opacity-40"
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
+                    viewMode === "list"
+                      ? "bg-[var(--bg-elevated)] text-[color:var(--accent)] shadow-xs"
+                      : "text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
                   }`}
                   title="List View"
                 >
@@ -551,18 +587,21 @@ export default function PostmanDashboardPage() {
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1, 2, 3].map((n) => (
-                <div key={n} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/40 p-5 space-y-4 animate-pulse">
+                <div
+                  key={n}
+                  className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-4 animate-pulse"
+                >
                   <div className="flex items-center justify-between">
-                    <div className="w-9 h-9 rounded-xl bg-[var(--surface-muted)]" />
-                    <div className="w-12 h-4 rounded bg-[var(--surface-muted)]" />
+                    <div className="w-8 h-8 rounded-lg bg-[var(--bg-elevated)]" />
+                    <div className="w-12 h-4 rounded bg-[var(--bg-elevated)]" />
                   </div>
                   <div className="space-y-2">
-                    <div className="w-3/4 h-5 rounded bg-[var(--surface-muted)]" />
-                    <div className="w-full h-3 rounded bg-[var(--surface-muted)]" />
+                    <div className="w-3/4 h-5 rounded bg-[var(--bg-elevated)]" />
+                    <div className="w-full h-3 rounded bg-[var(--bg-elevated)]" />
                   </div>
-                  <div className="pt-3 border-t border-[var(--border)]/50 flex justify-between">
-                    <div className="w-20 h-3 rounded bg-[var(--surface-muted)]" />
-                    <div className="w-16 h-3 rounded bg-[var(--surface-muted)]" />
+                  <div className="pt-3 border-t border-[var(--border)] flex justify-between">
+                    <div className="w-20 h-3 rounded bg-[var(--bg-elevated)]" />
+                    <div className="w-16 h-3 rounded bg-[var(--bg-elevated)]" />
                   </div>
                 </div>
               ))}
@@ -574,21 +613,21 @@ export default function PostmanDashboardPage() {
                   <Link
                     key={ws.id}
                     href={`/dashboard/workspace/${ws.id}`}
-                    className="group relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]/70 backdrop-blur-sm p-5 transition-all duration-300 hover:border-violet-500/40 hover:shadow-xl hover:shadow-violet-500/5 hover:-translate-y-1 flex flex-col justify-between"
+                    className="group relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-all duration-200 hover:border-[var(--accent)]/50 hover:-translate-y-0.5 flex flex-col justify-between"
                   >
-                    {/* Environment Badge */}
+                    {/* Environment Badge & Top Bar */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500/15 to-indigo-500/15 border border-violet-500/20 flex items-center justify-center text-base">
+                        <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center">
                           {renderIcon(ws.iconType)}
                         </div>
                         <span
-                          className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-md border ${
+                          className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded border ${
                             ws.env === "PROD"
-                              ? "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                              ? "bg-[var(--red-muted)] border-[var(--red)]/25 text-[color:var(--red)]"
                               : ws.env === "STAGING"
-                              ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
-                              : "bg-cyan-500/10 border-cyan-500/20 text-cyan-400"
+                              ? "bg-[var(--amber-muted)] border-[var(--amber)]/25 text-[color:var(--amber)]"
+                              : "bg-[var(--accent)]/10 border-[var(--accent)]/20 text-[color:var(--accent)]"
                           }`}
                         >
                           {ws.env}
@@ -599,15 +638,15 @@ export default function PostmanDashboardPage() {
                         <button
                           type="button"
                           onClick={(e) => openEditWorkspaceModal(ws, e)}
-                          className="p-1 rounded-lg text-[color:var(--foreground)]/40 hover:text-violet-400 hover:bg-violet-500/10 transition cursor-pointer"
-                          title="Edit workspace name & description"
+                          className="p-1 rounded-md text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition cursor-pointer"
+                          title="Edit workspace"
                         >
                           ✏️
                         </button>
                         <button
                           type="button"
                           onClick={(e) => openDeleteWorkspaceModal(ws, e)}
-                          className="p-1 rounded-lg text-[color:var(--foreground)]/40 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                          className="p-1 rounded-md text-[color:var(--muted)] hover:text-red-400 hover:bg-red-500/10 transition cursor-pointer"
                           title="Delete workspace"
                         >
                           🗑️
@@ -615,8 +654,10 @@ export default function PostmanDashboardPage() {
                         <button
                           type="button"
                           onClick={(e) => toggleStar(ws.id, e)}
-                          className={`transition-all hover:scale-125 cursor-pointer ${
-                            ws.starred ? "text-amber-400 opacity-100" : "text-[color:var(--foreground)]/30 opacity-40 group-hover:opacity-100"
+                          className={`transition-all cursor-pointer ${
+                            ws.starred
+                              ? "text-amber-400 opacity-100"
+                              : "text-[color:var(--muted)] opacity-50 group-hover:opacity-100"
                           }`}
                           title={ws.starred ? "Unstar" : "Star workspace"}
                         >
@@ -626,19 +667,19 @@ export default function PostmanDashboardPage() {
                     </div>
 
                     <div className="space-y-1 mb-4">
-                      <h3 className="text-base font-bold group-hover:text-violet-400 transition-colors truncate">
+                      <h3 className="text-sm font-bold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors truncate">
                         {ws.name}
                       </h3>
-                      <p className="text-xs text-[color:var(--foreground)]/50 line-clamp-2 min-h-[32px]">
-                        {ws.description}
+                      <p className="text-xs text-[color:var(--muted)] line-clamp-2 min-h-[32px] leading-relaxed">
+                        {ws.description || "No description provided."}
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t border-[var(--border)]/50 text-xs">
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-[color:var(--foreground)]/50">
-                        <DiagramIcon className="w-3.5 h-3.5 text-violet-400" /> {ws.diagrams_count} diagram{ws.diagrams_count !== 1 ? "s" : ""}
+                    <div className="flex items-center justify-between pt-3 border-t border-[var(--border)] text-xs">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-[color:var(--muted)]">
+                        <DiagramIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" /> {ws.diagrams_count} diagram{ws.diagrams_count !== 1 ? "s" : ""}
                       </span>
-                      <span className="text-[10px] font-mono text-[color:var(--foreground)]/35">
+                      <span className="text-[10px] font-mono text-[color:var(--muted)]">
                         {formatDate(ws.updated_at)}
                       </span>
                     </div>
@@ -649,16 +690,16 @@ export default function PostmanDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setCreateModalOpen(true)}
-                  className="group relative overflow-hidden rounded-2xl border-2 border-dashed border-[var(--border)] hover:border-violet-500/40 bg-[var(--surface)]/30 p-5 transition-all duration-300 hover:bg-[var(--surface)]/50 cursor-pointer flex flex-col items-center justify-center gap-3 min-h-[190px]"
+                  className="group relative overflow-hidden rounded-xl border-2 border-dashed border-[var(--border-strong)] hover:border-[var(--accent)]/60 bg-[var(--surface)]/40 p-5 transition-all duration-200 hover:bg-[var(--surface)] cursor-pointer flex flex-col items-center justify-center gap-2.5 min-h-[190px]"
                 >
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500/10 to-indigo-500/10 border border-violet-500/15 flex items-center justify-center text-violet-400 group-hover:scale-110 transition-transform">
-                    <PlusIcon className="w-6 h-6" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center text-[color:var(--accent)] group-hover:scale-110 transition-transform">
+                    <PlusIcon className="w-5 h-5" />
                   </div>
                   <div className="text-center">
-                    <p className="text-xs font-semibold text-[color:var(--foreground)]/60 group-hover:text-violet-400 transition-colors">
+                    <p className="text-xs font-semibold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors">
                       New Workspace
                     </p>
-                    <p className="text-[10px] text-[color:var(--foreground)]/35 mt-0.5">
+                    <p className="text-[10px] text-[color:var(--muted)] mt-0.5">
                       Create architecture project
                     </p>
                   </div>
@@ -666,51 +707,51 @@ export default function PostmanDashboardPage() {
               </div>
             ) : (
               /* List View */
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/60 backdrop-blur-sm divide-y divide-[var(--border)] overflow-hidden">
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] divide-y divide-[var(--border)] overflow-hidden">
                 {filteredWorkspaces.map((ws) => (
                   <Link
                     key={ws.id}
                     href={`/dashboard/workspace/${ws.id}`}
-                    className="flex items-center justify-between p-4 hover:bg-[var(--surface-muted)] transition group"
+                    className="flex items-center justify-between p-4 hover:bg-[var(--bg-elevated)] transition group"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/15 to-indigo-500/15 border border-violet-500/20 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center shrink-0">
                         {renderIcon(ws.iconType)}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-bold group-hover:text-violet-400 transition-colors truncate">
+                          <h3 className="text-sm font-bold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors truncate">
                             {ws.name}
                           </h3>
                           <span
                             className={`text-[9px] font-bold font-mono px-1.5 py-0.2 rounded border ${
                               ws.env === "PROD"
-                                ? "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                                ? "bg-[var(--red-muted)] border-[var(--red)]/25 text-[color:var(--red)]"
                                 : ws.env === "STAGING"
-                                ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
-                                : "bg-cyan-500/10 border-cyan-500/20 text-cyan-400"
+                                ? "bg-[var(--amber-muted)] border-[var(--amber)]/25 text-[color:var(--amber)]"
+                                : "bg-[var(--accent)]/10 border-[var(--accent)]/20 text-[color:var(--accent)]"
                             }`}
                           >
                             {ws.env}
                           </span>
                         </div>
-                        <p className="text-xs text-[color:var(--foreground)]/45 truncate">
-                          {ws.description}
+                        <p className="text-xs text-[color:var(--muted)] truncate">
+                          {ws.description || "No description provided."}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-xs font-mono text-[color:var(--foreground)]/50 flex items-center gap-1">
-                        <DiagramIcon className="w-3.5 h-3.5 text-violet-400" /> {ws.diagrams_count}
+                      <span className="text-xs font-mono text-[color:var(--muted)] flex items-center gap-1">
+                        <DiagramIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" /> {ws.diagrams_count}
                       </span>
-                      <span className="text-[10px] font-mono text-[color:var(--foreground)]/35 hidden sm:inline">
+                      <span className="text-[10px] font-mono text-[color:var(--muted)] hidden sm:inline">
                         {formatDate(ws.updated_at)}
                       </span>
                       <button
                         type="button"
                         onClick={(e) => openEditWorkspaceModal(ws, e)}
-                        className="p-1 rounded-lg text-[color:var(--foreground)]/40 hover:text-violet-400 hover:bg-violet-500/10 transition cursor-pointer"
+                        className="p-1 rounded-md text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition cursor-pointer"
                         title="Edit workspace"
                       >
                         ✏️
@@ -718,7 +759,7 @@ export default function PostmanDashboardPage() {
                       <button
                         type="button"
                         onClick={(e) => openDeleteWorkspaceModal(ws, e)}
-                        className="p-1 rounded-lg text-[color:var(--foreground)]/40 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                        className="p-1 rounded-md text-[color:var(--muted)] hover:text-red-400 hover:bg-red-500/10 transition cursor-pointer"
                         title="Delete workspace"
                       >
                         🗑️
@@ -727,13 +768,15 @@ export default function PostmanDashboardPage() {
                         type="button"
                         onClick={(e) => toggleStar(ws.id, e)}
                         className={`transition-all cursor-pointer ${
-                          ws.starred ? "text-amber-400 opacity-100" : "text-[color:var(--foreground)]/30 opacity-40 group-hover:opacity-100"
+                          ws.starred
+                            ? "text-amber-400 opacity-100"
+                            : "text-[color:var(--muted)] opacity-50 group-hover:opacity-100"
                         }`}
                         title={ws.starred ? "Unstar" : "Star workspace"}
                       >
                         <StarIcon className="w-4 h-4" filled={ws.starred} />
                       </button>
-                      <span className="text-xs text-violet-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-xs text-[color:var(--accent)] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
                         Open →
                       </span>
                     </div>
@@ -742,24 +785,24 @@ export default function PostmanDashboardPage() {
               </div>
             )
           ) : (
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/40 p-12 text-center space-y-3">
-              <SearchIcon className="w-8 h-8 text-[color:var(--foreground)]/30 mx-auto" />
-              <p className="text-sm font-semibold text-[color:var(--foreground)]/60">No workspaces match your filter</p>
-              <p className="text-xs text-[color:var(--foreground)]/35">
-                Try resetting filters or search term.
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-12 text-center space-y-3">
+              <SearchIcon className="w-8 h-8 text-[color:var(--muted)] mx-auto" />
+              <p className="text-sm font-semibold text-[color:var(--foreground)]">No workspaces match your filter</p>
+              <p className="text-xs text-[color:var(--muted)]">
+                Try resetting filters or changing your search query.
               </p>
             </div>
           )}
 
           {/* Recent Diagrams Strip */}
-          <div className="space-y-3 pt-4 border-t border-[var(--border)]/60">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-[color:var(--foreground)]/40 flex items-center gap-2">
-              <ZapIcon className="w-4 h-4 text-cyan-400" /> Recent Diagrams
+          <div className="space-y-3 pt-6 border-t border-[var(--border)]">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-[color:var(--muted)] flex items-center gap-2">
+              <ZapIcon className="w-4 h-4 text-[color:var(--accent)]" /> Recent Diagrams
             </h2>
 
             {recentDiagrams.length === 0 ? (
-              <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--surface)]/30 text-center text-xs text-[color:var(--foreground)]/40">
-                No recent diagrams yet. Create a diagram inside any workspace to see it here!
+              <div className="p-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-center text-xs text-[color:var(--muted)]">
+                No recent diagrams yet. Open any workspace to create your first architecture diagram!
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -767,17 +810,17 @@ export default function PostmanDashboardPage() {
                   <Link
                     key={d.id}
                     href={`/dashboard/workspace/${d.workspace_id}/${d.id}`}
-                    className="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 hover:bg-[var(--surface)] hover:border-cyan-500/30 transition group"
+                    className="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)]/50 transition group"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold group-hover:text-cyan-400 transition-colors truncate flex items-center gap-1.5">
-                        <DiagramIcon className="w-3.5 h-3.5 text-cyan-400" /> {d.title}
+                      <span className="text-xs font-bold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors truncate flex items-center gap-1.5">
+                        <DiagramIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" /> {d.title}
                       </span>
-                      <span className="text-[9px] font-mono text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">
+                      <span className="text-[9px] font-mono text-[color:var(--accent)] bg-[var(--accent)]/10 px-1.5 py-0.5 rounded border border-[var(--accent)]/20">
                         {d.env}
                       </span>
                     </div>
-                    <p className="text-[10px] text-[color:var(--foreground)]/40 truncate">
+                    <p className="text-[10px] text-[color:var(--muted)] truncate">
                       {d.workspace_name}
                     </p>
                   </Link>
@@ -791,37 +834,37 @@ export default function PostmanDashboardPage() {
       {/* ── CREATE WORKSPACE MODAL ──────────────────────────── */}
       {createModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
           onClick={() => setCreateModalOpen(false)}
         >
           <div
-            className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200"
+            className="w-full max-w-md rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-2xl p-6 space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-1">
-              <h2 className="text-lg font-bold tracking-tight">Create Workspace</h2>
-              <p className="text-xs text-[color:var(--foreground)]/50">
-                Postman-style project scope for architecture diagrams.
+              <h2 className="text-lg font-bold tracking-tight text-[color:var(--foreground)]">Create Workspace</h2>
+              <p className="text-xs text-[color:var(--muted)]">
+                Scoped project environment for your architecture diagrams.
               </p>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+                <label className="block text-xs font-semibold text-[color:var(--foreground)] mb-1.5">
                   Workspace Name
                 </label>
                 <input
                   type="text"
                   value={newWsName}
                   onChange={(e) => setNewWsName(e.target.value)}
-                  placeholder="e.g., Microservices Cluster"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-xs text-[color:var(--foreground)] focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                  placeholder="e.g. Microservices Cluster"
+                  className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)]"
                   autoFocus
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+                <label className="block text-xs font-semibold text-[color:var(--foreground)] mb-1.5">
                   Environment Tag
                 </label>
                 <div className="flex gap-2">
@@ -830,10 +873,10 @@ export default function PostmanDashboardPage() {
                       key={env}
                       type="button"
                       onClick={() => setNewWsEnv(env)}
-                      className={`flex-1 py-1.5 rounded-xl text-xs font-bold font-mono transition border cursor-pointer ${
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold font-mono transition border cursor-pointer ${
                         newWsEnv === env
-                          ? "bg-violet-500/15 border-violet-500 text-violet-400"
-                          : "border-[var(--border)] text-[color:var(--foreground)]/50 hover:bg-[var(--surface-muted)]"
+                          ? "bg-[var(--accent)] text-white border-[var(--accent)]"
+                          : "border-[var(--border)] text-[color:var(--muted)] hover:bg-[var(--bg-elevated)]"
                       }`}
                     >
                       {env}
@@ -843,7 +886,7 @@ export default function PostmanDashboardPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+                <label className="block text-xs font-semibold text-[color:var(--foreground)] mb-1.5">
                   Description
                 </label>
                 <textarea
@@ -851,23 +894,23 @@ export default function PostmanDashboardPage() {
                   onChange={(e) => setNewWsDesc(e.target.value)}
                   placeholder="Brief description of the architecture stack..."
                   rows={3}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-xs text-[color:var(--foreground)] focus:outline-none focus:ring-2 focus:ring-violet-500/40 resize-none"
+                  className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)] resize-none"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2.5">
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[var(--border)]">
               <button
                 type="button"
                 onClick={() => setCreateModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-semibold text-[color:var(--foreground)]/60 hover:bg-[var(--surface-muted)] transition cursor-pointer"
+                className="btn-secondary px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleCreateWorkspace}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-semibold text-white shadow-md shadow-violet-500/20 transition cursor-pointer"
+                className="btn-primary px-4 py-2 rounded-lg text-xs font-semibold text-white cursor-pointer"
               >
                 Create Workspace
               </button>
@@ -876,26 +919,26 @@ export default function PostmanDashboardPage() {
         </div>
       )}
 
-      {/* Edit Workspace Modal */}
+      {/* ── EDIT WORKSPACE MODAL ──────────────────────────── */}
       {editModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
           onClick={() => setEditModalOpen(false)}
         >
           <div
-            className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200"
+            className="w-full max-w-md rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-2xl p-6 space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-1">
-              <h2 className="text-lg font-bold tracking-tight">Edit Workspace</h2>
-              <p className="text-xs text-[color:var(--foreground)]/50">
-                Update workspace details in MongoDB.
+              <h2 className="text-lg font-bold tracking-tight text-[color:var(--foreground)]">Edit Workspace</h2>
+              <p className="text-xs text-[color:var(--muted)]">
+                Update workspace name, tag, and description.
               </p>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+                <label className="block text-xs font-semibold text-[color:var(--foreground)] mb-1.5">
                   Workspace Name
                 </label>
                 <input
@@ -903,13 +946,13 @@ export default function PostmanDashboardPage() {
                   value={editWsName}
                   onChange={(e) => setEditWsName(e.target.value)}
                   placeholder="Workspace Name"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-xs text-[color:var(--foreground)] focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                  className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)]"
                   autoFocus
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+                <label className="block text-xs font-semibold text-[color:var(--foreground)] mb-1.5">
                   Environment Tag
                 </label>
                 <div className="flex gap-2">
@@ -918,10 +961,10 @@ export default function PostmanDashboardPage() {
                       key={env}
                       type="button"
                       onClick={() => setEditWsEnv(env)}
-                      className={`flex-1 py-1.5 rounded-xl text-xs font-bold font-mono transition border cursor-pointer ${
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold font-mono transition border cursor-pointer ${
                         editWsEnv === env
-                          ? "bg-violet-500/15 border-violet-500 text-violet-400"
-                          : "border-[var(--border)] text-[color:var(--foreground)]/50 hover:bg-[var(--surface-muted)]"
+                          ? "bg-[var(--accent)] text-white border-[var(--accent)]"
+                          : "border-[var(--border)] text-[color:var(--muted)] hover:bg-[var(--bg-elevated)]"
                       }`}
                     >
                       {env}
@@ -931,7 +974,7 @@ export default function PostmanDashboardPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[color:var(--foreground)]/70 mb-1.5">
+                <label className="block text-xs font-semibold text-[color:var(--foreground)] mb-1.5">
                   Description
                 </label>
                 <textarea
@@ -939,23 +982,23 @@ export default function PostmanDashboardPage() {
                   onChange={(e) => setEditWsDesc(e.target.value)}
                   placeholder="Brief description..."
                   rows={3}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-xs text-[color:var(--foreground)] focus:outline-none focus:ring-2 focus:ring-violet-500/40 resize-none"
+                  className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)] resize-none"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2.5">
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[var(--border)]">
               <button
                 type="button"
                 onClick={() => setEditModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-semibold text-[color:var(--foreground)]/60 hover:bg-[var(--surface-muted)] transition cursor-pointer"
+                className="btn-secondary px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleUpdateWorkspace}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-semibold text-white shadow-md shadow-violet-500/20 transition cursor-pointer"
+                className="btn-primary px-4 py-2 rounded-lg text-xs font-semibold text-white cursor-pointer"
               >
                 Save Changes
               </button>
@@ -964,17 +1007,17 @@ export default function PostmanDashboardPage() {
         </div>
       )}
 
-      {/* Delete Workspace Confirmation Modal */}
+      {/* ── DELETE WORKSPACE CONFIRMATION MODAL ───────────── */}
       {deleteWsModalOpen && deletingWs && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md p-6 rounded-2xl border border-rose-500/30 bg-[var(--surface)] text-[color:var(--foreground)] shadow-2xl space-y-4">
-            <div className="flex items-center gap-3 text-rose-400">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+          <div className="w-full max-w-md p-6 rounded-xl border border-red-500/30 bg-[var(--surface)] text-[color:var(--foreground)] shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-red-500">
               <span className="text-2xl">⚠️</span>
               <h3 className="text-lg font-bold">Delete Workspace</h3>
             </div>
 
-            <p className="text-xs text-[color:var(--foreground)]/70 leading-relaxed">
-              Are you sure you want to delete <strong className="text-[color:var(--foreground)] font-semibold">&quot;{deletingWs.name}&quot;</strong>? This will permanently delete all diagrams and canvas data associated with this workspace.
+            <p className="text-xs text-[color:var(--muted)] leading-relaxed">
+              Are you sure you want to delete <strong className="text-[color:var(--foreground)] font-semibold">&quot;{deletingWs.name}&quot;</strong>? This will permanently delete all diagrams and simulation data associated with this workspace.
             </p>
 
             <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border)]">
@@ -985,7 +1028,7 @@ export default function PostmanDashboardPage() {
                   setDeletingWs(null);
                 }}
                 disabled={isDeletingWs}
-                className="px-4 py-2 rounded-xl text-xs font-semibold hover:bg-[var(--surface-muted)] transition cursor-pointer"
+                className="btn-secondary px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer"
               >
                 Cancel
               </button>
@@ -993,7 +1036,7 @@ export default function PostmanDashboardPage() {
                 type="button"
                 onClick={handleDeleteWorkspace}
                 disabled={isDeletingWs}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20 transition cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 rounded-lg text-xs font-semibold bg-red-600 hover:bg-red-500 text-white shadow-sm transition cursor-pointer disabled:opacity-50 flex items-center gap-2"
               >
                 {isDeletingWs ? (
                   <>
