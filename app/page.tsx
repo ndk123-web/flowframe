@@ -1,17 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
 import { ComponentIcon } from "@/components/ComponentIcons";
-import { GraphManager } from "@/engine/core/Graph/graph";
-import { NodeRegistry } from "@/engine/core/Graph/nodeResgistry";
-import { SimulationManager } from "@/engine/core/Simulations/Simulation";
-import LoadBalancerModel from "@/engine/models/LoadBalancer";
-import ServerModel from "@/engine/models/server";
-import ClientModel from "@/engine/models/Client";
-import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
-import ShortUniqueId from "short-unique-id";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useThemeStore } from "@/store/useThemeStore";
@@ -28,7 +20,6 @@ import {
   type EdgeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import Ipv4Generator from "@/utils/generateRandomIp";
 import Link from "next/link";
 import {
   ZapIcon,
@@ -41,134 +32,9 @@ import {
   DocsIcon,
   FilmIcon,
   SandboxIcon,
-  CartIcon,
-  ChatIcon,
-  CreditCardIcon,
 } from "@/components/DashboardIcons";
 
-type Theme = "light" | "dark";
-
-// ─── CSS ─────────────────────────────────────────────────────────────────────
-const animationStyles = `
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(28px); filter: blur(4px); }
-    to   { opacity: 1; transform: translateY(0);    filter: blur(0);   }
-  }
-  @keyframes slideLeft {
-    from { opacity: 0; transform: translateX(-18px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
-  @keyframes slideRight {
-    from { opacity: 0; transform: translateX(18px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
-  @keyframes pulseRing {
-    0%   { transform: scale(1);   opacity: 0.8; }
-    100% { transform: scale(1.9); opacity: 0;   }
-  }
-  @keyframes gradShift {
-    0%   { background-position: 0%   50%; }
-    50%  { background-position: 100% 50%; }
-    100% { background-position: 0%   50%; }
-  }
-  @keyframes float {
-    0%, 100% { transform: translateY(0px);   }
-    50%       { transform: translateY(-8px);  }
-  }
-  @keyframes tickerScroll {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
-  @keyframes orbit {
-    from { transform: rotate(0deg)   translateX(38px) rotate(0deg); }
-    to   { transform: rotate(360deg) translateX(38px) rotate(-360deg); }
-  }
-
-  .fade-up   { animation: fadeUp   0.7s cubic-bezier(.22,1,.36,1) forwards; }
-  .slide-l   { animation: slideLeft  0.6s cubic-bezier(.22,1,.36,1) forwards; }
-  .slide-r   { animation: slideRight 0.6s cubic-bezier(.22,1,.36,1) forwards; }
-  .float-anim { animation: float 4s ease-in-out infinite; }
-
-  .grad-text {
-    background: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #60a5fa 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .ticker-wrap {
-    overflow: hidden;
-    white-space: nowrap;
-  }
-  .ticker-track {
-    display: inline-flex;
-    animation: tickerScroll 22s linear infinite;
-  }
-
-  .v1-badge {
-    background: linear-gradient(135deg, rgba(99,102,241,.15), rgba(139,92,246,.15));
-    border: 1px solid rgba(139,92,246,.35);
-  }
-
-  .card-glow:hover {
-    box-shadow: 0 0 0 1px rgba(139,92,246,.3), 0 20px 60px -20px rgba(139,92,246,.25);
-  }
-
-  .btn-primary {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    box-shadow: 0 8px 32px -8px rgba(99,102,241,.5);
-    transition: all .2s ease;
-  }
-  .btn-primary:hover {
-    box-shadow: 0 14px 40px -8px rgba(99,102,241,.65);
-    transform: translateY(-1px) scale(1.02);
-  }
-  .btn-primary:active { transform: scale(.97); }
-
-  .btn-outline {
-    border: 1.5px solid rgba(139,92,246,.35);
-    transition: all .2s ease;
-  }
-  .btn-outline:hover {
-    border-color: rgba(139,92,246,.7);
-    background: rgba(139,92,246,.08);
-    transform: translateY(-1px);
-  }
-
-  .scene-card {
-    transition: all .25s ease;
-  }
-  .scene-card:hover {
-    transform: translateY(-4px);
-  }
-
-  /* ping ring for active nodes */
-  .ping-ring::after {
-    content: '';
-    position: absolute;
-    inset: -3px;
-    border-radius: 50%;
-    border: 2px solid currentColor;
-    animation: pulseRing 1.2s ease-out infinite;
-  }
-
-  /* subtle grid bg */
-  .dot-grid {
-    background-image: radial-gradient(rgba(148,163,184,.12) 1px, transparent 1px);
-    background-size: 28px 28px;
-  }
-
-  .status-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #34d399;
-    box-shadow: 0 0 0 2px rgba(52,211,153,.25);
-  }
-`;
-
-// ─── Custom Animated Edge ───────────────────────────────────────────────────
+// ─── Animated Edge with Glowing Packet ────────────────────────────────────────
 function AnimatedEdge({
   id,
   sourceX,
@@ -192,8 +58,8 @@ function AnimatedEdge({
   return (
     <g>
       <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
-      <circle r="4" fill="#a78bfa" className="ping-ring">
-        <animateMotion dur="2s" repeatCount="indefinite" path={edgePath} />
+      <circle r="3.5" fill="#3b82f6" filter="drop-shadow(0 0 3px #3b82f6)">
+        <animateMotion dur="2.2s" repeatCount="indefinite" path={edgePath} />
       </circle>
     </g>
   );
@@ -201,48 +67,172 @@ function AnimatedEdge({
 
 const edgeTypes = { animated: AnimatedEdge };
 
-// ─── Custom Landing Nodes ─────────────────────────────────────────────────────
-function LandingClientNode({ data }: { data: { label: string; sub: string } }) {
+// ─── Clean Architecture Node Component (No IP addresses) ───────────────────────
+interface DemoNodeData {
+  iconType: string;
+  title: string;
+  subtitle: string;
+  badge?: string;
+  badgeColor?: string;
+  active?: boolean;
+}
+
+function DemoNode({ data }: { data: DemoNodeData }) {
   return (
-    <div className="relative flex flex-col items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-lg backdrop-blur min-w-[130px] transition hover:scale-105">
-      <Handle type="source" position={Position.Right} className="!bg-indigo-400 !w-2.5 !h-2.5" />
-      <ComponentIcon type="client" className="h-6 w-6 text-indigo-500 dark:text-indigo-400 mb-1" />
-      <span className="text-xs font-bold text-[color:var(--foreground)]">{data.label}</span>
-      <span className="text-[10px] text-[color:var(--foreground)]/60 font-mono">{data.sub}</span>
+    <div
+      className={`relative flex flex-col rounded-xl border p-3 shadow-sm min-w-[136px] transition-all select-none ${
+        data.active
+          ? "border-[var(--accent)] bg-[var(--surface)] ring-1 ring-[var(--accent)]/25"
+          : "border-[var(--border-strong)] bg-[var(--surface)]"
+      }`}
+    >
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!bg-[var(--accent)] !w-2 !h-2 !border-0"
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="!bg-[var(--accent)] !w-2 !h-2 !border-0"
+      />
+
+      <div className="flex items-center justify-between gap-1.5 mb-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <ComponentIcon
+            type={data.iconType}
+            className="h-4 w-4 text-[color:var(--accent)] shrink-0"
+          />
+          <span className="text-[11px] font-bold text-[color:var(--foreground)] truncate">
+            {data.title}
+          </span>
+        </div>
+        {data.badge && (
+          <span
+            className={`text-[9px] font-mono font-medium px-1.5 py-0.5 rounded border shrink-0 ${
+              data.badgeColor ||
+              "text-[color:var(--muted)] border-[var(--border)] bg-[var(--bg-elevated)]"
+            }`}
+          >
+            {data.badge}
+          </span>
+        )}
+      </div>
+
+      <div className="text-[10px] font-mono text-[color:var(--muted)]">
+        <span className="truncate block">{data.subtitle}</span>
+      </div>
     </div>
   );
 }
 
-function LandingLBNode({ data }: { data: { label: string; sub: string } }) {
-  return (
-    <div className="relative flex flex-col items-center justify-center rounded-2xl border border-violet-500/40 bg-violet-500/10 p-3 shadow-lg backdrop-blur min-w-[140px] transition hover:scale-105">
-      <Handle type="target" position={Position.Left} className="!bg-violet-400 !w-2.5 !h-2.5" />
-      <Handle type="source" position={Position.Right} className="!bg-violet-400 !w-2.5 !h-2.5" />
-      <ComponentIcon type="load-balancer" className="h-6 w-6 text-violet-500 dark:text-violet-400 mb-1" />
-      <span className="text-xs font-bold text-[color:var(--foreground)]">{data.label}</span>
-      <span className="text-[10px] text-[color:var(--foreground)]/60 font-mono">{data.sub}</span>
-    </div>
-  );
-}
+const nodeTypes = { demoNode: DemoNode };
 
-function LandingServerNode({ data }: { data: { label: string; sub: string; active?: boolean } }) {
-  return (
-    <div className={`relative flex flex-col items-center justify-center rounded-2xl border p-3 shadow-lg backdrop-blur min-w-[130px] transition hover:scale-105 ${
-      data.active ? "border-emerald-500/50 bg-emerald-500/10" : "border-[var(--border)] bg-[var(--surface)]"
-    }`}>
-      <Handle type="target" position={Position.Left} className="!bg-violet-400 !w-2.5 !h-2.5" />
-      <ComponentIcon type="server" className={`h-6 w-6 mb-1 ${data.active ? "text-emerald-500 dark:text-emerald-400" : "text-violet-500 dark:text-violet-400"}`} />
-      <span className="text-xs font-bold text-[color:var(--foreground)]">{data.label}</span>
-      <span className="text-[10px] text-[color:var(--foreground)]/60 font-mono">{data.sub}</span>
-    </div>
-  );
-}
+// ─── Single API Gateway Scenario Data (Cleaned: No IP addresses) ─────────────
+function buildApiGatewayDemo() {
+  const nodes: Node[] = [
+    {
+      id: "c1",
+      type: "demoNode",
+      position: { x: 30, y: 130 },
+      data: {
+        iconType: "client",
+        title: "Mobile Client",
+        subtitle: "POST /orders/checkout",
+        badge: "Client",
+      },
+    },
+    {
+      id: "gw",
+      type: "demoNode",
+      position: { x: 260, y: 130 },
+      data: {
+        iconType: "api-gateway",
+        title: "API Gateway",
+        subtitle: "Path Routing Engine",
+        badge: "Port 443",
+        active: true,
+      },
+    },
+    {
+      id: "auth",
+      type: "demoNode",
+      position: { x: 510, y: 20 },
+      data: {
+        iconType: "server",
+        title: "Auth Service",
+        subtitle: "/api/auth/*",
+        badge: "JWT 200 OK",
+        badgeColor: "text-[color:var(--accent)] border-[var(--accent)]/25 bg-[var(--accent)]/10",
+      },
+    },
+    {
+      id: "orders",
+      type: "demoNode",
+      position: { x: 510, y: 130 },
+      data: {
+        iconType: "server",
+        title: "Order Service",
+        subtitle: "/api/orders/*",
+        badge: "Active Worker",
+        badgeColor: "text-[color:var(--accent)] border-[var(--accent)]/25 bg-[var(--accent)]/10",
+        active: true,
+      },
+    },
+    {
+      id: "queue",
+      type: "demoNode",
+      position: { x: 510, y: 240 },
+      data: {
+        iconType: "message-queue",
+        title: "RabbitMQ",
+        subtitle: "orders.created",
+        badge: "202 Ack",
+        badgeColor: "text-[color:var(--amber)] border-[var(--amber)]/25 bg-[var(--amber-muted)]",
+      },
+    },
+  ];
 
-const nodeTypes = {
-  landingClient: LandingClientNode,
-  landingLB: LandingLBNode,
-  landingServer: LandingServerNode,
-};
+  const edges: Edge[] = [
+    {
+      id: "e-c1-gw",
+      source: "c1",
+      target: "gw",
+      type: "animated",
+      style: { stroke: "#3b82f6", strokeWidth: 2, strokeOpacity: 0.8 },
+    },
+    {
+      id: "e-gw-auth",
+      source: "gw",
+      target: "auth",
+      type: "animated",
+      style: { stroke: "#3b82f6", strokeWidth: 1.5, strokeOpacity: 0.6 },
+    },
+    {
+      id: "e-gw-orders",
+      source: "gw",
+      target: "orders",
+      type: "animated",
+      style: { stroke: "#3b82f6", strokeWidth: 2, strokeOpacity: 0.8 },
+    },
+    {
+      id: "e-orders-queue",
+      source: "orders",
+      target: "queue",
+      type: "animated",
+      style: { stroke: "#f59e0b", strokeWidth: 1.6, strokeOpacity: 0.75 },
+    },
+  ];
+
+  const logs = [
+    { time: "00:00.090", src: "CLIENT", desc: "POST /api/orders/checkout dispatched to API Gateway" },
+    { time: "00:00.150", src: "GATEWAY", desc: "Validated session Bearer token via Auth Service [200 OK]" },
+    { time: "00:00.220", src: "GATEWAY", desc: "Matched path /api/orders/* → Forwarded to Order Service" },
+    { time: "00:00.310", src: "ORDER_SVC", desc: "Published event to RabbitMQ topic 'orders.created' [202 Accepted]" },
+  ];
+
+  return { nodes, edges, logs };
+}
 
 // ─── Scroll Reveal Hook ───────────────────────────────────────────────────────
 function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
@@ -252,9 +242,15 @@ function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const obs = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) { setVis(true); obs.unobserve(el); }
-    }, { threshold: 0.12 });
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVis(true);
+          obs.unobserve(el);
+        }
+      },
+      { threshold: 0.08 }
+    );
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
@@ -264,8 +260,8 @@ function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
       ref={ref}
       style={{
         opacity: vis ? 1 : 0,
-        transform: vis ? "translateY(0)" : "translateY(24px)",
-        transition: `opacity 0.65s cubic-bezier(.22,1,.36,1) ${delay}s, transform 0.65s cubic-bezier(.22,1,.36,1) ${delay}s`,
+        transform: vis ? "translateY(0)" : "translateY(16px)",
+        transition: `opacity 0.5s cubic-bezier(.22,1,.36,1) ${delay}s, transform 0.5s cubic-bezier(.22,1,.36,1) ${delay}s`,
       }}
     >
       {children}
@@ -273,50 +269,30 @@ function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
   );
 }
 
-// ─── Interactive Hero Simulation ──────────────────────────────────────────────
-const uid = new ShortUniqueId({ length: 6 });
-
-function buildDemoNodesAndEdges() {
-  const nodes: Node[] = [
-    { id: "c1", type: "landingClient", position: { x: 30,  y: 150 }, data: { label: "Client", sub: "3 Requests Sent" } },
-    { id: "lb", type: "landingLB",     position: { x: 250, y: 150 }, data: { label: "Load Balancer", sub: "Round Robin (1 Req / Server)" } },
-    { id: "s1", type: "landingServer", position: { x: 520, y: 20  }, data: { label: "Server A", sub: "Req #1 Handled", active: true  } },
-    { id: "s2", type: "landingServer", position: { x: 520, y: 150 }, data: { label: "Server B", sub: "Req #2 Handled", active: true } },
-    { id: "s3", type: "landingServer", position: { x: 520, y: 280 }, data: { label: "Server C", sub: "Req #3 Handled", active: true } },
-  ];
-
-  const edges: Edge[] = [
-    { id: "e-c1-lb", source: "c1", target: "lb", type: "animated", style: { stroke: "#6366f1", strokeWidth: 2 } },
-    { id: "e-lb-s1", source: "lb", target: "s1", type: "animated", style: { stroke: "#8b5cf6", strokeWidth: 2 } },
-    { id: "e-lb-s2", source: "lb", target: "s2", type: "animated", style: { stroke: "#8b5cf6", strokeWidth: 2 } },
-    { id: "e-lb-s3", source: "lb", target: "s3", type: "animated", style: { stroke: "#8b5cf6", strokeWidth: 2 } },
-  ];
-
-  return { nodes, edges };
-}
-
-// ─── Ticker bar ──────────────────────────────────────────────────────────────
+// ─── Feature Ticker ───────────────────────────────────────────────────────────
 function Ticker() {
   const items = [
-    { text: "FlowFrame DSL (.flow) — Declarative architecture compiler & engine", icon: <ZapIcon className="w-3.5 h-3.5 text-violet-400 shrink-0" /> },
-    { text: "Monaco Code Editor — Real-time syntax highlighting & autocompletion", icon: <CodeIcon className="w-3.5 h-3.5 text-cyan-400 shrink-0" /> },
-    { text: "API Gateway — Path-based routing to Server & LoadBalancer clusters", icon: <NodeLinkIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> },
-    { text: "Load Balancing — Round Robin & IP Hash traffic distribution", icon: <ScaleIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" /> },
-    { text: "RabbitMQ Queue — Asynchronous message buffering & consumer prefetch", icon: <InboxIcon className="w-3.5 h-3.5 text-rose-400 shrink-0" /> },
-    { text: "PubSub Broker — Multi-subscriber event fan-out & topic channels", icon: <BroadcastIcon className="w-3.5 h-3.5 text-indigo-400 shrink-0" /> },
-    { text: "Cache-Aside — Redis hit/miss & PostgreSQL database fallback", icon: <DatabaseIcon className="w-3.5 h-3.5 text-sky-400 shrink-0" /> },
-    { text: "Interactive Docs (/docs) — FastAPI-style comprehensive language reference", icon: <DocsIcon className="w-3.5 h-3.5 text-teal-400 shrink-0" /> },
+    { text: "FlowFrame DSL (.flow) — Declarative architecture compiler & engine", icon: <ZapIcon className="w-3 h-3 text-[color:var(--accent)] shrink-0" /> },
+    { text: "Monaco Code Editor — Real-time syntax highlighting & autocompletion", icon: <CodeIcon className="w-3 h-3 text-[color:var(--green)] shrink-0" /> },
+    { text: "API Gateway — Path-based routing to Server & LoadBalancer clusters", icon: <NodeLinkIcon className="w-3 h-3 text-[color:var(--muted)] shrink-0" /> },
+    { text: "Load Balancing — Round Robin & IP Hash traffic distribution", icon: <ScaleIcon className="w-3 h-3 text-[color:var(--amber)] shrink-0" /> },
+    { text: "RabbitMQ Queue — Asynchronous message buffering & consumer prefetch", icon: <InboxIcon className="w-3 h-3 text-[color:var(--red)] shrink-0" /> },
+    { text: "PubSub Broker — Multi-subscriber event fan-out & topic channels", icon: <BroadcastIcon className="w-3 h-3 text-[color:var(--accent)] shrink-0" /> },
+    { text: "Cache-Aside — Redis hit/miss & PostgreSQL database fallback", icon: <DatabaseIcon className="w-3 h-3 text-[color:var(--muted)] shrink-0" /> },
+    { text: "Interactive Docs (/docs) — Comprehensive language reference & API schemas", icon: <DocsIcon className="w-3 h-3 text-[color:var(--green)] shrink-0" /> },
   ];
   const all = [...items, ...items];
   return (
-    <div className="ticker-wrap border-y border-[var(--border)]/30 bg-[var(--surface-muted)]/20 py-3 text-[11px] font-medium text-[color:var(--foreground)]/70">
-      <div className="ticker-track hover:[animation-play-state:paused] cursor-pointer">
+    <div className="ticker-wrap border-y border-[var(--border)] bg-[var(--bg-elevated)] py-3">
+      <div className="ticker-track hover:[animation-play-state:paused] cursor-default">
         {all.map((t, i) => (
           <span
             key={i}
-            className="mx-4 shrink-0 rounded-full border border-[var(--border)]/50 bg-[var(--surface)]/60 px-3.5 py-1 text-xs font-semibold backdrop-blur shadow-sm inline-flex items-center gap-2"
+            className="mx-4 shrink-0 inline-flex items-center gap-2 text-[11px] font-medium text-[color:var(--muted)]"
           >
-            {t.icon} {t.text}
+            {t.icon}
+            <span>{t.text}</span>
+            <span className="text-[var(--border-strong)] mx-2">·</span>
           </span>
         ))}
       </div>
@@ -324,59 +300,141 @@ function Ticker() {
   );
 }
 
-// ─── What It Does section ─────────────────────────────────────────────────────
-function WhatItDoes() {
-  const points = [
+// ─── How it works steps ───────────────────────────────────────────────────────
+function HowItWorks() {
+  const steps = [
     {
-      icon: <ZapIcon className="w-6 h-6 text-indigo-400" />,
-      color: "#6366f1",
-      title: "Run real simulations",
-      body: "The engine actually runs your distributed system. Requests hop from Client → Load Balancer → Server → Redis → Postgres — not just drawn arrows.",
+      step: "01",
+      title: "Build",
+      desc: "Drag components onto the visual canvas or write FlowFrame DSL in the Monaco editor. Place clients, gateways, load balancers, caches, databases, and queues.",
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h8m-8 6h16" />
+        </svg>
+      ),
     },
     {
-      icon: <FilmIcon className="w-6 h-6 text-violet-400" />,
-      color: "#8b5cf6",
-      title: "Frame-by-frame playback",
-      body: "Every request hop becomes a playback frame. Pause at any moment, scrub backwards, or fast-forward. See exactly what happened and why.",
+      step: "02",
+      title: "Configure",
+      desc: "Set capacity limits, accepted endpoints, cache TTLs, routing algorithms, Postgres connection pools, and custom HTTP request payloads in the node inspector.",
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+        </svg>
+      ),
     },
     {
-      icon: <SandboxIcon className="w-6 h-6 text-cyan-400" />,
-      color: "#06b6d4",
-      title: "Inspect node state",
-      body: "Open any node's inspector. See Redis key snapshots, server load, capacity, request queues — all updating live as the simulation runs.",
+      step: "03",
+      title: "Run",
+      desc: "Hit play. The engine simulates real request routing: REST calls hop through your topology following deterministic rules that mirror production infrastructure.",
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <polygon points="5,3 19,12 5,21" fill="currentColor" opacity={0.25} />
+          <polygon points="5,3 19,12 5,21" />
+        </svg>
+      ),
     },
     {
-      icon: <DocsIcon className="w-6 h-6 text-emerald-400" />,
-      color: "#10b981",
-      title: "Learn as you simulate",
-      body: "Each concept has a guided doc page with a live sim embedded. Read the theory, trigger the failure, watch the recovery — all on one screen.",
+      step: "04",
+      title: "Understand",
+      desc: "Watch packets animate in real time. Pause at any frame, inspect live node states, verify cache hit rates, inspect connection queues, and read execution logs.",
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+      ),
     },
   ];
 
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <div className="mb-14 text-center">
-          <p className="mb-3 text-xs font-bold uppercase tracking-[.18em] text-violet-400">What makes it different</p>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "var(--foreground)" }}>
-            Not a diagram tool.<br />A running system.
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20">
+        <div className="text-center max-w-2xl mx-auto mb-14">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
+            The Core Experience
+          </p>
+          <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
+            From architecture to running system in four steps.
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-base" style={{ color: "var(--foreground)", opacity: 0.6 }}>
-            Most system design tools let you draw boxes and arrows. FlowFrame actually runs the logic, captures every hop, and plays it back so you can see what's happening inside.
+          <p className="mt-3 text-sm text-[color:var(--muted)]">
+            No static mockups. FlowFrame compiles your topology into an executable simulation graph.
           </p>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {steps.map((s, i) => (
+            <Reveal key={s.step} delay={i * 0.06}>
+              <div className="relative flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--accent)]/40 hover:-translate-y-0.5 transition-all duration-200 h-full">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-[color:var(--accent)]">
+                    {s.icon}
+                  </div>
+                  <span className="text-[10px] font-mono font-bold text-[color:var(--muted)] px-2 py-0.5 rounded bg-[var(--bg-elevated)] border border-[var(--border)]">
+                    Step {s.step}
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-[color:var(--foreground)] mb-2">{s.title}</h3>
+                <p className="text-sm text-[color:var(--muted)] leading-relaxed">{s.desc}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+    </Reveal>
+  );
+}
+
+// ─── What makes it different ──────────────────────────────────────────────────
+function WhatItDoes() {
+  const points = [
+    {
+      icon: <ZapIcon className="w-5 h-5" />,
+      title: "Real simulation engine",
+      body: "Requests actually route through your architecture. Client → Load Balancer → Server → Redis → Postgres — with real rules, not just animated arrows.",
+    },
+    {
+      icon: <FilmIcon className="w-5 h-5" />,
+      title: "Frame-by-frame playback",
+      body: "Every request hop becomes an inspectable frame. Pause at any moment, scrub backwards, or step forward through the execution graph.",
+    },
+    {
+      icon: <SandboxIcon className="w-5 h-5" />,
+      title: "Inspect live node state",
+      body: "Click any node's inspector. See Redis key snapshots, Postgres TCP connection pool depths, and load queues updating live as the simulation runs.",
+    },
+    {
+      icon: <DocsIcon className="w-5 h-5" />,
+      title: "Learn as you simulate",
+      body: "Every core concept has guided learning. Read theory, trigger node overload or failure, and watch recovery mechanisms — all on one screen.",
+    },
+  ];
+
+  return (
+    <Reveal>
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-[var(--border)]">
+        <div className="text-center max-w-2xl mx-auto mb-14">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
+            Why FlowFrame
+          </p>
+          <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
+            Not a diagram tool. A running system.
+          </h2>
+          <p className="mt-3 text-sm text-[color:var(--muted)] leading-relaxed">
+            Most system design tools let you draw static boxes and arrows. FlowFrame executes the actual runtime behavior, captures every hop, and plays it back.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           {points.map((p, i) => (
-            <Reveal key={p.title} delay={i * 0.1}>
-              <div className="card-glow group flex gap-5 rounded-2xl border border-[var(--border)]/40 bg-[var(--surface)]/40 p-7 backdrop-blur transition-all duration-300">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
-                  style={{ background: `${p.color}18`, border: `1px solid ${p.color}30` }}>
+            <Reveal key={p.title} delay={i * 0.07}>
+              <div className="flex gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--accent)]/35 transition-all duration-200 h-full">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-[color:var(--accent)]">
                   {p.icon}
                 </div>
                 <div>
-                  <h3 className="mb-2 text-base font-bold" style={{ color: "var(--foreground)" }}>{p.title}</h3>
-                  <p className="text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.6 }}>{p.body}</p>
+                  <h3 className="text-sm font-bold text-[color:var(--foreground)] mb-1.5">{p.title}</h3>
+                  <p className="text-sm text-[color:var(--muted)] leading-relaxed">{p.body}</p>
                 </div>
               </div>
             </Reveal>
@@ -387,100 +445,102 @@ function WhatItDoes() {
   );
 }
 
-// ─── V2 Scenarios section ─────────────────────────────────────────────────────
-function V1Scenarios() {
+// ─── Scenarios / Templates ────────────────────────────────────────────────────
+function Scenarios() {
   const router = useRouter();
   const scenes = [
     {
       id: "simple-load-balancer",
-      icon: <ScaleIcon className="w-6 h-6 text-blue-400" />,
-      color: "#3b82f6",
-      accent: "rgba(59,130,246,.12)",
       label: "Load Balancing",
-      tag: "v2.0 · Live",
-      desc: "Watch Round Robin and IP Hash distribute requests across 3 servers. Drag capacity to 0 to see failover in action.",
+      tag: "Beginner",
+      desc: "Round Robin and IP Hash distributing requests across 3 servers. Set server capacity to 0 to watch automatic failover.",
       chips: ["Round Robin", "IP Hash", "Failover"],
     },
     {
       id: "simple-cache",
-      icon: <DatabaseIcon className="w-6 h-6 text-amber-400" />,
-      color: "#f59e0b",
-      accent: "rgba(245,158,11,.12)",
       label: "Cache-Aside",
-      tag: "v2.0 · Live",
-      desc: "Three deterministic requests: cache hit, cache miss → DB fallback, and invalid key. See Redis snapshots update frame-by-frame.",
-      chips: ["Redis Hit/Miss", "DB Fallback", "TTL"],
+      tag: "Beginner",
+      desc: "Cache hit, cache miss → PostgreSQL fallback, and TTL invalidation. Redis snapshots update frame-by-frame.",
+      chips: ["Redis Hit/Miss", "DB Fallback", "TTL Expiry"],
     },
     {
       id: "simple-api-gateway",
-      icon: <NodeLinkIcon className="w-6 h-6 text-purple-400" />,
-      color: "#8b5cf6",
-      accent: "rgba(139,92,246,.12)",
       label: "API Gateway",
-      tag: "v2.0 · Live",
-      desc: "Path-based routing with server & LoadBalancer pools. Set a server's capacity to 0 and watch gateway failover.",
-      chips: ["Path Routing", "LoadBalancer Target", "503 Failover"],
+      tag: "Intermediate",
+      desc: "Path-based routing to microservices & load balancers. Simulates route matching and 503 gateway timeouts.",
+      chips: ["Path Routing", "Cluster Targets", "503 Failover"],
     },
     {
       id: "simple-valet-key",
-      icon: <ZapIcon className="w-6 h-6 text-emerald-400" />,
-      color: "#10b981",
-      accent: "rgba(16,185,129,.12)",
       label: "Valet Key Pattern",
-      tag: "v2.0 · Live",
-      desc: "Client requests a signed upload token from the server. Server issues it. Client uploads directly to cloud storage — no proxy.",
+      tag: "Intermediate",
+      desc: "Client requests a signed upload token from the server, then uploads directly to cloud storage bypassing proxies.",
       chips: ["Token Issuance", "Direct Upload", "Cloud Storage"],
     },
   ];
 
+  const tagColors: Record<string, string> = {
+    Beginner: "text-[color:var(--green)] bg-[var(--green-muted)] border-[var(--green)]/25",
+    Intermediate: "text-[color:var(--amber)] bg-[var(--amber-muted)] border-[var(--amber)]/25",
+    Advanced: "text-[color:var(--red)] bg-[var(--red-muted)] border-[var(--red)]/25",
+  };
+
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <div className="mb-12">
-          <div className="flex items-center gap-3 mb-4">
-            <p className="text-xs font-bold uppercase tracking-[.18em] text-violet-400">Supported in v2.0</p>
-            <span className="v1-badge rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-violet-300">v2.0.0 RELEASE</span>
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-[var(--border)]">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
+              Templates
+            </p>
+            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
+              Pick a scenario. Hit play.
+            </h2>
+            <p className="mt-2 text-sm text-[color:var(--muted)]">
+              Pre-wired architectures with real engine logic. Select one and watch the system run.
+            </p>
           </div>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "var(--foreground)" }}>
-            Pick a scenario. Hit play.
-          </h2>
-          <p className="mt-3 max-w-lg text-base" style={{ color: "var(--foreground)", opacity: 0.6 }}>
-            Each scenario is pre-wired with real engine logic. Just select one and watch the architecture run.
-          </p>
+          <Link
+            href="/scenarios"
+            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[color:var(--accent)] hover:underline shrink-0"
+          >
+            View all scenarios →
+          </Link>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {scenes.map((s, i) => (
-            <Reveal key={s.id} delay={i * 0.08}>
+            <Reveal key={s.id} delay={i * 0.06}>
               <div
                 onClick={() => router.push(`/scenarios/${s.id}`)}
-                className="scene-card card-glow group relative cursor-pointer rounded-2xl border border-[var(--border)]/40 p-6 backdrop-blur transition-all"
-                style={{ background: `linear-gradient(135deg, ${s.accent}, transparent)` }}
+                className="group relative cursor-pointer rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--accent)]/40 hover:-translate-y-0.5 transition-all duration-200"
               >
-                <div className="mb-4 flex items-start justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl"
-                    style={{ background: `${s.color}20`, border: `1px solid ${s.color}30` }}>
-                    {s.icon}
-                  </div>
-                  <span className="rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider"
-                    style={{ background: `${s.color}18`, color: s.color }}>
+                <div className="flex items-start justify-between mb-2.5">
+                  <h3 className="text-sm font-bold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors">
+                    {s.label}
+                  </h3>
+                  <span
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
+                      tagColors[s.tag] || tagColors.Beginner
+                    }`}
+                  >
                     {s.tag}
                   </span>
                 </div>
-                <h3 className="mb-2 text-lg font-bold" style={{ color: "var(--foreground)" }}>{s.label}</h3>
-                <p className="mb-4 text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.6 }}>{s.desc}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {s.chips.map(c => (
-                    <span key={c} className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
-                      style={{ background: `${s.color}12`, color: s.color, border: `1px solid ${s.color}25` }}>
+                <p className="text-sm text-[color:var(--muted)] mb-4 leading-relaxed">{s.desc}</p>
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {s.chips.map((c) => (
+                    <span
+                      key={c}
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-md border border-[var(--border)] bg-[var(--bg-elevated)] text-[color:var(--muted)]"
+                    >
                       {c}
                     </span>
                   ))}
                 </div>
-                <div className="mt-5 flex items-center text-xs font-bold transition-all"
-                  style={{ color: s.color, opacity: 0.7 }}>
-                  Open Simulator
-                  <span className="ml-1.5 transition-transform group-hover:translate-x-1">→</span>
+                <div className="flex items-center text-xs font-semibold text-[color:var(--accent)] opacity-80 group-hover:opacity-100 transition-opacity">
+                  Run simulation
+                  <span className="ml-1 transition-transform group-hover:translate-x-1">→</span>
                 </div>
               </div>
             </Reveal>
@@ -491,147 +551,200 @@ function V1Scenarios() {
   );
 }
 
-// ─── Learn & Sandbox section ─────────────────────────────────────────────────
+// ─── Learn & Sandbox ──────────────────────────────────────────────────────────
 function LearnAndSandbox() {
   const router = useRouter();
+  const cards = [
+    {
+      href: "/docs",
+      title: "DSL Reference",
+      desc: "Complete syntax guide, component node specifications, and copy-pasteable architecture scripts.",
+      cta: "Read Docs →",
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ),
+    },
+    {
+      href: "/learn",
+      title: "Guided Learning",
+      desc: "Theory on the left, live simulation on the right. Understand cache-aside, load balancing, and queues interactively.",
+      cta: "Start Learning →",
+      icon: <FilmIcon className="w-5 h-5" />,
+    },
+    {
+      href: "/workspace",
+      title: "Free Visual Sandbox",
+      desc: "Write DSL or drag & drop nodes. Build and run any distributed architecture in your browser with zero setup.",
+      cta: "Open Workspace →",
+      icon: <SandboxIcon className="w-5 h-5" />,
+    },
+  ];
+
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="grid gap-5 md:grid-cols-3">
-          {/* Learn Docs */}
-          <div
-            className="card-glow group relative cursor-pointer overflow-hidden rounded-2xl border border-[var(--border)]/40 p-8 backdrop-blur transition-all"
-            style={{ background: "linear-gradient(135deg, rgba(99,102,241,.08), rgba(139,92,246,.04))" }}
-            onClick={() => router.push("/docs")}
-          >
-            <div className="pointer-events-none absolute -top-10 -right-10 h-48 w-48 rounded-full bg-violet-500/10 blur-[50px]" />
-            <div className="relative z-10">
-              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/15 border border-violet-500/20">
-                <DocsIcon className="w-7 h-7 text-violet-400" />
-              </div>
-              <h3 className="mb-2 text-2xl font-bold" style={{ color: "var(--foreground)" }}>FlowFrame DSL Docs</h3>
-              <p className="mb-5 text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.6 }}>
-                Explore language specifications, syntax rules, schema specs for all 8 component nodes, and copy-pasteable flagship architecture scripts.
-              </p>
-              <div className="inline-flex items-center gap-2 rounded-xl bg-violet-500/15 px-4 py-2 text-sm font-bold text-violet-400 transition group-hover:bg-violet-500/25">
-                Read DSL Docs (/docs) <span className="transition-transform group-hover:translate-x-1">→</span>
-              </div>
-            </div>
-          </div>
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-[var(--border)]">
+        <div className="text-center max-w-2xl mx-auto mb-14">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
+            Explore
+          </p>
+          <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
+            Three ways to use FlowFrame
+          </h2>
+        </div>
 
-          {/* Learn Scenarios */}
-          <div
-            className="card-glow group relative cursor-pointer overflow-hidden rounded-2xl border border-[var(--border)]/40 p-8 backdrop-blur transition-all"
-            style={{ background: "linear-gradient(135deg, rgba(168,85,247,.08), rgba(192,132,252,.04))" }}
-            onClick={() => router.push("/learn")}
-          >
-            <div className="pointer-events-none absolute -top-10 -right-10 h-48 w-48 rounded-full bg-purple-500/10 blur-[50px]" />
-            <div className="relative z-10">
-              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-500/15 border border-purple-500/20">
-                <FilmIcon className="w-7 h-7 text-purple-400" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {cards.map((c, i) => (
+            <Reveal key={c.href} delay={i * 0.06}>
+              <div
+                onClick={() => router.push(c.href)}
+                className="group cursor-pointer rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 hover:border-[var(--accent)]/40 hover:-translate-y-0.5 transition-all duration-200 flex flex-col h-full"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-[color:var(--accent)] mb-4">
+                  {c.icon}
+                </div>
+                <h3 className="text-base font-bold text-[color:var(--foreground)] mb-2">{c.title}</h3>
+                <p className="text-sm text-[color:var(--muted)] leading-relaxed flex-1 mb-4">{c.desc}</p>
+                <span className="text-xs font-semibold text-[color:var(--accent)] opacity-80 group-hover:opacity-100 transition-opacity">
+                  {c.cta}
+                </span>
               </div>
-              <h3 className="mb-2 text-2xl font-bold" style={{ color: "var(--foreground)" }}>Guided Scenarios</h3>
-              <p className="mb-5 text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.6 }}>
-                Guided learning for each distributed system concept — theory on the left, live simulation on the right.
-              </p>
-              <div className="inline-flex items-center gap-2 rounded-xl bg-purple-500/15 px-4 py-2 text-sm font-bold text-purple-400 transition group-hover:bg-purple-500/25">
-                Start Scenarios <span className="transition-transform group-hover:translate-x-1">→</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Sandbox */}
-          <div
-            className="card-glow group relative cursor-pointer overflow-hidden rounded-2xl border border-[var(--border)]/40 p-8 backdrop-blur transition-all"
-            style={{ background: "linear-gradient(135deg, rgba(16,185,129,.08), rgba(6,182,212,.04))" }}
-            onClick={() => router.push("/workspace")}
-          >
-            <div className="pointer-events-none absolute -bottom-10 -right-10 h-48 w-48 rounded-full bg-emerald-500/10 blur-[50px]" />
-            <div className="relative z-10">
-              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 border border-emerald-500/20">
-                <ZapIcon className="w-7 h-7 text-emerald-400" />
-              </div>
-              <h3 className="mb-2 text-2xl font-bold" style={{ color: "var(--foreground)" }}>Monaco DSL Sandbox</h3>
-              <p className="mb-5 text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.6 }}>
-                Write code in Monaco Editor using FlowFrame DSL or drag & drop nodes on canvas. Run live system simulations instantly.
-              </p>
-              <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/15 px-4 py-2 text-sm font-bold text-emerald-400 transition group-hover:bg-emerald-500/25">
-                Open Workspace <span className="transition-transform group-hover:translate-x-1">→</span>
-              </div>
-            </div>
-          </div>
+            </Reveal>
+          ))}
         </div>
       </section>
     </Reveal>
   );
 }
 
-// ─── YOUTUBE VIDEO SHOWCASE ──────────────────────────────────────────────
+// ─── Engine Simulation Rules ──────────────────────────────────────────────────
+function EngineRules() {
+  const rules = [
+    { num: "01", category: "Data Access", title: "Cache-First Precedence", description: "When a Server is connected to both Redis and PostgreSQL, it always queries Redis first. Only upon CACHE_MISS does it fallback to PostgreSQL." },
+    { num: "02", category: "Database Pool", title: "Postgres TCP Pool Limits", description: "Server's tcpConnectionsToPostgres sets maximum active connections. Saturated requests wait in a POSTGRES_POOL_WAIT queue until freed." },
+    { num: "03", category: "Traffic Routing", title: "Load Balancer Health Filter", description: "Balancers evaluate server capacity and filter out overloaded targets. If all downstream servers are at capacity, it returns a 503 error." },
+    { num: "04", category: "REST Contracts", title: "Endpoint & Method Matching", description: "Servers validate incoming requests against declared acceptedEndpoints and HTTP verbs. Unmatched paths immediately trigger 404 or 405." },
+    { num: "05", category: "Async Messaging", title: "Message Queue & 202 Ack", description: "Publishing to a MessageQueue returns an immediate 202 Accepted ack to the client while consumer servers process messages in the background." },
+    { num: "06", category: "Event Streaming", title: "PubSub Event Fan-Out", description: "When an event is published to a PubSub broker, it broadcasts to all microservice workers registered to that topic channel." },
+    { num: "07", category: "Security", title: "Valet Key Pre-Signed Uploads", description: "Clients request a pre-signed token from the auth server, then upload heavy media assets directly to Cloud Storage bypassing server proxies." },
+    { num: "08", category: "Flow Control", title: "Queue Overflow Handling", description: "When MessageQueue reaches capacity, overflow behavior dictates execution: BLOCK halts producer until space frees, or REJECT fails fast." },
+  ];
+
+  return (
+    <Reveal>
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-[var(--border)]">
+        <div className="text-center max-w-2xl mx-auto mb-14">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
+            Engine Architecture
+          </p>
+          <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
+            Deterministic simulation rules & behavior
+          </h2>
+          <p className="mt-3 text-sm text-[color:var(--muted)] leading-relaxed">
+            Every distributed system in FlowFrame executes according to deterministic rules that mirror real-world production infrastructure.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {rules.map((r, i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 hover:border-[var(--accent)]/30 transition-all duration-200"
+            >
+              <div className="flex items-start gap-3">
+                <span className="text-[10px] font-mono font-bold text-[color:var(--muted)] mt-0.5 shrink-0 px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] border border-[var(--border)]">
+                  {r.num}
+                </span>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--accent)]">
+                      {r.category}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-[color:var(--foreground)] mb-1">{r.title}</h3>
+                  <p className="text-xs text-[color:var(--muted)] leading-relaxed">{r.description}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-10 text-center">
+          <Link
+            href="/docs"
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] hover:border-[var(--accent)]/40 transition-all duration-150"
+          >
+            Read complete language reference in Docs →
+          </Link>
+        </div>
+      </section>
+    </Reveal>
+  );
+}
+
+// ─── YouTube Showcase ─────────────────────────────────────────────────────────
 function YouTubeShowcase() {
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <div className="relative overflow-hidden rounded-3xl border border-violet-500/30 bg-gradient-to-br from-violet-950/30 via-[var(--surface)]/90 to-indigo-950/20 p-6 sm:p-10 shadow-2xl backdrop-blur-xl">
-          <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-rose-500/10 blur-[90px]" />
-          <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-violet-500/10 blur-[90px]" />
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-[var(--border)]">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
             {/* Left Content */}
-            <div className="lg:col-span-5 space-y-5 text-left">
-              <div className="inline-flex items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/10 px-3.5 py-1 text-xs font-bold text-rose-400">
-                <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping" />
-                <span>Featured Architecture Deep Dive</span>
+            <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-center">
+              <div className="inline-flex items-center gap-2 rounded-md border border-[var(--red)]/25 bg-[var(--red-muted)] px-2.5 py-1 text-[10px] font-bold text-[color:var(--red)] mb-5 w-fit">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--red)]" />
+                Featured Deep Dive
               </div>
 
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={{ color: "var(--foreground)" }}>
-                Building Event-Driven Microservices <span className="grad-text">From Scratch</span>
+              <h2 className="text-xl font-bold tracking-tight text-[color:var(--foreground)] mb-3">
+                Building Event-Driven Microservices From Scratch
               </h2>
 
-              <p className="text-sm leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.7 }}>
-                See FlowFrame in action as we construct a complete event-driven microservices architecture — routing requests through API Gateways, load balancers, server clusters, RabbitMQ message queues, and Postgres connection pools.
+              <p className="text-sm text-[color:var(--muted)] leading-relaxed mb-5">
+                Complete event-driven microservices architecture — routing through API Gateways, load balancers, RabbitMQ message queues, and Postgres connection pools.
               </p>
 
-              <div className="space-y-2.5 pt-2">
+              <div className="space-y-2 mb-6">
                 {[
                   "Complete producer-consumer & PubSub fan-out pipeline",
-                  "Cache-aside pattern with Redis hits vs misses",
+                  "Cache-aside with Redis hits vs misses",
                   "TCP connection pool exhaustion & waiting queues",
                   "Step-by-step live simulation frame playback",
                 ].map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.85 }}>
-                    <svg className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                  <div key={idx} className="flex items-start gap-2 text-xs text-[color:var(--muted)]">
+                    <svg className="w-3.5 h-3.5 text-[color:var(--green)] shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
-                    <span>{item}</span>
+                    {item}
                   </div>
                 ))}
               </div>
 
-              <div className="pt-3 flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <a
                   href="https://www.youtube.com/watch?v=XQxFZg6RcTI"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white px-5 py-2.5 text-xs sm:text-sm font-bold shadow-lg shadow-rose-600/25 transition hover:scale-105"
+                  className="inline-flex items-center gap-2 rounded-lg bg-red-600 hover:bg-red-500 text-white px-4 py-2 text-xs font-semibold shadow-sm transition-all duration-150"
                 >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                   </svg>
-                  <span>Watch on YouTube</span>
+                  Watch on YouTube
                 </a>
                 <Link
                   href="/workspace"
-                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] px-4 py-2.5 text-xs sm:text-sm font-semibold transition"
-                  style={{ color: "var(--foreground)" }}
+                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg-elevated)] hover:bg-[var(--surface-muted)] px-4 py-2 text-xs font-semibold text-[color:var(--foreground)] transition-all duration-150"
                 >
-                  <span>Try on Canvas →</span>
+                  Try on Canvas →
                 </Link>
               </div>
             </div>
 
-            {/* Right Video Embed */}
-            <div className="lg:col-span-7">
-              <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl bg-black/60 group">
+            {/* Right Video */}
+            <div className="lg:col-span-7 border-t lg:border-t-0 lg:border-l border-[var(--border)]">
+              <div className="aspect-video w-full bg-black">
                 <iframe
                   className="w-full h-full"
                   src="https://www.youtube.com/embed/XQxFZg6RcTI"
@@ -648,344 +761,334 @@ function YouTubeShowcase() {
   );
 }
 
-// ─── SYSTEM SIMULATION RULES ──────────────────────────────────────────────
-function SystemSimulationRules() {
-  const rules = [
-    {
-      num: "01",
-      category: "Data Access",
-      title: "Cache-First Precedence",
-      icon: (
-        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7zM9 4v16M15 4v16M4 12h16" />
-        </svg>
-      ),
-      description: "When a Server is connected to both Redis and PostgreSQL, it always queries Redis first. Only upon CACHE_MISS does it fallback to PostgreSQL.",
-    },
-    {
-      num: "02",
-      category: "Database Pool",
-      title: "Postgres TCP Pool Limits",
-      icon: (
-        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <ellipse cx="12" cy="5" rx="9" ry="3" />
-          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-        </svg>
-      ),
-      description: "Server's tcpConnectionsToPostgres sets maximum active connections. Saturated requests wait in a POSTGRES_POOL_WAIT queue until freed.",
-    },
-    {
-      num: "03",
-      category: "Traffic Routing",
-      title: "Load Balancer Health Filter",
-      icon: (
-        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l9-4 9 4v6c0 5.5-3.8 10.7-9 12-5.2-1.3-9-6.5-9-12V6z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
-        </svg>
-      ),
-      description: "Balancers evaluate server capacity and filter out overloaded targets. If all downstream servers are at capacity, it returns a 503 error.",
-    },
-    {
-      num: "04",
-      category: "REST Contracts",
-      title: "Endpoint & Method Matching",
-      icon: (
-        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-      ),
-      description: "Servers validate incoming requests against declared acceptedEndpoints and HTTP verbs. Unmatched paths immediately trigger 404 or 405.",
-    },
-    {
-      num: "05",
-      category: "Async Messaging",
-      title: "Message Queue & 202 Ack",
-      icon: (
-        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-        </svg>
-      ),
-      description: "Publishing to a MessageQueue returns an immediate 202 Accepted ack to the client while consumer servers process messages in the background.",
-    },
-    {
-      num: "06",
-      category: "Event Streaming",
-      title: "PubSub Event Fan-Out",
-      icon: (
-        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="2" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14" />
-        </svg>
-      ),
-      description: "When an event is published to a PubSub broker, it broadcasts to all microservice workers registered to that topic channel.",
-    },
-    {
-      num: "07",
-      category: "Security",
-      title: "Valet Key Pre-Signed Uploads",
-      icon: (
-        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-        </svg>
-      ),
-      description: "Clients request a pre-signed token from the auth server, then upload heavy media assets directly to Cloud Storage bypassing server proxies.",
-    },
-    {
-      num: "08",
-      category: "Flow Control",
-      title: "Queue Overflow Handling",
-      icon: (
-        <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-      ),
-      description: "When MessageQueue reaches capacity, overflow behavior dictates execution: BLOCK halts producer until space frees, or REJECT fails fast.",
-    },
-  ];
-
+// ─── Open Source Banner ───────────────────────────────────────────────────────
+function OpenSourceBanner() {
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <div className="text-center space-y-4 mb-14">
-          <div className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-1.5 text-xs font-bold text-violet-400">
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="3" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
-            </svg>
-            <span>Engine Architecture Specifications</span>
-          </div>
-          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight" style={{ color: "var(--foreground)" }}>
-            Engine Simulation <span className="grad-text">Rules & Behavior</span>
-          </h2>
-          <p className="max-w-2xl mx-auto text-sm sm:text-base leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.65 }}>
-            Every distributed system in FlowFrame executes according to deterministic engine rules that mirror real-world production infrastructure.
-          </p>
-        </div>
-
-        {/* Clean 2-Column Structured Specifications List */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {rules.map((r, i) => (
-            <div
-              key={i}
-              className="group rounded-2xl border border-[var(--border)] bg-[var(--surface)]/70 p-5 space-y-3 backdrop-blur transition-all duration-300 hover:border-violet-500/40 hover:bg-[var(--surface)] hover:-translate-y-0.5"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 shrink-0">
-                    {r.icon}
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-mono font-bold text-violet-400 block tracking-wider uppercase">
-                      Rule {r.num} · {r.category}
-                    </span>
-                    <h3 className="text-sm font-bold text-[color:var(--foreground)]">
-                      {r.title}
-                    </h3>
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-[color:var(--foreground)]/65 leading-relaxed pl-1">
-                {r.description}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-10 text-center">
-          <Link
-            href="/docs"
-            className="inline-flex items-center gap-2 rounded-xl border border-violet-500/40 bg-violet-500/10 hover:bg-violet-500/20 px-5 py-2.5 text-xs sm:text-sm font-bold text-violet-400 transition"
-          >
-            <span>Read Complete System Rules & Language Reference in Docs</span>
-            <span>→</span>
-          </Link>
-        </div>
-      </section>
-    </Reveal>
-  );
-}
-
-// ─── OPEN SOURCE & LICENSE BANNER ──────────────────────────────────────────
-function OpenSourceLicenseBanner() {
-  return (
-    <Reveal>
-      <section className="mx-auto max-w-6xl px-6 py-10">
-        <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)]/60 p-6 sm:p-8 backdrop-blur flex flex-col sm:flex-row items-center justify-between gap-6">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-16">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/30 flex items-center justify-center shrink-0">
-              <svg className="w-6 h-6 text-violet-400" viewBox="0 0 24 24" fill="currentColor">
+            <div className="w-10 h-10 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5 text-[color:var(--accent)]" viewBox="0 0 24 24" fill="currentColor">
                 <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
               </svg>
             </div>
             <div>
-              <h3 className="text-base font-bold text-[color:var(--foreground)]">
-                Open Source & Non-Commercial License
-              </h3>
-              <p className="text-xs text-[color:var(--foreground)]/60 mt-0.5">
-                FlowFrame is released under the <strong className="text-[color:var(--foreground)]">PolyForm Noncommercial License 1.0.0</strong>. Free for education, personal learning, and non-commercial research.
+              <h3 className="text-sm font-semibold text-[color:var(--foreground)]">Open Source · Noncommercial License</h3>
+              <p className="text-xs text-[color:var(--muted)] mt-0.5">
+                Free for education, personal learning, and non-commercial research. Released under PolyForm Noncommercial 1.0.0.
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <a
-              href="https://github.com/ndk123-web/flowframe"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 text-xs font-semibold shadow-md shadow-violet-600/20 transition hover:scale-105"
-            >
-              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-              <span>Star on GitHub</span>
-            </a>
-          </div>
+          <a
+            href="https://github.com/ndk123-web/flowframe"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 inline-flex items-center gap-2 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/8 px-4 py-2 text-sm font-semibold text-[color:var(--accent)] hover:bg-[var(--accent)]/15 transition-all duration-150"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+            </svg>
+            Star on GitHub
+          </a>
         </div>
       </section>
     </Reveal>
   );
 }
 
-// ─── MAIN LANDING PAGE ────────────────────────────────────────────────────────
+// ─── Main Landing Page ────────────────────────────────────────────────────────
 export default function LandingPage() {
   const { theme, toggleTheme } = useThemeStore();
   const router = useRouter();
-  const { user, isAuthenticated, _hasHydrated } = useAuthStore();
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
 
-  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => buildDemoNodesAndEdges(), []);
+  // Single showcase: API Gateway (clean: no IPs, real logs)
+  const { nodes: demoNodes, edges: demoEdges, logs: demoLogs } = useMemo(
+    () => buildApiGatewayDemo(),
+    []
+  );
 
   return (
-    <div className="min-h-screen bg-[var(--background)] transition-colors duration-300 overflow-x-hidden">
-      <style>{animationStyles}</style>
-
+    <div className="min-h-screen bg-[var(--bg)] transition-colors duration-200 overflow-x-hidden">
       {/* Header */}
-      <SiteHeader
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        showHomeLink={false}
-      />
+      <SiteHeader theme={theme} onToggleTheme={toggleTheme} showHomeLink={false} />
 
-      {/* Hero Section */}
-      <section className="relative mx-auto max-w-6xl px-6 pt-16 pb-24 text-center">
-        {/* Glow backdrop */}
-        <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-violet-600/15 blur-[120px]" />
+      {/* ── Hero Section (Centered & High Impact) ─────────────────────────── */}
+      <section className="relative mx-auto max-w-6xl px-4 sm:px-6 pt-10 sm:pt-14 pb-16 text-center flex flex-col items-center">
+        {/* Subtle background glow */}
+        <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[300px] bg-blue-500/10 rounded-full blur-3xl -z-10" />
 
-        {/* Dynamic Auth Badge */}
-        <div className="fade-up inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-1.5 text-xs font-semibold shadow-sm backdrop-blur mb-8 text-[color:var(--foreground)]">
-          <span className="flex h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
-          <span className="text-[11px] uppercase tracking-wider text-violet-700 dark:text-violet-300 font-bold">FlowFrame v2.0 Live</span>
-          <span className="text-[color:var(--foreground)]/30 font-normal">|</span>
-          <span className="text-[color:var(--foreground)]/80 font-medium">
-            {_hasHydrated && isAuthenticated
-              ? `Logged in as ${user?.email || "User"} — Workspaces Ready`
-              : "Monaco DSL Compiler & Interactive Engine"}
-          </span>
+        {/* Status Badge (Clean, No AI green dot, No awkward email display) */}
+        <div className="fade-up inline-flex items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 py-1 text-xs font-mono text-[color:var(--muted)] mb-6 shadow-xs">
+          <span className="font-semibold text-[color:var(--foreground)]">FlowFrame Engine</span>
+          <span className="text-[var(--border-strong)]">/</span>
+          <span className="text-[color:var(--accent)] font-medium">v2.0 Declarative Simulator</span>
         </div>
 
-        {/* Hero Title */}
-        <h1 className="fade-up mx-auto max-w-4xl text-4xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl leading-[1.08]"
-          style={{ animationDelay: ".05s", color: "var(--foreground)" }}>
-          Design distributed systems.<br />
-          <span className="grad-text">Simulate every frame.</span>
+        {/* H1 Title */}
+        <h1
+          className="fade-up max-w-4xl text-center text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-[color:var(--foreground)] leading-[1.12] mb-5"
+          style={{ animationDelay: ".04s" }}
+        >
+          Build, run, and understand<br />
+          <span className="grad-text">distributed systems.</span>
         </h1>
 
-        {/* Hero Subtitle */}
-        <p className="fade-up mx-auto mt-6 max-w-2xl text-base sm:text-lg leading-relaxed"
-          style={{ animationDelay: ".1s", color: "var(--foreground)", opacity: 0.65 }}>
-          FlowFrame is an interactive visual simulator for distributed architecture logic. Watch requests route through API Gateways, load balancers, server pools, Redis caches, and message queues in real time.
+        {/* Subtitle */}
+        <p
+          className="fade-up max-w-2xl text-center text-base sm:text-lg text-[color:var(--muted)] leading-relaxed mb-8"
+          style={{ animationDelay: ".08s" }}
+        >
+          FlowFrame is an interactive visual simulator and learning environment for distributed architectures.
+          Design systems on a canvas, configure components, run real requests, and watch execution unfold — frame by frame.
         </p>
 
-        {/* Smart CTAs */}
-        <div className="fade-up mt-10 flex flex-wrap items-center justify-center gap-4" style={{ animationDelay: ".15s" }}>
+        {/* CTAs */}
+        <div
+          className="fade-up flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-6"
+          style={{ animationDelay: ".12s" }}
+        >
           {_hasHydrated && isAuthenticated ? (
             <>
               <button
-                onClick={() => router.push("/dashboard")}
-                className="btn-primary flex items-center gap-2.5 rounded-2xl px-8 py-4 text-base font-bold text-white shadow-xl shadow-violet-500/25 hover:scale-105 transition-all duration-300 cursor-pointer"
+                onClick={() => router.push("/workspace")}
+                className="btn-primary inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-md cursor-pointer"
               >
-                <ZapIcon className="w-5 h-5 text-amber-300" /> Go to Dashboard →
+                <ZapIcon className="w-4 h-4" />
+                Open Workspace
               </button>
               <button
-                onClick={() => router.push("/workspace")}
-                className="btn-outline flex items-center gap-2 rounded-2xl px-7 py-4 text-sm font-bold cursor-pointer hover:bg-[var(--surface-muted)] transition"
-                style={{ color: "var(--foreground)", background: "var(--surface)" }}
+                onClick={() => router.push("/dashboard")}
+                className="btn-secondary inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold cursor-pointer"
               >
-                <SandboxIcon className="w-4 h-4 text-cyan-400" /> Open Sandbox Studio
+                Go to Dashboard →
+              </button>
+              <button
+                onClick={() => router.push("/scenarios")}
+                className="rounded-lg px-4 py-2.5 text-sm font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface)] transition-all cursor-pointer"
+              >
+                Explore Templates
               </button>
             </>
           ) : (
             <>
               <button
-                onClick={() => router.push("/signin")}
-                className="btn-primary flex items-center gap-2.5 rounded-2xl px-8 py-4 text-base font-bold text-white shadow-xl shadow-violet-500/25 hover:scale-105 transition-all duration-300 cursor-pointer"
+                onClick={() => router.push("/workspace")}
+                className="btn-primary inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-md cursor-pointer"
               >
-                Get Started Free →
+                <ZapIcon className="w-4 h-4" />
+                Try FlowFrame Free →
               </button>
               <button
-                onClick={() => router.push("/workspace")}
-                className="btn-outline flex items-center gap-2 rounded-2xl px-7 py-4 text-sm font-bold cursor-pointer hover:bg-[var(--surface-muted)] transition"
-                style={{ color: "var(--foreground)", background: "var(--surface)" }}
+                onClick={() => router.push("/scenarios")}
+                className="btn-secondary inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold cursor-pointer"
               >
-                <ZapIcon className="w-4 h-4 text-cyan-400" /> Open Sandbox Studio
+                Explore Scenarios
               </button>
+              <Link
+                href="/signin"
+                className="inline-flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors"
+              >
+                Sign in →
+              </Link>
             </>
           )}
         </div>
 
-        {/* Hero Interactive Diagram Preview */}
-        <div className="fade-up mt-14 rounded-3xl border border-[var(--border)] bg-[var(--surface)]/70 p-3 shadow-2xl backdrop-blur" style={{ animationDelay: ".2s" }}>
-          <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)]/40 text-xs font-mono text-[color:var(--foreground)]/50">
+        {/* Feature quick indicators */}
+        <div
+          className="fade-up flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-[color:var(--muted)] mb-10 font-medium"
+          style={{ animationDelay: ".15s" }}
+        >
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+            Deterministic routing engine
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+            Frame-by-frame packet inspection
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+            Monaco DSL editor (.flow)
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+            In-browser runtime, zero setup
+          </span>
+        </div>
+
+        {/* ── Single Hero Showcase: API Gateway & Microservices Pipeline ───── */}
+        <div
+          className="fade-up w-full max-w-5xl rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-2xl overflow-hidden text-left"
+          style={{ animationDelay: ".18s" }}
+        >
+          {/* Top Window Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-elevated)]">
+            {/* Left: macOS dots & file */}
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-rose-500/80" />
+              <span className="w-3 h-3 rounded-full bg-red-500/80" />
               <span className="w-3 h-3 rounded-full bg-amber-500/80" />
-              <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
-              <span className="ml-2 font-bold text-[color:var(--foreground)]">demo-cluster.flow</span>
+              <span className="w-3 h-3 rounded-full bg-green-500/80" />
+              <span className="ml-2 font-mono text-xs text-[color:var(--muted)] font-medium">
+                api-gateway-mesh.flow
+              </span>
             </div>
-            <div className="flex items-center gap-2 text-emerald-500 dark:text-emerald-400 font-semibold">
-              <span className="status-dot" /> Round-Robin Load Balancing
+
+            {/* Center: Single Scenario Label */}
+            <div className="hidden sm:flex items-center gap-2 font-mono text-xs text-[color:var(--muted)]">
+              <span className="font-semibold text-[color:var(--foreground)]">API Gateway</span>
+              <span className="text-[var(--border-strong)]">·</span>
+              <span>Microservices Routing & RabbitMQ Pipeline</span>
+            </div>
+
+            {/* Right: Engine status badge (No pulsing green dot) */}
+            <div className="flex items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[color:var(--accent)] text-[10px] font-mono font-semibold">
+                Simulated Runtime
+              </div>
             </div>
           </div>
-          <div className="h-[360px] w-full rounded-2xl overflow-hidden dot-grid">
+
+          {/* Sub-header telemetry banner */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2 border-b border-[var(--border)] bg-[var(--surface-muted)] text-xs text-[color:var(--muted)] font-mono">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 text-[color:var(--foreground)] font-semibold">
+                <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />
+                Active Request: POST /api/orders/checkout
+              </span>
+            </div>
+            <div className="flex items-center gap-4 text-[11px]">
+              <span>Route: /api/orders/*</span>
+              <span className="text-[var(--border-strong)]">|</span>
+              <span>Target: Order Service</span>
+              <span className="text-[var(--border-strong)]">|</span>
+              <span className="text-[color:var(--accent)]">Hop: 14ms</span>
+            </div>
+          </div>
+
+          {/* Canvas Preview Area */}
+          <div className="relative h-[340px] sm:h-[370px] w-full dot-grid bg-[var(--bg)]">
             <ReactFlow
-              nodes={initialNodes}
-              edges={initialEdges}
+              nodes={demoNodes}
+              edges={demoEdges}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               fitView
-              fitViewOptions={{ padding: 0.2 }}
+              fitViewOptions={{ padding: 0.18 }}
               preventScrolling
               nodesDraggable={false}
               nodesConnectable={false}
               zoomOnScroll={false}
               panOnDrag={false}
             >
-              <Background variant={BackgroundVariant.Dots} gap={24} size={1} color={theme === "dark" ? "rgba(148,163,184,0.12)" : "rgba(100,116,139,0.22)"} />
+              <Background
+                variant={BackgroundVariant.Dots}
+                gap={24}
+                size={1}
+                color={theme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.07)"}
+              />
             </ReactFlow>
           </div>
+
+          {/* Bottom Execution Trace Console (Kept as requested!) */}
+          <div className="border-t border-[var(--border)] bg-[var(--bg-elevated)] p-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 pb-2 border-b border-[var(--border)]">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
+                  Live Execution Trace
+                </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[var(--surface)] text-[color:var(--accent)] border border-[var(--border)]">
+                  4 hops recorded
+                </span>
+              </div>
+              <button
+                onClick={() => router.push("/scenarios/simple-api-gateway")}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-[color:var(--accent)] hover:underline cursor-pointer"
+              >
+                Open in Workspace
+                <span>→</span>
+              </button>
+            </div>
+
+            <div className="space-y-1 font-mono text-[11px] text-[color:var(--muted)]">
+              {demoLogs.map((log, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <span className="text-[color:var(--muted)] shrink-0">{log.time}</span>
+                  <span className="text-[color:var(--accent)] font-semibold shrink-0">
+                    [{log.src}]
+                  </span>
+                  <span className="text-[color:var(--foreground)] truncate">{log.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Start options row */}
+        <div
+          className="fade-up mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs text-[color:var(--muted)]"
+          style={{ animationDelay: ".22s" }}
+        >
+          <span className="font-semibold text-[color:var(--foreground)]">Start directly with:</span>
+          <Link
+            href="/workspace"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
+          >
+            <span>📄 Blank Canvas</span>
+          </Link>
+          <Link
+            href="/scenarios/simple-api-gateway"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
+          >
+            <span>🚪 API Gateway</span>
+          </Link>
+          <Link
+            href="/scenarios/simple-load-balancer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
+          >
+            <span>⚖️ Load Balancer</span>
+          </Link>
+          <Link
+            href="/scenarios/simple-cache"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
+          >
+            <span>⚡ Cache-Aside</span>
+          </Link>
+          <Link
+            href="/workspace"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
+          >
+            <CodeIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" />
+            <span>Monaco DSL</span>
+          </Link>
         </div>
       </section>
 
-      {/* Ticker bar */}
+      {/* Feature Ticker */}
       <Ticker />
 
-      {/* What It Does */}
+      {/* How it works */}
+      <HowItWorks />
+
+      {/* What makes it different */}
       <WhatItDoes />
 
-      {/* YouTube Video Showcase */}
-      <YouTubeShowcase />
-
-      {/* System Simulation Rules Section */}
-      <SystemSimulationRules />
-
-      {/* Scenarios */}
-      <V1Scenarios />
+      {/* Scenarios / Templates */}
+      <Scenarios />
 
       {/* Learn & Sandbox */}
       <LearnAndSandbox />
 
-      {/* Open Source & License Banner */}
-      <OpenSourceLicenseBanner />
+      {/* Engine Rules */}
+      <EngineRules />
+
+      {/* YouTube Showcase */}
+      <YouTubeShowcase />
+
+      {/* Open Source Banner */}
+      <OpenSourceBanner />
 
       {/* Footer */}
       <SiteFooter />

@@ -217,7 +217,7 @@ function getNodeRole(label: string): NodeRole {
 }
 
 function packetColor(isReverseMotion: boolean) {
-  return isReverseMotion ? "#f59e0b" : "#8b5cf6";
+  return isReverseMotion ? "#f59e0b" : "#3b82f6";
 }
 
 function PacketEdge(props: EdgeProps) {

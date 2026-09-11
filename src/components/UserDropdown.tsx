@@ -59,41 +59,39 @@ export default function UserDropdown({ theme: propTheme, onToggleTheme: propOnTo
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="group relative flex items-center gap-1.5 sm:gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/80 hover:bg-[var(--surface)] p-1 sm:p-1.5 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/40 shrink-0"
+        className="group relative flex items-center gap-1.5 sm:gap-2 rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] hover:bg-[var(--bg-elevated)] p-1 sm:p-1.5 transition-all duration-150 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--accent)] shrink-0"
       >
         <div className="relative">
           {user.avatar ? (
             <img
               src={user.avatar}
               alt="Avatar"
-              className="w-7 h-7 rounded-lg object-cover ring-1 ring-violet-500/40"
+              className="w-7 h-7 rounded-md object-cover ring-1 ring-[var(--border)]"
             />
           ) : (
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-inner">
+            <div className="w-7 h-7 rounded-md bg-[var(--accent)] text-white font-bold flex items-center justify-center text-xs">
               {userInitial}
             </div>
           )}
-          {/* Active Status Dot */}
-          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[var(--surface)]" />
         </div>
 
-        <span className="hidden md:block text-xs font-semibold text-[color:var(--foreground)]/80 max-w-[110px] truncate">
+        <span className="hidden md:block text-xs font-semibold text-[color:var(--foreground)] max-w-[110px] truncate">
           {user.name || user.email.split("@")[0]}
         </span>
 
-        <ChevronDownIcon className="w-3.5 h-3.5 text-[color:var(--foreground)]/40 transition-transform duration-200 group-hover:translate-y-0.5" />
+        <ChevronDownIcon className="w-3.5 h-3.5 text-[color:var(--muted)] transition-transform duration-150 group-hover:translate-y-0.5" />
       </button>
 
       {/* Popover Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-1.5rem)] rounded-2xl border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-2xl shadow-2xl z-50 p-2 space-y-1.5 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-1.5rem)] rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-2xl z-50 p-2 space-y-1.5 animate-in fade-in zoom-in-95 duration-100">
           {/* Profile Header */}
-          <div className="p-3 rounded-xl bg-[var(--surface-muted)]/60 border border-[var(--border)]/50 space-y-1">
+          <div className="p-3 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] space-y-1">
             <div className="flex items-center gap-2.5">
               {user.avatar ? (
-                <img src={user.avatar} alt="Avatar" className="w-9 h-9 rounded-xl object-cover ring-1 ring-violet-500/40" />
+                <img src={user.avatar} alt="Avatar" className="w-9 h-9 rounded-lg object-cover ring-1 ring-[var(--border)]" />
               ) : (
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white font-bold flex items-center justify-center text-sm shadow-md">
+                <div className="w-9 h-9 rounded-lg bg-[var(--accent)] text-white font-bold flex items-center justify-center text-sm">
                   {userInitial}
                 </div>
               )}
@@ -101,16 +99,16 @@ export default function UserDropdown({ theme: propTheme, onToggleTheme: propOnTo
                 <p className="text-xs font-bold text-[color:var(--foreground)] truncate">
                   {user.name || user.email.split("@")[0]}
                 </p>
-                <p className="text-[10px] text-[color:var(--foreground)]/50 truncate font-mono">
+                <p className="text-[10px] text-[color:var(--muted)] truncate font-mono">
                   {user.email}
                 </p>
               </div>
             </div>
             <div className="pt-1.5 flex items-center justify-between text-[10px]">
-              <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 text-violet-400 font-semibold">
+              <span className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)]/10 border border-[var(--accent)]/20 px-2 py-0.5 text-[color:var(--accent)] font-semibold">
                 <ZapIcon className="w-3 h-3" /> Personal Account
               </span>
-              <span className="text-[color:var(--foreground)]/30 font-mono">
+              <span className="text-[color:var(--muted)] font-mono">
                 {user.type_of_signin.toUpperCase()}
               </span>
             </div>
@@ -121,20 +119,20 @@ export default function UserDropdown({ theme: propTheme, onToggleTheme: propOnTo
             <Link
               href="/dashboard"
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[color:var(--foreground)]/80 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition"
             >
-              <DashboardIcon className="w-4 h-4 text-violet-400" /> Dashboard
+              <DashboardIcon className="w-4 h-4 text-[color:var(--accent)]" /> Dashboard
             </Link>
 
             <Link
               href="/scenarios"
               onClick={() => setIsOpen(false)}
-              className="flex items-center justify-between px-3 py-2 rounded-xl text-[color:var(--foreground)]/80 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition"
+              className="flex items-center justify-between px-3 py-2 rounded-lg text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition"
             >
               <span className="flex items-center gap-2.5">
-                <ZapIcon className="w-4 h-4 text-violet-400" /> Scenarios Library
+                <ZapIcon className="w-4 h-4 text-[color:var(--accent)]" /> Scenarios Library
               </span>
-              <span className="text-[9px] font-bold uppercase tracking-wider text-violet-400 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-[color:var(--accent)] bg-[var(--accent)]/10 border border-[var(--accent)]/20 px-1.5 py-0.5 rounded">
                 Sim
               </span>
             </Link>
@@ -142,20 +140,20 @@ export default function UserDropdown({ theme: propTheme, onToggleTheme: propOnTo
             <Link
               href="/learn"
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[color:var(--foreground)]/80 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition"
             >
-              <DocsIcon className="w-4 h-4 text-indigo-400" /> Learn Guides
+              <DocsIcon className="w-4 h-4 text-[color:var(--accent)]" /> Learn Guides
             </Link>
 
             <Link
               href="/workspace"
               onClick={() => setIsOpen(false)}
-              className="flex items-center justify-between px-3 py-2 rounded-xl text-[color:var(--foreground)]/80 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition"
+              className="flex items-center justify-between px-3 py-2 rounded-lg text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition"
             >
               <span className="flex items-center gap-2.5">
-                <SandboxIcon className="w-4 h-4 text-cyan-400" /> Sandbox Editor
+                <SandboxIcon className="w-4 h-4 text-[color:var(--accent)]" /> Sandbox Editor
               </span>
-              <span className="text-[9px] font-bold uppercase tracking-wider text-violet-400 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-[color:var(--accent)] bg-[var(--accent)]/10 border border-[var(--accent)]/20 px-1.5 py-0.5 rounded">
                 Demo
               </span>
             </Link>
@@ -163,9 +161,9 @@ export default function UserDropdown({ theme: propTheme, onToggleTheme: propOnTo
             <Link
               href="/docs"
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[color:var(--foreground)]/80 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition"
             >
-              <DocsIcon className="w-4 h-4 text-amber-400" /> Documentation
+              <DocsIcon className="w-4 h-4 text-[color:var(--muted)]" /> Documentation
             </Link>
           </div>
 
@@ -173,15 +171,15 @@ export default function UserDropdown({ theme: propTheme, onToggleTheme: propOnTo
 
           {/* Preferences */}
           <div className="px-3 py-1.5 flex items-center justify-between text-xs">
-            <span className="text-[color:var(--foreground)]/60 font-medium">Theme</span>
+            <span className="text-[color:var(--muted)] font-medium">Theme</span>
             <button
               type="button"
               onClick={onToggleTheme}
-              className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--foreground)]/80 hover:bg-[var(--surface)] transition cursor-pointer"
+              className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition cursor-pointer"
             >
               {theme === "dark" ? (
                 <>
-                  <MoonIcon className="w-3.5 h-3.5 text-indigo-400" /> Dark
+                  <MoonIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" /> Dark
                 </>
               ) : (
                 <>
@@ -197,7 +195,7 @@ export default function UserDropdown({ theme: propTheme, onToggleTheme: propOnTo
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-rose-500 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition cursor-pointer"
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-rose-500 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition cursor-pointer"
           >
             <span className="flex items-center gap-2">
               <LogoutIcon className="w-4 h-4" /> Sign Out
