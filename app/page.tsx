@@ -207,14 +207,7 @@ function buildLoadBalancerDemo() {
     },
   ];
 
-  const logs = [
-    { time: "00:00.080", src: "CLIENT", desc: "Dispatched 2 concurrent requests to Load Balancer" },
-    { time: "00:00.120", src: "LOAD_BALANCER", desc: "Parallel dispatch → Request #1 to Server 1, Request #2 to Server 2" },
-    { time: "00:00.190", src: "SERVER_1", desc: "Server 1 processed Request #1 · HTTP 200 OK" },
-    { time: "00:00.205", src: "SERVER_2", desc: "Server 2 processed Request #2 · HTTP 200 OK" },
-  ];
-
-  return { nodes, edges, logs };
+  return { nodes, edges };
 }
 
 // ─── Scroll Reveal Hook ───────────────────────────────────────────────────────
@@ -787,7 +780,7 @@ export default function LandingPage() {
   const { isAuthenticated, _hasHydrated } = useAuthStore();
 
   // Single showcase: Load Balancer (clean, basic info, zero text clutter)
-  const { nodes: demoNodes, edges: demoEdges, logs: demoLogs } = useMemo(
+  const { nodes: demoNodes, edges: demoEdges } = useMemo(
     () => buildLoadBalancerDemo(),
     []
   );
@@ -919,14 +912,22 @@ export default function LandingPage() {
               </span>
             </div>
 
-            {/* Right: Clean status indicator */}
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[color:var(--accent)] text-[10px] font-mono font-semibold">
-              Parallel Routing Active
+            {/* Right: Clean status indicator & Open in Workspace */}
+            <div className="flex items-center gap-3">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[color:var(--accent)] text-[10px] font-mono font-semibold">
+                Parallel Routing Active
+              </div>
+              <button
+                onClick={() => router.push("/workspace")}
+                className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-[color:var(--accent)] hover:underline cursor-pointer"
+              >
+                Open in Workspace →
+              </button>
             </div>
           </div>
 
           {/* Canvas Preview Area */}
-          <div className="relative h-[320px] sm:h-[350px] w-full dot-grid bg-[var(--bg)]">
+          <div className="relative h-[340px] sm:h-[380px] w-full dot-grid bg-[var(--bg)]">
             <ReactFlow
               nodes={demoNodes}
               edges={demoEdges}
@@ -947,33 +948,6 @@ export default function LandingPage() {
                 color={theme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.07)"}
               />
             </ReactFlow>
-          </div>
-
-          {/* Bottom Execution Trace Console */}
-          <div className="border-t border-[var(--border)] bg-[var(--bg-elevated)] p-3">
-            <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-[var(--border)]">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
-                Live Execution Trace
-              </span>
-              <button
-                onClick={() => router.push("/scenarios/simple-load-balancer")}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-[color:var(--accent)] hover:underline cursor-pointer"
-              >
-                Open in Workspace →
-              </button>
-            </div>
-
-            <div className="space-y-1 font-mono text-[11px]">
-              {demoLogs.map((log, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <span className="text-[color:var(--muted)] shrink-0">{log.time}</span>
-                  <span className="text-[color:var(--accent)] font-semibold shrink-0">
-                    [{log.src}]
-                  </span>
-                  <span className="text-[color:var(--foreground)] truncate">{log.desc}</span>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
 
