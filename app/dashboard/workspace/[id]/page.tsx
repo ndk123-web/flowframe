@@ -20,6 +20,7 @@ import {
   ZapIcon,
   NodeLinkIcon,
 } from "@/components/DashboardIcons";
+import { NodeSocket } from "@/components/FlowDecorations";
 
 import { getWorkspaceById, updateWorkspace, WorkspaceDTO } from "@/services/workspaceApi";
 import {
@@ -548,8 +549,10 @@ export default function WorkspaceDetailPage() {
                   <Link
                     key={d.id}
                     href={`/dashboard/workspace/${workspaceId}/${d.id}`}
-                    className="group relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-all duration-200 hover:border-[var(--accent)]/50 hover:-translate-y-0.5 flex flex-col justify-between"
+                    className="group relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-all duration-200 hover:border-[var(--accent)]/50 hover:-translate-y-0.5 flex flex-col justify-between shadow-xs"
                   >
+                    <NodeSocket position="left" />
+                    <NodeSocket position="right" />
                     <div>
                       <div className="flex items-start justify-between mb-3">
                         <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center">

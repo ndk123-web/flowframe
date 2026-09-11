@@ -235,3 +235,11 @@ body {
   display: inline-flex;
   animation: tickerScroll 26s linear infinite;
 }
+
+@keyframes flowPulse {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.animate-flow-pulse {
+  animation: flowPulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}

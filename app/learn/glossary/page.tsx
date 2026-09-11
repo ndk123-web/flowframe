@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import SiteHeader from "@/components/SiteHeader";
 import { useThemeStore } from "@/store/useThemeStore";
+import { NodeSocket } from "@/components/FlowDecorations";
 
 interface GlossaryTerm {
   id: string;
@@ -445,12 +446,13 @@ function TermCard({ term, expanded, onToggle }: { term: GlossaryTerm; expanded: 
   return (
     <motion.div
       layout
-      className={`rounded-xl border transition-all duration-200 overflow-hidden ${
+      className={`relative rounded-xl border transition-all duration-200 overflow-hidden ${
         expanded
           ? "border-[var(--accent)]/50 shadow-sm"
           : "border-[var(--border)] hover:border-[var(--accent)]/30"
       } bg-[var(--surface)]`}
     >
+      <NodeSocket position="left" active={expanded} />
       <div
         onClick={onToggle}
         className="w-full text-left px-5 py-4 flex items-center gap-4 cursor-pointer select-none"

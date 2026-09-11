@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
 import { useThemeStore } from "@/store/useThemeStore";
+import { NodeSocket } from "@/components/FlowDecorations";
 
 type ScenarioCard = {
   id: string;
@@ -137,8 +138,10 @@ export default function ScenariosPage() {
           {filteredScenarios.map((scenario, index) => (
             <article
               key={scenario.id}
-              className="group flex flex-col justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 hover:border-[var(--accent)]/50 hover:-translate-y-0.5 transition-all duration-200 shadow-xs"
+              className="group relative flex flex-col justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 hover:border-[var(--accent)]/50 hover:-translate-y-0.5 transition-all duration-200 shadow-xs"
             >
+              <NodeSocket position="left" />
+              <NodeSocket position="right" />
               <div className="space-y-4">
                 {/* Header: Number & Difficulty */}
                 <div className="flex items-center justify-between">
