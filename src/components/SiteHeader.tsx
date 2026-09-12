@@ -6,7 +6,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import UserDropdown from "@/components/UserDropdown";
-import { FiGithub, FiSun, FiMoon } from "react-icons/fi";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Sun, Moon, Menu, X } from "lucide-react";
+import { FiGithub } from "react-icons/fi";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { cn } from "cn";
 
 type Theme = "light" | "dark";
 
@@ -28,6 +38,7 @@ export default function SiteHeader({
   alwaysGlass = false,
 }: SiteHeaderProps) {
   const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { isAuthenticated, _hasHydrated } = useAuthStore();
   const pathname = usePathname() || "";
 
@@ -62,123 +73,172 @@ export default function SiteHeader({
     { label: "Docs", href: "/docs" },
   ];
 
+  const visibleNavLinks = navLinks.filter(
+    (item) => !(item.authOnly && (!_hasHydrated || !isAuthenticated))
+  );
+
   return (
     <header
-      className={`sticky top-0 z-30 transition-all duration-200 ${
+      className={cn(
+        "sticky top-0 z-30 transition-all duration-200 border-b",
         isScrolled
-          ? "border-b border-[var(--border)] bg-[var(--bg-elevated)]"
-          : "border-b border-transparent bg-transparent"
-      }`}
+          ? "border-border bg-background/95 backdrop-blur-sm"
+          : "border-transparent bg-transparent"
+      )}
     >
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-2.5 sm:px-6 sm:py-3 gap-2">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-2 sm:px-6 gap-2">
         {/* Logo */}
         <Link
           href="/"
           className="flex items-center gap-2.5 min-w-0 group shrink-0"
           aria-label="FlowFrame Home"
         >
-          <div className="relative h-8 w-8 sm:h-9 sm:w-9 shrink-0 overflow-hidden rounded-lg bg-[var(--surface)] ring-1 ring-[var(--border-strong)] transition-opacity group-hover:opacity-80">
+          <div className="relative size-8 sm:size-9 shrink-0 rounded-full overflow-hidden transition-opacity group-hover:opacity-80 flex items-center justify-center">
             <Image
               src={theme === "dark" ? "/logo/flow-frame-dark.png" : "/logo/flow-frame-light.png"}
               alt="FlowFrame"
               width={36}
               height={36}
               priority
-              className="h-full w-full object-cover rounded-lg"
+              className="size-full object-contain"
             />
           </div>
-
           <div className="leading-tight min-w-0">
-            <p className="text-sm font-bold tracking-tight text-[color:var(--foreground)] truncate">
+            <p className="text-sm font-bold tracking-tight text-foreground truncate">
               FlowFrame
             </p>
-            <p className="hidden md:block text-[10px] text-[color:var(--muted)] tracking-wide truncate">
+            <p className="hidden md:block text-[10px] text-muted-foreground tracking-wide truncate">
               {badgeText}
             </p>
           </div>
         </Link>
 
-        {/* Center/Main Navigation Links */}
-        <nav className="hidden md:flex items-center gap-1 shrink-0">
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-0.5 shrink-0">
           {showHomeLink && (
-            <Link
-              href="/"
-              className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface)] transition-all duration-150"
-            >
-              Home
-            </Link>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/">Home</Link>
+            </Button>
           )}
 
-          {navLinks.map((item) => {
-            if (item.authOnly && (!_hasHydrated || !isAuthenticated)) return null;
+          {visibleNavLinks.map((item) => {
             const active = isRouteActive(item.href);
             return (
-              <Link
+              <Button
                 key={item.href}
-                href={item.href}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 ${
-                  active
-                    ? "bg-[var(--accent)]/10 text-[color:var(--accent)] font-semibold border border-[var(--accent)]/25"
-                    : "text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface)] border border-transparent"
-                }`}
+                variant={active ? "secondary" : "ghost"}
+                size="sm"
+                asChild
+                className={cn(
+                  "text-xs",
+                  active && "font-semibold text-primary"
+                )}
               >
-                {item.label}
-              </Link>
+                <Link href={item.href}>{item.label}</Link>
+              </Button>
             );
           })}
         </nav>
 
-        {/* Right Nav / Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* GitHub link */}
-          <a
-            href="https://github.com/ndk123-web/flowframe"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition-all duration-150"
-            title="FlowFrame on GitHub"
-          >
-            <FiGithub className="w-3.5 h-3.5" />
-            <span>GitHub</span>
-          </a>
+        {/* Right Actions */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* GitHub */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon-sm" asChild className="hidden sm:inline-flex">
+                <a
+                  href="https://github.com/ndk123-web/flowframe"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="GitHub Repository"
+                >
+                  <FiGithub className="size-4" />
+                </a>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>View on GitHub</TooltipContent>
+          </Tooltip>
 
-          {/* Sandbox Canvas link */}
+          {/* Canvas CTA */}
           {!hideSandboxLink && (
-            <Link
-              href="/workspace"
-              className="inline-flex items-center rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-[color:var(--accent)] hover:bg-[var(--accent)]/20 hover:border-[var(--accent)]/50 transition-all duration-150"
-            >
-              Canvas
-            </Link>
+            <Button variant="default" size="sm" asChild>
+              <Link href="/workspace">Canvas</Link>
+            </Button>
           )}
 
+          {/* Auth section */}
           {_hasHydrated && isAuthenticated ? (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <UserDropdown theme={theme} onToggleTheme={onToggleTheme} />
-            </div>
+            <UserDropdown theme={theme} onToggleTheme={onToggleTheme} />
           ) : (
             <div className="flex items-center gap-1.5">
-              <Link
-                href="/signin"
-                className="rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] hover:border-[var(--accent)]/40 transition-all duration-150"
-              >
-                Sign In
-              </Link>
-              <button
-                type="button"
-                onClick={onToggleTheme}
-                className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition-all duration-150 cursor-pointer"
-                title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-                aria-label="Toggle theme"
-              >
-                {theme === "dark" ? (
-                  <FiSun className="w-3.5 h-3.5" />
-                ) : (
-                  <FiMoon className="w-3.5 h-3.5" />
-                )}
-              </button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/signin">Sign In</Link>
+              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={onToggleTheme}
+                    aria-label="Toggle theme"
+                  >
+                    {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {theme === "dark" ? "Light mode" : "Dark mode"}
+                </TooltipContent>
+              </Tooltip>
             </div>
           )}
+
+          {/* Mobile hamburger */}
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon-sm" className="md:hidden">
+                <Menu />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-64">
+              <SheetTitle className="sr-only">Navigation</SheetTitle>
+              <nav className="flex flex-col gap-1 pt-4">
+                {visibleNavLinks.map((item) => {
+                  const active = isRouteActive(item.href);
+                  return (
+                    <Button
+                      key={item.href}
+                      variant={active ? "secondary" : "ghost"}
+                      className={cn("justify-start", active && "font-semibold text-primary")}
+                      asChild
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <Link href={item.href}>{item.label}</Link>
+                    </Button>
+                  );
+                })}
+                <Separator className="my-2" />
+                <Button
+                  variant="ghost"
+                  className="justify-start gap-2"
+                  onClick={() => {
+                    onToggleTheme();
+                  }}
+                >
+                  {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                  {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                </Button>
+                <Button variant="ghost" className="justify-start gap-2" asChild>
+                  <a
+                    href="https://github.com/ndk123-web/flowframe"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <FiGithub className="size-4" /> GitHub
+                  </a>
+                </Button>
+              </nav>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </header>

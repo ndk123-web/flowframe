@@ -21,6 +21,8 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   ZapIcon,
   CodeIcon,
@@ -328,13 +330,13 @@ function HowItWorks() {
       <section className="relative mx-auto max-w-6xl px-4 sm:px-6 py-24 sm:py-28 overflow-hidden">
         <div className="relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-14">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
+            <Badge variant="outline" className="mb-2 font-mono text-[10px] uppercase tracking-widest text-primary border-primary/25 bg-primary/5">
               The Core Experience
-            </p>
-            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
+            </Badge>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               From architecture to running system in four steps.
             </h2>
-            <p className="mt-3 text-sm text-[color:var(--muted)]">
+            <p className="mt-3 text-sm text-muted-foreground">
               No static mockups. FlowFrame compiles your topology into an executable simulation graph.
             </p>
           </div>
@@ -342,17 +344,17 @@ function HowItWorks() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((s, i) => (
               <Reveal key={s.step} delay={i * 0.06}>
-                <div className="relative flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xs p-5 hover:border-[var(--accent)]/40 hover:-translate-y-0.5 transition-all duration-200 h-full shadow-xs">
+                <div className="relative flex flex-col rounded-xl border border-border bg-card p-5 hover:border-primary/40 hover:shadow-md transition-all duration-200 h-full shadow-xs">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-[color:var(--accent)]">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       {s.icon}
                     </div>
-                    <span className="text-[10px] font-mono font-bold text-[color:var(--muted)] px-2 py-0.5 rounded bg-[var(--bg-elevated)] border border-[var(--border)]">
+                    <Badge variant="outline" className="text-[10px] font-mono font-bold text-muted-foreground bg-muted/40">
                       Step {s.step}
-                    </span>
+                    </Badge>
                   </div>
-                  <h3 className="text-base font-bold text-[color:var(--foreground)] mb-2">{s.title}</h3>
-                  <p className="text-sm text-[color:var(--muted)] leading-relaxed">{s.desc}</p>
+                  <h3 className="text-base font-semibold text-card-foreground mb-2">{s.title}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
                 </div>
               </Reveal>
             ))}
@@ -390,15 +392,15 @@ function WhatItDoes() {
 
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-[var(--border)]">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-border">
         <div className="text-center max-w-2xl mx-auto mb-14">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
+          <Badge variant="outline" className="mb-2 font-mono text-[10px] uppercase tracking-widest text-primary border-primary/25 bg-primary/5">
             Why FlowFrame
-          </p>
-          <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
+          </Badge>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             Not a diagram tool. A running system.
           </h2>
-          <p className="mt-3 text-sm text-[color:var(--muted)] leading-relaxed">
+          <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
             Most system design tools let you draw static boxes and arrows. FlowFrame executes the actual runtime behavior, captures every hop, and plays it back.
           </p>
         </div>
@@ -406,13 +408,13 @@ function WhatItDoes() {
         <div className="grid gap-4 sm:grid-cols-2">
           {points.map((p, i) => (
             <Reveal key={p.title} delay={i * 0.07}>
-              <div className="flex gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--accent)]/35 transition-all duration-200 h-full">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-[color:var(--accent)]">
+              <div className="flex gap-4 rounded-xl border border-border bg-card p-5.5 hover:border-primary/40 hover:shadow-sm transition-all duration-200 h-full">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   {p.icon}
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-[color:var(--foreground)] mb-1.5">{p.title}</h3>
-                  <p className="text-sm text-[color:var(--muted)] leading-relaxed">{p.body}</p>
+                  <h3 className="text-sm font-semibold text-card-foreground mb-1.5">{p.title}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{p.body}</p>
                 </div>
               </div>
             </Reveal>
@@ -465,25 +467,25 @@ function Scenarios() {
 
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-[var(--border)]">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-border">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
-              Templates
-            </p>
-            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
+            <Badge variant="outline" className="mb-2 font-mono text-[10px] uppercase tracking-widest text-primary border-primary/25 bg-primary/5">
+              Templates & Scenarios
+            </Badge>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               Pick a scenario. Hit play.
             </h2>
-            <p className="mt-2 text-sm text-[color:var(--muted)]">
+            <p className="mt-2 text-sm text-muted-foreground">
               Pre-wired architectures with real engine logic. Select one and watch the system run.
             </p>
           </div>
-          <Link
-            href="/scenarios"
-            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[color:var(--accent)] hover:underline shrink-0"
-          >
-            View all scenarios →
-          </Link>
+          <Button variant="link" asChild className="text-primary font-semibold p-0 h-auto gap-1">
+            <Link href="/scenarios">
+              <span>View all scenarios</span>
+              <span>→</span>
+            </Link>
+          </Button>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -491,34 +493,37 @@ function Scenarios() {
             <Reveal key={s.id} delay={i * 0.06}>
               <div
                 onClick={() => router.push(`/scenarios/${s.id}`)}
-                className="group relative cursor-pointer rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--accent)]/40 hover:-translate-y-0.5 transition-all duration-200"
+                className="group relative cursor-pointer rounded-xl border border-border bg-card p-5.5 hover:border-primary/50 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
               >
-                <div className="flex items-start justify-between mb-2.5">
-                  <h3 className="text-sm font-bold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors">
-                    {s.label}
-                  </h3>
-                  <span
-                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
-                      tagColors[s.tag] || tagColors.Beginner
-                    }`}
-                  >
-                    {s.tag}
-                  </span>
-                </div>
-                <p className="text-sm text-[color:var(--muted)] mb-4 leading-relaxed">{s.desc}</p>
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {s.chips.map((c) => (
-                    <span
-                      key={c}
-                      className="text-[10px] font-medium px-2 py-0.5 rounded-md border border-[var(--border)] bg-[var(--bg-elevated)] text-[color:var(--muted)]"
+                <div>
+                  <div className="flex items-start justify-between gap-2 mb-2.5">
+                    <h3 className="text-base font-semibold text-card-foreground group-hover:text-primary transition-colors">
+                      {s.label}
+                    </h3>
+                    <Badge
+                      variant={s.tag === "Beginner" ? "secondary" : "outline"}
+                      className="text-[10px] font-semibold shrink-0"
                     >
-                      {c}
-                    </span>
-                  ))}
+                      {s.tag}
+                    </Badge>
+                  </div>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-4 leading-relaxed">{s.desc}</p>
+                  <div className="flex flex-wrap gap-1.5 mb-5">
+                    {s.chips.map((c) => (
+                      <Badge
+                        key={c}
+                        variant="outline"
+                        className="text-[10px] font-mono font-normal bg-muted/30 text-muted-foreground border-border"
+                      >
+                        {c}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex items-center text-xs font-semibold text-[color:var(--accent)] opacity-80 group-hover:opacity-100 transition-opacity">
-                  Run simulation
-                  <span className="ml-1 transition-transform group-hover:translate-x-1">→</span>
+
+                <div className="pt-3 border-t border-border flex items-center justify-between text-xs font-semibold text-primary">
+                  <span>Run simulation</span>
+                  <span className="transition-transform group-hover:translate-x-1">→</span>
                 </div>
               </div>
             </Reveal>
@@ -537,7 +542,7 @@ function LearnAndSandbox() {
       href: "/docs",
       title: "DSL Reference",
       desc: "Complete syntax guide, component node specifications, and copy-pasteable architecture scripts.",
-      cta: "Read Docs →",
+      cta: "Read Docs",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -548,26 +553,26 @@ function LearnAndSandbox() {
       href: "/learn",
       title: "Guided Learning",
       desc: "Theory on the left, live simulation on the right. Understand cache-aside, load balancing, and queues interactively.",
-      cta: "Start Learning →",
+      cta: "Start Learning",
       icon: <FilmIcon className="w-5 h-5" />,
     },
     {
       href: "/workspace",
       title: "Free Visual Sandbox",
       desc: "Write DSL or drag & drop nodes. Build and run any distributed architecture in your browser with zero setup.",
-      cta: "Open Workspace →",
+      cta: "Open Workspace",
       icon: <SandboxIcon className="w-5 h-5" />,
     },
   ];
 
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-[var(--border)]">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-border">
         <div className="text-center max-w-2xl mx-auto mb-14">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
+          <Badge variant="outline" className="mb-2 font-mono text-[10px] uppercase tracking-widest text-primary border-primary/25 bg-primary/5">
             Explore
-          </p>
-          <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
+          </Badge>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             Three ways to use FlowFrame
           </h2>
         </div>
@@ -577,16 +582,19 @@ function LearnAndSandbox() {
             <Reveal key={c.href} delay={i * 0.06}>
               <div
                 onClick={() => router.push(c.href)}
-                className="group cursor-pointer rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 hover:border-[var(--accent)]/40 hover:-translate-y-0.5 transition-all duration-200 flex flex-col h-full"
+                className="group cursor-pointer rounded-xl border border-border bg-card p-6 hover:border-primary/50 hover:shadow-md transition-all duration-200 flex flex-col h-full justify-between"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-[color:var(--accent)] mb-4">
-                  {c.icon}
+                <div>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
+                    {c.icon}
+                  </div>
+                  <h3 className="text-base font-semibold text-card-foreground mb-2">{c.title}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-4">{c.desc}</p>
                 </div>
-                <h3 className="text-base font-bold text-[color:var(--foreground)] mb-2">{c.title}</h3>
-                <p className="text-sm text-[color:var(--muted)] leading-relaxed flex-1 mb-4">{c.desc}</p>
-                <span className="text-xs font-semibold text-[color:var(--accent)] opacity-80 group-hover:opacity-100 transition-opacity">
-                  {c.cta}
-                </span>
+                <div className="pt-3 border-t border-border flex items-center justify-between text-xs font-semibold text-primary">
+                  <span>{c.cta}</span>
+                  <span className="transition-transform group-hover:translate-x-1">→</span>
+                </div>
               </div>
             </Reveal>
           ))}
@@ -611,15 +619,15 @@ function EngineRules() {
 
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-[var(--border)]">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-border">
         <div className="text-center max-w-2xl mx-auto mb-14">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
+          <Badge variant="outline" className="mb-2 font-mono text-[10px] uppercase tracking-widest text-primary border-primary/25 bg-primary/5">
             Engine Architecture
-          </p>
-          <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
+          </Badge>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             Deterministic simulation rules & behavior
           </h2>
-          <p className="mt-3 text-sm text-[color:var(--muted)] leading-relaxed">
+          <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
             Every distributed system in FlowFrame executes according to deterministic rules that mirror real-world production infrastructure.
           </p>
         </div>
@@ -628,20 +636,20 @@ function EngineRules() {
           {rules.map((r, i) => (
             <div
               key={i}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 hover:border-[var(--accent)]/30 transition-all duration-200"
+              className="rounded-xl border border-border bg-card p-4.5 hover:border-primary/40 transition-all duration-200 shadow-xs"
             >
-              <div className="flex items-start gap-3">
-                <span className="text-[10px] font-mono font-bold text-[color:var(--muted)] mt-0.5 shrink-0 px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] border border-[var(--border)]">
+              <div className="flex items-start gap-3.5">
+                <Badge variant="outline" className="text-[10px] font-mono font-bold text-muted-foreground shrink-0 px-2 py-0.5 bg-muted/30">
                   {r.num}
-                </span>
-                <div>
+                </Badge>
+                <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--accent)]">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
                       {r.category}
                     </span>
                   </div>
-                  <h3 className="text-sm font-semibold text-[color:var(--foreground)] mb-1">{r.title}</h3>
-                  <p className="text-xs text-[color:var(--muted)] leading-relaxed">{r.description}</p>
+                  <h3 className="text-sm font-semibold text-card-foreground mb-1">{r.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{r.description}</p>
                 </div>
               </div>
             </div>
@@ -649,12 +657,12 @@ function EngineRules() {
         </div>
 
         <div className="mt-10 text-center">
-          <Link
-            href="/docs"
-            className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] hover:border-[var(--accent)]/40 transition-all duration-150"
-          >
-            Read complete language reference in Docs →
-          </Link>
+          <Button variant="outline" asChild className="gap-2 shadow-xs">
+            <Link href="/docs">
+              <span>Read complete language reference in Docs</span>
+              <span>→</span>
+            </Link>
+          </Button>
         </div>
       </section>
     </Reveal>
@@ -665,106 +673,106 @@ function EngineRules() {
 function YouTubeShowcase() {
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-[var(--border)]">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-border">
         {/* Section Heading */}
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
+          <Badge variant="outline" className="mb-2 font-mono text-[10px] uppercase tracking-widest text-primary border-primary/25 bg-primary/5">
             Architecture Walkthrough
-          </p>
-          <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
+          </Badge>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             See Event-Driven Systems in Action
           </h2>
-          <p className="mt-3 text-sm text-[color:var(--muted)] leading-relaxed">
+          <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
             Follow a full implementation of message queues, connection pools, and distributed request traces modeled in FlowFrame.
           </p>
         </div>
 
         {/* Technical Window Card */}
-        <div className="rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-xl overflow-hidden">
+        <div className="rounded-2xl border border-border bg-card shadow-lg overflow-hidden">
           {/* Top Window Bar */}
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--border)] bg-[var(--bg-elevated)]/70 text-xs font-mono">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/40 text-xs font-mono">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[var(--border-strong)]" />
-                <span className="w-2.5 h-2.5 rounded-full bg-[var(--border-strong)]" />
-                <span className="w-2.5 h-2.5 rounded-full bg-[var(--border-strong)]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
               </div>
-              <span className="text-[11px] text-[color:var(--muted)] ml-2">
+              <span className="text-[11px] text-muted-foreground ml-2">
                 demo // event-driven-microservices.sim
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-[var(--accent)]/10 text-[color:var(--accent)] border border-[var(--accent)]/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+              <Badge variant="outline" className="gap-1.5 text-[10px] font-mono font-medium bg-primary/10 text-primary border-primary/25">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                 Live Architecture Trace
-              </span>
+              </Badge>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
             {/* Left Content Column */}
-            <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-[var(--border)]">
+            <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-border">
               <div>
-                <div className="inline-flex items-center gap-1.5 rounded-md border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-2.5 py-1 text-[10px] font-mono font-bold text-[color:var(--accent)] mb-4 w-fit">
-                  <span>SYSTEM DESIGN LAB</span>
-                </div>
+                <Badge variant="outline" className="text-[10px] font-mono font-bold text-primary border-primary/25 bg-primary/10 mb-4">
+                  SYSTEM DESIGN LAB
+                </Badge>
 
-                <h3 className="text-xl font-bold tracking-tight text-[color:var(--foreground)] mb-3 leading-snug">
+                <h3 className="text-xl font-bold tracking-tight text-card-foreground mb-3 leading-snug">
                   Building Event-Driven Microservices From Scratch
                 </h3>
 
-                <p className="text-xs text-[color:var(--muted)] leading-relaxed mb-6">
+                <p className="text-xs text-muted-foreground leading-relaxed mb-6">
                   Complete walkthrough covering API Gateway ingress, Round-Robin load distribution, RabbitMQ pub/sub fan-out, and PostgreSQL connection pool starvation.
                 </p>
 
                 {/* Architecture Highlights Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
-                  <div className="p-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex flex-col">
-                    <span className="text-[9px] font-mono uppercase text-[color:var(--muted)]">Message Broker</span>
-                    <span className="text-[11px] font-semibold text-[color:var(--foreground)] mt-0.5">RabbitMQ Fan-Out</span>
+                  <div className="p-2.5 rounded-lg border border-border bg-muted/20 flex flex-col">
+                    <span className="text-[9px] font-mono uppercase text-muted-foreground">Message Broker</span>
+                    <span className="text-[11px] font-semibold text-card-foreground mt-0.5">RabbitMQ Fan-Out</span>
                   </div>
-                  <div className="p-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex flex-col">
-                    <span className="text-[9px] font-mono uppercase text-[color:var(--muted)]">Cache Tier</span>
-                    <span className="text-[11px] font-semibold text-[color:var(--foreground)] mt-0.5">Redis Cache-Aside</span>
+                  <div className="p-2.5 rounded-lg border border-border bg-muted/20 flex flex-col">
+                    <span className="text-[9px] font-mono uppercase text-muted-foreground">Cache Tier</span>
+                    <span className="text-[11px] font-semibold text-card-foreground mt-0.5">Redis Cache-Aside</span>
                   </div>
-                  <div className="p-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex flex-col">
-                    <span className="text-[9px] font-mono uppercase text-[color:var(--muted)]">Persistence</span>
-                    <span className="text-[11px] font-semibold text-[color:var(--foreground)] mt-0.5">PostgreSQL Pool Limits</span>
+                  <div className="p-2.5 rounded-lg border border-border bg-muted/20 flex flex-col">
+                    <span className="text-[9px] font-mono uppercase text-muted-foreground">Persistence</span>
+                    <span className="text-[11px] font-semibold text-card-foreground mt-0.5">PostgreSQL Pool Limits</span>
                   </div>
-                  <div className="p-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex flex-col">
-                    <span className="text-[9px] font-mono uppercase text-[color:var(--muted)]">Telemetry</span>
-                    <span className="text-[11px] font-semibold text-[color:var(--foreground)] mt-0.5">Packet Frame Tracing</span>
+                  <div className="p-2.5 rounded-lg border border-border bg-muted/20 flex flex-col">
+                    <span className="text-[9px] font-mono uppercase text-muted-foreground">Telemetry</span>
+                    <span className="text-[11px] font-semibold text-card-foreground mt-0.5">Packet Frame Tracing</span>
                   </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
-                <Link
-                  href="/workspace"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-muted)] text-white px-4 py-2.5 text-xs font-semibold shadow-sm transition-all duration-150 text-center"
-                >
-                  <SandboxIcon className="w-3.5 h-3.5" />
-                  Try on Canvas →
-                </Link>
+                <Button size="sm" asChild className="gap-2 shadow-xs">
+                  <Link href="/workspace">
+                    <SandboxIcon className="w-3.5 h-3.5" />
+                    <span>Try on Canvas →</span>
+                  </Link>
+                </Button>
 
-                <a
-                  href="https://www.youtube.com/watch?v=XQxFZg6RcTI"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg-elevated)] hover:bg-[var(--surface-muted)] text-[color:var(--foreground)] px-4 py-2.5 text-xs font-semibold transition-all duration-150 text-center group"
-                >
-                  <svg className="w-3.5 h-3.5 text-[color:var(--muted)] group-hover:text-red-500 transition-colors" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                  </svg>
-                  Watch Deep Dive
-                </a>
+                <Button variant="outline" size="sm" asChild className="gap-2 group shadow-xs">
+                  <a
+                    href="https://www.youtube.com/watch?v=XQxFZg6RcTI"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <svg className="w-3.5 h-3.5 text-muted-foreground group-hover:text-red-500 transition-colors" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                    </svg>
+                    <span>Watch Deep Dive</span>
+                  </a>
+                </Button>
               </div>
             </div>
 
             {/* Right Video Player Column */}
-            <div className="lg:col-span-7 p-3 sm:p-5 flex items-center justify-center bg-[var(--surface-muted)]/40">
-              <div className="w-full aspect-video rounded-xl overflow-hidden border border-[var(--border)] bg-black shadow-inner">
+            <div className="lg:col-span-7 p-3 sm:p-5 flex items-center justify-center bg-muted/10">
+              <div className="w-full aspect-video rounded-xl overflow-hidden border border-border bg-black shadow-inner">
                 <iframe
                   className="w-full h-full"
                   src="https://www.youtube.com/embed/XQxFZg6RcTI"
@@ -786,31 +794,32 @@ function OpenSourceBanner() {
   return (
     <Reveal>
       <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-16">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="rounded-xl border border-border bg-card p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center shrink-0">
-              <svg className="w-5 h-5 text-[color:var(--accent)]" viewBox="0 0 24 24" fill="currentColor">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="currentColor">
                 <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
               </svg>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-[color:var(--foreground)]">Open Source · Noncommercial License</h3>
-              <p className="text-xs text-[color:var(--muted)] mt-0.5">
+              <h3 className="text-sm font-semibold text-card-foreground">Open Source · Noncommercial License</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Free for education, personal learning, and non-commercial research. Released under PolyForm Noncommercial 1.0.0.
               </p>
             </div>
           </div>
-          <a
-            href="https://github.com/ndk123-web/flowframe"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 inline-flex items-center gap-2 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/8 px-4 py-2 text-sm font-semibold text-[color:var(--accent)] hover:bg-[var(--accent)]/15 transition-all duration-150"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-            </svg>
-            Star on GitHub
-          </a>
+          <Button variant="outline" asChild className="shrink-0 gap-2 shadow-xs">
+            <a
+              href="https://github.com/ndk123-web/flowframe"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+              </svg>
+              <span>Star on GitHub</span>
+            </a>
+          </Button>
         </div>
       </section>
     </Reveal>
@@ -837,11 +846,14 @@ export default function LandingPage() {
       {/* ── Hero Section (Centered & High Impact) ─────────────────────────── */}
       <section className="relative mx-auto max-w-6xl px-4 sm:px-6 pt-10 sm:pt-14 pb-16 text-center flex flex-col items-center">
         {/* Status Badge */}
-        <div className="fade-up inline-flex items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 py-1 text-xs font-mono text-[color:var(--muted)] mb-6 shadow-xs">
-          <span className="font-semibold text-[color:var(--foreground)]">FlowFrame Engine</span>
-          <span className="text-[var(--border-strong)]">/</span>
-          <span className="text-[color:var(--accent)] font-medium">v2.0 Declarative Simulator</span>
-        </div>
+        <Badge
+          variant="outline"
+          className="fade-up inline-flex items-center gap-2 rounded-full border-border bg-card/80 backdrop-blur-xs px-3.5 py-1.5 text-xs font-mono text-muted-foreground mb-6 shadow-xs"
+        >
+          <span className="font-semibold text-foreground">FlowFrame Engine</span>
+          <span className="text-border">/</span>
+          <span className="text-primary font-medium">v2.0 Declarative Simulator</span>
+        </Badge>
 
         {/* H1 Title */}
         <h1
@@ -863,52 +875,49 @@ export default function LandingPage() {
 
         {/* CTAs */}
         <div
-          className="fade-up flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-6"
+          className="fade-up flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-8"
           style={{ animationDelay: ".12s" }}
         >
           {_hasHydrated && isAuthenticated ? (
             <>
-              <button
-                onClick={() => router.push("/workspace")}
-                className="btn-primary inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-md cursor-pointer"
-              >
-                <ZapIcon className="w-4 h-4" />
-                Open Workspace
-              </button>
-              <button
-                onClick={() => router.push("/dashboard")}
-                className="btn-secondary inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold cursor-pointer"
-              >
-                Go to Dashboard →
-              </button>
-              <button
-                onClick={() => router.push("/scenarios")}
-                className="rounded-lg px-4 py-2.5 text-sm font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface)] transition-all cursor-pointer"
-              >
-                Explore Templates
-              </button>
+              <Button size="lg" asChild className="gap-2 shadow-md">
+                <Link href="/workspace">
+                  <ZapIcon className="size-4" />
+                  <span>Open Architecture Canvas</span>
+                </Link>
+              </Button>
+              <Button variant="outline" size="lg" asChild className="gap-1.5">
+                <Link href="/dashboard">
+                  <span>Go to Dashboard</span>
+                  <span className="text-muted-foreground">→</span>
+                </Link>
+              </Button>
+              <Button variant="ghost" size="lg" asChild className="text-muted-foreground hover:text-foreground">
+                <Link href="/scenarios">
+                  <span>Explore Templates</span>
+                </Link>
+              </Button>
             </>
           ) : (
             <>
-              <button
-                onClick={() => router.push("/workspace")}
-                className="btn-primary inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-md cursor-pointer"
-              >
-                <ZapIcon className="w-4 h-4" />
-                Try FlowFrame Free →
-              </button>
-              <button
-                onClick={() => router.push("/scenarios")}
-                className="btn-secondary inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold cursor-pointer"
-              >
-                Explore Scenarios
-              </button>
-              <Link
-                href="/signin"
-                className="inline-flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors"
-              >
-                Sign in →
-              </Link>
+              <Button size="lg" asChild className="gap-2 shadow-md">
+                <Link href="/workspace">
+                  <ZapIcon className="size-4" />
+                  <span>Try FlowFrame Free</span>
+                  <span>→</span>
+                </Link>
+              </Button>
+              <Button variant="outline" size="lg" asChild>
+                <Link href="/scenarios">
+                  <span>Explore Scenarios</span>
+                </Link>
+              </Button>
+              <Button variant="ghost" size="lg" asChild className="text-muted-foreground hover:text-foreground">
+                <Link href="/signin">
+                  <span>Sign In</span>
+                  <span>→</span>
+                </Link>
+              </Button>
             </>
           )}
         </div>
@@ -994,38 +1003,34 @@ export default function LandingPage() {
 
         {/* Start options row */}
         <div
-          className="fade-up mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs text-[color:var(--muted)]"
+          className="fade-up mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs text-muted-foreground"
           style={{ animationDelay: ".22s" }}
         >
-          <span className="font-semibold text-[color:var(--foreground)]">Start directly with:</span>
-          <Link
-            href="/workspace"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
-          >
-            <SandboxIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" />
-            <span>Blank Canvas</span>
-          </Link>
-          <Link
-            href="/scenarios/simple-load-balancer"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
-          >
-            <ScaleIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" />
-            <span>Load Balancer</span>
-          </Link>
-          <Link
-            href="/scenarios/simple-cache"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
-          >
-            <ZapIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" />
-            <span>Cache-Aside</span>
-          </Link>
-          <Link
-            href="/workspace"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
-          >
-            <CodeIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" />
-            <span>Monaco DSL</span>
-          </Link>
+          <span className="font-semibold text-foreground">Start directly with:</span>
+          <Button variant="outline" size="sm" asChild className="h-8 gap-1.5 rounded-lg border-border bg-card">
+            <Link href="/workspace">
+              <SandboxIcon className="size-3.5 text-primary" />
+              <span>Blank Canvas</span>
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild className="h-8 gap-1.5 rounded-lg border-border bg-card">
+            <Link href="/scenarios/simple-load-balancer">
+              <ScaleIcon className="size-3.5 text-primary" />
+              <span>Load Balancer</span>
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild className="h-8 gap-1.5 rounded-lg border-border bg-card">
+            <Link href="/scenarios/simple-cache">
+              <ZapIcon className="size-3.5 text-primary" />
+              <span>Cache-Aside</span>
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild className="h-8 gap-1.5 rounded-lg border-border bg-card">
+            <Link href="/workspace">
+              <CodeIcon className="size-3.5 text-primary" />
+              <span>Monaco DSL</span>
+            </Link>
+          </Button>
         </div>
       </section>
 

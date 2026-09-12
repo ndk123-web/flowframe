@@ -1,0 +1,356 @@
+"use client";
+
+import React from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  RotateCcw,
+  SlidersHorizontal,
+  Terminal,
+  Bot,
+  Save,
+  Menu,
+  Loader2,
+  ChevronDown,
+} from "lucide-react";
+
+interface CanvasToolbarProps {
+  // Title & sidebar
+  title?: string;
+  onToggleSidebar?: () => void;
+  nodesCount: number;
+  edgesCount: number;
+  // Playback
+  isPlaying: boolean;
+  isCompiling: boolean;
+  onPlayToggle: () => void;
+  onPrevFrame: () => void;
+  onNextFrame: () => void;
+  onReset: () => void;
+  frameIndex: number;
+  totalFrames: number;
+  // Speed
+  speed: number;
+  onSpeedChange: (speed: number) => void;
+  // Requests / API selection
+  requestEndpoints?: Array<{ id: string; label: string; method?: string }>;
+  selectedRequestId?: string;
+  onSelectRequest?: (id: string) => void;
+  // Action triggers
+  onOpenSettings: () => void;
+  debugEnabled: boolean;
+  onToggleLogs: () => void;
+  isAssistantOpen: boolean;
+  onToggleAssistant: () => void;
+  onSave?: () => void;
+  isSaving?: boolean;
+}
+
+export default function CanvasToolbar({
+  title = "Architecture Sandbox",
+  onToggleSidebar,
+  nodesCount,
+  edgesCount,
+  isPlaying,
+  isCompiling,
+  onPlayToggle,
+  onPrevFrame,
+  onNextFrame,
+  onReset,
+  frameIndex,
+  totalFrames,
+  speed,
+  onSpeedChange,
+  requestEndpoints,
+  selectedRequestId,
+  onSelectRequest,
+  onOpenSettings,
+  debugEnabled,
+  onToggleLogs,
+  isAssistantOpen,
+  onToggleAssistant,
+  onSave,
+  isSaving = false,
+}: CanvasToolbarProps) {
+  return (
+    <header className="h-12 border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md flex items-center justify-between px-3 md:px-4 z-20 shrink-0 select-none gap-2">
+      {/* ─── Left: Architecture Info & Stats ────────────────────────────── */}
+      <div className="flex items-center gap-2 min-w-0">
+        {onToggleSidebar && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onToggleSidebar}
+            className="md:hidden"
+            title="Open Components Library"
+          >
+            <Menu className="size-4" />
+          </Button>
+        )}
+
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xs font-bold text-[color:var(--foreground)] truncate max-w-[120px] sm:max-w-[200px]">
+            {title}
+          </span>
+          <div className="hidden sm:flex items-center gap-1">
+            <Badge
+              variant="outline"
+              className="font-mono text-[10px] font-medium h-5 px-1.5"
+            >
+              {nodesCount} N
+            </Badge>
+            <Badge
+              variant="outline"
+              className="font-mono text-[10px] font-medium h-5 px-1.5"
+            >
+              {edgesCount} E
+            </Badge>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Center: Compact Engineering Simulation Toolbar ─────────────── */}
+      <div className="flex items-center gap-1 bg-[var(--surface-muted)]/80 border border-[var(--border)] px-1.5 py-1 rounded-xl shadow-xs">
+        {/* Run / Pause */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={isPlaying ? "destructive" : "default"}
+              size="sm"
+              disabled={isCompiling}
+              onClick={onPlayToggle}
+              className={`h-7 px-2.5 text-xs font-semibold gap-1.5 transition ${
+                isPlaying
+                  ? "bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 border border-amber-500/30"
+                  : "bg-[var(--accent)] text-white hover:brightness-110 shadow-xs"
+              }`}
+            >
+              {isCompiling ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  <span className="hidden sm:inline">Compiling</span>
+                </>
+              ) : isPlaying ? (
+                <>
+                  <Pause className="size-3.5" />
+                  <span className="hidden sm:inline">Pause</span>
+                </>
+              ) : (
+                <>
+                  <Play className="size-3.5 fill-current" />
+                  <span className="hidden sm:inline">
+                    {totalFrames === 0 ? "Simulate" : "Resume"}
+                  </span>
+                </>
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            {isCompiling
+              ? "Compiling architecture graph..."
+              : isPlaying
+              ? "Pause Simulation (Space)"
+              : "Run Simulation (Space)"}
+          </TooltipContent>
+        </Tooltip>
+
+        <div className="h-3.5 w-px bg-[var(--border)] mx-0.5" />
+
+        {/* Step Prev */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={onPrevFrame}
+              disabled={totalFrames === 0}
+              className="size-7 text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
+            >
+              <SkipBack className="size-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Step Back (←)</TooltipContent>
+        </Tooltip>
+
+        {/* Step Next */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={onNextFrame}
+              disabled={totalFrames === 0}
+              className="size-7 text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
+            >
+              <SkipForward className="size-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Step Forward (→)</TooltipContent>
+        </Tooltip>
+
+        {/* Reset */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={onReset}
+              disabled={totalFrames === 0 && frameIndex === 0}
+              className="size-7 text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
+            >
+              <RotateCcw className="size-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Reset Simulation</TooltipContent>
+        </Tooltip>
+
+        <div className="h-3.5 w-px bg-[var(--border)] mx-0.5 hidden sm:block" />
+
+        {/* Frame Readout */}
+        <div className="hidden sm:flex items-center px-1.5 text-[11px] font-mono text-[color:var(--foreground)]/75 select-none whitespace-nowrap">
+          {totalFrames > 0 ? (
+            <span>
+              Frame <strong className="text-[color:var(--accent)]">{frameIndex + 1}</strong>/{totalFrames}
+            </span>
+          ) : (
+            <span className="text-[color:var(--muted)]">Idle</span>
+          )}
+        </div>
+
+        <div className="h-3.5 w-px bg-[var(--border)] mx-0.5 hidden md:block" />
+
+        {/* Speed Selector */}
+        <div className="hidden md:flex items-center gap-0.5">
+          {[0.5, 1, 2].map((s) => (
+            <Button
+              key={s}
+              variant={speed === s ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => onSpeedChange(s)}
+              className={`h-6 px-1.5 text-[10px] font-mono font-bold ${
+                speed === s
+                  ? "bg-[var(--surface)] text-[color:var(--accent)] border border-[var(--border)]"
+                  : "text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
+              }`}
+            >
+              {s}x
+            </Button>
+          ))}
+        </div>
+
+        {/* Request / API Selection Dropdown (if provided) */}
+        {requestEndpoints && requestEndpoints.length > 0 && onSelectRequest && (
+          <>
+            <div className="h-3.5 w-px bg-[var(--border)] mx-0.5 hidden lg:block" />
+            <div className="hidden lg:flex items-center">
+              <select
+                value={selectedRequestId || requestEndpoints[0]?.id}
+                onChange={(e) => onSelectRequest(e.target.value)}
+                className="h-6 rounded bg-[var(--surface)] border border-[var(--border)] px-1.5 text-[10px] font-mono text-[color:var(--foreground)] focus:outline-none cursor-pointer"
+              >
+                {requestEndpoints.map((ep) => (
+                  <option key={ep.id} value={ep.id}>
+                    {ep.method ? `${ep.method} ` : ""}{ep.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ─── Right: Settings, Logs, Assistant, Cloud Save ─────────────────── */}
+      <div className="flex items-center gap-1 shrink-0">
+        {/* Logs Drawer Toggle */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={debugEnabled ? "secondary" : "ghost"}
+              size="sm"
+              onClick={onToggleLogs}
+              className={`h-8 px-2 gap-1.5 text-xs font-semibold ${
+                debugEnabled
+                  ? "text-[color:var(--accent)] border border-[var(--accent)]/30"
+                  : "text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
+              }`}
+            >
+              <Terminal className="size-3.5" />
+              <span className="hidden xl:inline text-[11px]">Logs</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Toggle Live Trace Logs</TooltipContent>
+        </Tooltip>
+
+        {/* AI Architecture Assistant */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={isAssistantOpen ? "secondary" : "ghost"}
+              size="sm"
+              onClick={onToggleAssistant}
+              className={`h-8 px-2 gap-1.5 text-xs font-semibold ${
+                isAssistantOpen
+                  ? "text-violet-400 border border-violet-500/30"
+                  : "text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
+              }`}
+            >
+              <Bot className="size-3.5" />
+              <span className="hidden xl:inline text-[11px]">Assistant</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">AI Architecture Assistant</TooltipContent>
+        </Tooltip>
+
+        {/* Dedicated Canvas Settings */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenSettings}
+              className="h-8 px-2.5 gap-1.5 text-xs font-semibold"
+            >
+              <SlidersHorizontal className="size-3.5 text-[color:var(--accent)]" />
+              <span className="hidden sm:inline text-[11px]">Settings</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Canvas & Grid Settings</TooltipContent>
+        </Tooltip>
+
+        {/* Save Diagram (when backend diagram is connected) */}
+        {onSave && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={onSave}
+                disabled={isSaving}
+                className="h-8 px-2.5 gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white"
+              >
+                {isSaving ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Save className="size-3.5" />
+                )}
+                <span className="hidden sm:inline">
+                  {isSaving ? "Saving..." : "Save"}
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Save Diagram to Cloud (Ctrl+S)</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+    </header>
+  );
+}

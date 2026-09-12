@@ -7,6 +7,8 @@ import Image from "next/image";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useToastStore } from "@/store/useToastStore";
 import { useThemeStore } from "@/store/useThemeStore";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   FiGrid,
   FiClock,
@@ -535,14 +537,14 @@ export default function DashboardPage() {
               className="flex items-center gap-2.5 min-w-0 group"
               onClick={() => setMobileMenuOpen(false)}
             >
-              <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-[var(--bg-elevated)] ring-1 ring-[var(--border-strong)]">
+              <div className="relative h-8 w-8 shrink-0 flex items-center justify-center">
                 <Image
                   src={theme === "dark" ? "/logo/flow-frame-dark.png" : "/logo/flow-frame-light.png"}
                   alt="FlowFrame"
                   width={32}
                   height={32}
                   priority
-                  className="h-full w-full object-cover rounded-lg"
+                  className="h-full w-full object-contain"
                 />
               </div>
               {(!sidebarCollapsed || mobileMenuOpen) && (
@@ -956,119 +958,166 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link
-              href="/workspace"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--bg-elevated)] text-[color:var(--foreground)] transition cursor-pointer"
-            >
-              <FiBox className="w-3.5 h-3.5 text-[color:var(--accent)]" />
-              <span className="hidden sm:inline">Open Simulator</span>
-            </Link>
-            <button
-              type="button"
+            <Button variant="outline" size="sm" asChild className="gap-1.5 h-8 text-xs">
+              <Link href="/workspace">
+                <FiBox className="size-3.5 text-primary" />
+                <span className="hidden sm:inline">Open Canvas</span>
+              </Link>
+            </Button>
+            <Button
+              size="sm"
               onClick={() => setCreateModalOpen(true)}
-              className="btn-primary inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white cursor-pointer shadow-xs"
+              className="gap-1.5 h-8 text-xs cursor-pointer shadow-xs"
             >
-              <FiPlus className="w-3.5 h-3.5" />
+              <FiPlus className="size-3.5" />
               <span className="hidden sm:inline">New Workspace</span>
               <span className="sm:hidden">New</span>
-            </button>
+            </Button>
           </div>
         </header>
 
         {/* Main Body */}
-        <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-8 space-y-10">
-          {/* ── 1. Developer Tool Architecture Lab Hero ────────────────── */}
-          <section className="relative rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-7 shadow-xs space-y-6">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--bg-elevated)] px-2.5 py-1 text-[11px] font-mono font-medium text-[color:var(--muted)]">
-                <FiZap className="w-3.5 h-3.5 text-[color:var(--accent)]" />
-                <span>Distributed Systems Architecture Lab</span>
+        <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-8 space-y-8">
+          {/* ── 1. Personalized User Dashboard Header & Stats ────────────────── */}
+          <section className="space-y-6">
+            {/* User Greeting Banner */}
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="relative shrink-0">
+                  {user.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.name || "User"}
+                      className="size-14 rounded-2xl object-cover ring-2 ring-primary/20 shadow-sm"
+                    />
+                  ) : (
+                    <img
+                      src={`https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.email || "flowframe")}`}
+                      alt={user.name || "User"}
+                      className="size-14 rounded-2xl object-cover bg-primary/10 ring-2 ring-primary/20 shadow-sm"
+                    />
+                  )}
+                  <span className="absolute -bottom-1 -right-1 size-3.5 rounded-full bg-emerald-500 ring-2 ring-card" title="Online" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground truncate">
+                      Welcome back, {user.name || "Architect"}
+                    </h2>
+                    <Badge variant="outline" className="font-mono text-[10px] uppercase text-primary border-primary/25 bg-primary/10">
+                      Developer Tier
+                    </Badge>
+                  </div>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">
+                    {user.email} · Manage your distributed systems architectures, topologies, and simulations.
+                  </p>
+                </div>
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[color:var(--foreground)]">
-                Design, simulate, and inspect distributed architectures.
-              </h2>
-              <p className="text-xs sm:text-sm text-[color:var(--muted)] max-w-2xl leading-relaxed">
-                Build topologies visually or via code, run deterministic simulated requests frame-by-frame, and observe packet routing across services, caches, brokers, and databases.
-              </p>
+
+              {/* Quick Action Buttons */}
+              <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                <Button
+                  onClick={() => setCreateModalOpen(true)}
+                  className="gap-2 shadow-xs cursor-pointer"
+                >
+                  <FiPlus className="size-4" />
+                  <span>New Workspace</span>
+                </Button>
+                <Button variant="outline" asChild className="gap-2 shadow-xs">
+                  <Link href="/workspace">
+                    <FiBox className="size-4 text-primary" />
+                    <span>Open Canvas</span>
+                  </Link>
+                </Button>
+              </div>
             </div>
 
-            {/* 3 Developer Entry Pathways */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
-              {/* Pathway 1: Blank Canvas */}
-              <Link
-                href="/workspace"
-                className="group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]/60 hover:border-[var(--accent)] hover:bg-[var(--bg-elevated)] transition flex flex-col justify-between"
-              >
-                <div className="space-y-2">
-                  <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 text-[color:var(--accent)] flex items-center justify-center">
-                    <FiBox className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors">
-                      New Blank Architecture
-                    </h3>
-                    <p className="text-[11px] text-[color:var(--muted)] leading-relaxed mt-1">
-                      Start with a clean canvas, place microservices, and connect edges visually.
-                    </p>
+            {/* 4 Developer Metric Stat Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              {/* Stat 1: Workspaces */}
+              <div className="rounded-xl border border-border bg-card p-4.5 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all duration-150">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-medium text-muted-foreground">Workspaces</span>
+                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <FiFolder className="size-4" />
                   </div>
                 </div>
-                <div className="pt-3 border-t border-[var(--border)] mt-3 flex items-center justify-between text-[11px] font-semibold text-[color:var(--accent)]">
-                  <span>Open Simulator</span>
-                  <FiArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                <div className="space-y-1">
+                  <div className="text-2xl font-bold font-mono text-card-foreground">
+                    {workspaces.length}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
+                    <span>{workspaces.filter((w) => w.env === "DEV").length} DEV</span>
+                    <span>·</span>
+                    <span>{workspaces.filter((w) => w.env === "PROD").length} PROD</span>
+                    {workspaces.filter((w) => w.starred).length > 0 && (
+                      <>
+                        <span>·</span>
+                        <span className="text-amber-500 font-medium">★ {workspaces.filter((w) => w.starred).length}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </Link>
+              </div>
 
-              {/* Pathway 2: Monaco DSL Editor */}
-              <Link
-                href="/workspace"
-                className="group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]/60 hover:border-[var(--accent)] hover:bg-[var(--bg-elevated)] transition flex flex-col justify-between"
-              >
-                <div className="space-y-2">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
-                    <FiCode className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-[color:var(--foreground)] group-hover:text-indigo-400 transition-colors">
-                      Code-First DSL Editor
-                    </h3>
-                    <p className="text-[11px] text-[color:var(--muted)] leading-relaxed mt-1">
-                      Define nodes, request endpoints, and routes declaratively with FlowFrame DSL.
-                    </p>
+              {/* Stat 2: Total Topologies / Diagrams */}
+              <div className="rounded-xl border border-border bg-card p-4.5 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all duration-150">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-medium text-muted-foreground">Architecture Diagrams</span>
+                  <div className="size-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                    <DiagramIcon className="size-4" />
                   </div>
                 </div>
-                <div className="pt-3 border-t border-[var(--border)] mt-3 flex items-center justify-between text-[11px] font-semibold text-indigo-400">
-                  <span>Open Code Editor</span>
-                  <FiArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                <div className="space-y-1">
+                  <div className="text-2xl font-bold font-mono text-card-foreground">
+                    {workspaces.reduce((acc, w) => acc + (w.diagrams_count || 0), 0)}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Across all environments
+                  </div>
                 </div>
-              </Link>
+              </div>
 
-              {/* Pathway 3: Interactive Scenarios */}
-              <Link
-                href="/scenarios"
-                className="group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]/60 hover:border-[var(--accent)] hover:bg-[var(--bg-elevated)] transition flex flex-col justify-between"
-              >
-                <div className="space-y-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                    <FiSliders className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-[color:var(--foreground)] group-hover:text-emerald-400 transition-colors">
-                      Production Scenarios
-                    </h3>
-                    <p className="text-[11px] text-[color:var(--muted)] leading-relaxed mt-1">
-                      Explore pre-built system patterns: load balancing, caching, and pub/sub queues.
-                    </p>
+              {/* Stat 3: Recent Activity */}
+              <div className="rounded-xl border border-border bg-card p-4.5 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all duration-150">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-medium text-muted-foreground">Recent Sessions</span>
+                  <div className="size-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                    <FiClock className="size-4" />
                   </div>
                 </div>
-                <div className="pt-3 border-t border-[var(--border)] mt-3 flex items-center justify-between text-[11px] font-semibold text-emerald-400">
-                  <span>Explore Scenarios</span>
-                  <FiArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                <div className="space-y-1">
+                  <div className="text-2xl font-bold font-mono text-card-foreground">
+                    {recentDiagrams.length}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground truncate">
+                    {recentDiagrams[0] ? recentDiagrams[0].title : "No active sessions"}
+                  </div>
                 </div>
-              </Link>
+              </div>
+
+              {/* Stat 4: Simulator Engine Status */}
+              <div className="rounded-xl border border-border bg-card p-4.5 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all duration-150">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-medium text-muted-foreground">Engine Status</span>
+                  <div className="size-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                    <FiActivity className="size-4" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-sm font-bold font-mono text-card-foreground flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>v2.0 Operational</span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Rust Core Simulator Ready
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Natural Topology Generation Input */}
-            <div className="pt-2 border-t border-[var(--border)]">
+            {/* Quick Generator & Templates Command Bar */}
+            <div className="rounded-xl border border-border bg-card p-3 sm:p-4 shadow-xs">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -1077,24 +1126,29 @@ export default function DashboardPage() {
                     `/workspace?ai=true${prompt ? `&prompt=${encodeURIComponent(prompt)}` : ""}`
                   );
                 }}
-                className="flex flex-col sm:flex-row gap-2"
+                className="flex flex-col sm:flex-row items-center gap-2.5"
               >
-                <div className="relative flex-1">
+                <div className="relative flex-1 w-full">
+                  <FiZap className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-primary" />
                   <input
                     type="text"
                     value={aiPrompt}
                     onChange={(e) => setAiPrompt(e.target.value)}
-                    placeholder="Describe a system topology (e.g., API Gateway routing to User and Order microservices with Redis cache)..."
-                    className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-2.5 text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)] focus:outline-none focus:border-[var(--accent)] transition"
+                    placeholder="AI Quick Prompt: e.g. API Gateway routing to User and Order microservices with Redis cache-aside..."
+                    className="w-full rounded-lg border border-border bg-muted/25 pl-10 pr-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition"
                   />
                 </div>
-                <button
-                  type="submit"
-                  className="btn-primary inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-semibold text-white shadow-xs cursor-pointer shrink-0"
-                >
-                  <span>Generate</span>
-                  <FiArrowRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
+                  <Button type="submit" size="sm" className="gap-1.5 shadow-xs">
+                    <span>Generate on Canvas</span>
+                    <FiArrowRight className="size-3.5" />
+                  </Button>
+                  <Button variant="outline" size="sm" asChild className="hidden sm:inline-flex shadow-xs">
+                    <Link href="/scenarios">
+                      <span>Templates</span>
+                    </Link>
+                  </Button>
+                </div>
               </form>
             </div>
           </section>
@@ -1102,15 +1156,15 @@ export default function DashboardPage() {
           {/* ── 2. Recent Diagrams Section ───────────────────────────── */}
           {(activeNav === "recent" || recentDiagrams.length > 0) && (
             <section className="space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-[var(--border)]">
+              <div className="flex items-center justify-between pb-2 border-b border-border">
                 <div className="flex items-center gap-2">
-                  <FiClock className="w-4 h-4 text-[color:var(--accent)]" />
-                  <h2 className="text-sm font-bold text-[color:var(--foreground)]">
+                  <FiClock className="size-4 text-primary" />
+                  <h2 className="text-sm font-semibold text-foreground">
                     Recent Diagrams
                   </h2>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--accent)]/10 text-[color:var(--accent)] border border-[var(--accent)]/20">
+                  <Badge variant="outline" className="text-[10px] font-mono px-2 py-0.5 bg-primary/10 text-primary border-primary/20">
                     {recentDiagrams.length}
-                  </span>
+                  </Badge>
                 </div>
               </div>
 
@@ -1120,49 +1174,50 @@ export default function DashboardPage() {
                     <Link
                       key={diag.id}
                       href={`/dashboard/workspace/${diag.workspace_id}/${diag.id}`}
-                      className="group relative rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 hover:border-[var(--accent)]/60 hover:-translate-y-0.5 transition-all duration-150 flex flex-col justify-between"
+                      className="group relative rounded-xl border border-border bg-card p-4 hover:border-primary/50 hover:shadow-md transition-all duration-150 flex flex-col justify-between"
                     >
                       <div className="space-y-2 mb-3">
                         <div className="flex items-center justify-between">
-                          <span
-                            className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                          <Badge
+                            variant="outline"
+                            className={`text-[9px] font-mono font-bold px-1.5 py-0.2 ${
                               diag.env === "PROD"
-                                ? "bg-[var(--red-muted)] border-[var(--red)]/25 text-[color:var(--red)]"
+                                ? "bg-red-500/10 border-red-500/25 text-red-500"
                                 : diag.env === "STAGING"
-                                ? "bg-[var(--amber-muted)] border-[var(--amber)]/25 text-[color:var(--amber)]"
-                                : "bg-[var(--accent)]/10 border-[var(--accent)]/20 text-[color:var(--accent)]"
+                                ? "bg-amber-500/10 border-amber-500/25 text-amber-500"
+                                : "bg-primary/10 border-primary/20 text-primary"
                             }`}
                           >
                             {diag.env || "DEV"}
-                          </span>
-                          <span className="text-[10px] font-mono text-[color:var(--muted)]">
+                          </Badge>
+                          <span className="text-[10px] font-mono text-muted-foreground">
                             {formatDate(diag.updated_at)}
                           </span>
                         </div>
                         <div>
-                          <h3 className="text-xs font-bold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors truncate">
+                          <h3 className="text-xs font-semibold text-card-foreground group-hover:text-primary transition-colors truncate">
                             {diag.title}
                           </h3>
-                          <p className="text-[11px] text-[color:var(--muted)] truncate mt-0.5">
+                          <p className="text-[11px] text-muted-foreground truncate mt-0.5">
                             {diag.workspace_name}
                           </p>
                         </div>
                       </div>
 
-                      <div className="pt-2.5 border-t border-[var(--border)] flex items-center justify-between text-[11px]">
-                        <span className="font-mono text-[color:var(--muted)]">
+                      <div className="pt-2.5 border-t border-border flex items-center justify-between text-[11px]">
+                        <span className="font-mono text-muted-foreground">
                           {diag.nodes_count || 0} nodes
                         </span>
-                        <span className="font-medium text-[color:var(--accent)] group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-1">
-                          Open Canvas <FiArrowRight className="w-3 h-3" />
+                        <span className="font-medium text-primary group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-1">
+                          Open Canvas <FiArrowRight className="size-3" />
                         </span>
                       </div>
                     </Link>
                   ))}
                 </div>
               ) : (
-                <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface)]/30 p-6 text-center">
-                  <p className="text-xs text-[color:var(--muted)]">
+                <div className="rounded-xl border border-dashed border-border bg-card/40 p-6 text-center">
+                  <p className="text-xs text-muted-foreground">
                     No recent diagrams opened yet. Select or create an architecture workspace below to begin diagramming.
                   </p>
                 </div>
@@ -1172,13 +1227,13 @@ export default function DashboardPage() {
 
           {/* ── 3. Your Workspaces / Systems ─────────────────────────── */}
           <section className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[var(--border)]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border">
               <div>
-                <h2 className="text-base font-bold text-[color:var(--foreground)] flex items-center gap-2">
-                  <FiGrid className="w-4 h-4 text-[color:var(--accent)]" />
+                <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <FiGrid className="size-4 text-primary" />
                   <span>Workspaces</span>
                 </h2>
-                <p className="text-xs text-[color:var(--muted)] mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   Organize your distributed system architectures, topologies, and environments.
                 </p>
               </div>
@@ -1187,18 +1242,18 @@ export default function DashboardPage() {
               <div className="flex flex-wrap items-center gap-2">
                 {/* Search Bar */}
                 <div className="relative min-w-[180px] sm:min-w-[220px]">
-                  <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[color:var(--muted)]" />
+                  <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
                   <input
                     type="text"
                     placeholder="Search workspaces..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] pl-8 pr-3 py-1.5 text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)] focus:outline-none focus:border-[var(--accent)]"
+                    className="w-full rounded-lg border border-border bg-card pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary shadow-2xs transition"
                   />
                 </div>
 
                 {/* Filter Tabs */}
-                <div className="flex items-center rounded-lg border border-[var(--border)] bg-[var(--surface)] p-0.5 text-xs">
+                <div className="flex items-center rounded-lg border border-border bg-muted/30 p-0.5 text-xs">
                   {(["all", "development", "production", "starred"] as FilterTab[]).map((tab) => (
                     <button
                       key={tab}
@@ -1206,8 +1261,8 @@ export default function DashboardPage() {
                       onClick={() => setActiveTab(tab)}
                       className={`px-2.5 py-1 rounded-md capitalize font-medium transition cursor-pointer ${
                         activeTab === tab
-                          ? "bg-[var(--bg-elevated)] text-[color:var(--accent)] font-semibold"
-                          : "text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
+                          ? "bg-card text-primary font-semibold shadow-xs border border-border"
+                          : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       {tab === "development" ? "DEV" : tab === "production" ? "PROD" : tab}
@@ -1216,30 +1271,30 @@ export default function DashboardPage() {
                 </div>
 
                 {/* View Mode Toggle */}
-                <div className="flex items-center rounded-lg border border-[var(--border)] bg-[var(--surface)] p-0.5">
+                <div className="flex items-center rounded-lg border border-border bg-muted/30 p-0.5">
                   <button
                     type="button"
                     onClick={() => setViewMode("grid")}
                     className={`p-1 rounded-md transition cursor-pointer ${
                       viewMode === "grid"
-                        ? "bg-[var(--bg-elevated)] text-[color:var(--accent)]"
-                        : "text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
+                        ? "bg-card text-primary shadow-xs border border-border"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                     title="Grid View"
                   >
-                    <GridIcon className="w-3.5 h-3.5" />
+                    <GridIcon className="size-3.5" />
                   </button>
                   <button
                     type="button"
                     onClick={() => setViewMode("list")}
                     className={`p-1 rounded-md transition cursor-pointer ${
                       viewMode === "list"
-                        ? "bg-[var(--bg-elevated)] text-[color:var(--accent)]"
-                        : "text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
+                        ? "bg-card text-primary shadow-xs border border-border"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                     title="List View"
                   >
-                    <ListIcon className="w-3.5 h-3.5" />
+                    <ListIcon className="size-3.5" />
                   </button>
                 </div>
               </div>
@@ -1251,19 +1306,19 @@ export default function DashboardPage() {
                 {[1, 2, 3].map((n) => (
                   <div
                     key={n}
-                    className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-4 animate-pulse"
+                    className="rounded-xl border border-border bg-card p-5 space-y-4 animate-pulse"
                   >
                     <div className="flex items-center justify-between">
-                      <div className="w-8 h-8 rounded-lg bg-[var(--bg-elevated)]" />
-                      <div className="w-12 h-4 rounded bg-[var(--bg-elevated)]" />
+                      <div className="size-8 rounded-lg bg-muted" />
+                      <div className="w-12 h-4 rounded bg-muted" />
                     </div>
                     <div className="space-y-2">
-                      <div className="w-3/4 h-5 rounded bg-[var(--bg-elevated)]" />
-                      <div className="w-full h-3 rounded bg-[var(--bg-elevated)]" />
+                      <div className="w-3/4 h-5 rounded bg-muted" />
+                      <div className="w-full h-3 rounded bg-muted" />
                     </div>
-                    <div className="pt-3 border-t border-[var(--border)] flex justify-between">
-                      <div className="w-20 h-3 rounded bg-[var(--bg-elevated)]" />
-                      <div className="w-16 h-3 rounded bg-[var(--bg-elevated)]" />
+                    <div className="pt-3 border-t border-border flex justify-between">
+                      <div className="w-20 h-3 rounded bg-muted" />
+                      <div className="w-16 h-3 rounded bg-muted" />
                     </div>
                   </div>
                 ))}
@@ -1275,25 +1330,26 @@ export default function DashboardPage() {
                     <Link
                       key={ws.id}
                       href={`/dashboard/workspace/${ws.id}`}
-                      className="group relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-all duration-200 hover:border-[var(--accent)]/50 hover:-translate-y-0.5 flex flex-col justify-between"
+                      className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:border-primary/50 hover:shadow-md flex flex-col justify-between"
                     >
                       {/* Top Bar: Icon, Env Tag, Actions */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center">
+                          <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
                             {renderIcon(ws.iconType)}
                           </div>
-                          <span
-                            className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded border ${
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] font-bold font-mono px-2 py-0.2 ${
                               ws.env === "PROD"
-                                ? "bg-[var(--red-muted)] border-[var(--red)]/25 text-[color:var(--red)]"
+                                ? "bg-red-500/10 border-red-500/25 text-red-500"
                                 : ws.env === "STAGING"
-                                ? "bg-[var(--amber-muted)] border-[var(--amber)]/25 text-[color:var(--amber)]"
-                                : "bg-[var(--accent)]/10 border-[var(--accent)]/20 text-[color:var(--accent)]"
+                                ? "bg-amber-500/10 border-amber-500/25 text-amber-500"
+                                : "bg-primary/10 border-primary/20 text-primary"
                             }`}
                           >
                             {ws.env}
-                          </span>
+                          </Badge>
                         </div>
 
                         <div className="flex items-center gap-1.5">
@@ -1329,19 +1385,19 @@ export default function DashboardPage() {
                       </div>
 
                       <div className="space-y-1 mb-4">
-                        <h3 className="text-sm font-bold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors truncate">
+                        <h3 className="text-sm font-semibold text-card-foreground group-hover:text-primary transition-colors truncate">
                           {ws.name}
                         </h3>
-                        <p className="text-xs text-[color:var(--muted)] line-clamp-2 min-h-[32px] leading-relaxed">
+                        <p className="text-xs text-muted-foreground line-clamp-2 min-h-[32px] leading-relaxed">
                           {ws.description || "No description provided."}
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-between pt-3 border-t border-[var(--border)] text-xs">
-                        <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-[color:var(--muted)]">
-                          <DiagramIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" /> {ws.diagrams_count} diagram{ws.diagrams_count !== 1 ? "s" : ""}
+                      <div className="flex items-center justify-between pt-3 border-t border-border text-xs">
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground">
+                          <DiagramIcon className="size-3.5 text-primary" /> {ws.diagrams_count} diagram{ws.diagrams_count !== 1 ? "s" : ""}
                         </span>
-                        <span className="text-[10px] font-mono text-[color:var(--muted)]">
+                        <span className="text-[10px] font-mono text-muted-foreground">
                           {formatDate(ws.updated_at)}
                         </span>
                       </div>
@@ -1352,16 +1408,16 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => setCreateModalOpen(true)}
-                    className="group relative overflow-hidden rounded-xl border-2 border-dashed border-[var(--border-strong)] hover:border-[var(--accent)]/60 bg-[var(--surface)]/40 p-5 transition-all duration-200 hover:bg-[var(--surface)] cursor-pointer flex flex-col items-center justify-center gap-2.5 min-h-[180px]"
+                    className="group relative overflow-hidden rounded-xl border-2 border-dashed border-border hover:border-primary/60 bg-card/30 p-5 transition-all duration-200 hover:bg-card cursor-pointer flex flex-col items-center justify-center gap-2.5 min-h-[180px]"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center text-[color:var(--accent)] group-hover:scale-110 transition-transform">
-                      <PlusIcon className="w-5 h-5" />
+                    <div className="size-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                      <PlusIcon className="size-5" />
                     </div>
                     <div className="text-center">
-                      <p className="text-xs font-semibold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors">
+                      <p className="text-xs font-semibold text-card-foreground group-hover:text-primary transition-colors">
                         New Workspace
                       </p>
-                      <p className="text-[11px] text-[color:var(--muted)] mt-0.5">
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
                         Add a new system environment
                       </p>
                     </div>
@@ -1369,61 +1425,62 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 /* List View */
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden divide-y divide-[var(--border)]">
+                <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border shadow-xs">
                   {filteredWorkspaces.map((ws) => (
                     <Link
                       key={ws.id}
                       href={`/dashboard/workspace/${ws.id}`}
-                      className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-[var(--bg-elevated)] transition gap-3"
+                      className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-muted/40 transition gap-3"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center shrink-0">
+                        <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
                           {renderIcon(ws.iconType)}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-semibold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors truncate">
+                            <h3 className="text-sm font-semibold text-card-foreground group-hover:text-primary transition-colors truncate">
                               {ws.name}
                             </h3>
-                            <span
-                              className={`text-[9px] font-bold font-mono px-1.5 py-0.2 rounded border shrink-0 ${
+                            <Badge
+                              variant="outline"
+                              className={`text-[9px] font-bold font-mono px-1.5 py-0.2 shrink-0 ${
                                 ws.env === "PROD"
-                                  ? "bg-[var(--red-muted)] border-[var(--red)]/25 text-[color:var(--red)]"
+                                  ? "bg-red-500/10 border-red-500/25 text-red-500"
                                   : ws.env === "STAGING"
-                                  ? "bg-[var(--amber-muted)] border-[var(--amber)]/25 text-[color:var(--amber)]"
-                                  : "bg-[var(--accent)]/10 border-[var(--accent)]/20 text-[color:var(--accent)]"
+                                  ? "bg-amber-500/10 border-amber-500/25 text-amber-500"
+                                  : "bg-primary/10 border-primary/20 text-primary"
                               }`}
                             >
                               {ws.env}
-                            </span>
+                            </Badge>
                           </div>
-                          <p className="text-xs text-[color:var(--muted)] truncate max-w-md">
+                          <p className="text-xs text-muted-foreground truncate max-w-md">
                             {ws.description || "No description provided."}
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4 text-xs font-mono text-[color:var(--muted)] shrink-0 justify-between sm:justify-end">
+                      <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground shrink-0 justify-between sm:justify-end">
                         <span className="flex items-center gap-1.5">
-                          <DiagramIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" /> {ws.diagrams_count}
+                          <DiagramIcon className="size-3.5 text-primary" /> {ws.diagrams_count}
                         </span>
                         <span>{formatDate(ws.updated_at)}</span>
                         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
                             onClick={(e) => openEditWorkspaceModal(ws, e)}
-                            className="p-1.5 rounded text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition"
+                            className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
                             title="Edit workspace"
                           >
-                            <FiEdit2 className="w-3.5 h-3.5" />
+                            <FiEdit2 className="size-3.5" />
                           </button>
                           <button
                             type="button"
                             onClick={(e) => openDeleteWorkspaceModal(ws, e)}
-                            className="p-1.5 rounded text-[color:var(--muted)] hover:text-red-400 hover:bg-red-500/10 transition"
+                            className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition cursor-pointer"
                             title="Delete workspace"
                           >
-                            <FiTrash2 className="w-3.5 h-3.5" />
+                            <FiTrash2 className="size-3.5" />
                           </button>
                         </div>
                       </div>

@@ -350,14 +350,14 @@ export default function WorkspaceDetailPage() {
             </Link>
 
             <Link href="/" className="group flex items-center gap-2 shrink-0">
-              <div className="relative h-7 w-7 sm:h-8 sm:w-8 overflow-hidden rounded-lg bg-[var(--surface)] ring-1 ring-[var(--border-strong)]">
+              <div className="relative h-7 w-7 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center">
                 <Image
                   src={theme === "dark" ? "/logo/flow-frame-dark.png" : "/logo/flow-frame-light.png"}
                   alt="FlowFrame"
                   width={32}
                   height={32}
                   priority
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain"
                 />
               </div>
             </Link>

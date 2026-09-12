@@ -68,6 +68,9 @@ import {
   FiCpu,
 } from "react-icons/fi";
 import AIAssistantDrawer from "@/components/AIAssistantDrawer";
+import CanvasToolbar from "@/components/CanvasToolbar";
+import CanvasSettingsSheet from "@/components/CanvasSettingsSheet";
+import CanvasControlsBar from "@/components/CanvasControlsBar";
 
 // DSL Interpreter & Graph Engine
 import { compileDSL } from "@/DSL";
@@ -1913,7 +1916,7 @@ function WorkspaceInner({
   shareId?: string;
   isSharedView?: boolean;
 }) {
-  const { screenToFlowPosition, fitView } = useReactFlow();
+  const { screenToFlowPosition, fitView, zoomIn, zoomOut } = useReactFlow();
   const { token } = useAuthStore();
   const { theme, toggleTheme, setTheme } = useThemeStore();
   const [diagramTitle, setDiagramTitle] = useState<string>("");
@@ -2026,9 +2029,13 @@ function WorkspaceInner({
   const [hideResponse, setHideResponse] = useState(false);
   const [parallelResponse, setParallelResponse] = useState(false);
   const [debugEnabled, setDebugEnabled] = useState(true);
-  const [bgPattern, setBgPattern] = useState<"dots" | "lines" | "cross" | "none">("none");
-  const [bgOpacity, setBgOpacity] = useState<number>(0.18);
+  const [bgPattern, setBgPattern] = useState<"dots" | "lines" | "cross" | "none">("dots");
+  const [bgOpacity, setBgOpacity] = useState<number>(0.12);
   const [showBgControls, setShowBgControls] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showMinimap, setShowMinimap] = useState(false);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+  const [gridSize, setGridSize] = useState(20);
 
   // Raw generated simulation frames list
   const [rawSimulationFrames, setRawSimulationFrames] = useState<any[]>([]);
@@ -2053,6 +2060,25 @@ function WorkspaceInner({
 
   const [showMetrics, setShowMetrics] = useState(true);
   const [activeReqIdx, setActiveReqIdx] = useState(0);
+
+  // Extract client requests for top toolbar API selection
+  const clientEndpoints = useMemo(() => {
+    const eps: Array<{ id: string; label: string; method?: string }> = [];
+    nodes.forEach((n) => {
+      const nType = (n.data?.type || n.type || "") as string;
+      if (nType === "client") {
+        const reqs = (n.data?.requests as any[]) || [];
+        reqs.forEach((r, idx) => {
+          eps.push({
+            id: `${n.id}-${idx}`,
+            label: `${n.data?.label || n.id}: ${r.endpoint || "/"}`,
+            method: Array.isArray(r.allowedMethods) ? r.allowedMethods[0] : r.method || "GET",
+          });
+        });
+      }
+    });
+    return eps;
+  }, [nodes]);
 
   // Terminal Panel height state for bottom docked resizable view
   const [panelHeight, setPanelHeight] = useState(220);
@@ -2944,17 +2970,19 @@ connect s1 -> r1
       });
       setNodeConfigs(configs);
 
-      // Stop and Reset playback
+      // Stop and Reset playback - do NOT auto-run simulation on template load
       setIsPlaying(false);
       setRawSimulationFrames([]);
       setFrameIndex(0);
       setValidationWarning(null);
       setSelectedNodeId(null);
 
-      // Synchronously start simulation for the loaded template
-      handleStartSimulation("client-1", templateNodes, templateEdges, configs);
+      // Center the loaded template on the canvas
+      setTimeout(() => {
+        fitView({ duration: 400 });
+      }, 80);
     },
-    [setNodes, setEdges, handleStartSimulation],
+    [setNodes, setEdges, fitView],
   );
 
   // Open template selection picker modal ONLY on standalone sandbox load (not inside workspace diagrams or share view)
@@ -4454,271 +4482,43 @@ connect s1 -> r1
         <div className="flex-1 h-full min-w-0 flex flex-col md:flex-row relative z-0 overflow-hidden">
           {/* Center Column: Top Technical Bar + ReactFlow Canvas + Bottom Logs Drawer */}
           <div className="flex-1 h-full min-w-0 flex flex-col relative overflow-hidden">
-            {/* Top Technical Canvas Bar (Section 14 & 17) */}
-            <header className="h-12 border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md flex items-center justify-between px-3 md:px-4 z-20 shrink-0 select-none">
-              {/* Left: Diagram Info & Stats */}
-              <div className="flex items-center gap-2.5 min-w-0">
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarOpenMobile(true)}
-                  className="md:hidden p-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] cursor-pointer"
-                  title="Open Shapes Library"
-                >
-                  <FiMenu className="w-4 h-4" />
-                </button>
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs font-bold text-[color:var(--foreground)] truncate max-w-[130px] sm:max-w-[200px]">
-                    {workspaceId ? "Distributed Architecture" : "Architecture Sandbox"}
-                  </span>
-                  <div className="hidden sm:flex items-center gap-1.5">
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 border border-[var(--border)]">
-                      {nodes.length} Nodes
-                    </span>
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 border border-[var(--border)]">
-                      {edges.length} Edges
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Center: Playback Controls (Compact & Technical) */}
-              <div className="flex items-center gap-1 bg-[var(--surface-muted)]/80 border border-[var(--border)] px-1.5 py-1 rounded-xl shadow-xs">
-                <button
-                  type="button"
-                  disabled={isCompilingSimulation}
-                  onClick={() => {
-                    if (isCompilingSimulation) return;
-                    if (simulationFrames.length === 0) {
-                      handleStartSimulation();
-                    } else {
-                      setIsPlaying((prev) => !prev);
-                    }
-                  }}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                    isCompilingSimulation
-                      ? "bg-[var(--accent)]/70 text-white cursor-wait"
-                      : isPlaying
-                      ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
-                      : "bg-[var(--accent)] text-white shadow-xs hover:brightness-110"
-                  }`}
-                  title={isCompilingSimulation ? "Compiling simulation..." : isPlaying ? "Pause simulation (Space)" : "Run simulation (Space)"}
-                >
-                  {isCompilingSimulation ? (
-                    <>
-                      <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                      <span className="hidden sm:inline">Compiling...</span>
-                    </>
-                  ) : isPlaying ? (
-                    <>
-                      <FiPause className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Pause</span>
-                    </>
-                  ) : (
-                    <>
-                      <FiPlay className="w-3.5 h-3.5 fill-current" />
-                      <span className="hidden sm:inline">{simulationFrames.length === 0 ? "Simulate" : "Resume"}</span>
-                    </>
-                  )}
-                </button>
-
-                <div className="h-4 w-px bg-[var(--border)] mx-0.5" />
-
-                <button
-                  type="button"
-                  onClick={goToPreviousFrame}
-                  className="p-1.5 rounded-lg text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface)] transition cursor-pointer"
-                  title="Previous Frame (Left Arrow)"
-                >
-                  <FiSkipBack className="w-3.5 h-3.5" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={goToNextFrame}
-                  className="p-1.5 rounded-lg text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface)] transition cursor-pointer"
-                  title="Next Frame (Right Arrow)"
-                >
-                  <FiSkipForward className="w-3.5 h-3.5" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={resetPlayback}
-                  className="p-1.5 rounded-lg text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface)] transition cursor-pointer"
-                  title="Reset playback"
-                >
-                  <FiRotateCcw className="w-3.5 h-3.5" />
-                </button>
-
-                <div className="h-4 w-px bg-[var(--border)] mx-0.5 hidden sm:block" />
-
-                {/* Frame indicator */}
-                <div className="hidden sm:flex items-center px-2 py-0.5 text-[10px] font-mono text-[color:var(--foreground)]/70">
-                  Frame {simulationFrames.length > 0 ? frameIndex + 1 : 0}/{simulationFrames.length}
-                </div>
-
-                <div className="h-4 w-px bg-[var(--border)] mx-0.5 hidden sm:block" />
-
-                {/* Speed Dropdown */}
-                <div className="hidden sm:flex items-center gap-0.5">
-                  {[0.5, 1, 2].map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setSpeed(s)}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition cursor-pointer ${
-                        speed === s
-                          ? "bg-[var(--surface)] text-[color:var(--accent)] border border-[var(--border)] shadow-xs"
-                          : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]"
-                      }`}
-                    >
-                      {s}x
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Right: Canvas Settings, Trace Logs, Copilot, Save */}
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                {/* Canvas Settings Popover */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowBgControls((prev) => !prev)}
-                    className={`p-2 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-                      showBgControls
-                        ? "bg-[var(--surface-muted)] text-[color:var(--accent)] border-[var(--accent)]/40"
-                        : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
-                    }`}
-                    title="Canvas Grid & Display Settings"
-                  >
-                    <FiSliders className="w-3.5 h-3.5" />
-                    <span className="hidden lg:inline text-[11px]">Grid</span>
-                  </button>
-
-                  {showBgControls && (
-                    <div className="absolute right-0 top-12 w-64 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-2xl z-50 flex flex-col gap-3">
-                      <div className="flex items-center justify-between pb-2 border-b border-[var(--border)]">
-                        <span className="text-xs font-bold text-[color:var(--foreground)]">Canvas Settings</span>
-                        <button
-                          type="button"
-                          onClick={() => setShowBgControls(false)}
-                          className="text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] text-xs font-bold cursor-pointer"
-                        >
-                          ×
-                        </button>
-                      </div>
-
-                      {/* Grid Pattern */}
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] uppercase font-bold text-[color:var(--foreground)]/60">
-                          Grid Pattern
-                        </label>
-                        <div className="grid grid-cols-4 gap-1">
-                          {(["dots", "lines", "cross", "none"] as const).map((pat) => (
-                            <button
-                              key={pat}
-                              type="button"
-                              onClick={() => setBgPattern(pat)}
-                              className={`py-1 rounded-lg text-[10px] font-mono uppercase font-bold transition cursor-pointer ${
-                                bgPattern === pat
-                                  ? "bg-[var(--accent)] text-white shadow-xs"
-                                  : "bg-[var(--surface-muted)] text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] border border-[var(--border)]"
-                              }`}
-                            >
-                              {pat}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Grid Opacity */}
-                      {bgPattern !== "none" && (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between text-[10px] font-bold text-[color:var(--foreground)]/60">
-                            <span className="uppercase">Grid Opacity</span>
-                            <span className="font-mono text-[color:var(--accent)]">{Math.round(bgOpacity * 100)}%</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="0.05"
-                            max="0.70"
-                            step="0.05"
-                            value={bgOpacity}
-                            onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
-                            className="w-full h-1.5 rounded-lg bg-[var(--surface-muted)] appearance-none cursor-pointer accent-[var(--accent)]"
-                          />
-                        </div>
-                      )}
-
-                      {/* Quick Actions */}
-                      <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between">
-                        <button
-                          type="button"
-                          onClick={handleExportFlow}
-                          className="flex items-center gap-1 text-[11px] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] font-semibold transition cursor-pointer"
-                        >
-                          <FiDownload className="w-3.5 h-3.5" />
-                          <span>Export</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleImportClick}
-                          className="flex items-center gap-1 text-[11px] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] font-semibold transition cursor-pointer"
-                        >
-                          <FiUpload className="w-3.5 h-3.5" />
-                          <span>Import</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Trace Logs Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setDebugEnabled((prev) => !prev)}
-                  className={`p-2 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-                    debugEnabled
-                      ? "bg-[var(--accent)]/15 text-[color:var(--accent)] border-[var(--accent)]/40"
-                      : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
-                  }`}
-                  title="Toggle Logs / Execution Drawer"
-                >
-                  <FiActivity className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline text-[11px]">Logs</span>
-                </button>
-
-                {/* AI Architecture Assistant */}
-                <button
-                  type="button"
-                  onClick={() => setIsAIAssistantOpen((prev) => !prev)}
-                  className={`p-2 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-                    isAIAssistantOpen
-                      ? "bg-violet-500/15 text-violet-400 border-violet-500/40"
-                      : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
-                  }`}
-                  title="Open AI Architecture Assistant"
-                >
-                  <FiCpu className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline text-[11px]">Assistant</span>
-                </button>
-
-                {/* Save Diagram Button */}
-                {workspaceId && diagramId && (
-                  <button
-                    type="button"
-                    onClick={handleSaveDiagramToBackend}
-                    disabled={isSaving}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-600/20 transition cursor-pointer disabled:opacity-50"
-                    title="Save diagram to cloud (Ctrl+S)"
-                  >
-                    <FiSave className="w-3.5 h-3.5" />
-                    <span>{isSaving ? "Saving..." : "Save"}</span>
-                  </button>
-                )}
-              </div>
-            </header>
+            {/* Top Engineering Canvas Toolbar */}
+            <CanvasToolbar
+              title={workspaceId ? (diagramTitle || "Distributed Architecture") : "Architecture Sandbox"}
+              onToggleSidebar={() => setIsSidebarOpenMobile(true)}
+              nodesCount={nodes.length}
+              edgesCount={edges.length}
+              isPlaying={isPlaying}
+              isCompiling={isCompilingSimulation}
+              onPlayToggle={() => {
+                if (isCompilingSimulation) return;
+                if (simulationFrames.length === 0) {
+                  handleStartSimulation();
+                } else {
+                  setIsPlaying((prev) => !prev);
+                }
+              }}
+              onPrevFrame={goToPreviousFrame}
+              onNextFrame={goToNextFrame}
+              onReset={resetPlayback}
+              frameIndex={frameIndex}
+              totalFrames={simulationFrames.length}
+              speed={speed}
+              onSpeedChange={setSpeed}
+              requestEndpoints={clientEndpoints}
+              selectedRequestId={clientEndpoints[activeReqIdx]?.id}
+              onSelectRequest={(id) => {
+                const idx = clientEndpoints.findIndex((ep) => ep.id === id);
+                if (idx !== -1) setActiveReqIdx(idx);
+              }}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              debugEnabled={debugEnabled}
+              onToggleLogs={() => setDebugEnabled((prev) => !prev)}
+              isAssistantOpen={isAIAssistantOpen}
+              onToggleAssistant={() => setIsAIAssistantOpen((prev) => !prev)}
+              onSave={workspaceId && diagramId ? handleSaveDiagramToBackend : undefined}
+              isSaving={isSaving}
+            />
           {/* Full-Screen React Flow Canvas */}
           <div
             className={`flex-1 min-h-0 relative z-0 w-full transition-all duration-150 ${
@@ -4791,8 +4591,8 @@ connect s1 -> r1
               onPaneClick={onPaneClick}
               fitView
               fitViewOptions={{ padding: 0.2 }}
-              snapToGrid
-              snapGrid={[20, 20]}
+              snapToGrid={snapToGrid}
+              snapGrid={[gridSize, gridSize]}
               minZoom={0.2}
               maxZoom={2.5}
               style={{ width: "100%", height: "100%" }}
@@ -4806,8 +4606,8 @@ connect s1 -> r1
                       ? BackgroundVariant.Cross
                       : BackgroundVariant.Dots
                   }
-                  gap={20}
-                  size={0.8}
+                  gap={gridSize}
+                  size={bgPattern === "dots" ? 1.5 : 1}
                   color={
                     theme === "dark"
                       ? `rgba(148, 163, 184, ${bgOpacity})`
@@ -4815,29 +4615,63 @@ connect s1 -> r1
                   }
                 />
               )}
-              {/* <MiniMap
-                nodeStrokeWidth={3}
-                zoomable
-                pannable
-                style={{
-                  backgroundColor: "rgba(15, 23, 42, 0.6)",
-                  border: "1px solid rgba(148, 163, 184, 0.15)",
-                  borderRadius: "12px",
-                  backdropFilter: "blur(8px)",
-                }}
-                maskColor="rgba(0, 0, 0, 0.35)"
-              /> */}
-              {/* <FlowControls
-                showInteractive={false}
-                style={{
-                  borderRadius: "12px",
-                  border: "1px solid rgba(148, 163, 184, 0.15)",
-                  backgroundColor: "rgba(15, 23, 42, 0.7)",
-                  backdropFilter: "blur(8px)",
-                  boxShadow: "0 4px 24px rgba(0,0,0,0.2)",
-                }}
-              /> */}
+              {showMinimap && (
+                <MiniMap
+                  nodeStrokeWidth={2}
+                  zoomable
+                  pannable
+                  style={{
+                    backgroundColor: theme === "dark" ? "rgba(15, 23, 42, 0.85)" : "rgba(255, 255, 255, 0.85)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "12px",
+                    backdropFilter: "blur(12px)",
+                    boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
+                  }}
+                  maskColor={theme === "dark" ? "rgba(0, 0, 0, 0.45)" : "rgba(241, 245, 249, 0.55)"}
+                />
+              )}
             </ReactFlow>
+
+            {/* Minimal Floating Canvas Controls Dock */}
+            <CanvasControlsBar
+              onZoomIn={() => zoomIn({ duration: 200 })}
+              onZoomOut={() => zoomOut({ duration: 200 })}
+              onFitView={() => fitView({ duration: 400 })}
+              showMinimap={showMinimap}
+              onToggleMinimap={() => setShowMinimap((prev) => !prev)}
+              bgPattern={bgPattern}
+              onToggleGrid={() => setBgPattern((prev) => (prev === "none" ? "dots" : "none"))}
+            />
+
+            {/* Professional Clean Empty State */}
+            {nodes.length === 0 && !isLoadingDiagram && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none select-none">
+                <div className="flex flex-col items-center text-center max-w-sm px-6 py-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-md shadow-2xl">
+                  <div className="w-12 h-12 rounded-xl bg-[var(--surface-muted)] border border-[var(--border)] flex items-center justify-center mb-3 text-[color:var(--accent)]">
+                    <FiGrid className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-sm font-bold text-[color:var(--foreground)] mb-1 tracking-tight">
+                    Architecture Canvas is Empty
+                  </h3>
+                  <p className="text-xs text-[color:var(--foreground)]/60 mb-4 leading-relaxed font-sans">
+                    Drag components from the library or load a production template to simulate distributed requests in real-time.
+                  </p>
+                  <div className="flex items-center gap-2 pointer-events-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isSidebarCollapsed) setIsSidebarCollapsed(false);
+                        setSidebarTab("library");
+                        setIsTemplatesExpanded(true);
+                      }}
+                      className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent)] text-white hover:brightness-110 shadow-xs cursor-pointer transition"
+                    >
+                      Browse Templates
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* System Health & Load Monitor Overlay */}
             {systemMetrics &&
@@ -5066,139 +4900,64 @@ connect s1 -> r1
           )}
 
           {/* Bottom Docked Playback / Timeline Terminal Panel */}
-          <div
-            style={{ height: debugEnabled ? `${panelHeight}px` : "auto" }}
-            className={`flex flex-col border-t border-[var(--border)] bg-[var(--surface)]/45 backdrop-blur-xl overflow-hidden shrink-0 z-10 w-full transition-all duration-150 ${selectedNode ? "max-md:hidden" : ""}`}
-          >
-            {/* Drag Handle */}
-            {debugEnabled && (
+          {debugEnabled && (
+            <div
+              style={{ height: `${panelHeight}px` }}
+              className={`flex flex-col border-t border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xl overflow-hidden shrink-0 z-10 w-full transition-all duration-150 ${selectedNode ? "max-md:hidden" : ""}`}
+            >
+              {/* Drag Handle */}
               <div
                 onMouseDown={() => setIsDraggingTerminal(true)}
-                className="h-1 w-full cursor-row-resize bg-[var(--border)] hover:bg-violet-500/50 transition-colors shrink-0 mb-1"
+                className="h-1 w-full cursor-row-resize bg-[var(--border)] hover:bg-[var(--accent)]/60 transition-colors shrink-0"
                 title="Drag to resize terminal panel"
               />
-            )}
 
-            <div className="p-3 flex-1 flex flex-col gap-3 min-h-0 overflow-y-auto scrollbar-thin">
-              <div className="mx-auto flex w-full max-w-7xl flex-col gap-3">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                  <div className="flex-1 overflow-x-auto min-w-0 scrollbar-thin">
-                    <Controls
-                      isPlaying={isPlaying}
-                      isCompiling={isCompilingSimulation}
-                      onPlayToggle={() => {
-                        if (isCompilingSimulation) return;
-                        if (simulationFrames.length === 0) {
-                          handleStartSimulation();
-                        } else {
-                          setIsPlaying((prev) => !prev);
-                        }
-                      }}
-                      onPrev={goToPreviousFrame}
-                      onNext={goToNextFrame}
-                      onReset={resetPlayback}
-                      onReframe={() => {
-                        handleStartSimulation();
-                        setFrameIndex(0);
-                        setIsPlaying(true);
-                      }}
-                      debugEnabled={debugEnabled}
-                      onDebugToggle={() => setDebugEnabled((prev) => !prev)}
-                      speed={speed}
-                      onSpeedChange={setSpeed}
-                      theme={theme}
-                    />
+              <div className="p-3 flex-1 flex flex-col gap-2.5 min-h-0 overflow-y-auto scrollbar-thin">
+                <div className="mx-auto flex w-full max-w-7xl flex-col gap-2.5">
+                  <div className="flex items-center justify-between border-b border-[var(--border)]/60 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-[11px] font-mono font-bold tracking-tight uppercase text-[color:var(--foreground)]/80">
+                        Simulation Execution Logs & Timeline
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--surface-muted)] text-[color:var(--foreground)]/60 border border-[var(--border)]">
+                        Frame {simulationFrames.length > 0 ? frameIndex + 1 : 0} / {simulationFrames.length}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setDebugEnabled(false)}
+                      className="p-1 rounded-md text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] text-xs cursor-pointer font-bold"
+                      title="Close Logs Drawer"
+                    >
+                      ✕
+                    </button>
                   </div>
 
-                  <div className="flex items-center gap-1.5 sm:gap-2 self-end md:self-auto shrink-0">
-                    <label
-                      title="Hide response/return packets flowing back"
-                      className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-violet-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={hideResponse}
-                        onChange={() => setHideResponse((prev) => !prev)}
-                        className="accent-violet-500 cursor-pointer"
-                      />
-                      <span className="group-hover:text-violet-300">
-                        Hide Response
-                      </span>
-                    </label>
+                  <Timeline
+                    frameIndex={frameIndex}
+                    frameGroups={frameGroups}
+                    onSeek={(idx) => {
+                      setIsPlaying(false);
+                      setFrameIndex(idx);
+                    }}
+                    theme={theme}
+                  />
 
-                    <label
-                      title="Show parallel requests simultaneously"
-                      className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-blue-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={parallelResponse}
-                        onChange={() => setParallelResponse((prev) => !prev)}
-                        className="accent-violet-500 cursor-pointer"
-                      />
-                      <span className="group-hover:text-blue-300">
-                        Parallel
-                      </span>
-                    </label>
-
-                    <label
-                      title="Toggle live simulation logs & console"
-                      className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition whitespace-nowrap font-medium ${
-                        debugEnabled
-                          ? "border-violet-500/50 bg-violet-500/15 text-violet-300 shadow-sm"
-                          : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:border-violet-500/30"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={debugEnabled}
-                        onChange={() => setDebugEnabled((prev) => !prev)}
-                        className="accent-violet-500 cursor-pointer"
-                      />
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span>Logs</span>
-                    </label>
-                  </div>
-                </div>
-
-                <Timeline
-                  frameIndex={frameIndex}
-                  frameGroups={frameGroups}
-                  onSeek={(idx) => {
-                    setIsPlaying(false);
-                    setFrameIndex(idx);
-                  }}
-                  theme={theme}
-                />
-
-                {debugEnabled && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="min-h-0 flex-1"
-                  >
-                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 p-3 mt-1 shadow-inner">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-[10px] uppercase font-bold tracking-widest text-violet-400">
-                          Simulation Execution Logs
-                        </p>
-                        <span className="text-[10px] font-mono text-[color:var(--foreground)]/40">
-                          Frame {simulationFrames.length > 0 ? frameIndex + 1 : 0} / {simulationFrames.length}
-                        </span>
-                      </div>
+                  <div className="min-h-0 flex-1">
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/40 p-2.5 shadow-inner">
                       <DebugPanel
                         currentFrames={accumulatedFrames}
                         frameIndex={frameIndex}
                         theme={theme}
                       />
                     </div>
-                  </motion.div>
-                )}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Docked Right Inspector Panel — bottom sheet on mobile, right-docked on desktop (Section 15) */}
@@ -5210,28 +4969,34 @@ connect s1 -> r1
             bg-[var(--surface)] shadow-2xl md:shadow-none flex flex-col overflow-y-auto scrollbar-thin shrink-0 transition-all duration-200
           "
           >
-            <div className="p-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]/50">
-                <div>
-                  <h2 className="text-sm font-bold tracking-tight text-[color:var(--foreground)]">
+            <div className="p-3.5 px-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface-muted)]/50">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-[var(--surface)] text-[color:var(--accent)] border border-[var(--border)] shrink-0">
+                  {String(selectedNode.data?.type || selectedNode.type || "node")}
+                </span>
+                <div className="min-w-0">
+                  <h2 className="text-xs font-bold tracking-tight text-[color:var(--foreground)]">
                     Node Inspector
                   </h2>
-                  <p className="text-[10px] text-[color:var(--foreground)]/50">
-                    Configure component settings.
+                  <p className="text-[10px] font-mono text-[color:var(--foreground)]/50 truncate max-w-[140px]">
+                    {String(selectedNode.data?.label || selectedNode.id)}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedNodeId(null);
-                    setNodes((nds) =>
-                      nds.map((n) => ({ ...n, selected: false })),
-                    );
-                  }}
-                  className="text-xs text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] h-6 w-6 rounded-full hover:bg-[var(--surface-muted)] flex items-center justify-center font-bold transition cursor-pointer"
-                >
-                  ×
-                </button>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedNodeId(null);
+                  setNodes((nds) =>
+                    nds.map((n) => ({ ...n, selected: false })),
+                  );
+                }}
+                className="text-xs text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] h-6 w-6 rounded-md hover:bg-[var(--surface)] flex items-center justify-center font-bold transition cursor-pointer shrink-0"
+                title="Close Inspector"
+              >
+                ✕
+              </button>
+            </div>
 
               <div className="p-4 flex-1 space-y-4">
                 <button
@@ -7755,6 +7520,40 @@ connect s1 -> r1
             onRunSimulation={() => {
               handleStartSimulation();
             }}
+          />
+
+          {/* Dedicated Canvas Settings Sheet */}
+          <CanvasSettingsSheet
+            isOpen={isSettingsOpen}
+            onOpenChange={setIsSettingsOpen}
+            bgPattern={bgPattern}
+            setBgPattern={setBgPattern}
+            bgOpacity={bgOpacity}
+            setBgOpacity={setBgOpacity}
+            snapToGrid={snapToGrid}
+            setSnapToGrid={setSnapToGrid}
+            gridSize={gridSize}
+            setGridSize={setGridSize}
+            showMinimap={showMinimap}
+            setShowMinimap={setShowMinimap}
+            onZoomIn={() => zoomIn({ duration: 200 })}
+            onZoomOut={() => zoomOut({ duration: 200 })}
+            onFitView={() => fitView({ duration: 400 })}
+            nodes={nodes}
+            edges={edges}
+            speed={speed}
+            setSpeed={setSpeed}
+            hideResponse={hideResponse}
+            setHideResponse={setHideResponse}
+            parallelResponse={parallelResponse}
+            setParallelResponse={setParallelResponse}
+            debugEnabled={debugEnabled}
+            setDebugEnabled={setDebugEnabled}
+            onExport={handleExportFlow}
+            onImport={handleImportClick}
+            onDownloadImage={downloadCanvasImage}
+            onClearCanvas={handleClearCanvas}
+            theme={theme}
           />
         </div>
 

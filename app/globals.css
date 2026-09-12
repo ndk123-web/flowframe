@@ -1,100 +1,202 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is([data-theme="dark"] *, .dark, .dark *));
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────────
-   Dark-first palette. One primary accent: electric blue.
+   FlowFrame palette integrated with shadcn/ui semantic tokens.
+   Dark-first palette. One primary accent: FlowFrame blue.
    Surfaces are deep charcoal, NOT pure black.
 ────────────────────────────────────────────────────────────────────────────── */
 :root {
-  /* Backgrounds */
-  --bg:          #f8fafc;
-  --bg-elevated: #f1f5f9;
-  --surface:     #ffffff;
+  color-scheme: light;
+
+  /* ── FlowFrame custom tokens ── */
+  --bg:            #f8fafc;
+  --bg-elevated:   #f1f5f9;
+  --surface:       #ffffff;
   --surface-muted: #f8fafc;
-
-  /* Borders */
-  --border:      rgba(15, 23, 42, 0.12);
+  --border:        rgba(15, 23, 42, 0.12);
   --border-strong: rgba(15, 23, 42, 0.22);
-
-  /* Text */
-  --foreground:  #0f172a;
-  --muted:       #64748b;
-
-  /* Accent — single primary blue */
-  --accent:      #2563eb;
-  --accent-muted: #1d4ed8;
-  --accent-fg:   #ffffff;
-  --glow:        rgba(37, 99, 235, 0.2);
+  --foreground:    #0f172a;
+  --muted:         #475569;
+  --accent:        #2563eb;
+  --accent-muted:  #1d4ed8;
+  --accent-fg:     #ffffff;
+  --glow:          rgba(37, 99, 235, 0.2);
 
   /* Status colors */
-  --green:       #16a34a;
-  --green-muted: rgba(22, 163, 74, 0.12);
-  --amber:       #d97706;
-  --amber-muted: rgba(217, 119, 6, 0.12);
-  --red:         #dc2626;
-  --red-muted:   rgba(220, 38, 38, 0.12);
+  --green:         #16a34a;
+  --green-muted:   rgba(22, 163, 74, 0.12);
+  --amber:         #d97706;
+  --amber-muted:   rgba(217, 119, 6, 0.12);
+  --red-c:         #dc2626;
+  --red-muted:     rgba(220, 38, 38, 0.12);
 
   /* Secondary (used sparingly) */
-  --violet:      #7c3aed;
-  --violet-muted: rgba(124, 58, 237, 0.10);
-
-  /* Legacy aliases for backwards compat */
-  --background:  var(--bg);
-  --accent-a:    var(--accent);
-  --accent-b:    var(--violet);
-}
-
-[data-theme="dark"] {
-  /* Backgrounds */
-  --bg:          #0f1117;
-  --bg-elevated: #161b27;
-  --surface:     #1c2130;
-  --surface-muted: #1a1f2e;
-
-  /* Borders */
-  --border:      rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.14);
-
-  /* Text */
-  --foreground:  #e2e8f0;
-  --muted:       #8892a4;
-
-  /* Accent */
-  --accent:      #3b82f6;
-  --accent-muted: #2563eb;
-  --accent-fg:   #ffffff;
-  --glow:        rgba(59, 130, 246, 0.20);
-
-  /* Status colors */
-  --green:       #22c55e;
-  --green-muted: rgba(34, 197, 94, 0.12);
-  --amber:       #f59e0b;
-  --amber-muted: rgba(245, 158, 11, 0.12);
-  --red:         #ef4444;
-  --red-muted:   rgba(239, 68, 68, 0.12);
-
-  /* Secondary */
-  --violet:      #a78bfa;
-  --violet-muted: rgba(167, 139, 250, 0.10);
+  --violet:        #7c3aed;
+  --violet-muted:  rgba(124, 58, 237, 0.10);
 
   /* Legacy aliases */
-  --background:  var(--bg);
-  --accent-a:    var(--accent);
-  --accent-b:    var(--violet);
+  --accent-a:      #2563eb;
+  --accent-b:      var(--violet);
+
+  /* ── shadcn semantic tokens (light) ── */
+  --background:          #f8fafc;
+  --card:                #ffffff;
+  --card-foreground:     #0f172a;
+  --popover:             #ffffff;
+  --popover-foreground:  #0f172a;
+  --primary:             #2563eb;
+  --primary-foreground:  #ffffff;
+  --secondary:           #f1f5f9;
+  --secondary-foreground:#0f172a;
+  --shadcn-muted:        #f1f5f9;
+  --muted-foreground:    #475569;
+  --shadcn-accent:       #f1f5f9;
+  --accent-foreground:   #0f172a;
+  --destructive:         #dc2626;
+  --destructive-foreground: #ffffff;
+  --input:               rgba(15, 23, 42, 0.12);
+  --ring:                #2563eb;
+  --chart-1:             #2563eb;
+  --chart-2:             #16a34a;
+  --chart-3:             #d97706;
+  --chart-4:             #7c3aed;
+  --chart-5:             #dc2626;
+  --radius:              0.5rem;
+
+  /* Sidebar */
+  --sidebar:                    #f8fafc;
+  --sidebar-foreground:         #0f172a;
+  --sidebar-primary:            #2563eb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent:             #f1f5f9;
+  --sidebar-accent-foreground:  #0f172a;
+  --sidebar-border:             rgba(15, 23, 42, 0.12);
+  --sidebar-ring:               #2563eb;
+}
+
+[data-theme="dark"],
+.dark {
+  color-scheme: dark;
+
+  /* ── FlowFrame custom tokens ── */
+  --bg:            #0f1117;
+  --bg-elevated:   #161b27;
+  --surface:       #1c2130;
+  --surface-muted: #1a1f2e;
+  --border:        rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --foreground:    #f8fafc;
+  --muted:         #94a3b8;
+  --accent:        #3b82f6;
+  --accent-muted:  #2563eb;
+  --accent-fg:     #ffffff;
+  --glow:          rgba(59, 130, 246, 0.20);
+
+  /* Status colors */
+  --green:         #22c55e;
+  --green-muted:   rgba(34, 197, 94, 0.12);
+  --amber:         #f59e0b;
+  --amber-muted:   rgba(245, 158, 11, 0.12);
+  --red-c:         #ef4444;
+  --red-muted:     rgba(239, 68, 68, 0.12);
+
+  /* Secondary */
+  --violet:        #a78bfa;
+  --violet-muted:  rgba(167, 139, 250, 0.10);
+
+  /* Legacy aliases */
+  --accent-a:      #3b82f6;
+  --accent-b:      var(--violet);
+
+  /* ── shadcn semantic tokens (dark) ── */
+  --background:          #0f1117;
+  --card:                #1c2130;
+  --card-foreground:     #f8fafc;
+  --popover:             #1c2130;
+  --popover-foreground:  #f8fafc;
+  --primary:             #3b82f6;
+  --primary-foreground:  #ffffff;
+  --secondary:           #1a1f2e;
+  --secondary-foreground:#f8fafc;
+  --shadcn-muted:        #1a1f2e;
+  --muted-foreground:    #94a3b8;
+  --shadcn-accent:       #1a1f2e;
+  --accent-foreground:   #f8fafc;
+  --destructive:         #ef4444;
+  --destructive-foreground: #ffffff;
+  --input:               rgba(255, 255, 255, 0.10);
+  --ring:                #3b82f6;
+  --chart-1:             #3b82f6;
+  --chart-2:             #22c55e;
+  --chart-3:             #f59e0b;
+  --chart-4:             #a78bfa;
+  --chart-5:             #ef4444;
+
+  /* Sidebar */
+  --sidebar:                    #0f1117;
+  --sidebar-foreground:         #f8fafc;
+  --sidebar-primary:            #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent:             #1a1f2e;
+  --sidebar-accent-foreground:  #f8fafc;
+  --sidebar-border:             rgba(255, 255, 255, 0.08);
+  --sidebar-ring:               #3b82f6;
+}
+
+/* ─── Tailwind Theme Mapping ─────────────────────────────────────────────── */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--shadcn-muted);
+  --color-muted-foreground: var(--muted);
+  --color-accent: var(--shadcn-accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-mono), "JetBrains Mono", ui-monospace, monospace;
+  --font-heading: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* ─── Base Styles ─────────────────────────────────────────────────────────── */
-@theme inline {
-  --color-background: var(--bg);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
 body {
-  background: var(--bg);
+  background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), "SF Pro Text", "Segoe UI", system-ui, sans-serif;
-  transition: background-color 250ms ease, color 250ms ease;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -111,7 +213,8 @@ body {
   background-size: 40px 40px;
 }
 
-[data-theme="dark"] .technical-grid {
+[data-theme="dark"] .technical-grid,
+.dark .technical-grid {
   background-image:
     linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
@@ -123,7 +226,8 @@ body {
   background-size: 24px 24px;
 }
 
-[data-theme="dark"] .dot-grid {
+[data-theme="dark"] .dot-grid,
+.dark .dot-grid {
   background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
 }
 
@@ -137,7 +241,7 @@ body {
   background-color: var(--border-strong);
   border-radius: 9999px;
 }
-::-webkit-scrollbar-thumb:hover { background-color: var(--muted); }
+::-webkit-scrollbar-thumb:hover { background-color: var(--muted-foreground); }
 
 .scrollbar-thin { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
 .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -146,41 +250,42 @@ body {
   background-color: var(--border-strong);
   border-radius: 9999px;
 }
-.scrollbar-thin::-webkit-scrollbar-thumb:hover { background-color: var(--muted); }
+.scrollbar-thin::-webkit-scrollbar-thumb:hover { background-color: var(--muted-foreground); }
 
 /* ─── Utility Classes ─────────────────────────────────────────────────────── */
 
-/* Gradient text — using blue instead of violet */
+/* Gradient text — using blue */
 .grad-text {
-  background: linear-gradient(135deg, var(--accent) 0%, #60a5fa 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #60a5fa 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Accent button */
+/* Legacy accent button (use shadcn Button variant="default" instead) */
 .btn-primary {
-  background: var(--accent);
-  color: var(--accent-fg);
+  background: var(--primary);
+  color: var(--primary-foreground);
   transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
 }
 .btn-primary:hover {
-  background: var(--accent-muted);
+  background: var(--primary);
+  opacity: 0.9;
   box-shadow: 0 4px 16px -4px var(--glow);
   transform: translateY(-1px);
 }
 .btn-primary:active { transform: scale(0.97); }
 
-/* Secondary/ghost button */
+/* Legacy secondary button (use shadcn Button variant="outline" instead) */
 .btn-secondary {
-  background: var(--surface);
+  background: var(--card);
   border: 1px solid var(--border-strong);
   color: var(--foreground);
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 .btn-secondary:hover {
-  background: var(--surface-muted);
-  border-color: var(--accent);
+  background: var(--secondary);
+  border-color: var(--primary);
 }
 
 /* Status dot */
@@ -254,4 +359,20 @@ body {
 @keyframes shimmerTrack {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(200%); }
+}
+
+/* ─── shadcn base layer ──────────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
+  }
 }
