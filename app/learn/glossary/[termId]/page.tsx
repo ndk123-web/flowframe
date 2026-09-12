@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import SiteHeader from "@/components/SiteHeader";
 import { useThemeStore } from "@/store/useThemeStore";
+import { FiAlertTriangle, FiGlobe } from "react-icons/fi";
 import { TERMS } from "../page";
 
 interface Section {
@@ -162,10 +163,10 @@ app.get('/api/v1/users/:id', async (req, res) => {
     diagram: `  Status Code Families:
   ─────────────────────────────────────────
   1xx  Informational   (connecting...)
-  2xx  ✅ Success       (request completed!)
-  3xx  ↪ Redirect      (resource moved)
-  4xx  ⚠️ Client Error  (invalid request body)
-  5xx  💥 Server Error  (database crashed)
+  2xx  Success         (request completed!)
+  3xx  Redirect        (resource moved)
+  4xx  Client Error    (invalid request body)
+  5xx  Server Error    (database crashed)
   ─────────────────────────────────────────`,
     sections: [
       { title: "1. What is it?", body: "HTTP Status Codes are standardized 3-digit integers returned in every server response. They serve as metadata indicating how the request was handled." },
@@ -488,7 +489,7 @@ async function getCachedData(key, fetchFromDbFunc) {
     id: "high-availability",
     term: "High Availability",
     category: "Architecture",
-    categoryColor: "text-violet-400 bg-violet-500/10 border-violet-500/20",
+    categoryColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
     tldr: "High Availability (HA) is a design pattern aimed at minimizing service downtime through hardware redundancy and failover systems.",
     diagram: `  Server 1 (Active)  ──┐
                        ├─▶ [Load Balancer] ──▶ User
@@ -508,7 +509,7 @@ async function getCachedData(key, fetchFromDbFunc) {
     id: "microservices",
     term: "Microservices",
     category: "Architecture",
-    categoryColor: "text-violet-400 bg-violet-500/10 border-violet-500/20",
+    categoryColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
     tldr: "An architecture style that decomposes an application into a suite of small, independent services communicating via APIs.",
     diagram: `  Monolith: [Auth + Orders + Billing] (One large app)
   
@@ -527,7 +528,7 @@ async function getCachedData(key, fetchFromDbFunc) {
     id: "dns",
     term: "DNS",
     category: "Networking",
-    categoryColor: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
+    categoryColor: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
     tldr: "DNS (Domain Name System) translates human-readable domain names (google.com) to machine-readable IP addresses (142.250.80.46).",
     diagram: `  Browser ── Query: myapp.com ──▶ [DNS Resolver] ──▶ IP: 54.92.17.33
      │                                                     ▲
@@ -653,7 +654,7 @@ async function getCachedData(key, fetchFromDbFunc) {
     id: "circuit-breaker",
     term: "Circuit Breaker",
     category: "Architecture",
-    categoryColor: "text-violet-400 bg-violet-500/10 border-violet-500/20",
+    categoryColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
     tldr: "A circuit breaker is a resilience pattern that stops requests to a failing backend service, returning fallbacks and allowing the system to recover.",
     diagram: `  [Client] ──▶ [Circuit Breaker (Closed: OK)] ──▶ [Downstream Service]
   
@@ -672,7 +673,7 @@ async function getCachedData(key, fetchFromDbFunc) {
     id: "websocket",
     term: "WebSocket",
     category: "Networking",
-    categoryColor: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
+    categoryColor: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
     tldr: "A WebSocket is a persistent, bidirectional communication protocol that allows a client and server to push messages to each other instantly.",
     diagram: `  Client ── 1. HTTP Upgrade Handshake ──▶ Server
   Client ◀─────── 2. Persistent TCP ──────▶ Server (Bidirectional messages)`,
@@ -939,7 +940,7 @@ SELECT * FROM users WHERE email = 'rohan@test.com'; -- uses index` },
     id: "monolith",
     term: "Monolith",
     category: "Architecture",
-    categoryColor: "text-violet-400 bg-violet-500/10 border-violet-500/20",
+    categoryColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
     tldr: "A monolith is a single deployable application containing all features — auth, payments, notifications — in one codebase.",
     diagram: `  Monolith App
   ┌─────────────────────────────┐
@@ -959,7 +960,7 @@ SELECT * FROM users WHERE email = 'rohan@test.com'; -- uses index` },
     id: "fault-tolerance",
     term: "Fault Tolerance",
     category: "Architecture",
-    categoryColor: "text-violet-400 bg-violet-500/10 border-violet-500/20",
+    categoryColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
     tldr: "Fault tolerance is a system's ability to keep operating — or degrade gracefully — when individual components fail.",
     diagram: `  Payment Service DOWN
        │
@@ -980,7 +981,7 @@ SELECT * FROM users WHERE email = 'rohan@test.com'; -- uses index` },
     id: "ip",
     term: "IP Address",
     category: "Networking",
-    categoryColor: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
+    categoryColor: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
     tldr: "An IP address is a unique numerical label that identifies a device on a network so data packets know where to go.",
     diagram: `  myapp.com ──[DNS]──▶ 54.92.17.33 (IPv4)
                               │
@@ -999,7 +1000,7 @@ SELECT * FROM users WHERE email = 'rohan@test.com'; -- uses index` },
     id: "tcp",
     term: "TCP",
     category: "Networking",
-    categoryColor: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
+    categoryColor: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
     tldr: "TCP is a reliable transport protocol that guarantees ordered, acknowledged delivery of data packets over the internet.",
     diagram: `  3-Way Handshake:
   Client ── SYN ──────────▶ Server
@@ -1020,7 +1021,7 @@ SELECT * FROM users WHERE email = 'rohan@test.com'; -- uses index` },
     id: "bandwidth",
     term: "Bandwidth",
     category: "Networking",
-    categoryColor: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
+    categoryColor: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
     tldr: "Bandwidth is the maximum data transfer capacity of a network connection, measured in Mbps or Gbps.",
     diagram: `  1 Gbps link = max ~125 MB/s theoretical throughput
   
@@ -1060,7 +1061,7 @@ function parseTextWithLinks(text: string) {
       parts.push(
         <code
           key={key++}
-          className="font-mono text-[0.85em] bg-[var(--surface-muted)] px-1.5 py-0.5 rounded border border-[var(--border)] text-violet-400"
+          className="font-mono text-[0.85em] bg-[var(--surface-muted)] px-1.5 py-0.5 rounded border border-[var(--border)] text-blue-400"
         >
           {match[3]}
         </code>
@@ -1073,7 +1074,7 @@ function parseTextWithLinks(text: string) {
           href={match[5]}
           target={isExternal ? "_blank" : undefined}
           rel={isExternal ? "noopener noreferrer" : undefined}
-          className="text-violet-400 hover:text-violet-300 underline font-semibold transition-colors duration-150"
+          className="text-blue-400 hover:text-blue-300 underline font-semibold transition-colors duration-150"
         >
           {match[4]}
         </Link>
@@ -1146,8 +1147,8 @@ export default function TermDetailPage({ params }: { params: Promise<{ termId: s
                        fallbackTerm.category === "Databases" ? "text-cyan-400 bg-cyan-500/10 border-cyan-500/20" :
                        fallbackTerm.category === "Performance" ? "text-amber-400 bg-amber-500/10 border-amber-500/20" :
                        fallbackTerm.category === "Security" ? "text-red-400 bg-red-500/10 border-red-500/20" :
-                       fallbackTerm.category === "Architecture" ? "text-violet-400 bg-violet-500/10 border-violet-500/20" :
-                       "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
+                       fallbackTerm.category === "Architecture" ? "text-blue-400 bg-blue-500/10 border-blue-500/20" :
+                       "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
         tldr: fallbackTerm.short,
         sections: [
           { title: "The In-Depth Explanation", body: fallbackTerm.long }
@@ -1161,29 +1162,29 @@ export default function TermDetailPage({ params }: { params: Promise<{ termId: s
 
   if (!term) {
     return (
-      <main className="min-h-screen bg-[var(--background)] text-[color:var(--foreground)] flex flex-col items-center justify-center gap-4">
-        <SiteHeader theme={theme} onToggleTheme={toggleTheme} showHomeLink badgeText="Learn Academy" alwaysGlass />
+      <main className="min-h-screen bg-[var(--bg)] text-[color:var(--foreground)] flex flex-col items-center justify-center gap-4">
+        <SiteHeader theme={theme} onToggleTheme={toggleTheme} showHomeLink badgeText="Learn Academy" />
         <p className="text-lg font-bold">Term not found: {termId}</p>
-        <Link href="/learn/glossary" className="text-violet-400 underline text-sm">← Back to Glossary</Link>
+        <Link href="/learn/glossary" className="text-[color:var(--accent)] underline text-sm">← Back to Glossary</Link>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[color:var(--foreground)] relative overflow-x-hidden">
+    <main className="min-h-screen bg-[var(--bg)] text-[color:var(--foreground)] relative overflow-x-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10 technical-grid opacity-20" />
-      <div className="pointer-events-none absolute -left-32 top-0 -z-10 h-[500px] w-[500px] rounded-full bg-violet-500/5 blur-[120px]" />
+      <div className="pointer-events-none absolute -left-32 top-0 -z-10 h-[500px] w-[500px] rounded-full bg-[var(--accent)]/10 blur-3xl" />
 
-      <SiteHeader theme={theme} onToggleTheme={toggleTheme} showHomeLink badgeText="Learn Academy" alwaysGlass />
+      <SiteHeader theme={theme} onToggleTheme={toggleTheme} showHomeLink badgeText="Learn Academy" />
 
       {/* Breadcrumb */}
-      <div className="border-b border-[var(--border)]/60 bg-[var(--surface)]/40 backdrop-blur">
-        <div className="mx-auto max-w-3xl px-5 sm:px-8 h-10 flex items-center gap-2 text-xs text-[color:var(--foreground)]/40 font-mono">
-          <Link href="/learn" className="hover:text-violet-400 transition-colors">Learn</Link>
+      <div className="border-b border-[var(--border)] bg-[var(--bg-elevated)]">
+        <div className="mx-auto max-w-3xl px-5 sm:px-8 h-10 flex items-center gap-2 text-xs text-[color:var(--muted)] font-mono">
+          <Link href="/learn" className="hover:text-[color:var(--accent)] transition-colors">Learn</Link>
           <span>/</span>
-          <Link href="/learn/glossary" className="hover:text-violet-400 transition-colors">Glossary</Link>
+          <Link href="/learn/glossary" className="hover:text-[color:var(--accent)] transition-colors">Glossary</Link>
           <span>/</span>
-          <span className="text-violet-400">{term.term}</span>
+          <span className="text-[color:var(--accent)]">{term.term}</span>
         </div>
       </div>
 
@@ -1195,14 +1196,14 @@ export default function TermDetailPage({ params }: { params: Promise<{ termId: s
             <span className={`text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${term.categoryColor}`}>{term.category}</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[color:var(--foreground)]">{term.term}</h1>
-          <p className="text-base sm:text-lg text-[color:var(--foreground)]/55 leading-relaxed border-l-2 border-violet-500/40 pl-4">{term.tldr}</p>
+          <p className="text-base sm:text-lg text-[color:var(--muted)] leading-relaxed border-l-2 border-[var(--accent)] pl-4">{term.tldr}</p>
         </motion.div>
 
         {/* Diagram */}
         {term.diagram && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05 }}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--foreground)]/30 mb-3 font-mono">Diagram</p>
-            <pre className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/60 backdrop-blur px-5 py-4 text-xs sm:text-sm font-mono text-[color:var(--foreground)]/70 overflow-x-auto leading-relaxed">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--muted)] mb-3 font-mono">Diagram</p>
+            <pre className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 text-xs sm:text-sm font-mono text-[color:var(--foreground)]/80 overflow-x-auto leading-relaxed">
               {term.diagram}
             </pre>
           </motion.div>
@@ -1210,20 +1211,20 @@ export default function TermDetailPage({ params }: { params: Promise<{ termId: s
 
         {/* Sections (accordion) */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.08 }} className="space-y-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--foreground)]/30 mb-3 font-mono">In Depth</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--muted)] mb-3 font-mono">In Depth</p>
           {term.sections.map((sec, i) => (
-            <div key={i} className={`rounded-2xl border transition-all duration-200 overflow-hidden ${openSection === i ? "border-violet-500/30 bg-[var(--surface)]/60" : "border-[var(--border)] bg-[var(--surface)]/40 hover:border-[var(--border)]"}`}>
-              <button type="button" onClick={() => setOpenSection(p => p === i ? -1 : i)} className="w-full text-left px-5 py-4 flex items-center justify-between gap-3">
+            <div key={i} className={`rounded-xl border transition-all duration-200 overflow-hidden ${openSection === i ? "border-[var(--accent)]/40 bg-[var(--surface)]" : "border-[var(--border)] bg-[var(--surface)]/60 hover:border-[var(--border)]"}`}>
+              <button type="button" onClick={() => setOpenSection(p => p === i ? -1 : i)} className="w-full text-left px-5 py-4 flex items-center justify-between gap-3 cursor-pointer">
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${openSection === i ? "bg-violet-500 text-white" : "bg-[var(--surface-muted)] text-[color:var(--foreground)]/50"}`}>{i + 1}</span>
-                  <span className={`font-semibold text-sm ${openSection === i ? "text-[color:var(--foreground)]" : "text-[color:var(--foreground)]/75"}`}>{sec.title}</span>
+                  <span className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${openSection === i ? "bg-[var(--accent)] text-white" : "bg-[var(--surface-muted)] text-[color:var(--muted)]"}`}>{i + 1}</span>
+                  <span className={`font-semibold text-sm ${openSection === i ? "text-[color:var(--foreground)]" : "text-[color:var(--foreground)]/80"}`}>{sec.title}</span>
                 </div>
-                <span className={`shrink-0 text-[color:var(--foreground)]/30 transition-transform duration-200 ${openSection === i ? "rotate-180" : ""}`}>▾</span>
+                <span className={`shrink-0 text-[color:var(--muted)] transition-transform duration-200 ${openSection === i ? "rotate-180" : ""}`}>▾</span>
               </button>
               <AnimatePresence>
                 {openSection === i && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden">
-                    <div className="px-5 pb-5 border-t border-[var(--border)]/50 pt-4 space-y-1">
+                    <div className="px-5 pb-5 border-t border-[var(--border)] pt-4 space-y-1">
                       {renderBody(sec.body)}
                     </div>
                   </motion.div>
@@ -1236,11 +1237,11 @@ export default function TermDetailPage({ params }: { params: Promise<{ termId: s
         {/* Code example */}
         {term.codeExample && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.12 }}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--foreground)]/30 mb-3 font-mono">Code Example</p>
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/50 overflow-hidden">
-              <div className="px-4 py-2.5 border-b border-[var(--border)]/60 flex items-center gap-2">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--muted)] mb-3 font-mono">Code Example</p>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-[var(--border)] flex items-center gap-2">
                 <div className="flex gap-1.5"><div className="h-2.5 w-2.5 rounded-full bg-red-400/60" /><div className="h-2.5 w-2.5 rounded-full bg-amber-400/60" /><div className="h-2.5 w-2.5 rounded-full bg-emerald-400/60" /></div>
-                <p className="text-[10px] font-mono text-[color:var(--foreground)]/35">{term.codeExample.label}</p>
+                <p className="text-[10px] font-mono text-[color:var(--muted)]">{term.codeExample.label}</p>
               </div>
               <pre className="px-5 py-4 font-mono text-xs text-[color:var(--foreground)]/80 overflow-x-auto whitespace-pre leading-relaxed">{term.codeExample.code}</pre>
             </div>
@@ -1250,15 +1251,21 @@ export default function TermDetailPage({ params }: { params: Promise<{ termId: s
         {/* Misconception + Real World */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.14 }} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {term.misconception && (
-            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 space-y-2">
-              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-400/70 font-mono">⚠️ Common Misconception</p>
-              <p className="text-sm text-[color:var(--foreground)]/65 leading-relaxed">{term.misconception}</p>
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-5 space-y-2">
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-400 font-mono flex items-center gap-1.5">
+                <FiAlertTriangle className="w-3 h-3 shrink-0" />
+                <span>Common Misconception</span>
+              </p>
+              <p className="text-sm text-[color:var(--foreground)]/80 leading-relaxed">{term.misconception}</p>
             </div>
           )}
           {term.realWorld && (
-            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5 space-y-2">
-              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-emerald-400/70 font-mono">🌍 Real World Usage</p>
-              <p className="text-sm text-[color:var(--foreground)]/65 leading-relaxed">{term.realWorld}</p>
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-5 space-y-2">
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-emerald-400 font-mono flex items-center gap-1.5">
+                <FiGlobe className="w-3 h-3 shrink-0" />
+                <span>Real World Usage</span>
+              </p>
+              <p className="text-sm text-[color:var(--foreground)]/80 leading-relaxed">{term.realWorld}</p>
             </div>
           )}
         </motion.div>
@@ -1266,10 +1273,10 @@ export default function TermDetailPage({ params }: { params: Promise<{ termId: s
         {/* Related terms */}
         {term.relatedIds && term.relatedIds.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.16 }}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--foreground)]/30 mb-3 font-mono">Related Terms</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--muted)] mb-3 font-mono">Related Terms</p>
             <div className="flex flex-wrap gap-2">
               {term.relatedIds.map(id => (
-                <Link key={id} href={`/learn/glossary/${id}`} className="rounded-full border border-[var(--border)] bg-[var(--surface)]/40 hover:border-violet-500/40 hover:text-violet-400 hover:bg-violet-500/5 px-3 py-1.5 text-xs font-semibold text-[color:var(--foreground)]/55 transition-all duration-150 capitalize">
+                <Link key={id} href={`/learn/glossary/${id}`} className="rounded-full border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] hover:text-[color:var(--accent)] px-3 py-1.5 text-xs font-semibold text-[color:var(--muted)] transition-all duration-150 capitalize">
                   {id.replace(/-/g, " ")}
                 </Link>
               ))}
@@ -1278,12 +1285,12 @@ export default function TermDetailPage({ params }: { params: Promise<{ termId: s
         )}
 
         {/* Bottom CTAs */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.18 }} className="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-[var(--border)]/50">
-          <Link href="/learn/glossary" className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)]/40 hover:bg-[var(--surface)]/70 px-5 py-3 text-sm font-bold text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] transition-all duration-150">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.18 }} className="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-[var(--border)]">
+          <Link href="/learn/glossary" className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--bg-elevated)] px-5 py-3 text-sm font-bold text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-all duration-150">
             ← All Terms
           </Link>
           {term.nextId && TERM_MAP[term.nextId] && (
-            <Link href={`/learn/glossary/${term.nextId}`} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 px-5 py-3 text-sm font-bold text-white transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-violet-500/20">
+            <Link href={`/learn/glossary/${term.nextId}`} className="flex-1 flex items-center justify-center gap-2 rounded-xl btn-primary px-5 py-3 text-sm font-bold text-white transition-all duration-150 shadow-sm">
               Next: {TERM_MAP[term.nextId].term} →
             </Link>
           )}

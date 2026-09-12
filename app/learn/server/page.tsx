@@ -5,6 +5,17 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import SiteHeader from "@/components/SiteHeader";
 import { useThemeStore } from "@/store/useThemeStore";
+import {
+  FiServer,
+  FiLink,
+  FiZap,
+  FiActivity,
+  FiBox,
+  FiCode,
+  FiChevronRight,
+  FiInfo,
+  FiMonitor,
+} from "react-icons/fi";
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 interface Endpoint {
@@ -40,7 +51,7 @@ const STATUS_COLOR = (s: number) => {
 const ENDPOINT_GROUPS = [
   {
     label: "Users",
-    color: "border-violet-500/25",
+    color: "border-blue-500/25",
     endpoints: [
       { method: "GET"    as HttpMethod, path: "/api/v1/users",       desc: "List all users" },
       { method: "POST"   as HttpMethod, path: "/api/v1/users",       desc: "Create a new user", body: { name: "Rohan Sharma", email: "rohan@example.com", role: "user" } },
@@ -119,8 +130,8 @@ function FlowDiagram({ activeEp, isLoading, response }: { activeEp: Endpoint; is
 
       <div className="flex items-stretch gap-0 min-w-0">
         {/* Client box */}
-        <div className="shrink-0 flex flex-col items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)]/60 px-3 py-2.5 min-w-[72px] gap-1">
-          <span className="text-xl">💻</span>
+        <div className="shrink-0 flex flex-col items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)]/60 px-3 py-2.5 min-w-[72px] gap-1.5">
+          <FiMonitor className="w-5 h-5 text-blue-400" />
           <p className="text-[9px] font-bold text-[color:var(--foreground)]/60 uppercase tracking-wide">Client</p>
         </div>
 
@@ -196,12 +207,12 @@ function FlowDiagram({ activeEp, isLoading, response }: { activeEp: Endpoint; is
               return (
                 <div
                   key={i}
-                  className={`flex items-center gap-1.5 px-2 py-0.5 transition-colors duration-150 ${isActive ? "bg-violet-500/15" : ""}`}
+                  className={`flex items-center gap-1.5 px-2 py-0.5 transition-colors duration-150 ${isActive ? "bg-blue-500/15" : ""}`}
                 >
                   <span className={`text-[7px] font-bold font-mono w-8 text-center shrink-0 ${METHOD_COLORS[ep.method].cls.split(" ")[0]}`}>
                     {ep.method}
                   </span>
-                  <span className={`text-[7px] font-mono truncate ${isActive ? "text-violet-400" : "text-[color:var(--foreground)]/35"}`}>
+                  <span className={`text-[7px] font-mono truncate ${isActive ? "text-blue-400" : "text-[color:var(--foreground)]/35"}`}>
                     {ep.path}
                   </span>
                 </div>
@@ -238,7 +249,7 @@ function parseTextWithLinks(text: string) {
       parts.push(
         <code
           key={key++}
-          className="font-mono text-[0.82em] bg-[var(--surface-muted)] px-1 py-0.5 rounded border border-[var(--border)] text-violet-400"
+          className="font-mono text-[0.82em] bg-[var(--surface-muted)] px-1 py-0.5 rounded border border-[var(--border)] text-blue-400"
         >
           {match[3]}
         </code>
@@ -251,7 +262,7 @@ function parseTextWithLinks(text: string) {
           href={match[5]}
           target={isExternal ? "_blank" : undefined}
           rel={isExternal ? "noopener noreferrer" : undefined}
-          className="text-violet-400 hover:text-violet-300 underline font-semibold transition-colors duration-150"
+          className="text-blue-400 hover:text-blue-300 underline font-semibold transition-colors duration-150"
         >
           {match[4]}
         </Link>
@@ -269,12 +280,12 @@ function parseTextWithLinks(text: string) {
 
 // ── Concept Accordion ────────────────────────────────────────────────────────
 const CONCEPTS = [
-  { id: "what-is-server",    icon: "🖥️", title: "What is a Web Server?",      content: `A [web server](/learn/glossary/server) is a program that **listens** on a port for incoming HTTP requests, processes them, and sends back a response.\n\nThink of it like a waiter:\n- You (the [client](/learn/glossary/request-response)) say: "I'd like a list of users."\n- The server fetches the data and brings it back.\n- You receive a [response](/learn/glossary/request-response) with the data.` },
-  { id: "what-is-endpoint",  icon: "🔌", title: "What is an Endpoint?",       content: `An [endpoint](/learn/glossary/endpoint) is a specific URL + HTTP method the server listens on:\n\n- \`GET /api/v1/users\` → "Give me all users"\n- \`POST /api/v1/users\` → "Create a new user"\n- \`DELETE /api/v1/users/:id\` → "Delete user by ID"\n\nThe **path** = what. The **method** = how.` },
-  { id: "http-methods",      icon: "⚡", title: "HTTP Methods",               content: `**GET** — Read data. Never changes anything. See details under [HTTP](/learn/glossary/http).\n**POST** — Create something new. Body required.\n**PUT** — Replace a full resource. Body required.\n**PATCH** — Update only specific fields. Body required.\n**DELETE** — Remove a resource.\n\nRule: GET = read, POST = create, PUT/PATCH = update, DELETE = remove.` },
-  { id: "status-codes",      icon: "🚦", title: "HTTP Status Codes",          content: `**2xx — Success:** \`200 OK\` / \`201 Created\`\n**4xx — Client Error:** See [Status Codes](/learn/glossary/status-codes).\n- \`400\` Bad Request — wrong body\n- \`401\` Unauthorized — not logged in\n- \`403\` Forbidden — no permission\n- \`404\` Not Found — route doesn't exist\n- \`405\` Method Not Allowed — wrong verb\n**5xx — Server Error:** \`500\` Internal Server Error` },
-  { id: "request-response",  icon: "📦", title: "Request & Response Anatomy", content: `**Request (client → server):**\n- Method + URL + Headers + optional Body. See [Request / Response](/learn/glossary/request-response).\n\n**Response (server → client):**\n- Status Code + Headers + Body (JSON)\n\nHeaders = metadata envelope. Body = the actual data.\n\nEvery interaction follows this cycle, taking ~20–200ms.` },
-  { id: "json",              icon: "{}", title: "What is JSON?",              content: `[JSON](/learn/glossary/json) (JavaScript Object Notation) is the universal format for sending structured data:\n\n\`\`\`\n{"id":"user_a4f","name":"Rohan","active":true}\n\`\`\`\n\nSupports: strings, numbers, booleans, null, arrays, nested objects.\nEvery programming language can read it. APIs use it everywhere.` },
+  { id: "what-is-server",    iconType: "server", title: "What is a Web Server?",      content: `A [web server](/learn/glossary/server) is a program that **listens** on a port for incoming HTTP requests, processes them, and sends back a response.\n\nThink of it like a waiter:\n- You (the [client](/learn/glossary/request-response)) say: "I'd like a list of users."\n- The server fetches the data and brings it back.\n- You receive a [response](/learn/glossary/request-response) with the data.` },
+  { id: "what-is-endpoint",  iconType: "link", title: "What is an Endpoint?",       content: `An [endpoint](/learn/glossary/endpoint) is a specific URL + HTTP method the server listens on:\n\n- \`GET /api/v1/users\` → "Give me all users"\n- \`POST /api/v1/users\` → "Create a new user"\n- \`DELETE /api/v1/users/:id\` → "Delete user by ID"\n\nThe **path** = what. The **method** = how.` },
+  { id: "http-methods",      iconType: "zap", title: "HTTP Methods",               content: `**GET** — Read data. Never changes anything. See details under [HTTP](/learn/glossary/http).\n**POST** — Create something new. Body required.\n**PUT** — Replace a full resource. Body required.\n**PATCH** — Update only specific fields. Body required.\n**DELETE** — Remove a resource.\n\nRule: GET = read, POST = create, PUT/PATCH = update, DELETE = remove.` },
+  { id: "status-codes",      iconType: "activity", title: "HTTP Status Codes",          content: `**2xx — Success:** \`200 OK\` / \`201 Created\`\n**4xx — Client Error:** See [Status Codes](/learn/glossary/status-codes).\n- \`400\` Bad Request — wrong body\n- \`401\` Unauthorized — not logged in\n- \`403\` Forbidden — no permission\n- \`404\` Not Found — route doesn't exist\n- \`405\` Method Not Allowed — wrong verb\n**5xx — Server Error:** \`500\` Internal Server Error` },
+  { id: "request-response",  iconType: "box", title: "Request & Response Anatomy", content: `**Request (client → server):**\n- Method + URL + Headers + optional Body. See [Request / Response](/learn/glossary/request-response).\n\n**Response (server → client):**\n- Status Code + Headers + Body (JSON)\n\nHeaders = metadata envelope. Body = the actual data.\n\nEvery interaction follows this cycle, taking ~20–200ms.` },
+  { id: "json",              iconType: "code", title: "What is JSON?",              content: `[JSON](/learn/glossary/json) (JavaScript Object Notation) is the universal format for sending structured data:\n\n\`\`\`\n{"id":"user_a4f","name":"Rohan","active":true}\n\`\`\`\n\nSupports: strings, numbers, booleans, null, arrays, nested objects.\nEvery programming language can read it. APIs use it everywhere.` },
 ];
 
 const CHALLENGES = [
@@ -310,7 +321,7 @@ const CHALLENGES = [
     title: "4. Query Specific User",
     desc: "Retrieve a single user details. Send GET to `/api/v1/users/:id`.",
     expectedMethod: "GET" as HttpMethod,
-    expectedPath: "/api/v1/users/:id",
+    expectedPath: "/api/v1/users",
     expectedStatus: 200,
     setup: { method: "GET" as HttpMethod, path: "/api/v1/users/:id" }
   },
@@ -353,6 +364,17 @@ const CHALLENGES = [
 ];
 
 function ConceptCard({ c, active, onClick }: { c: typeof CONCEPTS[0]; active: boolean; onClick: () => void }) {
+  const renderConceptIcon = (type: string) => {
+    switch (type) {
+      case "server": return <FiServer className="w-3.5 h-3.5 text-blue-400 shrink-0" />;
+      case "link": return <FiLink className="w-3.5 h-3.5 text-cyan-400 shrink-0" />;
+      case "zap": return <FiZap className="w-3.5 h-3.5 text-amber-400 shrink-0" />;
+      case "activity": return <FiActivity className="w-3.5 h-3.5 text-emerald-400 shrink-0" />;
+      case "box": return <FiBox className="w-3.5 h-3.5 text-violet-400 shrink-0" />;
+      default: return <FiCode className="w-3.5 h-3.5 text-blue-400 shrink-0" />;
+    }
+  };
+
   const renderLine = (line: string, i: number) => {
     const trimmed = line.trim();
     if (!trimmed) return <div key={i} className="h-1" />;
@@ -365,16 +387,16 @@ function ConceptCard({ c, active, onClick }: { c: typeof CONCEPTS[0]; active: bo
     return <p key={i} className="text-[0.82em] text-[color:var(--foreground)]/60 leading-relaxed">{parts}</p>;
   };
   return (
-    <button type="button" onClick={onClick} className={`w-full text-left rounded-xl border p-3.5 transition-all duration-200 ${active ? "border-violet-500/40 bg-violet-500/8" : "border-[var(--border)] bg-[var(--surface)]/40 hover:bg-[var(--surface)]/70"}`}>
+    <button type="button" onClick={onClick} className={`w-full text-left rounded-xl border p-3.5 transition-all duration-200 ${active ? "border-blue-500/40 bg-blue-500/8" : "border-[var(--border)] bg-[var(--surface)]/40 hover:bg-[var(--surface)]/70"}`}>
       <div className="flex items-center gap-2 mb-1">
-        <span className="text-base">{c.icon}</span>
-        <span className={`text-xs font-bold ${active ? "text-violet-400" : "text-[color:var(--foreground)]"} transition-colors`}>{c.title}</span>
-        <span className={`ml-auto text-[color:var(--foreground)]/25 transition-transform duration-200 text-xs ${active ? "rotate-90" : ""}`}>▶</span>
+        {renderConceptIcon(c.iconType)}
+        <span className={`text-xs font-bold ${active ? "text-blue-400" : "text-[color:var(--foreground)]"} transition-colors`}>{c.title}</span>
+        <FiChevronRight className={`ml-auto text-[color:var(--foreground)]/30 transition-transform duration-200 w-3.5 h-3.5 ${active ? "rotate-90" : ""}`} />
       </div>
       <AnimatePresence>
         {active && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22, ease: "easeInOut" }} className="overflow-hidden">
-            <div className="pt-2.5 space-y-1 border-t border-violet-500/15 mt-1.5">
+            <div className="pt-2.5 space-y-1 border-t border-blue-500/15 mt-1.5">
               {c.content.split("\n").map((l, i) => renderLine(l, i))}
             </div>
           </motion.div>
@@ -470,7 +492,7 @@ export default function ServerLearnPage() {
       <SiteHeader theme={theme} onToggleTheme={toggleTheme} showHomeLink badgeText="Learn Academy" alwaysGlass />
 
       {/* Breadcrumb */}
-      <div className="border-b border-[var(--border)]/60 bg-[var(--surface)]/40 backdrop-blur shrink-0">
+      <div className="border-b border-[var(--border)]/60 bg-[var(--surface)] shrink-0">
         <div className="mx-auto max-w-[1600px] px-4 sm:px-6 h-10 flex items-center text-xs text-[color:var(--foreground)]/40 font-mono">
           <div className="flex items-center gap-2">
             <Link href="/learn" className="hover:text-emerald-400 transition-colors">← Learn</Link>
@@ -487,11 +509,11 @@ export default function ServerLearnPage() {
           onClick={() => setMobileView("academy")}
           className={`flex-1 text-center py-2 text-xs font-bold rounded-lg border transition-all ${
             mobileView === "academy"
-              ? "bg-violet-500/15 text-violet-400 border-violet-500/30"
+              ? "bg-blue-500/15 text-blue-400 border-blue-500/30"
               : "border-transparent text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]/70"
           }`}
         >
-          📖 Academy
+          Academy
         </button>
         <button
           type="button"
@@ -502,7 +524,7 @@ export default function ServerLearnPage() {
               : "border-transparent text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]/70"
           }`}
         >
-          🔌 Endpoints
+          Endpoints
         </button>
         <button
           type="button"
@@ -513,7 +535,7 @@ export default function ServerLearnPage() {
               : "border-transparent text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]/70"
           }`}
         >
-          ⚡ Explorer
+          Explorer
         </button>
       </div>
 
@@ -572,7 +594,7 @@ export default function ServerLearnPage() {
                   <ConceptCard key={c.id} c={c} active={activeConcept === c.id} onClick={() => setActiveConcept(p => p === c.id ? "" : c.id)} />
                 ))}
                 <div className="pt-2">
-                  <Link href="/learn/glossary" className="flex items-center justify-between gap-2 rounded-xl border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/10 hover:border-violet-500/40 px-3 py-2.5 text-xs font-bold text-violet-400 transition-all duration-200">
+                  <Link href="/learn/glossary" className="flex items-center justify-between gap-2 rounded-xl border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/40 px-3 py-2.5 text-xs font-bold text-blue-400 transition-all duration-200">
                     <span>📖 Systems Glossary</span>
                     <span>→</span>
                   </Link>
@@ -614,7 +636,7 @@ export default function ServerLearnPage() {
                           <button
                             type="button"
                             onClick={() => loadChallenge(ch)}
-                            className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-violet-500/20 bg-violet-500/5 text-violet-400 hover:bg-violet-500/10 cursor-pointer"
+                            className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-blue-500/20 bg-blue-500/5 text-blue-400 hover:bg-blue-500/10 cursor-pointer"
                           >
                             Load
                           </button>
@@ -740,12 +762,12 @@ export default function ServerLearnPage() {
                   <span className="text-xs text-[color:var(--foreground)]/35 font-mono">{JSON.stringify(response.body).length}B</span>
                 </div>
                 <div className={`rounded-xl border px-4 py-2.5 text-xs leading-relaxed ${response.status >= 400 ? "border-amber-500/20 bg-amber-500/5 text-amber-300" : "border-emerald-500/20 bg-emerald-500/5 text-emerald-300"}`}>
-                  {response.status === 200 && "✅  200 OK — Request succeeded. Data is in the response body."}
-                  {response.status === 201 && "✅  201 Created — New resource was created. Server generated the ID."}
-                  {response.status === 400 && "⚠️  400 Bad Request — Invalid request body. Check for missing or wrong fields."}
-                  {response.status === 404 && "❌  404 Not Found — No route matched this path on the server."}
-                  {response.status === 405 && "❌  405 Method Not Allowed — Route exists but doesn't support this HTTP method."}
-                  {response.status >= 500 && "💥  500 Server Error — Something crashed server-side."}
+                  {response.status === 200 && "200 OK — Request succeeded. Data is in the response body."}
+                  {response.status === 201 && "201 Created — New resource was created. Server generated the ID."}
+                  {response.status === 400 && "400 Bad Request — Invalid request body. Check for missing or wrong fields."}
+                  {response.status === 404 && "404 Not Found — No route matched this path on the server."}
+                  {response.status === 405 && "405 Method Not Allowed — Route exists but doesn't support this HTTP method."}
+                  {response.status >= 500 && "500 Server Error — Something crashed server-side."}
                 </div>
                 <div className="border-b border-[var(--border)]/60 flex">
                   {(["body", "headers"] as const).map(tab => (
@@ -763,9 +785,9 @@ export default function ServerLearnPage() {
                     ))}
                   </div>
                 )}
-                <div className="rounded-xl border border-[var(--border)]/40 bg-[var(--surface)]/25 p-3 text-[10px] text-[color:var(--foreground)]/40 leading-relaxed">
-                  <span className="font-bold text-[color:var(--foreground)]/55">💡 </span>
-                  {response.status === 201 ? "The server generated a unique ID and timestamp — you didn't send those." : response.status === 400 ? "Validation failed before any DB write. Fast, cheap, protective." : response.status === 404 ? "Server searched its routing table and found no match." : response.status === 405 ? "Route exists — but this HTTP method is not registered on it." : "Response body is JSON — every language can parse and use it."}
+                <div className="rounded-xl border border-[var(--border)]/40 bg-[var(--surface)]/25 p-3 text-[10px] text-[color:var(--foreground)]/40 leading-relaxed flex items-start gap-1.5">
+                  <FiInfo className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+                  <p>{response.status === 201 ? "The server generated a unique ID and timestamp — you didn't send those." : response.status === 400 ? "Validation failed before any DB write. Fast, cheap, protective." : response.status === 404 ? "Server searched its routing table and found no match." : response.status === 405 ? "Route exists — but this HTTP method is not registered on it." : "Response body is JSON — every language can parse and use it."}</p>
                 </div>
               </motion.div>
             )}

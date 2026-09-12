@@ -1,112 +1,133 @@
 import Link from "next/link";
+import { FiGithub, FiYoutube, FiLinkedin, FiMail, FiCheckCircle } from "react-icons/fi";
 
 export default function SiteFooter() {
   return (
-    <footer className="w-full border-t border-[var(--border)] bg-[var(--bg-elevated)]">
-      <div className="mx-auto max-w-6xl px-6 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8">
-          {/* Brand Column */}
-          <div className="md:col-span-2 flex flex-col gap-3">
-            <p className="text-sm font-bold text-[color:var(--foreground)]">
-              FlowFrame
+    <footer className="w-full border-t border-[var(--border)] bg-[var(--surface)] transition-colors duration-200">
+      <div className="mx-auto max-w-6xl px-6 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-10 border-b border-[var(--border)]">
+          {/* Brand & Mission Column */}
+          <div className="md:col-span-5 flex flex-col gap-3.5">
+            <div className="flex items-center gap-2.5">
+              <span className="text-sm font-bold tracking-tight text-[color:var(--foreground)]">
+                FlowFrame
+              </span>
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-[var(--surface-muted)] text-[color:var(--muted)] border border-[var(--border)]">
+                v1.2
+              </span>
+            </div>
+            <p className="text-xs text-[color:var(--muted)] leading-relaxed max-w-sm">
+              An interactive visual distributed systems simulator. Design topologies, trace packet traversals, and observe runtime behavior step by step.
             </p>
-            <p className="text-sm text-[color:var(--muted)] leading-relaxed max-w-xs">
-              Interactive distributed systems simulator. Build architectures visually, run REST requests through them, and observe behavior frame by frame.
-            </p>
-            <p className="text-xs text-[color:var(--muted)]">
-              Built by{" "}
-              <a
-                href="https://github.com/ndk123-web"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[color:var(--accent)] hover:underline font-semibold"
-              >
-                ndk
-              </a>
-            </p>
+            <div className="flex items-center gap-2 pt-1">
+              <span className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
+                <FiCheckCircle className="w-3 h-3 text-emerald-500" />
+                <span>Simulation Engine Operational</span>
+              </span>
+            </div>
           </div>
 
-          {/* Product Column */}
-          <div className="flex flex-col gap-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--muted)]">
-              Product
+          {/* Product Navigation */}
+          <div className="md:col-span-3 flex flex-col gap-3">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
+              Architecture
             </p>
-            <div className="flex flex-col gap-2 text-sm text-[color:var(--muted)]">
-              <Link href="/" className="hover:text-[color:var(--foreground)] transition-colors">
-                Home
-              </Link>
+            <div className="flex flex-col gap-2 text-xs text-[color:var(--muted)]">
               <Link href="/workspace" className="hover:text-[color:var(--foreground)] transition-colors">
-                Workspace
+                Sandbox Canvas
+              </Link>
+              <Link href="/dashboard" className="hover:text-[color:var(--foreground)] transition-colors">
+                Workspace Hub
               </Link>
               <Link href="/scenarios" className="hover:text-[color:var(--foreground)] transition-colors">
-                Scenarios
+                System Scenarios
               </Link>
+              <Link href="/workspace?tab=library" className="hover:text-[color:var(--foreground)] transition-colors">
+                Component Library
+              </Link>
+            </div>
+          </div>
+
+          {/* Learn & Docs */}
+          <div className="md:col-span-2 flex flex-col gap-3">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
+              Knowledge
+            </p>
+            <div className="flex flex-col gap-2 text-xs text-[color:var(--muted)]">
               <Link href="/learn" className="hover:text-[color:var(--foreground)] transition-colors">
-                Learn
+                Learn Academy
+              </Link>
+              <Link href="/learn/server" className="hover:text-[color:var(--foreground)] transition-colors">
+                Server Internals
+              </Link>
+              <Link href="/learn/glossary" className="hover:text-[color:var(--foreground)] transition-colors">
+                Systems Glossary
               </Link>
               <Link href="/docs" className="hover:text-[color:var(--foreground)] transition-colors">
-                Docs
+                Documentation
               </Link>
             </div>
           </div>
 
           {/* Connect Column */}
-          <div className="flex flex-col gap-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--muted)]">
+          <div className="md:col-span-2 flex flex-col gap-3">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
               Connect
             </p>
-            <div className="flex flex-col gap-2 text-sm text-[color:var(--muted)]">
+            <div className="flex flex-col gap-2 text-xs text-[color:var(--muted)]">
               <a
                 href="https://github.com/ndk123-web/flowframe"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-[color:var(--foreground)] transition-colors flex items-center gap-1.5"
               >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                </svg>
-                GitHub
+                <FiGithub className="w-3.5 h-3.5" />
+                <span>GitHub</span>
               </a>
               <a
                 href="https://www.youtube.com/watch?v=XQxFZg6RcTI"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-[color:var(--red)] transition-colors flex items-center gap-1.5"
+                className="hover:text-red-400 transition-colors flex items-center gap-1.5"
               >
-                <svg className="w-3.5 h-3.5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                </svg>
-                YouTube
+                <FiYoutube className="w-3.5 h-3.5" />
+                <span>YouTube</span>
               </a>
               <a
                 href="https://www.linkedin.com/in/navnath-kadam-883a57288/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-[color:var(--foreground)] transition-colors"
+                className="hover:text-[color:var(--foreground)] transition-colors flex items-center gap-1.5"
               >
-                LinkedIn
+                <FiLinkedin className="w-3.5 h-3.5" />
+                <span>LinkedIn</span>
               </a>
               <a
                 href="mailto:navnathkadam284@gmail.com"
-                className="hover:text-[color:var(--foreground)] transition-colors"
+                className="hover:text-[color:var(--foreground)] transition-colors flex items-center gap-1.5"
               >
-                Gmail
+                <FiMail className="w-3.5 h-3.5" />
+                <span>Contact</span>
               </a>
             </div>
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="border-t border-[var(--border)] pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[color:var(--muted)]">
-          <p>© 2026 FlowFrame. All rights reserved.</p>
-          <a
-            href="https://polyformproject.org/licenses/noncommercial/1.0.0/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-[color:var(--foreground)] transition-colors"
-          >
-            PolyForm Noncommercial License 1.0.0
-          </a>
+        {/* Bottom copyright bar */}
+        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[color:var(--muted)]">
+          <p>© {new Date().getFullYear()} FlowFrame. Built for distributed systems engineering.</p>
+          <div className="flex items-center gap-4 text-[11px]">
+            <a
+              href="https://polyformproject.org/licenses/noncommercial/1.0.0/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[color:var(--foreground)] transition-colors font-mono"
+            >
+              PolyForm Noncommercial 1.0.0
+            </a>
+            <span className="text-[color:var(--border)]">•</span>
+            <span>Created by <strong className="text-[color:var(--foreground)] font-medium">Navnath</strong></span>
+          </div>
         </div>
       </div>
     </footer>

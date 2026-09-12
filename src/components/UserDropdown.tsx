@@ -75,10 +75,6 @@ export default function UserDropdown({ theme: propTheme, onToggleTheme: propOnTo
           )}
         </div>
 
-        <span className="hidden md:block text-xs font-semibold text-[color:var(--foreground)] max-w-[110px] truncate">
-          {user.name || user.email.split("@")[0]}
-        </span>
-
         <ChevronDownIcon className="w-3.5 h-3.5 text-[color:var(--muted)] transition-transform duration-150 group-hover:translate-y-0.5" />
       </button>
 

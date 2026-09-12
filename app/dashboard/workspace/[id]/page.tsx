@@ -9,6 +9,15 @@ import { useToastStore } from "@/store/useToastStore";
 import { useThemeStore } from "@/store/useThemeStore";
 import UserDropdown from "@/components/UserDropdown";
 import {
+  FiEdit2,
+  FiTrash2,
+  FiSliders,
+  FiZap as FiZapIcon,
+  FiLayers,
+  FiBox,
+  FiAlertTriangle,
+} from "react-icons/fi";
+import {
   DiagramIcon,
   SearchIcon,
   GridIcon,
@@ -20,6 +29,8 @@ import {
   ZapIcon,
   NodeLinkIcon,
 } from "@/components/DashboardIcons";
+import { NodeSocket } from "@/components/FlowDecorations";
+import FlowLoader from "@/components/FlowLoader";
 
 import { getWorkspaceById, updateWorkspace, WorkspaceDTO } from "@/services/workspaceApi";
 import {
@@ -411,10 +422,10 @@ export default function WorkspaceDetailPage() {
                 <button
                   type="button"
                   onClick={openEditWorkspaceModal}
-                  className="px-2 py-0.5 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[10px] font-semibold text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[10px] font-semibold text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition cursor-pointer"
                   title="Edit workspace details"
                 >
-                  ✏️ Edit
+                  <FiEdit2 className="w-3 h-3" /> Edit
                 </button>
               </div>
               <p className="text-xs text-[color:var(--muted)] mt-1 line-clamp-2">
@@ -454,6 +465,45 @@ export default function WorkspaceDetailPage() {
               <p className="text-lg font-bold text-[color:var(--foreground)]">{s.value}</p>
             </div>
           ))}
+        </section>
+
+        {/* Quick Architecture Template Starters */}
+        <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
+              Quick Architecture Starters
+            </span>
+            <span className="text-[10px] text-[color:var(--muted)] font-mono">1-click template initialization</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {[
+              { title: "Load Balancer", desc: "Round-robin traffic distribution", icon: <FiSliders className="w-4 h-4 text-emerald-400" /> },
+              { title: "Cache-Aside", desc: "Redis hit/miss with DB fallback", icon: <FiZapIcon className="w-4 h-4 text-amber-400" /> },
+              { title: "API Gateway", desc: "Microservices path routing", icon: <FiLayers className="w-4 h-4 text-indigo-400" /> },
+              { title: "Blank Canvas", desc: "Design from scratch", icon: <FiBox className="w-4 h-4 text-cyan-400" /> },
+            ].map((tmpl) => (
+              <button
+                key={tmpl.title}
+                type="button"
+                onClick={() => {
+                  setNewDiagramName(tmpl.title === "Blank Canvas" ? "New Architecture" : `${tmpl.title} Cluster`);
+                  setNewDiagramDesc(tmpl.desc);
+                  setCreateDiagramOpen(true);
+                }}
+                className="flex items-center gap-2.5 p-3 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] hover:border-[var(--accent)] hover:bg-[var(--surface-muted)] text-left transition cursor-pointer group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  {tmpl.icon}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors truncate">
+                    {tmpl.title}
+                  </p>
+                  <p className="text-[10px] text-[color:var(--muted)] truncate">{tmpl.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
         </section>
 
         {/* Search, Filter & View Toggle */}
@@ -504,15 +554,24 @@ export default function WorkspaceDetailPage() {
           </div>
 
           {/* Diagrams Cards */}
-          {filteredDiagrams.length > 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <FlowLoader
+                label="Loading Workspace Diagrams..."
+                sublabel="Fetching nodes, connections & configurations from database"
+              />
+            </div>
+          ) : filteredDiagrams.length > 0 ? (
             viewMode === "grid" ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredDiagrams.map((d) => (
                   <Link
                     key={d.id}
                     href={`/dashboard/workspace/${workspaceId}/${d.id}`}
-                    className="group relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-all duration-200 hover:border-[var(--accent)]/50 hover:-translate-y-0.5 flex flex-col justify-between"
+                    className="group relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-all duration-200 hover:border-[var(--accent)]/50 hover:-translate-y-0.5 flex flex-col justify-between shadow-xs"
                   >
+                    <NodeSocket position="left" />
+                    <NodeSocket position="right" />
                     <div>
                       <div className="flex items-start justify-between mb-3">
                         <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center">
@@ -525,7 +584,7 @@ export default function WorkspaceDetailPage() {
                             className="p-1 rounded-md text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition cursor-pointer"
                             title="Edit diagram"
                           >
-                            ✏️
+                            <FiEdit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             type="button"
@@ -533,7 +592,7 @@ export default function WorkspaceDetailPage() {
                             className="p-1 rounded-md text-[color:var(--muted)] hover:text-red-400 hover:bg-red-500/10 transition cursor-pointer"
                             title="Delete diagram"
                           >
-                            🗑️
+                            <FiTrash2 className="w-3.5 h-3.5" />
                           </button>
                           <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-[color:var(--muted)]">
                             v{d.version}
@@ -623,7 +682,7 @@ export default function WorkspaceDetailPage() {
                         className="p-1 rounded-md text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition cursor-pointer"
                         title="Edit diagram"
                       >
-                        ✏️
+                        <FiEdit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         type="button"
@@ -631,7 +690,7 @@ export default function WorkspaceDetailPage() {
                         className="p-1 rounded-md text-[color:var(--muted)] hover:text-red-400 hover:bg-red-500/10 transition cursor-pointer"
                         title="Delete diagram"
                       >
-                        🗑️
+                        <FiTrash2 className="w-3.5 h-3.5" />
                       </button>
                       <span className="text-xs text-[color:var(--accent)] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
                         Open →
@@ -881,7 +940,7 @@ export default function WorkspaceDetailPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
           <div className="w-full max-w-md p-6 rounded-xl border border-red-500/30 bg-[var(--surface)] text-[color:var(--foreground)] shadow-2xl space-y-4">
             <div className="flex items-center gap-3 text-red-500">
-              <span className="text-2xl">⚠️</span>
+              <FiAlertTriangle className="w-6 h-6 text-red-400" />
               <h3 className="text-lg font-bold">Delete Diagram</h3>
             </div>
 

@@ -37,6 +37,37 @@ import "@xyflow/react/dist/style.css";
 import { motion } from "framer-motion";
 import ShortUniqueId from "short-unique-id";
 import { toPng } from "html-to-image";
+import {
+  FiRotateCcw,
+  FiPlay,
+  FiPause,
+  FiMenu,
+  FiSave,
+  FiCopy,
+  FiTrash2,
+  FiZap,
+  FiGrid,
+  FiCode,
+  FiCheckCircle,
+  FiAlertTriangle,
+  FiAlertCircle,
+  FiClock,
+  FiChevronRight,
+  FiChevronLeft,
+  FiActivity,
+  FiSliders,
+  FiFolder,
+  FiTerminal,
+  FiMaximize2,
+  FiZoomIn,
+  FiZoomOut,
+  FiDownload,
+  FiUpload,
+  FiSkipBack,
+  FiSkipForward,
+  FiCpu,
+} from "react-icons/fi";
+import AIAssistantDrawer from "@/components/AIAssistantDrawer";
 
 // DSL Interpreter & Graph Engine
 import { compileDSL } from "@/DSL";
@@ -62,6 +93,7 @@ import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useThemeStore } from "@/store/useThemeStore";
 import { getDiagramById, updateDiagram, getSharedDiagram } from "@/services/diagramApi";
+import FlowLoader from "@/components/FlowLoader";
 
 // Header
 import SiteHeader from "@/components/SiteHeader";
@@ -101,38 +133,22 @@ const COMPONENTS_LIBRARY: ComponentMetadata[] = [
   {
     type: "client",
     label: "Client",
-    icon: "💻",
+    icon: "client",
     description:
       "Generates requests (GET/POST/uploads) to route through the network.",
     colorClass: "border-l-violet-500 shadow-violet-500/10 text-violet-400",
   },
-  // {
-  //   type: "dns",
-  //   label: "DNS Server",
-  //   icon: "🌐",
-  //   description:
-  //     "Resolves domain names (like ndkdev.me) to target node IDs or IP addresses.",
-  //   colorClass: "border-l-indigo-500 shadow-indigo-500/10 text-indigo-400",
-  // },
-  // {
-  //   type: "cdn",
-  //   label: "CDN Server",
-  //   icon: "🌍",
-  //   description:
-  //     "Distributed edge server that caches files near users to speed up asset delivery.",
-  //   colorClass: "border-l-teal-500 shadow-teal-500/10 text-teal-400",
-  // },
   {
     type: "api-gateway",
     label: "API Gateway",
-    icon: "🚪",
+    icon: "api-gateway",
     description: "Routes requests to specific services based on path prefixes.",
     colorClass: "border-l-fuchsia-500 shadow-fuchsia-500/10 text-fuchsia-400",
   },
   {
     type: "load-balancer",
     label: "Load Balancer",
-    icon: "⚖️",
+    icon: "load-balancer",
     description:
       "Balances traffic across multiple backend servers using Round Robin.",
     colorClass: "border-l-blue-500 shadow-blue-500/10 text-blue-400",
@@ -140,7 +156,7 @@ const COMPONENTS_LIBRARY: ComponentMetadata[] = [
   {
     type: "server",
     label: "Web Server",
-    icon: "🖥️",
+    icon: "server",
     description:
       "Handles HTTP queries, reads/writes cache, and fallbacks to DB.",
     colorClass: "border-l-emerald-500 shadow-emerald-500/10 text-emerald-400",
@@ -148,7 +164,7 @@ const COMPONENTS_LIBRARY: ComponentMetadata[] = [
   {
     type: "redis",
     label: "Redis Cache",
-    icon: "💾",
+    icon: "redis",
     description:
       "Fast key-value cache layer prioritizing low-latency retrieval.",
     colorClass: "border-l-amber-500 shadow-amber-500/10 text-amber-400",
@@ -156,21 +172,21 @@ const COMPONENTS_LIBRARY: ComponentMetadata[] = [
   {
     type: "postgres",
     label: "Postgres DB",
-    icon: "🗄️",
+    icon: "postgres",
     description: "Persistent SQL database. Primary storage of system records.",
     colorClass: "border-l-cyan-500 shadow-cyan-500/10 text-cyan-400",
   },
   {
     type: "storage",
     label: "Cloud Storage",
-    icon: "☁️",
+    icon: "storage",
     description: "Object storage bucket for file uploads using valet key URLs.",
     colorClass: "border-l-yellow-500 shadow-yellow-500/10 text-yellow-400",
   },
   {
     type: "message-queue",
     label: "Message Queue",
-    icon: "📬",
+    icon: "message-queue",
     description:
       "Asynchronous message queue broker with producer-consumer routing.",
     colorClass: "border-l-pink-500 shadow-pink-500/10 text-pink-400",
@@ -178,7 +194,7 @@ const COMPONENTS_LIBRARY: ComponentMetadata[] = [
   {
     type: "pubsub",
     label: "Pub/Sub Broker",
-    icon: "📡",
+    icon: "pubsub",
     description:
       "Asynchronous fanout message broker with topic/channel routing.",
     colorClass: "border-l-indigo-500 shadow-indigo-500/10 text-indigo-400",
@@ -707,14 +723,14 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
 // ── Node shape geometry helpers ────────────────────────────────────────────
 // Shapes that need a wrapper SVG overlay (non-rectangular geometry)
 const NODE_SHAPES = [
-  { id: "rectangle", label: "Rectangle", icon: "⬜" },
-  { id: "rounded", label: "Rounded", icon: "🔲" },
-  { id: "stadium", label: "Stadium", icon: "🏟" },
-  { id: "circle", label: "Circle", icon: "⭕" },
-  { id: "diamond", label: "Diamond", icon: "◆" },
-  { id: "hexagon", label: "Hexagon", icon: "⬡" },
-  { id: "cylinder", label: "Cylinder", icon: "🗄" },
-  { id: "parallelogram", label: "Slant", icon: "▱" },
+  { id: "rectangle", label: "Rectangle" },
+  { id: "rounded", label: "Rounded" },
+  { id: "stadium", label: "Stadium" },
+  { id: "circle", label: "Circle" },
+  { id: "diamond", label: "Diamond" },
+  { id: "hexagon", label: "Hexagon" },
+  { id: "cylinder", label: "Cylinder" },
+  { id: "parallelogram", label: "Slant" },
 ];
 
 function getShapeStyle(shape: string): React.CSSProperties {
@@ -875,7 +891,6 @@ function CustomNode({ id, data, selected }: any) {
         width: "100%",
         height: "100%",
         minWidth: isDiamond ? 120 : isCircle ? 90 : 180,
-        filter: selected ? `drop-shadow(0 0 10px ${colors.ring})` : undefined,
       }}
     >
       {/* Resizer — outside shape container */}
@@ -915,17 +930,21 @@ function CustomNode({ id, data, selected }: any) {
 
       {/* ── Shape Container ─────────────────────────────────────────────── */}
       <div
-        className="w-full h-full flex items-center justify-center overflow-hidden"
+        className="w-full h-full flex items-center justify-center overflow-hidden transition-all duration-150"
         style={{
-          background: `linear-gradient(135deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 92%, ${colors.accent}) 100%)`,
-          border: `1.5px solid color-mix(in srgb, var(--border) 80%, ${colors.accent})`,
+          background: "var(--surface)",
+          border: selected
+            ? `1.5px solid ${colors.accent}`
+            : `1px solid color-mix(in srgb, var(--border) 80%, ${colors.accent} 20%)`,
           boxShadow: selected
-            ? `0 0 0 2px ${colors.ring}, 0 4px 20px ${colors.glow}`
-            : `0 2px 8px ${colors.glow}`,
+            ? `0 0 0 2px ${colors.ring}, 0 2px 6px rgba(0, 0, 0, 0.08)`
+            : "0 1px 3px rgba(0, 0, 0, 0.05)",
           ...shapeStyle,
           ...(isCylinder
             ? {
-                boxShadow: `${selected ? `0 0 0 2px ${colors.ring}, ` : ""}0 2px 8px ${colors.glow}, inset 0 -3px 0 color-mix(in srgb, var(--border) 60%, ${colors.accent})`,
+                boxShadow: selected
+                  ? `0 0 0 2px ${colors.ring}, 0 2px 6px rgba(0, 0, 0, 0.08)`
+                  : "0 1px 3px rgba(0, 0, 0, 0.05)",
               }
             : {}),
         }}
@@ -1156,6 +1175,7 @@ function shouldKeepFrame(hideResponse: boolean, frame: any) {
 
 function Controls({
   isPlaying,
+  isCompiling,
   onPlayToggle,
   onPrev,
   onNext,
@@ -1168,6 +1188,7 @@ function Controls({
   theme,
 }: {
   isPlaying: boolean;
+  isCompiling?: boolean;
   onPlayToggle: () => void;
   onPrev: () => void;
   onNext: () => void;
@@ -1191,8 +1212,22 @@ function Controls({
     <div className="flex flex-col gap-2 sm:gap-3 w-full overflow-x-hidden">
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-          <button type="button" onClick={onPlayToggle} className={buttonClass}>
-            {isPlaying ? "Pause" : "Play"}
+          <button
+            type="button"
+            disabled={isCompiling}
+            onClick={onPlayToggle}
+            className={`${buttonClass} flex items-center gap-1.5`}
+          >
+            {isCompiling ? (
+              <>
+                <div className="w-3 h-3 rounded-full border border-current border-t-transparent animate-spin" />
+                <span>Compiling...</span>
+              </>
+            ) : isPlaying ? (
+              "Pause"
+            ) : (
+              "Play"
+            )}
           </button>
           <button type="button" onClick={onPrev} className={buttonClass}>
             ← Prev
@@ -1206,10 +1241,11 @@ function Controls({
           <button
             type="button"
             onClick={onReframe}
-            className={`${buttonClass} bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] border-[var(--accent)]/30`}
+            className={`${buttonClass} bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] border-[var(--accent)]/30 flex items-center gap-1.5`}
             title="Re-run simulation with current changes"
           >
-            🔄 Reframe
+            <FiRotateCcw className="w-3.5 h-3.5" />
+            <span>Reframe</span>
           </button>
         </div>
 
@@ -1411,7 +1447,7 @@ function getFormattedLogText(frame: any) {
   if (normAction.includes("POSTGRES_POOL_WAIT")) {
     const payloadStr = frame.payloadSummary ? ` — ${frame.payloadSummary}` : "";
     return {
-      text: `${flow} | ⏳ POSTGRES POOL WAIT${payloadStr}`,
+      text: `${flow} | [WAIT] POSTGRES POOL WAIT${payloadStr}`,
       type: "error",
     };
   }
@@ -1419,7 +1455,7 @@ function getFormattedLogText(frame: any) {
   if (normAction.includes("POSTGRES_CONNECTION_ERROR")) {
     const payloadStr = frame.payloadSummary ? ` — ${frame.payloadSummary}` : "";
     return {
-      text: `${flow} | ❌ POSTGRES CONNECTION ERROR${payloadStr}`,
+      text: `${flow} | [ERROR] POSTGRES CONNECTION ERROR${payloadStr}`,
       type: "error",
     };
   }
@@ -1480,7 +1516,7 @@ function DebugPanel({
       <div className="font-mono text-xs p-2 text-center sm:text-left flex items-center gap-2">
         <span className="inline-block w-2 h-2 rounded-full bg-violet-400/60 animate-ping shrink-0" />
         <span className={textColor}>
-          Simulation logs ready — click <strong className="text-violet-400">Play ▶</strong> or <strong className="text-violet-400">Reframe 🔄</strong> to stream live execution logs.
+          Simulation logs ready — click <strong className="text-violet-400">Play</strong> or <strong className="text-violet-400">Reframe</strong> to stream live execution logs.
         </span>
       </div>
     );
@@ -1960,7 +1996,7 @@ function WorkspaceInner({
         },
         token
       );
-      setSuccessToast("Diagram saved to MongoDB successfully! 💾");
+      setSuccessToast("Diagram saved to MongoDB successfully!");
     } catch (err: any) {
       setValidationWarning(err.message || "Failed to save diagram");
     } finally {
@@ -1982,6 +2018,7 @@ function WorkspaceInner({
 
   // Playback Simulation States
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isCompilingSimulation, setIsCompilingSimulation] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [frameIndex, setFrameIndex] = useState(0);
 
@@ -2026,6 +2063,17 @@ function WorkspaceInner({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(!Boolean(workspaceId && diagramId));
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+
+  // Auto-open AI Architecture Assistant if ?ai=true is in URL query parameters
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("ai") === "true") {
+        setIsAIAssistantOpen(true);
+      }
+    }
+  }, []);
 
   // Redesigned Sidebar Accordions & Search states
   const [isTemplatesExpanded, setIsTemplatesExpanded] = useState(true);
@@ -2243,6 +2291,7 @@ connect s1 -> r1
 
       const clientId = clientToRun.id;
       setValidationWarning(null);
+      setIsCompilingSimulation(true);
 
       // 2. Initialize simulation components
       const graph = new GraphManager("dynamic-graph");
@@ -2645,80 +2694,84 @@ connect s1 -> r1
         },
       ];
 
-      try {
-        // Clear active states on Postgres and Server models
-        activeNodes.forEach((n) => {
-          if (n.data.type === "postgres") {
-            const pg = registry.getInstance(n.id) as PostgresModel;
-            if (pg) {
-              pg.activeConnections.clear();
-              pg.connectionIntervals = [];
+      setTimeout(() => {
+        try {
+          // Clear active states on Postgres and Server models
+          activeNodes.forEach((n) => {
+            if (n.data.type === "postgres") {
+              const pg = registry.getInstance(n.id) as PostgresModel;
+              if (pg) {
+                pg.activeConnections.clear();
+                pg.connectionIntervals = [];
+              }
             }
-          }
-          if (n.data.type === "server") {
-            const server = registry.getInstance(n.id) as ServerModel;
-            if (server) {
-              server.activeQueueMessages = 0;
-              server.queueProcessingIntervals = [];
+            if (n.data.type === "server") {
+              const server = registry.getInstance(n.id) as ServerModel;
+              if (server) {
+                server.activeQueueMessages = 0;
+                server.queueProcessingIntervals = [];
+              }
             }
-          }
-        });
-
-        for (let i = 0; i < clientRequests.length; i++) {
-          const sourceIp = ipv4Instance.getRandomIpv4();
-          const reqItem = clientRequests[i];
-
-          let parsedBody = {};
-          if (
-            typeof reqItem.body === "string" &&
-            reqItem.body.trim().length > 0
-          ) {
-            try {
-              parsedBody = JSON.parse(reqItem.body);
-            } catch (err) {
-              console.error("Failed to parse request body JSON:", err);
-            }
-          }
-
-          const payload: any = {
-            valetKeyFlow: clientConfig.valetKeyFlow,
-            lookupKey: reqItem.lookupKey,
-            fileName: reqItem.fileName,
-            isThereFileToUpload: reqItem.isThereFileToUpload,
-            endpoint: reqItem.endpoint,
-            method: reqItem.method || "GET",
-            targetBucket: reqItem.targetBucket,
-            parallelResponse,
-            ...parsedBody,
-          };
-
-          const simulation = new SimulationManager(
-            graph,
-            registry,
-            payload,
-            sourceIp,
-          );
-          simulation.runSimulation(clientId);
-
-          const runFrames = (simulation.getFrames() as any[]).map((frame) => ({
-            ...frame,
-            sourceIp,
-            payloadSummary:
-              frame.payloadSummary || `lookupKey=${reqItem.lookupKey}`,
-          }));
-
-          allFrames.push({
-            runIndex: i,
-            frames: runFrames,
           });
-        }
 
-        setRawSimulationFrames(allFrames);
-        setFrameIndex(0);
-        setIsPlaying(true);
-      } catch (err: any) {
-        setValidationWarning(`Simulation Error: ${err.message || err}`);
-      }
+          for (let i = 0; i < clientRequests.length; i++) {
+            const sourceIp = ipv4Instance.getRandomIpv4();
+            const reqItem = clientRequests[i];
+
+            let parsedBody = {};
+            if (
+              typeof reqItem.body === "string" &&
+              reqItem.body.trim().length > 0
+            ) {
+              try {
+                parsedBody = JSON.parse(reqItem.body);
+              } catch (err) {
+                console.error("Failed to parse request body JSON:", err);
+              }
+            }
+
+            const payload: any = {
+              valetKeyFlow: clientConfig.valetKeyFlow,
+              lookupKey: reqItem.lookupKey,
+              fileName: reqItem.fileName,
+              isThereFileToUpload: reqItem.isThereFileToUpload,
+              endpoint: reqItem.endpoint,
+              method: reqItem.method || "GET",
+              targetBucket: reqItem.targetBucket,
+              parallelResponse,
+              ...parsedBody,
+            };
+
+            const simulation = new SimulationManager(
+              graph,
+              registry,
+              payload,
+              sourceIp,
+            );
+            simulation.runSimulation(clientId);
+
+            const runFrames = (simulation.getFrames() as any[]).map((frame) => ({
+              ...frame,
+              sourceIp,
+              payloadSummary:
+                frame.payloadSummary || `lookupKey=${reqItem.lookupKey}`,
+            }));
+
+            allFrames.push({
+              runIndex: i,
+              frames: runFrames,
+            });
+          }
+
+          setRawSimulationFrames(allFrames);
+          setFrameIndex(0);
+          setIsPlaying(true);
+          setIsCompilingSimulation(false);
+        } catch (err: any) {
+          setValidationWarning(`Simulation Error: ${err.message || err}`);
+          setIsCompilingSimulation(false);
+        }
+      }, 350);
     },
     [nodes, nodeConfigs, edges],
   );
@@ -2740,7 +2793,7 @@ connect s1 -> r1
       setEdges(output.edges);
       setNodeConfigs(output.nodeConfigs);
       setValidationWarning(null);
-      setSuccessToast("DSL compiled & architecture generated! ⚡");
+      setSuccessToast("DSL compiled & architecture generated!");
 
       const firstClient = output.nodes.find((n: any) => n.data?.type === "client");
       if (firstClient) {
@@ -3990,7 +4043,7 @@ connect s1 -> r1
         a.setAttribute("download", `flow-frame-architecture-${new Date().toISOString().split("T")[0]}.png`);
         a.setAttribute("href", dataUrl);
         a.click();
-        setSuccessToast("Architecture image downloaded successfully! 📸");
+        setSuccessToast("Architecture image downloaded successfully!");
       })
       .catch((error) => {
         console.error("Failed to download canvas image:", error);
@@ -4028,49 +4081,130 @@ connect s1 -> r1
               : "max-md:-translate-x-full"
           }`}
           style={{
-            width: isSidebarFloating ? 288 : sidebarWidth,
+            width: isSidebarFloating ? 288 : (isSidebarCollapsed ? 56 : sidebarWidth),
             left: isSidebarFloating ? sidebarPosition.x : undefined,
             top: isSidebarFloating ? sidebarPosition.y : undefined,
             height: isSidebarFloating ? "calc(100vh - 160px)" : "100%",
           }}
         >
-          {/* Resize Handle (only active in docked mode on desktop) */}
-          {!isSidebarFloating && (
+          {/* Resize Handle (only active in docked mode on desktop when expanded) */}
+          {!isSidebarFloating && !isSidebarCollapsed && (
             <div
               onMouseDown={handleResizeMouseDown}
               className="absolute right-0 top-0 bottom-0 w-1 hover:w-2 bg-transparent hover:bg-[var(--accent)]/25 cursor-col-resize transition-all z-20 max-md:hidden"
             />
           )}
 
-          {/* Mode Switcher Header: Library vs Monaco Code Editor */}
-          <div className="p-2 border-b border-[var(--border)] bg-[var(--surface)] shrink-0 flex flex-col gap-2">
-            <div className="flex items-center gap-1 bg-[var(--surface-muted)] p-1 rounded-xl border border-[var(--border)]">
+          {isSidebarCollapsed ? (
+            /* Collapsed Vertical Tool Rail (56px / w-14) */
+            <div className="flex-1 flex flex-col items-center justify-between py-3 px-1 w-full bg-[var(--surface)] select-none">
+              <div className="flex flex-col items-center gap-2.5 w-full">
+                {/* Expand Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  className="p-2 rounded-xl text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition cursor-pointer"
+                  title="Expand Shapes Sidebar"
+                >
+                  <FiChevronRight className="w-4 h-4" />
+                </button>
+
+                <div className="w-8 h-px bg-[var(--border)]" />
+
+                {/* Library tab button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSidebarTab("library");
+                    setIsSidebarCollapsed(false);
+                  }}
+                  className={`p-2.5 rounded-xl transition cursor-pointer ${
+                    sidebarTab === "library"
+                      ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
+                      : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                  }`}
+                  title="Component & Shape Library"
+                >
+                  <FiGrid className="w-4 h-4" />
+                </button>
+
+                {/* Code Editor tab button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSidebarTab("editor");
+                    setIsSidebarCollapsed(false);
+                  }}
+                  className={`p-2.5 rounded-xl transition cursor-pointer ${
+                    sidebarTab === "editor"
+                      ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
+                      : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                  }`}
+                  title="Monaco Architecture DSL Editor"
+                >
+                  <FiCode className="w-4 h-4" />
+                </button>
+
+                {/* Architecture Templates button */}
+                <button
+                  type="button"
+                  onClick={() => setShowWelcomeModal(true)}
+                  className="p-2.5 rounded-xl text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition cursor-pointer"
+                  title="Architecture Templates"
+                >
+                  <FiFolder className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Bottom Clear Canvas */}
               <button
                 type="button"
-                onClick={() => setSidebarTab("library")}
-                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                  sidebarTab === "library"
-                    ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-sm border border-[var(--border)] font-bold"
-                    : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
-                }`}
+                onClick={handleClearCanvas}
+                className="p-2.5 rounded-xl text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                title="Clear Canvas"
               >
-                <span>🎨</span>
-                <span>Library</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSidebarTab("editor")}
-                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                  sidebarTab === "editor"
-                    ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-sm border border-[var(--border)] font-bold"
-                    : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
-                }`}
-              >
-                <span>⚡</span>
-                <span>Code Editor</span>
+                <FiTrash2 className="w-4 h-4" />
               </button>
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Mode Switcher Header: Library vs Monaco Code Editor */}
+              <div className="p-2 border-b border-[var(--border)] bg-[var(--surface)] shrink-0 flex items-center gap-1.5">
+                <div className="flex-1 flex items-center gap-1 bg-[var(--surface-muted)] p-1 rounded-xl border border-[var(--border)]">
+                  <button
+                    type="button"
+                    onClick={() => setSidebarTab("library")}
+                    className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                      sidebarTab === "library"
+                        ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-sm border border-[var(--border)] font-bold"
+                        : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+                    }`}
+                  >
+                    <FiGrid className="w-3.5 h-3.5" />
+                    <span>Library</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSidebarTab("editor")}
+                    className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                      sidebarTab === "editor"
+                        ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-sm border border-[var(--border)] font-bold"
+                        : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+                    }`}
+                  >
+                    <FiCode className="w-3.5 h-3.5" />
+                    <span>Code Editor</span>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarCollapsed(true)}
+                  className="p-1.5 rounded-lg text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition cursor-pointer hidden md:flex"
+                  title="Collapse Sidebar"
+                >
+                  <FiChevronLeft className="w-4 h-4" />
+                </button>
+              </div>
 
           {sidebarTab === "editor" ? (
             /* Monaco Code Editor Panel in Left Sidebar */
@@ -4091,14 +4225,14 @@ connect s1 -> r1
                     className="rounded bg-violet-600 hover:bg-violet-500 text-white text-[10px] px-2.5 py-1 font-bold shadow-md transition cursor-pointer flex items-center gap-1"
                     title="Compile DSL script and render architecture on canvas"
                   >
-                    <span>▶</span>
+                    <FiPlay className="w-3 h-3 fill-current" />
                     <span>Run Flow</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       navigator.clipboard.writeText(dslCode);
-                      setSuccessToast("Code copied to clipboard! 📋");
+                      setSuccessToast("Code copied to clipboard!");
                     }}
                     className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-2 py-1 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] transition cursor-pointer"
                     title="Copy Code"
@@ -4261,11 +4395,9 @@ connect s1 -> r1
                 className="w-full flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)] transition duration-150 text-left font-semibold cursor-pointer"
               >
                 <div className="flex items-center gap-2">
-                  <span
-                    className={`text-[8px] text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isTemplatesExpanded ? "rotate-90" : "rotate-0"}`}
-                  >
-                    ▶
-                  </span>
+                  <FiChevronRight
+                    className={`w-3 h-3 text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isTemplatesExpanded ? "rotate-90" : "rotate-0"}`}
+                  />
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
                     Templates
                   </span>
@@ -4405,11 +4537,9 @@ connect s1 -> r1
                 className="w-full flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)] transition duration-150 text-left font-semibold cursor-pointer"
               >
                 <div className="flex items-center gap-2">
-                  <span
-                    className={`text-[8px] text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isComponentsExpanded ? "rotate-90" : "rotate-0"}`}
-                  >
-                    ▶
-                  </span>
+                  <FiChevronRight
+                    className={`w-3 h-3 text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isComponentsExpanded ? "rotate-90" : "rotate-0"}`}
+                  />
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
                     Components & Shapes
                   </span>
@@ -4622,19 +4752,279 @@ connect s1 -> r1
           </div>
             </>
           )}
+            </>
+          )}
         </aside>
 
-        {/* Right Canvas Area (Fills the rest of screen) */}
-        <div className="flex-1 h-full min-w-0 flex flex-col relative z-0">
-          {/* Mobile Sidebar Hamburger Toggle */}
-          <button
-            type="button"
-            onClick={() => setIsSidebarOpenMobile(true)}
-            className="md:hidden absolute top-4 left-4 z-20 bg-[var(--surface)] border border-[var(--border)] p-2.5 rounded-xl shadow-lg hover:bg-[var(--surface-muted)] cursor-pointer flex items-center justify-center text-sm font-bold"
-            title="Open Shapes Library"
-          >
-            ☰
-          </button>
+        {/* Right Canvas Area: Center Canvas Column + Docked Right Inspector */}
+        <div className="flex-1 h-full min-w-0 flex flex-col md:flex-row relative z-0 overflow-hidden">
+          {/* Center Column: Top Technical Bar + ReactFlow Canvas + Bottom Logs Drawer */}
+          <div className="flex-1 h-full min-w-0 flex flex-col relative overflow-hidden">
+            {/* Top Technical Canvas Bar (Section 14 & 17) */}
+            <header className="h-12 border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md flex items-center justify-between px-3 md:px-4 z-20 shrink-0 select-none">
+              {/* Left: Diagram Info & Stats */}
+              <div className="flex items-center gap-2.5 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarOpenMobile(true)}
+                  className="md:hidden p-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] cursor-pointer"
+                  title="Open Shapes Library"
+                >
+                  <FiMenu className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs font-bold text-[color:var(--foreground)] truncate max-w-[130px] sm:max-w-[200px]">
+                    {workspaceId ? "Distributed Architecture" : "Architecture Sandbox"}
+                  </span>
+                  <div className="hidden sm:flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 border border-[var(--border)]">
+                      {nodes.length} Nodes
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 border border-[var(--border)]">
+                      {edges.length} Edges
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Center: Playback Controls (Compact & Technical) */}
+              <div className="flex items-center gap-1 bg-[var(--surface-muted)]/80 border border-[var(--border)] px-1.5 py-1 rounded-xl shadow-xs">
+                <button
+                  type="button"
+                  disabled={isCompilingSimulation}
+                  onClick={() => {
+                    if (isCompilingSimulation) return;
+                    if (simulationFrames.length === 0) {
+                      handleStartSimulation();
+                    } else {
+                      setIsPlaying((prev) => !prev);
+                    }
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                    isCompilingSimulation
+                      ? "bg-[var(--accent)]/70 text-white cursor-wait"
+                      : isPlaying
+                      ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                      : "bg-[var(--accent)] text-white shadow-xs hover:brightness-110"
+                  }`}
+                  title={isCompilingSimulation ? "Compiling simulation..." : isPlaying ? "Pause simulation (Space)" : "Run simulation (Space)"}
+                >
+                  {isCompilingSimulation ? (
+                    <>
+                      <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      <span className="hidden sm:inline">Compiling...</span>
+                    </>
+                  ) : isPlaying ? (
+                    <>
+                      <FiPause className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Pause</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiPlay className="w-3.5 h-3.5 fill-current" />
+                      <span className="hidden sm:inline">{simulationFrames.length === 0 ? "Simulate" : "Resume"}</span>
+                    </>
+                  )}
+                </button>
+
+                <div className="h-4 w-px bg-[var(--border)] mx-0.5" />
+
+                <button
+                  type="button"
+                  onClick={goToPreviousFrame}
+                  className="p-1.5 rounded-lg text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface)] transition cursor-pointer"
+                  title="Previous Frame (Left Arrow)"
+                >
+                  <FiSkipBack className="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={goToNextFrame}
+                  className="p-1.5 rounded-lg text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface)] transition cursor-pointer"
+                  title="Next Frame (Right Arrow)"
+                >
+                  <FiSkipForward className="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={resetPlayback}
+                  className="p-1.5 rounded-lg text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface)] transition cursor-pointer"
+                  title="Reset playback"
+                >
+                  <FiRotateCcw className="w-3.5 h-3.5" />
+                </button>
+
+                <div className="h-4 w-px bg-[var(--border)] mx-0.5 hidden sm:block" />
+
+                {/* Frame indicator */}
+                <div className="hidden sm:flex items-center px-2 py-0.5 text-[10px] font-mono text-[color:var(--foreground)]/70">
+                  Frame {simulationFrames.length > 0 ? frameIndex + 1 : 0}/{simulationFrames.length}
+                </div>
+
+                <div className="h-4 w-px bg-[var(--border)] mx-0.5 hidden sm:block" />
+
+                {/* Speed Dropdown */}
+                <div className="hidden sm:flex items-center gap-0.5">
+                  {[0.5, 1, 2].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSpeed(s)}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition cursor-pointer ${
+                        speed === s
+                          ? "bg-[var(--surface)] text-[color:var(--accent)] border border-[var(--border)] shadow-xs"
+                          : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]"
+                      }`}
+                    >
+                      {s}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right: Canvas Settings, Trace Logs, Copilot, Save */}
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                {/* Canvas Settings Popover */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowBgControls((prev) => !prev)}
+                    className={`p-2 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                      showBgControls
+                        ? "bg-[var(--surface-muted)] text-[color:var(--accent)] border-[var(--accent)]/40"
+                        : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                    }`}
+                    title="Canvas Grid & Display Settings"
+                  >
+                    <FiSliders className="w-3.5 h-3.5" />
+                    <span className="hidden lg:inline text-[11px]">Grid</span>
+                  </button>
+
+                  {showBgControls && (
+                    <div className="absolute right-0 top-12 w-64 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-2xl z-50 flex flex-col gap-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-[var(--border)]">
+                        <span className="text-xs font-bold text-[color:var(--foreground)]">Canvas Settings</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowBgControls(false)}
+                          className="text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] text-xs font-bold cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </div>
+
+                      {/* Grid Pattern */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] uppercase font-bold text-[color:var(--foreground)]/60">
+                          Grid Pattern
+                        </label>
+                        <div className="grid grid-cols-4 gap-1">
+                          {(["dots", "lines", "cross", "none"] as const).map((pat) => (
+                            <button
+                              key={pat}
+                              type="button"
+                              onClick={() => setBgPattern(pat)}
+                              className={`py-1 rounded-lg text-[10px] font-mono uppercase font-bold transition cursor-pointer ${
+                                bgPattern === pat
+                                  ? "bg-[var(--accent)] text-white shadow-xs"
+                                  : "bg-[var(--surface-muted)] text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] border border-[var(--border)]"
+                              }`}
+                            >
+                              {pat}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Grid Opacity */}
+                      {bgPattern !== "none" && (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[10px] font-bold text-[color:var(--foreground)]/60">
+                            <span className="uppercase">Grid Opacity</span>
+                            <span className="font-mono text-[color:var(--accent)]">{Math.round(bgOpacity * 100)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0.05"
+                            max="0.70"
+                            step="0.05"
+                            value={bgOpacity}
+                            onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
+                            className="w-full h-1.5 rounded-lg bg-[var(--surface-muted)] appearance-none cursor-pointer accent-[var(--accent)]"
+                          />
+                        </div>
+                      )}
+
+                      {/* Quick Actions */}
+                      <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={handleExportFlow}
+                          className="flex items-center gap-1 text-[11px] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] font-semibold transition cursor-pointer"
+                        >
+                          <FiDownload className="w-3.5 h-3.5" />
+                          <span>Export</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleImportClick}
+                          className="flex items-center gap-1 text-[11px] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] font-semibold transition cursor-pointer"
+                        >
+                          <FiUpload className="w-3.5 h-3.5" />
+                          <span>Import</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Trace Logs Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setDebugEnabled((prev) => !prev)}
+                  className={`p-2 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                    debugEnabled
+                      ? "bg-[var(--accent)]/15 text-[color:var(--accent)] border-[var(--accent)]/40"
+                      : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                  }`}
+                  title="Toggle Logs / Execution Drawer"
+                >
+                  <FiActivity className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline text-[11px]">Logs</span>
+                </button>
+
+                {/* AI Architecture Assistant */}
+                <button
+                  type="button"
+                  onClick={() => setIsAIAssistantOpen((prev) => !prev)}
+                  className={`p-2 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                    isAIAssistantOpen
+                      ? "bg-violet-500/15 text-violet-400 border-violet-500/40"
+                      : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                  }`}
+                  title="Open AI Architecture Assistant"
+                >
+                  <FiCpu className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline text-[11px]">Assistant</span>
+                </button>
+
+                {/* Save Diagram Button */}
+                {workspaceId && diagramId && (
+                  <button
+                    type="button"
+                    onClick={handleSaveDiagramToBackend}
+                    disabled={isSaving}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-600/20 transition cursor-pointer disabled:opacity-50"
+                    title="Save diagram to cloud (Ctrl+S)"
+                  >
+                    <FiSave className="w-3.5 h-3.5" />
+                    <span>{isSaving ? "Saving..." : "Save"}</span>
+                  </button>
+                )}
+              </div>
+            </header>
           {/* Full-Screen React Flow Canvas */}
           <div
             className={`flex-1 min-h-0 relative z-0 w-full transition-all duration-150 ${
@@ -4656,21 +5046,24 @@ connect s1 -> r1
               </div>
             )}
 
-            {/* Canvas Loading Overlay */}
+            {/* Canvas Loading Overlay with Engineering FlowLoader */}
             {isLoadingDiagram && (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[var(--background)]/80 backdrop-blur-md transition-all">
-                <div className="flex flex-col items-center gap-3 p-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 shadow-2xl">
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full border-4 border-violet-500/20 border-t-violet-500 animate-spin" />
-                    <div className="absolute inset-0 flex items-center justify-center text-xs">
-                      ⚡
-                    </div>
-                  </div>
-                  <div className="text-center space-y-1">
-                    <p className="text-sm font-bold text-[color:var(--foreground)] tracking-tight">Loading Architecture Diagram...</p>
-                    <p className="text-xs text-[color:var(--foreground)]/50 font-mono">Fetching nodes & configurations from database</p>
-                  </div>
-                </div>
+              <div className="absolute inset-0 z-30 flex items-center justify-center bg-[var(--background)]/85 backdrop-blur-md transition-all">
+                <FlowLoader
+                  label="Loading Architecture Diagram..."
+                  sublabel="Fetching nodes, connections & configurations from database"
+                />
+              </div>
+            )}
+
+            {/* Simulation Compiling HUD Indicator */}
+            {isCompilingSimulation && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+                <FlowLoader
+                  size="hud"
+                  label="Compiling Simulation Engine"
+                  sublabel="Tracing network paths & allocating buffer queues"
+                />
               </div>
             )}
 
@@ -4831,8 +5224,9 @@ connect s1 -> r1
 
                   {systemMetrics.queuedRequests.length > 0 && (
                     <div className="flex flex-col gap-1 rounded-xl bg-rose-500/5 border border-rose-500/15 p-2">
-                      <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
-                        <span>⏳</span> Bottleneck: Database Wait
+                      <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1.5">
+                        <FiClock className="w-3 h-3 text-rose-400 shrink-0" />
+                        <span>Bottleneck: Database Wait</span>
                       </p>
                       <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
                         {systemMetrics.queuedRequests.map(
@@ -4851,8 +5245,9 @@ connect s1 -> r1
 
                   {systemMetrics.errorRequests.length > 0 && (
                     <div className="flex flex-col gap-1 rounded-xl bg-rose-500/10 border border-rose-500/20 p-2">
-                      <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
-                        <span>❌</span> Failures Detected
+                      <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1.5">
+                        <FiAlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                        <span>Failures Detected</span>
                       </p>
                       <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
                         {systemMetrics.errorRequests.map(
@@ -4872,8 +5267,9 @@ connect s1 -> r1
                   {systemMetrics.warningRequests &&
                     systemMetrics.warningRequests.length > 0 && (
                       <div className="flex flex-col gap-1 rounded-xl bg-amber-500/10 border border-amber-500/20 p-2">
-                        <p className="text-[8px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1">
-                          <span>⚠️</span> Warnings Detected
+                        <p className="text-[8px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1.5">
+                          <FiAlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
+                          <span>Warnings Detected</span>
                         </p>
                         <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
                           {systemMetrics.warningRequests.map(
@@ -4896,7 +5292,7 @@ connect s1 -> r1
                     (!systemMetrics.warningRequests ||
                       systemMetrics.warningRequests.length === 0) && (
                       <div className="flex items-center gap-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/15 p-1.5 text-emerald-400">
-                        <span className="text-xs">⚡</span>
+                        <FiCheckCircle className="w-3 h-3 text-emerald-400 shrink-0" />
                         <span className="text-[8px] font-bold uppercase tracking-wider">
                           Processing requests smoothly
                         </span>
@@ -4930,99 +5326,24 @@ connect s1 -> r1
                       }`}
                     ></span>
                   </span>
-                  <span>⚡ Health & Load</span>
+                  <FiActivity className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                  <span>Health & Load</span>
                 </button>
               ))}
 
-            {/* Canvas Background Pattern & Opacity Switcher Overlay */}
-            <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex flex-wrap sm:flex-nowrap items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-md p-1 shadow-lg pointer-events-auto max-w-[92vw] sm:max-w-none">
-              {/* Toggle Hide/Show Controls */}
-              <button
-                type="button"
-                onClick={() => setShowBgControls((prev) => !prev)}
-                className="px-2 py-1 rounded-lg text-xs font-semibold text-[color:var(--foreground)]/60 hover:text-violet-400 hover:bg-[var(--surface-muted)] transition cursor-pointer flex items-center gap-1.5"
-                title={showBgControls ? "Hide Grid Pattern settings" : "Show Grid Pattern settings"}
-              >
-                <svg className="w-3.5 h-3.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-                <span className="text-[10px] font-mono uppercase">{showBgControls ? "Grid" : "Grid Controls"}</span>
-              </button>
-
-              {showBgControls && (
-                <>
-                  <div className="h-4 w-px bg-[var(--border)] my-auto hidden sm:block" />
-
-                  {/* Pattern selector */}
-                  <div className="flex items-center gap-0.5 overflow-x-auto">
-                    {(["dots", "lines", "cross", "none"] as const).map((pattern) => (
-                      <button
-                        key={pattern}
-                        type="button"
-                        onClick={() => setBgPattern(pattern)}
-                        className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-[9px] sm:text-[10px] font-bold font-mono uppercase transition cursor-pointer ${
-                          bgPattern === pattern
-                            ? "bg-violet-500/20 text-violet-400 border border-violet-500/30 shadow-sm"
-                            : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
-                        }`}
-                        title={`Set grid pattern to ${pattern}`}
-                      >
-                        {pattern}
-                      </button>
-                    ))}
-                  </div>
-
-                  {bgPattern !== "none" && (
-                    <>
-                      <div className="h-4 w-px bg-[var(--border)] my-auto hidden sm:block" />
-
-                      {/* Opacity slider */}
-                      <div className="flex items-center gap-1 px-1">
-                        <input
-                          type="range"
-                          min="0.05"
-                          max="0.70"
-                          step="0.05"
-                          value={bgOpacity}
-                          onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
-                          className="w-12 sm:w-16 h-1 rounded-lg bg-[var(--surface-muted)] appearance-none cursor-pointer accent-violet-500"
-                          title={`Adjust grid opacity: ${Math.round(bgOpacity * 100)}%`}
-                        />
-                        <span className="text-[9px] font-mono font-semibold text-violet-400 min-w-[20px]">
-                          {Math.round(bgOpacity * 100)}%
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-
-              {workspaceId && diagramId && (
-                <>
-                  <div className="h-4 w-px bg-[var(--border)] my-auto" />
-                  <button
-                    type="button"
-                    onClick={handleSaveDiagramToBackend}
-                    disabled={isSaving}
-                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/20 transition cursor-pointer disabled:opacity-50"
-                    title="Save diagram to MongoDB (Ctrl+S / Cmd+S)"
-                  >
-                    <span>💾</span>
-                    <span>{isSaving ? "Saving..." : "Save"}</span>
-                  </button>
-                </>
-              )}
-            </div>
           </div>
 
           {/* Floating Warning Message */}
           {validationWarning && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4 animate-fade-in">
               <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 backdrop-blur-xl px-4 py-3 text-xs text-amber-300 flex items-center justify-between shadow-lg">
-                <span>⚠️ {validationWarning}</span>
+                <span className="flex items-center gap-1.5">
+                  <FiAlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                  {validationWarning}
+                </span>
                 <button
                   onClick={() => setValidationWarning(null)}
-                  className="text-amber-400 font-bold ml-2 text-base hover:text-amber-300"
+                  className="text-amber-400 font-bold ml-2 text-base hover:text-amber-300 cursor-pointer"
                 >
                   ×
                 </button>
@@ -5042,7 +5363,7 @@ connect s1 -> r1
                 </span>
                 <button
                   onClick={() => setSuccessToast(null)}
-                  className="text-emerald-400 font-bold ml-2 text-base hover:text-emerald-300"
+                  className="text-emerald-400 font-bold ml-2 text-base hover:text-emerald-300 cursor-pointer"
                 >
                   ×
                 </button>
@@ -5050,17 +5371,152 @@ connect s1 -> r1
             </div>
           )}
 
-          {/* Floating Inspector Panel — bottom sheet on mobile, right side on desktop */}
-          {selectedNode && (
-            <aside
-              className="
-              absolute z-20
-              bottom-0 left-0 right-0 max-h-[50vh] rounded-t-3xl rounded-b-none
-              md:bottom-auto md:top-4 md:right-4 md:left-auto md:w-80 md:rounded-2xl md:max-h-[calc(100vh-160px)]
-              border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xl shadow-2xl flex flex-col overflow-y-auto scrollbar-thin transition-all duration-300
-            "
-            >
-              <div className="p-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]/50">
+          {/* Bottom Docked Playback / Timeline Terminal Panel */}
+          <div
+            style={{ height: debugEnabled ? `${panelHeight}px` : "auto" }}
+            className={`flex flex-col border-t border-[var(--border)] bg-[var(--surface)]/45 backdrop-blur-xl overflow-hidden shrink-0 z-10 w-full transition-all duration-150 ${selectedNode ? "max-md:hidden" : ""}`}
+          >
+            {/* Drag Handle */}
+            {debugEnabled && (
+              <div
+                onMouseDown={() => setIsDraggingTerminal(true)}
+                className="h-1 w-full cursor-row-resize bg-[var(--border)] hover:bg-violet-500/50 transition-colors shrink-0 mb-1"
+                title="Drag to resize terminal panel"
+              />
+            )}
+
+            <div className="p-3 flex-1 flex flex-col gap-3 min-h-0 overflow-y-auto scrollbar-thin">
+              <div className="mx-auto flex w-full max-w-7xl flex-col gap-3">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div className="flex-1 overflow-x-auto min-w-0 scrollbar-thin">
+                    <Controls
+                      isPlaying={isPlaying}
+                      isCompiling={isCompilingSimulation}
+                      onPlayToggle={() => {
+                        if (isCompilingSimulation) return;
+                        if (simulationFrames.length === 0) {
+                          handleStartSimulation();
+                        } else {
+                          setIsPlaying((prev) => !prev);
+                        }
+                      }}
+                      onPrev={goToPreviousFrame}
+                      onNext={goToNextFrame}
+                      onReset={resetPlayback}
+                      onReframe={() => {
+                        handleStartSimulation();
+                        setFrameIndex(0);
+                        setIsPlaying(true);
+                      }}
+                      debugEnabled={debugEnabled}
+                      onDebugToggle={() => setDebugEnabled((prev) => !prev)}
+                      speed={speed}
+                      onSpeedChange={setSpeed}
+                      theme={theme}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5 sm:gap-2 self-end md:self-auto shrink-0">
+                    <label
+                      title="Hide response/return packets flowing back"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-violet-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={hideResponse}
+                        onChange={() => setHideResponse((prev) => !prev)}
+                        className="accent-violet-500 cursor-pointer"
+                      />
+                      <span className="group-hover:text-violet-300">
+                        Hide Response
+                      </span>
+                    </label>
+
+                    <label
+                      title="Show parallel requests simultaneously"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-blue-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={parallelResponse}
+                        onChange={() => setParallelResponse((prev) => !prev)}
+                        className="accent-violet-500 cursor-pointer"
+                      />
+                      <span className="group-hover:text-blue-300">
+                        Parallel
+                      </span>
+                    </label>
+
+                    <label
+                      title="Toggle live simulation logs & console"
+                      className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition whitespace-nowrap font-medium ${
+                        debugEnabled
+                          ? "border-violet-500/50 bg-violet-500/15 text-violet-300 shadow-sm"
+                          : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:border-violet-500/30"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={debugEnabled}
+                        onChange={() => setDebugEnabled((prev) => !prev)}
+                        className="accent-violet-500 cursor-pointer"
+                      />
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>Logs</span>
+                    </label>
+                  </div>
+                </div>
+
+                <Timeline
+                  frameIndex={frameIndex}
+                  frameGroups={frameGroups}
+                  onSeek={(idx) => {
+                    setIsPlaying(false);
+                    setFrameIndex(idx);
+                  }}
+                  theme={theme}
+                />
+
+                {debugEnabled && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="min-h-0 flex-1"
+                  >
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 p-3 mt-1 shadow-inner">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-violet-400">
+                          Simulation Execution Logs
+                        </p>
+                        <span className="text-[10px] font-mono text-[color:var(--foreground)]/40">
+                          Frame {simulationFrames.length > 0 ? frameIndex + 1 : 0} / {simulationFrames.length}
+                        </span>
+                      </div>
+                      <DebugPanel
+                        currentFrames={accumulatedFrames}
+                        frameIndex={frameIndex}
+                        theme={theme}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Docked Right Inspector Panel — bottom sheet on mobile, right-docked on desktop (Section 15) */}
+        {selectedNode && (
+          <aside
+            className="
+            fixed inset-x-0 bottom-0 max-h-[60vh] rounded-t-2xl border-t border-[var(--border)] z-50
+            md:static md:w-80 md:h-full md:max-h-full md:rounded-none md:border-t-0 md:border-l md:border-[var(--border)] md:z-20
+            bg-[var(--surface)] shadow-2xl md:shadow-none flex flex-col overflow-y-auto scrollbar-thin shrink-0 transition-all duration-200
+          "
+          >
+            <div className="p-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]/50">
                 <div>
                   <h2 className="text-sm font-bold tracking-tight text-[color:var(--foreground)]">
                     Node Inspector
@@ -5094,7 +5550,7 @@ connect s1 -> r1
                   className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] text-[11px] font-bold transition cursor-pointer"
                   title="Re-run simulation with current changes"
                 >
-                  <span>🔄</span>
+                  <FiRotateCcw className="w-3.5 h-3.5" />
                   <span>Re-run Simulation</span>
                 </button>
 
@@ -5240,10 +5696,10 @@ connect s1 -> r1
                               }}
                             >
                               {align === "left"
-                                ? "⬅️ Left"
+                                ? "Left"
                                 : align === "right"
-                                  ? "➡️ Right"
-                                  : "↕️ Center"}
+                                  ? "Right"
+                                  : "Center"}
                             </button>
                           );
                         })}
@@ -5638,8 +6094,9 @@ connect s1 -> r1
                                             JSON.parse(activeReq.body);
                                           } catch (err: any) {
                                             return (
-                                              <span className="text-[9px] text-rose-500 mt-1 block leading-normal font-mono">
-                                                ⚠ {err.message}
+                                              <span className="text-[9px] text-rose-500 mt-1 flex items-center gap-1 leading-normal font-mono">
+                                                <FiAlertCircle className="w-2.5 h-2.5 shrink-0" />
+                                                <span>{err.message}</span>
                                               </span>
                                             );
                                           }
@@ -6037,13 +6494,15 @@ connect s1 -> r1
                                       {targetLabel}
                                     </span>
                                     {!isConnected && (
-                                      <span className="text-[8px] text-amber-500 font-semibold bg-amber-500/10 px-1 rounded">
-                                        ⚠️ Unlinked
+                                      <span className="text-[8px] text-amber-500 font-semibold bg-amber-500/10 px-1 rounded flex items-center gap-0.5">
+                                        <FiAlertTriangle className="w-2.5 h-2.5" />
+                                        <span>Unlinked</span>
                                       </span>
                                     )}
                                     {isConnectedBackwards && (
-                                      <span className="text-[8px] text-rose-500 font-semibold bg-rose-500/10 px-1 rounded animate-pulse">
-                                        ⚠️ Reverse
+                                      <span className="text-[8px] text-rose-500 font-semibold bg-rose-500/10 px-1 rounded animate-pulse flex items-center gap-0.5">
+                                        <FiAlertCircle className="w-2.5 h-2.5" />
+                                        <span>Reverse</span>
                                       </span>
                                     )}
                                     {isConnectedCorrectly && (
@@ -7562,146 +8021,14 @@ connect s1 -> r1
                     );
                     setSelectedNodeId(null);
                   }}
-                  className="w-full rounded-lg border border-rose-500/30 text-rose-500 dark:text-rose-400 py-2 text-center text-xs hover:bg-rose-500/10 transition font-semibold cursor-pointer"
+                  className="w-full rounded-lg border border-rose-500/30 text-rose-500 dark:text-rose-400 py-2 text-center text-xs hover:bg-rose-500/10 transition font-semibold cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Delete Component 🗑️
+                  <FiTrash2 className="w-3.5 h-3.5" />
+                  <span>Delete Component</span>
                 </button>
               </div>
             </aside>
           )}
-
-          {/* Bottom Docked Playback / Timeline Terminal Panel */}
-          <div
-            style={{ height: debugEnabled ? `${panelHeight}px` : "auto" }}
-            className={`flex flex-col border-t border-[var(--border)] bg-[var(--surface)]/45 backdrop-blur-xl overflow-hidden shrink-0 z-10 w-full transition-all duration-150 ${selectedNode ? "max-md:hidden" : ""}`}
-          >
-            {/* Drag Handle */}
-            {debugEnabled && (
-              <div
-                onMouseDown={() => setIsDraggingTerminal(true)}
-                className="h-1 w-full cursor-row-resize bg-[var(--border)] hover:bg-violet-500/50 transition-colors shrink-0 mb-1"
-                title="Drag to resize terminal panel"
-              />
-            )}
-
-            <div className="p-3 flex-1 flex flex-col gap-3 min-h-0 overflow-y-auto scrollbar-thin">
-              <div className="mx-auto flex w-full max-w-7xl flex-col gap-3">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                  <div className="flex-1 overflow-x-auto min-w-0 scrollbar-thin">
-                    <Controls
-                      isPlaying={isPlaying}
-                      onPlayToggle={() => {
-                        if (simulationFrames.length === 0) {
-                          handleStartSimulation();
-                        } else {
-                          setIsPlaying((prev) => !prev);
-                        }
-                      }}
-                      onPrev={goToPreviousFrame}
-                      onNext={goToNextFrame}
-                      onReset={resetPlayback}
-                      onReframe={() => {
-                        handleStartSimulation();
-                        setFrameIndex(0);
-                        setIsPlaying(true);
-                      }}
-                      debugEnabled={debugEnabled}
-                      onDebugToggle={() => setDebugEnabled((prev) => !prev)}
-                      speed={speed}
-                      onSpeedChange={setSpeed}
-                      theme={theme}
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-1.5 sm:gap-2 self-end md:self-auto shrink-0">
-                    <label
-                      title="Hide response/return packets flowing back"
-                      className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-violet-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={hideResponse}
-                        onChange={() => setHideResponse((prev) => !prev)}
-                        className="accent-violet-500 cursor-pointer"
-                      />
-                      <span className="group-hover:text-violet-300">
-                        Hide Response
-                      </span>
-                    </label>
-
-                    <label
-                      title="Show parallel requests simultaneously"
-                      className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-blue-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={parallelResponse}
-                        onChange={() => setParallelResponse((prev) => !prev)}
-                        className="accent-violet-500 cursor-pointer"
-                      />
-                      <span className="group-hover:text-blue-300">
-                        Parallel
-                      </span>
-                    </label>
-
-                    <label
-                      title="Toggle live simulation logs & console"
-                      className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition whitespace-nowrap font-medium ${
-                        debugEnabled
-                          ? "border-violet-500/50 bg-violet-500/15 text-violet-300 shadow-sm"
-                          : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:border-violet-500/30"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={debugEnabled}
-                        onChange={() => setDebugEnabled((prev) => !prev)}
-                        className="accent-violet-500 cursor-pointer"
-                      />
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span>Logs</span>
-                    </label>
-                  </div>
-                </div>
-
-                <Timeline
-                  frameIndex={frameIndex}
-                  frameGroups={frameGroups}
-                  onSeek={(idx) => {
-                    setIsPlaying(false);
-                    setFrameIndex(idx);
-                  }}
-                  theme={theme}
-                />
-
-                {debugEnabled && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="min-h-0 flex-1"
-                  >
-                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 p-3 mt-1 shadow-inner">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-[10px] uppercase font-bold tracking-widest text-violet-400">
-                          Simulation Execution Logs
-                        </p>
-                        <span className="text-[10px] font-mono text-[color:var(--foreground)]/40">
-                          Frame {simulationFrames.length > 0 ? frameIndex + 1 : 0} / {simulationFrames.length}
-                        </span>
-                      </div>
-                      <DebugPanel
-                        currentFrames={accumulatedFrames}
-                        frameIndex={frameIndex}
-                        theme={theme}
-                      />
-                    </div>
-                  </motion.div>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Welcome Modal & Template Picker Dialog */}
@@ -8198,7 +8525,7 @@ connect s1 -> r1
                   <button
                     type="button"
                     onClick={() => {
-                      const templateText = `I just designed this distributed system architecture flow on FlowFrame! 🚀\n\nFlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues.`;
+                      const templateText = `I just designed this distributed system architecture flow on FlowFrame.\n\nFlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues.`;
                       navigator.clipboard.writeText(templateText);
                       setSuccessToast("Caption copied to clipboard! Opening LinkedIn...");
                       window.open(`https://www.linkedin.com/shareArticle?mini=true&&text=${templateText}`, "_blank", "noopener,noreferrer");
@@ -8215,7 +8542,7 @@ connect s1 -> r1
                   {/* Share on X */}
                   <a
                     href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                      "I just designed this distributed system architecture flow on FlowFrame! 🚀\n\nFlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues."
+                      "I just designed this distributed system architecture flow on FlowFrame.\n\nFlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues."
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -8239,7 +8566,7 @@ connect s1 -> r1
                   <button
                     type="button"
                     onClick={() => {
-                      const templateText = `I just designed this distributed system architecture flow on FlowFrame! 🚀\n\nFlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues.`;
+                      const templateText = `I just designed this distributed system architecture flow on FlowFrame.\n\nFlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues.`;
                       navigator.clipboard.writeText(templateText);
                       setCopiedTemplate(true);
                       setTimeout(() => setCopiedTemplate(false), 2000);
@@ -8250,7 +8577,7 @@ connect s1 -> r1
                   </button>
                 </div>
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-[10px] text-[color:var(--foreground)]/60 leading-relaxed font-sans max-h-24 overflow-y-auto scrollbar-thin select-all">
-                  <p className="font-semibold text-[color:var(--foreground)]/80">I just designed this distributed system architecture flow on FlowFrame! 🚀</p>
+                  <p className="font-semibold text-[color:var(--foreground)]/80">I just designed this distributed system architecture flow on FlowFrame.</p>
                   <p className="mt-1">FlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues.</p>
                 </div>
               </div>
@@ -8288,6 +8615,39 @@ connect s1 -> r1
           </p>
         </div>
       )}
+
+      {/* AI Architecture Assistant Drawer */}
+      <AIAssistantDrawer
+        isOpen={isAIAssistantOpen}
+        onClose={() => setIsAIAssistantOpen(false)}
+        nodes={nodes}
+        edges={edges}
+        nodeConfigs={nodeConfigs}
+        theme={theme}
+        onApplyDsl={(code: string, explanation: string) => {
+          try {
+            const output = compileDSL(code);
+            if (!output.nodes || output.nodes.length === 0) {
+              setValidationWarning("No nodes generated from AI architecture DSL.");
+              return;
+            }
+            setDslCode(code);
+            setNodes(output.nodes);
+            setEdges(output.edges);
+            setNodeConfigs(output.nodeConfigs || {});
+            setValidationWarning(null);
+            setSuccessToast(explanation || "AI Architecture applied to canvas!");
+            setTimeout(() => {
+              fitView({ duration: 600 });
+            }, 150);
+          } catch (err: any) {
+            setValidationWarning(`Failed to apply architecture: ${err.message || err}`);
+          }
+        }}
+        onRunSimulation={() => {
+          handleStartSimulation();
+        }}
+      />
     </main>
   );
 }

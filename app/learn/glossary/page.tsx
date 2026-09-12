@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import SiteHeader from "@/components/SiteHeader";
 import { useThemeStore } from "@/store/useThemeStore";
+import { NodeSocket } from "@/components/FlowDecorations";
 
 interface GlossaryTerm {
   id: string;
@@ -436,18 +437,22 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Databases": "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
   "Performance": "bg-amber-500/10 text-amber-400 border-amber-500/20",
   "Security": "bg-red-500/10 text-red-400 border-red-500/20",
-  "Architecture": "bg-violet-500/10 text-violet-400 border-violet-500/20",
-  "Networking": "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20",
+  "Architecture": "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  "Networking": "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
 };
 
 function TermCard({ term, expanded, onToggle }: { term: GlossaryTerm; expanded: boolean; onToggle: () => void }) {
   const catColor = CATEGORY_COLORS[term.category] ?? "bg-slate-500/10 text-slate-400 border-slate-500/20";
-  const hasDetail = true;
   return (
     <motion.div
       layout
-      className={`rounded-xl border transition-all duration-200 overflow-hidden ${expanded ? "border-violet-500/30 shadow-[0_0_0_1px_rgba(139,92,246,0.1)]" : "border-[var(--border)] hover:border-[var(--border)]"} bg-[var(--surface)]/50 backdrop-blur-sm`}
+      className={`relative rounded-xl border transition-all duration-200 overflow-hidden ${
+        expanded
+          ? "border-[var(--accent)]/50 shadow-sm"
+          : "border-[var(--border)] hover:border-[var(--accent)]/30"
+      } bg-[var(--surface)]`}
     >
+      <NodeSocket position="left" active={expanded} />
       <div
         onClick={onToggle}
         className="w-full text-left px-5 py-4 flex items-center gap-4 cursor-pointer select-none"
@@ -461,14 +466,14 @@ function TermCard({ term, expanded, onToggle }: { term: GlossaryTerm; expanded: 
             <Link
               href={`/learn/glossary/${term.id}`}
               onClick={e => e.stopPropagation()}
-              className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 border border-violet-500/20 hover:border-violet-500/40 uppercase tracking-wide transition-all duration-150 relative z-10"
+              className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] border border-[var(--accent)]/25 uppercase tracking-wide transition-all duration-150 relative z-10"
             >
               Deep Dive →
             </Link>
           </div>
-          <p className="text-xs text-[color:var(--foreground)]/50 mt-1 leading-relaxed">{term.short}</p>
+          <p className="text-xs text-[color:var(--muted)] mt-1 leading-relaxed">{term.short}</p>
         </div>
-        <span className={`shrink-0 text-[color:var(--foreground)]/30 text-sm transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}>
+        <span className={`shrink-0 text-[color:var(--muted)] text-sm transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}>
           ▾
         </span>
       </div>
@@ -482,15 +487,15 @@ function TermCard({ term, expanded, onToggle }: { term: GlossaryTerm; expanded: 
             transition={{ duration: 0.22, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 space-y-4 border-t border-[var(--border)]/50 pt-4">
+            <div className="px-5 pb-5 space-y-4 border-t border-[var(--border)] pt-4">
               {/* Full explanation */}
-              <p className="text-sm text-[color:var(--foreground)]/70 leading-relaxed">{term.long}</p>
+              <p className="text-sm text-[color:var(--foreground)]/80 leading-relaxed">{term.long}</p>
 
               {/* Example */}
               {term.example && (
-                <div className="rounded-lg border border-emerald-500/15 bg-emerald-500/5 px-4 py-3 space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400/70">Example</p>
-                  <p className="text-xs text-[color:var(--foreground)]/65 leading-relaxed font-mono">{term.example}</p>
+                <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 space-y-1">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Example</p>
+                  <p className="text-xs text-[color:var(--foreground)]/80 leading-relaxed font-mono">{term.example}</p>
                 </div>
               )}
 
@@ -498,16 +503,16 @@ function TermCard({ term, expanded, onToggle }: { term: GlossaryTerm; expanded: 
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 {term.related && term.related.length > 0 && (
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--foreground)]/30">Related:</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--muted)]">Related:</p>
                     {term.related.map(r => (
-                      <span key={r} className="text-[10px] px-2 py-0.5 rounded-full border border-[var(--border)]/60 text-[color:var(--foreground)]/50">{r}</span>
+                      <span key={r} className="text-[10px] px-2 py-0.5 rounded-full border border-[var(--border)] text-[color:var(--muted)]">{r}</span>
                     ))}
                   </div>
                 )}
                 <Link
                   href={`/learn/glossary/${term.id}`}
                   onClick={e => e.stopPropagation()}
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/25 hover:border-violet-500/50 px-3.5 py-1.5 text-xs font-bold text-violet-400 transition-all duration-150"
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 border border-[var(--accent)]/25 px-3 py-1.5 text-xs font-bold text-[color:var(--accent)] transition-all duration-150"
                 >
                   Full Deep Dive →
                 </Link>
@@ -542,24 +547,23 @@ export default function GlossaryPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[color:var(--foreground)] relative">
+    <main className="min-h-screen bg-[var(--bg)] text-[color:var(--foreground)] relative">
       <div className="pointer-events-none absolute inset-0 -z-10 technical-grid opacity-20" />
-      <div className="pointer-events-none absolute -right-32 top-0 -z-10 h-[500px] w-[500px] rounded-full bg-violet-500/6 blur-[140px]" />
+      <div className="pointer-events-none absolute -right-32 top-0 -z-10 h-[500px] w-[500px] rounded-full bg-[var(--accent)]/10 blur-3xl" />
 
       <SiteHeader
         theme={theme}
         onToggleTheme={toggleTheme}
         showHomeLink
         badgeText="Learn Academy"
-        alwaysGlass
       />
 
       {/* Breadcrumb */}
-      <div className="border-b border-[var(--border)]/60 bg-[var(--surface)]/40 backdrop-blur">
-        <div className="mx-auto max-w-5xl px-5 sm:px-8 h-10 flex items-center gap-2 text-xs text-[color:var(--foreground)]/40 font-mono">
-          <Link href="/learn" className="hover:text-violet-400 transition-colors">← Learn</Link>
+      <div className="border-b border-[var(--border)] bg-[var(--bg-elevated)]">
+        <div className="mx-auto max-w-5xl px-5 sm:px-8 h-10 flex items-center gap-2 text-xs text-[color:var(--muted)] font-mono">
+          <Link href="/learn" className="hover:text-[color:var(--accent)] transition-colors">← Learn</Link>
           <span>/</span>
-          <span className="text-violet-400">Systems Glossary</span>
+          <span className="text-[color:var(--accent)]">Systems Glossary</span>
         </div>
       </div>
 
@@ -573,18 +577,18 @@ export default function GlossaryPage() {
           className="space-y-4 max-w-2xl"
         >
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[color:var(--foreground)]/35 font-mono">Reference</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[color:var(--muted)] font-mono">Reference</p>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-1">
-              Systems <span className="text-violet-400">Glossary</span>
+              Systems <span className="grad-text">Glossary</span>
             </h1>
           </div>
-          <p className="text-base text-[color:var(--foreground)]/55 leading-relaxed">
+          <p className="text-base text-[color:var(--muted)] leading-relaxed">
             {TERMS.length} terms across {CATEGORIES.length - 1} categories — from HTTP basics to distributed systems patterns. Search for anything.
           </p>
 
           {/* Search */}
           <div className="relative">
-            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--foreground)]/30">
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--muted)]">
               <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
               </svg>
@@ -594,13 +598,13 @@ export default function GlossaryPage() {
               value={query}
               onChange={e => { setQuery(e.target.value); setExpandedId(null); }}
               placeholder="Search terms, concepts, acronyms…"
-              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)]/60 pl-10 pr-4 py-3 text-sm text-[color:var(--foreground)] placeholder:text-[color:var(--foreground)]/30 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/10 transition-all duration-150 backdrop-blur-sm"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] pl-10 pr-4 py-3 text-sm text-[color:var(--foreground)] placeholder:text-[color:var(--muted)] outline-none focus:border-[var(--accent)] transition-all duration-150"
             />
             {query && (
               <button
                 type="button"
                 onClick={() => setQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--foreground)]/30 hover:text-[color:var(--foreground)]/60 transition-colors text-lg leading-none"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors text-lg leading-none"
               >
                 ×
               </button>
@@ -627,13 +631,13 @@ export default function GlossaryPage() {
                 className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-150 ${
                   active
                     ? cat === "All"
-                      ? "border-violet-500/50 bg-violet-500/15 text-violet-400"
+                      ? "border-[var(--accent)]/50 bg-[var(--accent)]/15 text-[color:var(--accent)]"
                       : `${color} opacity-100`
-                    : "border-[var(--border)] bg-[var(--surface)]/40 text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]/80 hover:border-[var(--border)]"
+                    : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:border-[var(--border)]"
                 }`}
               >
                 {cat}
-                <span className={`text-[9px] rounded-full px-1.5 py-0.5 ${active ? "bg-[var(--background)]/30" : "bg-[var(--surface-muted)]"}`}>
+                <span className={`text-[9px] rounded-full px-1.5 py-0.5 ${active ? "bg-[var(--bg)]/30" : "bg-[var(--bg-elevated)]"}`}>
                   {count}
                 </span>
               </button>

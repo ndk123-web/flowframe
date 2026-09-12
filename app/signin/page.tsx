@@ -10,12 +10,23 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useToastStore } from "@/store/useToastStore";
 import { useThemeStore } from "@/store/useThemeStore";
 import { syncFirebaseUserApi } from "@/services/authApi";
+import {
+  FiMail,
+  FiLock,
+  FiEye,
+  FiEyeOff,
+  FiArrowRight,
+  FiShield,
+  FiAlertCircle,
+} from "react-icons/fi";
 
 export default function SignInPage() {
   const { theme, toggleTheme } = useThemeStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
@@ -46,14 +57,17 @@ export default function SignInPage() {
       router.push("/dashboard");
     } catch (err: any) {
       console.error("Backend DB sync error:", err);
-      showToast("Backend server unreachable. Unable to sync profile.", "error");
+      const msg = "Backend server unreachable. Unable to sync profile.";
+      setFormError(msg);
+      showToast(msg, "error");
     }
   };
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     if (!email || !password) {
-      showToast("Please enter both email and password.", "error");
+      setFormError("Please enter both email address and password.");
       return;
     }
 
@@ -62,48 +76,71 @@ export default function SignInPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       await handleFirebaseUserSync(userCredential.user, "email");
     } catch (err: any) {
-      showToast(err.message || "Failed to sign in. Please check credentials.", "error");
+      const msg = err.message || "Failed to sign in. Please check your credentials.";
+      setFormError(msg);
+      showToast(msg, "error");
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
+    setFormError(null);
     setLoading(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
       await handleFirebaseUserSync(result.user, "google");
     } catch (err: any) {
-      showToast(err.message || "Google sign in failed.", "error");
+      const msg = err.message || "Google authentication was cancelled or failed.";
+      setFormError(msg);
+      showToast(msg, "error");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[color:var(--foreground)] flex flex-col justify-between transition-colors duration-200">
+    <div className="min-h-screen bg-[var(--bg)] text-[color:var(--foreground)] flex flex-col justify-between transition-colors duration-200 relative overflow-hidden">
+      {/* Background technical subtle grid */}
+      <div className="pointer-events-none absolute inset-0 -z-10 technical-grid opacity-25" />
+
       <SiteHeader
         theme={theme}
         onToggleTheme={toggleTheme}
         showHomeLink={true}
-        badgeText="Authentication"
+        badgeText="Developer Portal"
       />
 
-      <main className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md p-7 sm:p-8 rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-2xl space-y-6">
-          <div className="text-center space-y-1.5">
-            <h1 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)]">Welcome Back</h1>
-            <p className="text-xs text-[color:var(--muted)]">
-              Sign in to manage your workspaces and architecture diagrams
+      <main className="flex-1 flex items-center justify-center px-4 py-12 z-10">
+        <div className="w-full max-w-md rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)]/95 backdrop-blur-md p-7 sm:p-8 shadow-2xl space-y-6">
+          {/* Header */}
+          <div className="space-y-2 text-center">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-[var(--surface-muted)] text-[color:var(--accent)] border border-[var(--border)]">
+              <FiShield className="w-3 h-3" />
+              <span>Authentication</span>
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)]">
+              Sign In to FlowFrame
+            </h1>
+            <p className="text-xs text-[color:var(--muted)] leading-relaxed">
+              Access your architecture workspaces, topology graphs, and distributed system simulations.
             </p>
           </div>
+
+          {/* Form Error Banner */}
+          {formError && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 text-xs animate-in fade-in duration-150">
+              <FiAlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span className="flex-1 leading-tight">{formError}</span>
+            </div>
+          )}
 
           {/* Social Sign-In */}
           <button
             type="button"
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-lg border border-[var(--border-strong)] bg-[var(--bg-elevated)] hover:bg-[var(--surface-muted)] text-xs font-semibold text-[color:var(--foreground)] transition duration-150 cursor-pointer disabled:opacity-50 shadow-xs"
+            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl border border-[var(--border-strong)] bg-[var(--bg-elevated)] hover:bg-[var(--surface-muted)] text-xs font-semibold text-[color:var(--foreground)] transition duration-150 cursor-pointer disabled:opacity-50 shadow-xs"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24">
               <path
@@ -123,13 +160,13 @@ export default function SignInPage() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            Sign in with Google
+            Continue with Google
           </button>
 
           <div className="relative flex items-center justify-center">
             <span className="absolute inset-x-0 h-px bg-[var(--border)]" />
             <span className="relative bg-[var(--surface)] px-3 text-[10px] uppercase font-mono tracking-widest text-[color:var(--muted)]">
-              OR EMAIL
+              Or continue with email
             </span>
           </div>
 
@@ -139,34 +176,50 @@ export default function SignInPage() {
               <label className="block text-xs font-semibold text-[color:var(--foreground)] mb-1.5">
                 Email Address
               </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)] transition"
-              />
+              <div className="relative">
+                <FiMail className="w-4 h-4 text-[color:var(--muted)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="developer@company.com"
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)]/60 focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition"
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[color:var(--foreground)] mb-1.5">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)] transition"
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-[color:var(--foreground)]">
+                  Password
+                </label>
+              </div>
+              <div className="relative">
+                <FiLock className="w-4 h-4 text-[color:var(--muted)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your account password"
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)]/60 focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((p) => !p)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--muted)] hover:text-[color:var(--foreground)] p-1 rounded transition cursor-pointer"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <FiEyeOff className="w-3.5 h-3.5" /> : <FiEye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full py-2.5 px-4 rounded-lg text-white font-semibold text-xs shadow-sm cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+              className="btn-primary w-full py-2.5 px-4 rounded-xl text-white font-semibold text-xs shadow-sm cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 transition"
             >
               {loading ? (
                 <>
@@ -174,10 +227,13 @@ export default function SignInPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  <span>Signing in...</span>
+                  <span>Authenticating...</span>
                 </>
               ) : (
-                "Sign In"
+                <>
+                  <span>Sign In</span>
+                  <FiArrowRight className="w-3.5 h-3.5" />
+                </>
               )}
             </button>
           </form>
@@ -185,14 +241,14 @@ export default function SignInPage() {
           <p className="text-center text-xs text-[color:var(--muted)]">
             Don&apos;t have an account?{" "}
             <Link href="/signup" className="font-semibold text-[color:var(--accent)] hover:underline">
-              Sign Up
+              Create an account
             </Link>
           </p>
         </div>
       </main>
 
       <footer className="py-6 text-center text-xs text-[color:var(--muted)] border-t border-[var(--border)]">
-        FlowFrame Architecture Simulator &copy; {new Date().getFullYear()} · All rights reserved.
+        FlowFrame Architecture Simulator &copy; {new Date().getFullYear()} · Licensed under PolyForm Noncommercial 1.0.0
       </footer>
     </div>
   );

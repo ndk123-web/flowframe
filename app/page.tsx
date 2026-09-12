@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
+import ArchitectureBackground from "@/components/ArchitectureBackground";
 import { ComponentIcon } from "@/components/ComponentIcons";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -80,7 +81,7 @@ interface DemoNodeData {
 function DemoNode({ data }: { data: DemoNodeData }) {
   return (
     <div
-      className={`relative flex flex-col rounded-xl border p-3 shadow-sm min-w-[136px] transition-all select-none ${
+      className={`relative flex flex-col rounded-xl border p-3 shadow-sm min-w-[130px] transition-all select-none ${
         data.active
           ? "border-[var(--accent)] bg-[var(--surface)] ring-1 ring-[var(--accent)]/25"
           : "border-[var(--border-strong)] bg-[var(--surface)]"
@@ -97,7 +98,7 @@ function DemoNode({ data }: { data: DemoNodeData }) {
         className="!bg-[var(--accent)] !w-2 !h-2 !border-0"
       />
 
-      <div className="flex items-center justify-between gap-1.5 mb-1.5">
+      <div className="flex items-center justify-between gap-1.5 mb-1">
         <div className="flex items-center gap-1.5 min-w-0">
           <ComponentIcon
             type={data.iconType}
@@ -119,119 +120,95 @@ function DemoNode({ data }: { data: DemoNodeData }) {
         )}
       </div>
 
-      <div className="text-[10px] font-mono text-[color:var(--muted)]">
-        <span className="truncate block">{data.subtitle}</span>
-      </div>
+      {data.subtitle && (
+        <div className="text-[10px] font-mono text-[color:var(--muted)]">
+          <span className="truncate block">{data.subtitle}</span>
+        </div>
+      )}
     </div>
   );
 }
 
 const nodeTypes = { demoNode: DemoNode };
 
-// ─── Single API Gateway Scenario Data (Cleaned: No IP addresses) ─────────────
-function buildApiGatewayDemo() {
+// ─── Single Load Balancer Scenario (Parallel Distribution, No Ports) ─────────
+function buildLoadBalancerDemo() {
   const nodes: Node[] = [
     {
-      id: "c1",
+      id: "client",
       type: "demoNode",
-      position: { x: 30, y: 130 },
+      position: { x: 30, y: 120 },
       data: {
         iconType: "client",
-        title: "Mobile Client",
-        subtitle: "POST /orders/checkout",
-        badge: "Client",
+        title: "Client",
+        subtitle: "2 Requests",
       },
     },
     {
-      id: "gw",
+      id: "lb",
       type: "demoNode",
-      position: { x: 260, y: 130 },
+      position: { x: 260, y: 120 },
       data: {
-        iconType: "api-gateway",
-        title: "API Gateway",
-        subtitle: "Path Routing Engine",
-        badge: "Port 443",
+        iconType: "load-balancer",
+        title: "Load Balancer",
+        subtitle: "Distributing",
         active: true,
       },
     },
     {
-      id: "auth",
+      id: "s1",
       type: "demoNode",
-      position: { x: 510, y: 20 },
+      position: { x: 500, y: 40 },
       data: {
         iconType: "server",
-        title: "Auth Service",
-        subtitle: "/api/auth/*",
-        badge: "JWT 200 OK",
-        badgeColor: "text-[color:var(--accent)] border-[var(--accent)]/25 bg-[var(--accent)]/10",
-      },
-    },
-    {
-      id: "orders",
-      type: "demoNode",
-      position: { x: 510, y: 130 },
-      data: {
-        iconType: "server",
-        title: "Order Service",
-        subtitle: "/api/orders/*",
-        badge: "Active Worker",
+        title: "Server 1",
+        subtitle: "Request #1",
+        badge: "Processing",
         badgeColor: "text-[color:var(--accent)] border-[var(--accent)]/25 bg-[var(--accent)]/10",
         active: true,
       },
     },
     {
-      id: "queue",
+      id: "s2",
       type: "demoNode",
-      position: { x: 510, y: 240 },
+      position: { x: 500, y: 190 },
       data: {
-        iconType: "message-queue",
-        title: "RabbitMQ",
-        subtitle: "orders.created",
-        badge: "202 Ack",
-        badgeColor: "text-[color:var(--amber)] border-[var(--amber)]/25 bg-[var(--amber-muted)]",
+        iconType: "server",
+        title: "Server 2",
+        subtitle: "Request #2",
+        badge: "Processing",
+        badgeColor: "text-[color:var(--accent)] border-[var(--accent)]/25 bg-[var(--accent)]/10",
+        active: true,
       },
     },
   ];
 
+  // 2 Parallel animated streams leaving the Load Balancer to Server 1 & Server 2
   const edges: Edge[] = [
     {
-      id: "e-c1-gw",
-      source: "c1",
-      target: "gw",
+      id: "e-client-lb",
+      source: "client",
+      target: "lb",
       type: "animated",
-      style: { stroke: "#3b82f6", strokeWidth: 2, strokeOpacity: 0.8 },
+      style: { stroke: "#3b82f6", strokeWidth: 2, strokeOpacity: 0.9 },
     },
     {
-      id: "e-gw-auth",
-      source: "gw",
-      target: "auth",
+      id: "e-lb-s1",
+      source: "lb",
+      target: "s1",
       type: "animated",
-      style: { stroke: "#3b82f6", strokeWidth: 1.5, strokeOpacity: 0.6 },
+      style: { stroke: "#3b82f6", strokeWidth: 2, strokeOpacity: 0.9 },
     },
     {
-      id: "e-gw-orders",
-      source: "gw",
-      target: "orders",
+      id: "e-lb-s2",
+      source: "lb",
+      target: "s2",
       type: "animated",
-      style: { stroke: "#3b82f6", strokeWidth: 2, strokeOpacity: 0.8 },
-    },
-    {
-      id: "e-orders-queue",
-      source: "orders",
-      target: "queue",
-      type: "animated",
-      style: { stroke: "#f59e0b", strokeWidth: 1.6, strokeOpacity: 0.75 },
+      style: { stroke: "#3b82f6", strokeWidth: 2, strokeOpacity: 0.9 },
     },
   ];
 
-  const logs = [
-    { time: "00:00.090", src: "CLIENT", desc: "POST /api/orders/checkout dispatched to API Gateway" },
-    { time: "00:00.150", src: "GATEWAY", desc: "Validated session Bearer token via Auth Service [200 OK]" },
-    { time: "00:00.220", src: "GATEWAY", desc: "Matched path /api/orders/* → Forwarded to Order Service" },
-    { time: "00:00.310", src: "ORDER_SVC", desc: "Published event to RabbitMQ topic 'orders.created' [202 Accepted]" },
-  ];
-
-  return { nodes, edges, logs };
+  return { nodes, edges };
 }
 
 // ─── Scroll Reveal Hook ───────────────────────────────────────────────────────
@@ -349,36 +326,41 @@ function HowItWorks() {
 
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20">
-        <div className="text-center max-w-2xl mx-auto mb-14">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
-            The Core Experience
-          </p>
-          <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
-            From architecture to running system in four steps.
-          </h2>
-          <p className="mt-3 text-sm text-[color:var(--muted)]">
-            No static mockups. FlowFrame compiles your topology into an executable simulation graph.
-          </p>
-        </div>
+      <section className="relative mx-auto max-w-6xl px-4 sm:px-6 py-24 sm:py-28 overflow-hidden">
+        {/* Ambient Vertical Architecture Simulation directly behind the four steps */}
+        <ArchitectureBackground variant="section" />
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((s, i) => (
-            <Reveal key={s.step} delay={i * 0.06}>
-              <div className="relative flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--accent)]/40 hover:-translate-y-0.5 transition-all duration-200 h-full">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-[color:var(--accent)]">
-                    {s.icon}
+        <div className="relative z-10">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
+              The Core Experience
+            </p>
+            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
+              From architecture to running system in four steps.
+            </h2>
+            <p className="mt-3 text-sm text-[color:var(--muted)]">
+              No static mockups. FlowFrame compiles your topology into an executable simulation graph.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {steps.map((s, i) => (
+              <Reveal key={s.step} delay={i * 0.06}>
+                <div className="relative flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xs p-5 hover:border-[var(--accent)]/40 hover:-translate-y-0.5 transition-all duration-200 h-full shadow-xs">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-[color:var(--accent)]">
+                      {s.icon}
+                    </div>
+                    <span className="text-[10px] font-mono font-bold text-[color:var(--muted)] px-2 py-0.5 rounded bg-[var(--bg-elevated)] border border-[var(--border)]">
+                      Step {s.step}
+                    </span>
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-[color:var(--muted)] px-2 py-0.5 rounded bg-[var(--bg-elevated)] border border-[var(--border)]">
-                    Step {s.step}
-                  </span>
+                  <h3 className="text-base font-bold text-[color:var(--foreground)] mb-2">{s.title}</h3>
+                  <p className="text-sm text-[color:var(--muted)] leading-relaxed">{s.desc}</p>
                 </div>
-                <h3 className="text-base font-bold text-[color:var(--foreground)] mb-2">{s.title}</h3>
-                <p className="text-sm text-[color:var(--muted)] leading-relaxed">{s.desc}</p>
-              </div>
-            </Reveal>
-          ))}
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
     </Reveal>
@@ -688,63 +670,105 @@ function YouTubeShowcase() {
   return (
     <Reveal>
       <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20 border-t border-[var(--border)]">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+        {/* Section Heading */}
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
+            Architecture Walkthrough
+          </p>
+          <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
+            See Event-Driven Systems in Action
+          </h2>
+          <p className="mt-3 text-sm text-[color:var(--muted)] leading-relaxed">
+            Follow a full implementation of message queues, connection pools, and distributed request traces modeled in FlowFrame.
+          </p>
+        </div>
+
+        {/* Technical Window Card */}
+        <div className="rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-xl overflow-hidden">
+          {/* Top Window Bar */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--border)] bg-[var(--bg-elevated)]/70 text-xs font-mono">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--border-strong)]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--border-strong)]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--border-strong)]" />
+              </div>
+              <span className="text-[11px] text-[color:var(--muted)] ml-2">
+                demo // event-driven-microservices.sim
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-[var(--accent)]/10 text-[color:var(--accent)] border border-[var(--accent)]/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+                Live Architecture Trace
+              </span>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-            {/* Left Content */}
-            <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-center">
-              <div className="inline-flex items-center gap-2 rounded-md border border-[var(--red)]/25 bg-[var(--red-muted)] px-2.5 py-1 text-[10px] font-bold text-[color:var(--red)] mb-5 w-fit">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--red)]" />
-                Featured Deep Dive
-              </div>
+            {/* Left Content Column */}
+            <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-[var(--border)]">
+              <div>
+                <div className="inline-flex items-center gap-1.5 rounded-md border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-2.5 py-1 text-[10px] font-mono font-bold text-[color:var(--accent)] mb-4 w-fit">
+                  <span>SYSTEM DESIGN LAB</span>
+                </div>
 
-              <h2 className="text-xl font-bold tracking-tight text-[color:var(--foreground)] mb-3">
-                Building Event-Driven Microservices From Scratch
-              </h2>
+                <h3 className="text-xl font-bold tracking-tight text-[color:var(--foreground)] mb-3 leading-snug">
+                  Building Event-Driven Microservices From Scratch
+                </h3>
 
-              <p className="text-sm text-[color:var(--muted)] leading-relaxed mb-5">
-                Complete event-driven microservices architecture — routing through API Gateways, load balancers, RabbitMQ message queues, and Postgres connection pools.
-              </p>
+                <p className="text-xs text-[color:var(--muted)] leading-relaxed mb-6">
+                  Complete walkthrough covering API Gateway ingress, Round-Robin load distribution, RabbitMQ pub/sub fan-out, and PostgreSQL connection pool starvation.
+                </p>
 
-              <div className="space-y-2 mb-6">
-                {[
-                  "Complete producer-consumer & PubSub fan-out pipeline",
-                  "Cache-aside with Redis hits vs misses",
-                  "TCP connection pool exhaustion & waiting queues",
-                  "Step-by-step live simulation frame playback",
-                ].map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-2 text-xs text-[color:var(--muted)]">
-                    <svg className="w-3.5 h-3.5 text-[color:var(--green)] shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    {item}
+                {/* Architecture Highlights Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
+                  <div className="p-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex flex-col">
+                    <span className="text-[9px] font-mono uppercase text-[color:var(--muted)]">Message Broker</span>
+                    <span className="text-[11px] font-semibold text-[color:var(--foreground)] mt-0.5">RabbitMQ Fan-Out</span>
                   </div>
-                ))}
+                  <div className="p-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex flex-col">
+                    <span className="text-[9px] font-mono uppercase text-[color:var(--muted)]">Cache Tier</span>
+                    <span className="text-[11px] font-semibold text-[color:var(--foreground)] mt-0.5">Redis Cache-Aside</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex flex-col">
+                    <span className="text-[9px] font-mono uppercase text-[color:var(--muted)]">Persistence</span>
+                    <span className="text-[11px] font-semibold text-[color:var(--foreground)] mt-0.5">PostgreSQL Pool Limits</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex flex-col">
+                    <span className="text-[9px] font-mono uppercase text-[color:var(--muted)]">Telemetry</span>
+                    <span className="text-[11px] font-semibold text-[color:var(--foreground)] mt-0.5">Packet Frame Tracing</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+                <Link
+                  href="/workspace"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-muted)] text-white px-4 py-2.5 text-xs font-semibold shadow-sm transition-all duration-150 text-center"
+                >
+                  <SandboxIcon className="w-3.5 h-3.5" />
+                  Try on Canvas →
+                </Link>
+
                 <a
                   href="https://www.youtube.com/watch?v=XQxFZg6RcTI"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-red-600 hover:bg-red-500 text-white px-4 py-2 text-xs font-semibold shadow-sm transition-all duration-150"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg-elevated)] hover:bg-[var(--surface-muted)] text-[color:var(--foreground)] px-4 py-2.5 text-xs font-semibold transition-all duration-150 text-center group"
                 >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="w-3.5 h-3.5 text-[color:var(--muted)] group-hover:text-red-500 transition-colors" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                   </svg>
-                  Watch on YouTube
+                  Watch Deep Dive
                 </a>
-                <Link
-                  href="/workspace"
-                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg-elevated)] hover:bg-[var(--surface-muted)] px-4 py-2 text-xs font-semibold text-[color:var(--foreground)] transition-all duration-150"
-                >
-                  Try on Canvas →
-                </Link>
               </div>
             </div>
 
-            {/* Right Video */}
-            <div className="lg:col-span-7 border-t lg:border-t-0 lg:border-l border-[var(--border)]">
-              <div className="aspect-video w-full bg-black">
+            {/* Right Video Player Column */}
+            <div className="lg:col-span-7 p-3 sm:p-5 flex items-center justify-center bg-[var(--surface-muted)]/40">
+              <div className="w-full aspect-video rounded-xl overflow-hidden border border-[var(--border)] bg-black shadow-inner">
                 <iframe
                   className="w-full h-full"
                   src="https://www.youtube.com/embed/XQxFZg6RcTI"
@@ -803,23 +827,20 @@ export default function LandingPage() {
   const router = useRouter();
   const { isAuthenticated, _hasHydrated } = useAuthStore();
 
-  // Single showcase: API Gateway (clean: no IPs, real logs)
-  const { nodes: demoNodes, edges: demoEdges, logs: demoLogs } = useMemo(
-    () => buildApiGatewayDemo(),
+  // Single showcase: Load Balancer (clean, basic info, zero text clutter)
+  const { nodes: demoNodes, edges: demoEdges } = useMemo(
+    () => buildLoadBalancerDemo(),
     []
   );
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] transition-colors duration-200 overflow-x-hidden">
+    <div className="relative min-h-screen bg-[var(--bg)] transition-colors duration-200 overflow-x-hidden">
       {/* Header */}
       <SiteHeader theme={theme} onToggleTheme={toggleTheme} showHomeLink={false} />
 
       {/* ── Hero Section (Centered & High Impact) ─────────────────────────── */}
       <section className="relative mx-auto max-w-6xl px-4 sm:px-6 pt-10 sm:pt-14 pb-16 text-center flex flex-col items-center">
-        {/* Subtle background glow */}
-        <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[300px] bg-blue-500/10 rounded-full blur-3xl -z-10" />
-
-        {/* Status Badge (Clean, No AI green dot, No awkward email display) */}
+        {/* Status Badge */}
         <div className="fade-up inline-flex items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 py-1 text-xs font-mono text-[color:var(--muted)] mb-6 shadow-xs">
           <span className="font-semibold text-[color:var(--foreground)]">FlowFrame Engine</span>
           <span className="text-[var(--border-strong)]">/</span>
@@ -919,64 +940,46 @@ export default function LandingPage() {
           </span>
         </div>
 
-        {/* ── Single Hero Showcase: API Gateway & Microservices Pipeline ───── */}
+        {/* ── Single Hero Showcase: Load Balancer (Clean & Uncluttered) ───── */}
         <div
-          className="fade-up w-full max-w-5xl rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-2xl overflow-hidden text-left"
+          className="fade-up w-full max-w-4xl rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-2xl overflow-hidden text-left"
           style={{ animationDelay: ".18s" }}
         >
           {/* Top Window Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-elevated)]">
-            {/* Left: macOS dots & file */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-elevated)]">
+            {/* Left: macOS dots & filename */}
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-red-500/80" />
               <span className="w-3 h-3 rounded-full bg-amber-500/80" />
               <span className="w-3 h-3 rounded-full bg-green-500/80" />
-              <span className="ml-2 font-mono text-xs text-[color:var(--muted)] font-medium">
-                api-gateway-mesh.flow
+              <span className="ml-2 font-mono text-xs text-[color:var(--foreground)] font-medium">
+                load-balancer.flow
               </span>
             </div>
 
-            {/* Center: Single Scenario Label */}
-            <div className="hidden sm:flex items-center gap-2 font-mono text-xs text-[color:var(--muted)]">
-              <span className="font-semibold text-[color:var(--foreground)]">API Gateway</span>
-              <span className="text-[var(--border-strong)]">·</span>
-              <span>Microservices Routing & RabbitMQ Pipeline</span>
-            </div>
-
-            {/* Right: Engine status badge (No pulsing green dot) */}
-            <div className="flex items-center gap-2">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[color:var(--accent)] text-[10px] font-mono font-semibold">
-                Simulated Runtime
-              </div>
-            </div>
-          </div>
-
-          {/* Sub-header telemetry banner */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2 border-b border-[var(--border)] bg-[var(--surface-muted)] text-xs text-[color:var(--muted)] font-mono">
+            {/* Right: Clean status indicator & Open in Workspace */}
             <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 text-[color:var(--foreground)] font-semibold">
-                <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />
-                Active Request: POST /api/orders/checkout
-              </span>
-            </div>
-            <div className="flex items-center gap-4 text-[11px]">
-              <span>Route: /api/orders/*</span>
-              <span className="text-[var(--border-strong)]">|</span>
-              <span>Target: Order Service</span>
-              <span className="text-[var(--border-strong)]">|</span>
-              <span className="text-[color:var(--accent)]">Hop: 14ms</span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[color:var(--accent)] text-[10px] font-mono font-semibold">
+                Parallel Routing Active
+              </div>
+              <button
+                onClick={() => router.push("/workspace")}
+                className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-[color:var(--accent)] hover:underline cursor-pointer"
+              >
+                Open in Workspace →
+              </button>
             </div>
           </div>
 
           {/* Canvas Preview Area */}
-          <div className="relative h-[340px] sm:h-[370px] w-full dot-grid bg-[var(--bg)]">
+          <div className="relative h-[340px] sm:h-[380px] w-full dot-grid bg-[var(--bg)]">
             <ReactFlow
               nodes={demoNodes}
               edges={demoEdges}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               fitView
-              fitViewOptions={{ padding: 0.18 }}
+              fitViewOptions={{ padding: 0.2 }}
               preventScrolling
               nodesDraggable={false}
               nodesConnectable={false}
@@ -991,39 +994,6 @@ export default function LandingPage() {
               />
             </ReactFlow>
           </div>
-
-          {/* Bottom Execution Trace Console (Kept as requested!) */}
-          <div className="border-t border-[var(--border)] bg-[var(--bg-elevated)] p-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 pb-2 border-b border-[var(--border)]">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
-                  Live Execution Trace
-                </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[var(--surface)] text-[color:var(--accent)] border border-[var(--border)]">
-                  4 hops recorded
-                </span>
-              </div>
-              <button
-                onClick={() => router.push("/scenarios/simple-api-gateway")}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-[color:var(--accent)] hover:underline cursor-pointer"
-              >
-                Open in Workspace
-                <span>→</span>
-              </button>
-            </div>
-
-            <div className="space-y-1 font-mono text-[11px] text-[color:var(--muted)]">
-              {demoLogs.map((log, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <span className="text-[color:var(--muted)] shrink-0">{log.time}</span>
-                  <span className="text-[color:var(--accent)] font-semibold shrink-0">
-                    [{log.src}]
-                  </span>
-                  <span className="text-[color:var(--foreground)] truncate">{log.desc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Start options row */}
@@ -1036,25 +1006,22 @@ export default function LandingPage() {
             href="/workspace"
             className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
           >
-            <span>📄 Blank Canvas</span>
-          </Link>
-          <Link
-            href="/scenarios/simple-api-gateway"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
-          >
-            <span>🚪 API Gateway</span>
+            <SandboxIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" />
+            <span>Blank Canvas</span>
           </Link>
           <Link
             href="/scenarios/simple-load-balancer"
             className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
           >
-            <span>⚖️ Load Balancer</span>
+            <ScaleIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" />
+            <span>Load Balancer</span>
           </Link>
           <Link
             href="/scenarios/simple-cache"
             className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
           >
-            <span>⚡ Cache-Aside</span>
+            <ZapIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" />
+            <span>Cache-Aside</span>
           </Link>
           <Link
             href="/workspace"

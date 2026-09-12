@@ -22,6 +22,15 @@ import SiteHeader from "@/components/SiteHeader";
 import { ComponentIcon } from "@/components/ComponentIcons";
 import { useThemeStore } from "@/store/useThemeStore";
 import {
+  FiAlertTriangle,
+  FiAlertCircle,
+  FiClock,
+  FiCheckCircle,
+  FiActivity,
+  FiRotateCcw,
+  FiTool,
+} from "react-icons/fi";
+import {
   LEARN_TOPICS,
   LearnTopic,
   Checkpoint,
@@ -297,8 +306,8 @@ function PacketEdge(props: EdgeProps) {
 
 function CustomNode({ id, data, selected }: any) {
   const typeColors: any = {
-    client: "border-l-violet-500 shadow-violet-500/10",
-    "api-gateway": "border-l-fuchsia-500 shadow-fuchsia-500/10",
+    client: "border-l-sky-500 shadow-sky-500/10",
+    "api-gateway": "border-l-indigo-500 shadow-indigo-500/10",
     "load-balancer": "border-l-blue-500 shadow-blue-500/10",
     server: "border-l-emerald-500 shadow-emerald-500/10",
     redis: "border-l-amber-500 shadow-amber-500/10",
@@ -327,7 +336,7 @@ function CustomNode({ id, data, selected }: any) {
     <div
       className={`relative rounded-xl border border-l-4 bg-[var(--surface)] px-4 py-3 shadow-md transition-all duration-300 ${borderClass} ${colorClass} ${
         selected
-          ? "ring-2 ring-violet-500 scale-105"
+          ? "ring-2 ring-blue-500 scale-105"
           : "hover:border-[var(--border)]/80"
       } min-w-[145px]`}
     >
@@ -350,8 +359,8 @@ function CustomNode({ id, data, selected }: any) {
             {data.label}
           </p>
           {data.status === "error" && (
-            <p className="text-[9px] font-bold text-rose-400 mt-0.5 animate-pulse flex items-center gap-0.5">
-              <span>⚠️</span>{" "}
+            <p className="text-[9px] font-bold text-rose-400 mt-0.5 animate-pulse flex items-center gap-1">
+              <FiAlertCircle className="w-2.5 h-2.5 shrink-0" />
               <span
                 className="truncate max-w-[95px]"
                 title={data.statusMessage}
@@ -361,8 +370,8 @@ function CustomNode({ id, data, selected }: any) {
             </p>
           )}
           {data.status === "warning" && (
-            <p className="text-[9px] font-bold text-amber-400 mt-0.5 flex items-center gap-0.5">
-              <span>⚠️</span>{" "}
+            <p className="text-[9px] font-bold text-amber-400 mt-0.5 flex items-center gap-1">
+              <FiAlertTriangle className="w-2.5 h-2.5 shrink-0" />
               <span
                 className="truncate max-w-[95px]"
                 title={data.statusMessage}
@@ -406,7 +415,7 @@ function CustomNode({ id, data, selected }: any) {
                 ? "bg-rose-400"
                 : data.status === "warning"
                   ? "bg-amber-400"
-                  : "bg-violet-400"
+                  : "bg-blue-400"
             }`}
           ></span>
           <span
@@ -415,7 +424,7 @@ function CustomNode({ id, data, selected }: any) {
                 ? "bg-rose-500"
                 : data.status === "warning"
                   ? "bg-amber-500"
-                  : "bg-violet-500"
+                  : "bg-blue-500"
             }`}
           ></span>
         </span>
@@ -478,7 +487,7 @@ function GraphCanvas({
       {/* System Health & Load Monitor Overlay */}
       {systemMetrics && (
         showMetrics ? (
-          <div className="absolute top-16 left-4 z-10 w-72 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md shadow-lg p-3 flex flex-col gap-2.5 font-sans select-none pointer-events-auto">
+          <div className="absolute top-16 left-4 z-10 w-72 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80  shadow-lg p-3 flex flex-col gap-2.5 font-sans select-none pointer-events-auto">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-1.5">
                 <span className="relative flex h-2 w-2">
@@ -548,11 +557,11 @@ function GraphCanvas({
                 </p>
               </div>
             </div>
-
             {systemMetrics.queuedRequests.length > 0 && (
               <div className="flex flex-col gap-1 rounded-xl bg-rose-500/5 border border-rose-500/15 p-2">
-                <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
-                  <span>⏳</span> Bottleneck: Database Wait
+                <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1.5">
+                  <FiClock className="w-3 h-3 text-rose-400 shrink-0" />
+                  <span>Bottleneck: Database Wait</span>
                 </p>
                 <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
                   {systemMetrics.queuedRequests.map(
@@ -571,8 +580,9 @@ function GraphCanvas({
 
             {systemMetrics.errorRequests.length > 0 && (
               <div className="flex flex-col gap-1 rounded-xl bg-rose-500/10 border border-rose-500/20 p-2">
-                <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
-                  <span>❌</span> Failures Detected
+                <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1.5">
+                  <FiAlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                  <span>Failures Detected</span>
                 </p>
                 <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
                   {systemMetrics.errorRequests.map((err: string, idx: number) => (
@@ -591,7 +601,7 @@ function GraphCanvas({
               systemMetrics.queuedRequests.length === 0 &&
               systemMetrics.errorRequests.length === 0 && (
                 <div className="flex items-center gap-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/15 p-1.5 text-emerald-400">
-                  <span className="text-xs">⚡</span>
+                  <FiCheckCircle className="w-3 h-3 text-emerald-400 shrink-0" />
                   <span className="text-[8px] font-bold uppercase tracking-wider">
                     Processing requests smoothly
                   </span>
@@ -602,7 +612,7 @@ function GraphCanvas({
           <button
             type="button"
             onClick={() => setShowMetrics(true)}
-            className="absolute top-16 left-4 z-10 rounded-full border border-[var(--border)] bg-[var(--surface)]/90 hover:bg-[var(--surface-muted)] hover:border-[var(--border)]/80 text-[10px] font-bold text-[color:var(--foreground)]/80 transition px-3 py-1.5 flex items-center gap-1.5 shadow-md cursor-pointer pointer-events-auto"
+            className="absolute top-4 left-4 z-10 rounded-full border border-[var(--border)] bg-[var(--surface)]/90 hover:bg-[var(--surface-muted)] hover:border-[var(--border)]/80 text-[10px] font-bold text-[color:var(--foreground)]/80 transition px-3 py-1.5 flex items-center gap-1.5 shadow-md cursor-pointer pointer-events-auto"
             title="Expand Health Overlay"
           >
             <span className="relative flex h-2 w-2">
@@ -623,7 +633,8 @@ function GraphCanvas({
                 }`}
               ></span>
             </span>
-            <span>⚡ Health & Load</span>
+            <FiActivity className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <span>Health & Load</span>
           </button>
         )
       )}
@@ -679,10 +690,11 @@ function Controls({
           <button
             type="button"
             onClick={onReframe}
-            className={`${buttonClass} bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 border-violet-500/30 font-semibold`}
+            className={`${buttonClass} bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border-blue-500/30 font-semibold flex items-center gap-1.5`}
             title="Restart simulation from the beginning"
           >
-            🔄 Reframe
+            <FiRotateCcw className="w-3.5 h-3.5" />
+            <span>Reframe</span>
           </button>
         </div>
 
@@ -750,7 +762,7 @@ function Timeline({
         max={Math.max(frameGroups.length - 1, 0)}
         value={Math.min(frameIndex, Math.max(frameGroups.length - 1, 0))}
         onChange={(event) => onSeek(Number(event.target.value))}
-        className="w-full accent-violet-500 cursor-pointer"
+        className="w-full accent-blue-500 cursor-pointer"
       />
 
       <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-thin">
@@ -764,7 +776,7 @@ function Timeline({
               onClick={() => onSeek(index)}
               className={`shrink-0 rounded-sm border px-2 py-1.5 text-[11px] transition cursor-pointer ${
                 isActive
-                  ? "border-violet-400 bg-violet-500/25 text-violet-100"
+                  ? "border-blue-400 bg-blue-500/25 text-blue-100"
                   : `${inactiveBg} ${inactiveHover}`
               }`}
               title={`t=${group.timestamp} (${group.frames.length} frame${group.frames.length > 1 ? "s" : ""})`}
@@ -856,10 +868,10 @@ function NodeInspectorPanel({
           {/* Node Config Options */}
           {nodeConfigs && nodeConfigs[selectedNode.id] && (
             <div
-              className={`rounded-xl border border-violet-500/25 bg-violet-500/5 p-3.5 space-y-3 shadow-inner`}
+              className={`rounded-xl border border-blue-500/25 bg-blue-500/5 p-3.5 space-y-3 shadow-inner`}
             >
               <p
-                className={`text-[10px] uppercase tracking-widest text-violet-400 font-bold font-mono`}
+                className={`text-[10px] uppercase tracking-widest text-blue-400 font-bold font-mono`}
               >
                 Configure
               </p>
@@ -887,7 +899,7 @@ function NodeInspectorPanel({
                             onClick={() => setActiveReqIdx(idx)}
                             className={`text-[10px] px-2.5 py-1 rounded-t-md font-medium transition cursor-pointer border-t border-x shrink-0 ${
                               idx === activeIdx
-                                ? "bg-[var(--surface-muted)] border-[var(--border)] text-violet-400 font-bold -mb-[7px] pb-[7px]"
+                                ? "bg-[var(--surface-muted)] border-[var(--border)] text-blue-400 font-bold -mb-[7px] pb-[7px]"
                                 : "border-transparent text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]/50"
                             }`}
                           >
@@ -914,7 +926,7 @@ function NodeInspectorPanel({
                             });
                             setActiveReqIdx(nextReqs.length - 1);
                           }}
-                          className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer shrink-0 ml-auto"
+                          className="text-[9px] bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded transition cursor-pointer shrink-0 ml-auto"
                         >
                           + Add
                         </button>
@@ -940,7 +952,7 @@ function NodeInspectorPanel({
                               Remove ×
                             </button>
                           )}
-                          <div className="text-[10px] font-bold text-violet-400">
+                          <div className="text-[10px] font-bold text-blue-400">
                             Editing Request #{activeIdx + 1}
                           </div>
 
@@ -1108,7 +1120,7 @@ function NodeInspectorPanel({
                                   }}
                                   rows={4}
                                   placeholder='{\n  "key": "value"\n}'
-                                  className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)] resize-none"
+                                  className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-blue-500 text-[color:var(--foreground)] resize-none"
                                 />
                                 {(() => {
                                   if (
@@ -1119,8 +1131,9 @@ function NodeInspectorPanel({
                                       JSON.parse(activeReq.body);
                                     } catch (err: any) {
                                       return (
-                                        <span className="text-[9px] text-rose-500 mt-1 block leading-normal font-mono">
-                                          ⚠ {err.message}
+                                        <span className="text-[9px] text-rose-500 mt-1 flex items-center gap-1 leading-normal font-mono">
+                                          <FiAlertCircle className="w-2.5 h-2.5 shrink-0" />
+                                          <span>{err.message}</span>
                                         </span>
                                       );
                                     }
@@ -1179,7 +1192,7 @@ function NodeInspectorPanel({
                           strategy: e.target.value,
                         })
                       }
-                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none cursor-pointer focus:border-violet-500 text-[color:var(--foreground)]"
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none cursor-pointer focus:border-blue-500 text-[color:var(--foreground)]"
                     >
                       <option value="ROUND_ROBIN">Round Robin</option>
                       <option value="RANDOM">Random Dispatch</option>
@@ -1208,7 +1221,7 @@ function NodeInspectorPanel({
                             routes: nextRoutes,
                           });
                         }}
-                        className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer"
+                        className="text-[9px] bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded transition cursor-pointer"
                       >
                         + Add Rule
                       </button>
@@ -1355,7 +1368,7 @@ function NodeInspectorPanel({
                           capacity: Number(e.target.value),
                         })
                       }
-                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500 text-[color:var(--foreground)]"
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-blue-500 text-[color:var(--foreground)]"
                     />
                   </div>
 
@@ -1409,7 +1422,7 @@ function NodeInspectorPanel({
                             endpoints: nextEndpoints,
                           });
                         }}
-                        className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer"
+                        className="text-[9px] bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded transition cursor-pointer"
                       >
                         + Add Endpoint
                       </button>
@@ -1475,7 +1488,7 @@ function NodeInspectorPanel({
                                     endpoints: nextEndpoints,
                                   });
                                 }}
-                                className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
+                                className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-blue-500 text-[color:var(--foreground)]"
                               />
                             </div>
 
@@ -1736,7 +1749,7 @@ function NodeInspectorPanel({
                           table: e.target.value,
                         })
                       }
-                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-mono outline-none focus:border-blue-500 text-[color:var(--foreground)]"
                     />
                   </div>
 
@@ -2030,7 +2043,7 @@ function NodeInspectorPanel({
                 <div className="mt-2 space-y-1.5">
                   {redisStoreEntries.map(([key, value]) => (
                     <div key={key} className="text-xs">
-                      <p className="truncate text-violet-400">{key}</p>
+                      <p className="truncate text-blue-400">{key}</p>
                       <p className={`truncate ${textColor}`}>{String(value)}</p>
                     </div>
                   ))}
@@ -2127,7 +2140,7 @@ function NodeInspectorPanel({
                               className={`text-[10px] font-mono font-bold ${info.exhausted ? "text-rose-400" : "text-cyan-400"}`}
                             >
                               {info.activeConnections}/{info.poolSize}
-                              {info.exhausted ? " 🔴 WAIT" : ""}
+                              {info.exhausted ? " [WAIT]" : ""}
                             </span>
                           </div>
                           <div
@@ -2170,7 +2183,7 @@ function NodeInspectorPanel({
                       key={frame.requestId}
                       className={`rounded border ${borderColor} ${theme === "dark" ? "bg-slate-950" : "bg-slate-100"} p-1.5`}
                     >
-                      <p className="font-mono text-[11px] text-violet-400">
+                      <p className="font-mono text-[11px] text-blue-400">
                         {frame.requestId.slice(0, 8)}
                       </p>
                       <p className={`mt-0.5 text-[10px] ${textColor}`}>
@@ -2202,7 +2215,7 @@ function NodeInspectorPanel({
                         key={bucketName}
                         className={`rounded border ${borderColor} ${theme === "dark" ? "bg-slate-950" : "bg-slate-100"} p-2`}
                       >
-                        <p className="font-mono text-[11px] text-violet-400">
+                        <p className="font-mono text-[11px] text-blue-400">
                           {bucketName}
                         </p>
                         <p className={`mt-1 text-[10px] ${textColor}`}>
@@ -2352,7 +2365,7 @@ function getFormattedLogText(frame: Frame) {
   if (normAction.includes("POSTGRES_POOL_WAIT")) {
     const payloadStr = frame.payloadSummary ? ` — ${frame.payloadSummary}` : "";
     return {
-      text: `${flow} | ⏳ POSTGRES POOL WAIT${payloadStr}`,
+      text: `${flow} | [WAIT] POSTGRES POOL WAIT${payloadStr}`,
       type: "error",
     };
   }
@@ -2360,7 +2373,7 @@ function getFormattedLogText(frame: Frame) {
   if (normAction.includes("POSTGRES_CONNECTION_ERROR")) {
     const payloadStr = frame.payloadSummary ? ` — ${frame.payloadSummary}` : "";
     return {
-      text: `${flow} | ❌ POSTGRES CONNECTION ERROR${payloadStr}`,
+      text: `${flow} | [ERROR] POSTGRES CONNECTION ERROR${payloadStr}`,
       type: "error",
     };
   }
@@ -2444,7 +2457,7 @@ function DebugPanel({
             <span className="text-[color:var(--foreground)]/35 select-none">
               [t={frame.timestamp}]
             </span>
-            <span className="text-violet-400 font-bold select-none">&gt;</span>
+            <span className="text-blue-400 font-bold select-none">&gt;</span>
             <span className={colors[formatted.type] || colors.default}>
               {formatted.text}
             </span>
@@ -2569,7 +2582,7 @@ function parseInlineMarkdown(text: string) {
       parts.push(
         <code
           key={key++}
-          className="bg-[var(--surface-muted)] text-[0.9em] font-mono px-1 py-0.5 rounded border border-[var(--border)] text-violet-400"
+          className="bg-[var(--surface-muted)] text-[0.9em] font-mono px-1 py-0.5 rounded border border-[var(--border)] text-blue-400"
         >
           {match[3]}
         </code>,
@@ -2582,7 +2595,7 @@ function parseInlineMarkdown(text: string) {
           href={match[5]}
           target={isExternal ? "_blank" : undefined}
           rel={isExternal ? "noopener noreferrer" : undefined}
-          className="text-violet-400 hover:text-violet-300 underline font-semibold transition-colors duration-150"
+          className="text-blue-400 hover:text-blue-300 underline font-semibold transition-colors duration-150"
         >
           {match[4]}
         </Link>,
@@ -2661,7 +2674,7 @@ function renderMarkdown(text: string) {
       elements.push(
         <h3
           key={idx}
-          className="text-[0.85em] font-bold uppercase tracking-wider text-violet-400 mt-6 mb-2 font-mono"
+          className="text-[0.85em] font-bold uppercase tracking-wider text-blue-400 mt-6 mb-2 font-mono"
         >
           {trimmed.slice(4)}
         </h3>,
@@ -3410,7 +3423,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
             initial={{ opacity: 0, y: -20, x: "-50%" }}
             animate={{ opacity: 1, y: 0, x: "-50%" }}
             exit={{ opacity: 0, y: -20, x: "-50%" }}
-            className="absolute top-20 left-1/2 z-50 rounded-xl border border-violet-500/50 bg-slate-950/90 px-4 py-2.5 text-xs text-violet-300 font-mono font-bold flex items-center gap-2 shadow-2xl backdrop-blur"
+            className="absolute top-20 left-1/2 z-50 rounded-xl border border-blue-500/50 bg-slate-950/90 px-4 py-2.5 text-xs text-blue-300 font-mono font-bold flex items-center gap-2 shadow-2xl "
           >
             {notification}
           </motion.div>
@@ -3438,7 +3451,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
               <div className="min-w-0">
                 <Link
                   href="/learn"
-                  className="text-[11px] font-medium text-violet-400 hover:text-violet-300 transition-colors uppercase tracking-widest font-mono"
+                  className="text-[11px] font-medium text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-widest font-mono"
                 >
                   ← Academy
                 </Link>
@@ -3471,7 +3484,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                         setShowDocs(false);
                         setInspectorVisible(false);
                       }}
-                      className="text-[10px] font-bold tracking-wide font-mono px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-violet-500/10 hover:text-violet-400 text-[color:var(--foreground)]/70 transition cursor-pointer shadow-sm whitespace-nowrap"
+                      className="text-[10px] font-bold tracking-wide font-mono px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-blue-500/10 hover:text-blue-400 text-[color:var(--foreground)]/70 transition cursor-pointer shadow-sm whitespace-nowrap"
                     >
                       Focus Simulator
                     </button>
@@ -3501,13 +3514,13 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                           <div
                             key={cp.id}
                             onClick={() => applyCheckpoint(cp)}
-                            className="cursor-pointer group flex flex-col p-3 rounded-xl border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/10 hover:border-violet-500/40 transition-all duration-300 relative shadow-sm"
+                            className="cursor-pointer group flex flex-col p-3 rounded-xl border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/40 transition-all duration-300 relative shadow-sm"
                           >
                             <div className="flex items-center justify-between">
-                              <h4 className="text-xs font-bold text-violet-400 font-mono group-hover:text-violet-300">
+                              <h4 className="text-xs font-bold text-blue-400 font-mono group-hover:text-blue-300">
                                 {cp.title}
                               </h4>
-                              <span className="text-[9px] font-mono uppercase bg-violet-500/10 text-violet-400 border border-violet-500/20 px-1.5 py-0.5 rounded group-hover:bg-violet-500/25 group-hover:text-violet-300 transition select-none">
+                              <span className="text-[9px] font-mono uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded group-hover:bg-blue-500/25 group-hover:text-blue-300 transition select-none">
                                 Apply
                               </span>
                             </div>
@@ -3523,8 +3536,10 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
 
                 {/* Sandbox CTA — always at the bottom of every guide */}
                 <div className="mt-8 pt-6 border-t border-[var(--border)]/60">
-                  <div className="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-5 text-center space-y-3">
-                    <div className="text-2xl">🛠️</div>
+                  <div className="rounded-2xl border border-blue-500/25 bg-blue-500/5 p-5 text-center space-y-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto text-blue-400">
+                      <FiTool className="w-5 h-5" />
+                    </div>
                     <div>
                       <p className="text-sm font-bold text-[color:var(--foreground)]">
                         Now Try It Yourself!
@@ -3539,7 +3554,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                       href="/workspace"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:shadow-violet-500/30 hover:-translate-y-0.5 transition-all duration-200"
+                      className="btn-primary inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold text-white shadow-md transition cursor-pointer"
                     >
                       Open Interactive Sandbox
                       <svg
@@ -3573,7 +3588,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
         {showDocs && showCanvas && (
           <div
             onMouseDown={() => setIsResizingDocs(true)}
-            className="hidden lg:block w-[5px] cursor-col-resize hover:bg-violet-500/40 active:bg-violet-500 transition-colors z-30 shrink-0 -mx-[2.5px]"
+            className="hidden lg:block w-[5px] cursor-col-resize hover:bg-blue-500/40 active:bg-blue-500 transition-colors z-30 shrink-0 -mx-[2.5px]"
             title="Drag to resize documentation panel"
           />
         )}
@@ -3583,7 +3598,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
           <button
             type="button"
             onClick={() => setShowDocs(true)}
-            className="hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-gradient-to-b from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-r-2xl border-y border-r border-violet-400/30 px-3 py-5 shadow-2xl hover:translate-x-0.5 transition-all font-bold font-mono text-[11px] cursor-pointer flex-col items-center gap-1.5 select-none"
+            className="hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[color:var(--foreground)] rounded-r-2xl border-y border-r border-[var(--border)] px-3 py-5 shadow-2xl hover:translate-x-0.5 transition font-bold font-mono text-[11px] cursor-pointer flex-col items-center gap-1.5 select-none"
             style={{ writingMode: "vertical-lr", letterSpacing: "0.1em" }}
           >
             SHOW DOCS
@@ -3613,7 +3628,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                     setShowDocs(true);
                     setShowCanvas(true);
                   }}
-                  className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2.5 py-1 text-xs text-[color:var(--foreground)] shadow hover:border-violet-500/40 transition cursor-pointer select-none font-bold font-mono"
+                  className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2.5 py-1 text-xs text-[color:var(--foreground)] shadow hover:border-blue-500/40 transition cursor-pointer select-none font-bold font-mono"
                 >
                   Split View
                 </button>
@@ -3625,7 +3640,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                       setShowDocs(false);
                       setInspectorVisible(false);
                     }}
-                    className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2.5 py-1 text-xs text-[color:var(--foreground)] shadow hover:border-violet-500/40 transition cursor-pointer select-none font-bold font-mono"
+                    className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2.5 py-1 text-xs text-[color:var(--foreground)] shadow hover:border-blue-500/40 transition cursor-pointer select-none font-bold font-mono"
                   >
                     Focus Simulator
                   </button>
@@ -3638,12 +3653,12 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                   </button>
                 </>
               )}
-              <label className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2.5 py-1 text-xs text-[color:var(--foreground)] shadow hover:border-violet-500/40 transition cursor-pointer select-none">
+              <label className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2.5 py-1 text-xs text-[color:var(--foreground)] shadow hover:border-blue-500/40 transition cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={hideResponse}
                   onChange={() => setHideResponse(!hideResponse)}
-                  className="accent-violet-500 cursor-pointer"
+                  className="accent-blue-500 cursor-pointer"
                 />
                 <span>Hide Response</span>
               </label>
@@ -3652,7 +3667,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                   type="checkbox"
                   checked={parallelResponse}
                   onChange={() => setParallelResponse(!parallelResponse)}
-                  className="accent-violet-500 cursor-pointer"
+                  className="accent-blue-500 cursor-pointer"
                 />
                 <span>Parallel</span>
               </label>
@@ -3661,7 +3676,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                   type="checkbox"
                   checked={debugEnabled}
                   onChange={() => setDebugEnabled(!debugEnabled)}
-                  className="accent-violet-500 cursor-pointer"
+                  className="accent-blue-500 cursor-pointer"
                 />
                 <span>Logs</span>
               </label>
@@ -3696,7 +3711,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
               {inspectorVisible && selectedNode && (
                 <div
                   className="
-                  absolute z-20 pointer-events-auto shadow-2xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xl flex flex-col overflow-hidden
+                  absolute z-20 pointer-events-auto shadow-2xl border border-[var(--border)] bg-[var(--surface)]/90  flex flex-col overflow-hidden
                   bottom-0 left-0 right-0 max-h-[50vh] rounded-t-2xl
                   sm:top-12 sm:bottom-3 sm:left-auto sm:right-3 sm:w-80 md:w-96 sm:rounded-2xl sm:max-h-[calc(100%-60px)]
                 "
@@ -3736,7 +3751,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                 <button
                   type="button"
                   onClick={() => setInspectorVisible(true)}
-                  className="absolute bottom-24 right-3 z-20 flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] px-3 py-1.5 text-xs text-violet-400 font-bold shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer font-mono"
+                  className="absolute bottom-24 right-3 z-20 flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] px-3 py-1.5 text-xs text-blue-400 font-bold shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer font-mono"
                 >
                   Inspect: {String(selectedNode.data?.label || selectedNode.id)}
                 </button>
@@ -3746,13 +3761,13 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
             {/* Sticky Timeline / Controls at Bottom - Resizable */}
             <div
               style={{ height: debugEnabled ? `${panelHeight}px` : "auto" }}
-              className="border-t border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur flex flex-col overflow-hidden shrink-0 transition-all duration-150"
+              className="border-t border-[var(--border)] bg-[var(--surface)]/85  flex flex-col overflow-hidden shrink-0 transition-all duration-150"
             >
               {/* Drag Handle */}
               {debugEnabled && (
                 <div
                   onMouseDown={() => setIsDragging(true)}
-                  className="h-1 w-full cursor-row-resize bg-[var(--border)] hover:bg-violet-500/50 transition-colors shrink-0 mb-1"
+                  className="h-1 w-full cursor-row-resize bg-[var(--border)] hover:bg-blue-500/50 transition-colors shrink-0 mb-1"
                   title="Drag to resize debug panel"
                 />
               )}
@@ -3805,7 +3820,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
       </div>
 
       {/* Mobile bottom tab bar: Docs | Sim — only on < lg screens */}
-      <div className="lg:hidden shrink-0 flex border-t border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur">
+      <div className="lg:hidden shrink-0 flex border-t border-[var(--border)] bg-[var(--surface)]/90 ">
         <button
           type="button"
           onClick={() => {
@@ -3814,7 +3829,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
           }}
           className={`flex-1 py-3 text-xs font-bold transition flex items-center justify-center gap-2 ${
             showDocs && !showCanvas
-              ? "text-violet-400 border-t-2 border-violet-500 bg-violet-500/5"
+              ? "text-blue-400 border-t-2 border-blue-500 bg-blue-500/5"
               : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]"
           }`}
         >
@@ -3830,7 +3845,7 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
           }}
           className={`flex-1 py-3 text-xs font-bold transition flex items-center justify-center gap-2 ${
             showCanvas && !showDocs
-              ? "text-violet-400 border-t-2 border-violet-500 bg-violet-500/5"
+              ? "text-blue-400 border-t-2 border-blue-500 bg-blue-500/5"
               : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]"
           }`}
         >
