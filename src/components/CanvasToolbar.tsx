@@ -21,6 +21,8 @@ import {
   Menu,
   Loader2,
   ChevronDown,
+  Code,
+  Box,
 } from "lucide-react";
 
 interface CanvasToolbarProps {
@@ -29,6 +31,9 @@ interface CanvasToolbarProps {
   onToggleSidebar?: () => void;
   nodesCount: number;
   edgesCount: number;
+  // Workspace Mode (Canvas vs Full IDE Editor)
+  viewMode?: "canvas" | "editor";
+  onViewModeChange?: (mode: "canvas" | "editor") => void;
   // Playback
   isPlaying: boolean;
   isCompiling: boolean;
@@ -60,6 +65,8 @@ export default function CanvasToolbar({
   onToggleSidebar,
   nodesCount,
   edgesCount,
+  viewMode = "canvas",
+  onViewModeChange,
   isPlaying,
   isCompiling,
   onPlayToggle,
@@ -83,8 +90,8 @@ export default function CanvasToolbar({
 }: CanvasToolbarProps) {
   return (
     <header className="h-12 border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md flex items-center justify-between px-3 md:px-4 z-20 shrink-0 select-none gap-2">
-      {/* ─── Left: Architecture Info & Stats ────────────────────────────── */}
-      <div className="flex items-center gap-2 min-w-0">
+      {/* ─── Left: Mode Switcher (Canvas vs Flow Code) ────────────── */}
+      <div className="flex items-center gap-2 shrink-0">
         {onToggleSidebar && (
           <Button
             variant="ghost"
@@ -97,25 +104,37 @@ export default function CanvasToolbar({
           </Button>
         )}
 
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-bold text-[color:var(--foreground)] truncate max-w-[120px] sm:max-w-[200px]">
-            {title}
-          </span>
-          <div className="hidden sm:flex items-center gap-1">
-            <Badge
-              variant="outline"
-              className="font-mono text-[10px] font-medium h-5 px-1.5"
+        {/* Dual Mode Switcher: Canvas vs Flow Code */}
+        {onViewModeChange && (
+          <div className="flex items-center bg-[var(--surface-muted)] p-0.5 rounded-lg border border-[var(--border)] shrink-0">
+            <button
+              type="button"
+              onClick={() => onViewModeChange("canvas")}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer ${
+                viewMode === "canvas"
+                  ? "bg-[var(--surface)] text-[color:var(--foreground)] shadow-xs border border-[var(--border)]/60"
+                  : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+              }`}
+              title="Switch to visual canvas"
             >
-              {nodesCount} N
-            </Badge>
-            <Badge
-              variant="outline"
-              className="font-mono text-[10px] font-medium h-5 px-1.5"
+              <Box className="size-3.5 text-primary" />
+              <span>Canvas</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewModeChange("editor")}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer ${
+                viewMode === "editor"
+                  ? "bg-[var(--surface)] text-[color:var(--foreground)] shadow-xs border border-[var(--border)]/60"
+                  : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+              }`}
+              title="Switch to Flow Code editor"
             >
-              {edgesCount} E
-            </Badge>
+              <Code className="size-3.5 text-blue-400" />
+              <span>Flow Code</span>
+            </button>
           </div>
-        </div>
+        )}
       </div>
 
       {/* ─── Center: Compact Engineering Simulation Toolbar ─────────────── */}

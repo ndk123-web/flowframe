@@ -435,15 +435,33 @@ export default function WorkspaceDetailPage() {
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-between sm:justify-end">
-            <span className="text-[10px] font-mono font-bold px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[color:var(--muted)]">
-              {diagrams.length} / 5 Diagrams
+            <span
+              className={`text-[10px] font-mono font-bold px-2.5 py-1.5 rounded-lg border ${
+                diagrams.length >= 5
+                  ? "border-amber-500/30 bg-amber-500/10 text-amber-500"
+                  : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--muted)]"
+              }`}
+            >
+              {diagrams.length} / 5 Diagrams {diagrams.length >= 5 ? "(Limit Reached)" : `(${5 - diagrams.length} left)`}
             </span>
             <button
               type="button"
-              onClick={() => setCreateDiagramOpen(true)}
-              className="btn-primary inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm cursor-pointer"
+              onClick={() => {
+                if (diagrams.length >= 5) {
+                  showToast("Diagrams limit reached (5/5). Free plan allows up to 5 diagrams per workspace.", "error");
+                  return;
+                }
+                setCreateDiagramOpen(true);
+              }}
+              disabled={diagrams.length >= 5}
+              className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold shadow-sm transition ${
+                diagrams.length >= 5
+                  ? "bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-60"
+                  : "btn-primary text-white cursor-pointer"
+              }`}
             >
-              <PlusIcon className="w-3.5 h-3.5" /> New Diagram
+              <PlusIcon className="w-3.5 h-3.5" />
+              <span>{diagrams.length >= 5 ? "Diagrams Full (5/5)" : "New Diagram"}</span>
             </button>
           </div>
         </section>
@@ -451,9 +469,24 @@ export default function WorkspaceDetailPage() {
         {/* Stats Strip */}
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
-            { label: "Diagrams Limit", value: `${diagrams.length} / 5`, icon: <DiagramIcon className="w-4 h-4 text-[color:var(--accent)]" /> },
-            { label: "Total Nodes", value: totalNodes, icon: <NodeLinkIcon className="w-4 h-4 text-[color:var(--muted)]" /> },
-            { label: "Total Edges", value: totalEdges, icon: <ZapIcon className="w-4 h-4 text-[color:var(--green)]" /> },
+            {
+              label: "Diagrams Limit",
+              value: `${diagrams.length} / 5`,
+              sub: diagrams.length >= 5 ? "Limit reached (5/5)" : `${5 - diagrams.length} slots available`,
+              icon: <DiagramIcon className="w-4 h-4 text-[color:var(--accent)]" />,
+            },
+            {
+              label: "Total Nodes",
+              value: totalNodes,
+              sub: "Across workspace",
+              icon: <NodeLinkIcon className="w-4 h-4 text-[color:var(--muted)]" />,
+            },
+            {
+              label: "Total Edges",
+              value: totalEdges,
+              sub: "Active connections",
+              icon: <ZapIcon className="w-4 h-4 text-[color:var(--green)]" />,
+            },
           ].map((s) => (
             <div
               key={s.label}
@@ -463,6 +496,9 @@ export default function WorkspaceDetailPage() {
                 {s.icon} {s.label}
               </div>
               <p className="text-lg font-bold text-[color:var(--foreground)]">{s.value}</p>
+              {s.sub && (
+                <p className="text-[10px] font-mono text-[color:var(--muted)] mt-0.5">{s.sub}</p>
+              )}
             </div>
           ))}
         </section>
@@ -625,18 +661,36 @@ export default function WorkspaceDetailPage() {
                 {/* New Diagram Card */}
                 <button
                   type="button"
-                  onClick={() => setCreateDiagramOpen(true)}
-                  className="group relative overflow-hidden rounded-xl border-2 border-dashed border-[var(--border-strong)] hover:border-[var(--accent)]/60 bg-[var(--surface)]/40 p-5 transition-all duration-200 hover:bg-[var(--surface)] cursor-pointer flex flex-col items-center justify-center gap-2.5 min-h-[190px]"
+                  onClick={() => {
+                    if (diagrams.length >= 5) {
+                      showToast("Personal Plan limit reached (5/5 Diagrams per workspace).", "error");
+                      return;
+                    }
+                    setCreateDiagramOpen(true);
+                  }}
+                  className={`group relative overflow-hidden rounded-xl border-2 border-dashed p-5 transition-all duration-200 flex flex-col items-center justify-center gap-2.5 min-h-[190px] ${
+                    diagrams.length >= 5
+                      ? "border-amber-500/30 bg-amber-500/5 cursor-not-allowed hover:border-amber-500/40"
+                      : "border-[var(--border-strong)] hover:border-[var(--accent)]/60 bg-[var(--surface)]/40 hover:bg-[var(--surface)] cursor-pointer"
+                  }`}
                 >
-                  <div className="w-10 h-10 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center text-[color:var(--accent)] group-hover:scale-110 transition-transform">
+                  <div
+                    className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-transform ${
+                      diagrams.length >= 5
+                        ? "bg-amber-500/10 border-amber-500/20 text-amber-500"
+                        : "bg-[var(--accent)]/10 border-[var(--accent)]/20 text-[color:var(--accent)] group-hover:scale-110"
+                    }`}
+                  >
                     <PlusIcon className="w-5 h-5" />
                   </div>
                   <div className="text-center">
                     <p className="text-xs font-semibold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors">
-                      New Diagram
+                      {diagrams.length >= 5 ? "Diagrams Limit Reached" : "New Diagram"}
                     </p>
-                    <p className="text-[10px] text-[color:var(--muted)] mt-0.5">
-                      Create architecture flow
+                    <p className="text-[10px] text-[color:var(--muted)] mt-0.5 font-mono">
+                      {diagrams.length >= 5
+                        ? "5 of 5 diagrams used"
+                        : `Create flow (${5 - diagrams.length} slots left)`}
                     </p>
                   </div>
                 </button>
@@ -723,11 +777,34 @@ export default function WorkspaceDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-1">
-              <h2 className="text-lg font-bold tracking-tight text-[color:var(--foreground)]">Create New Diagram</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold tracking-tight text-[color:var(--foreground)]">Create New Diagram</h2>
+                <span
+                  className={`text-[10px] font-mono px-2 py-0.5 rounded-md border font-semibold ${
+                    diagrams.length >= 5
+                      ? "bg-amber-500/10 text-amber-500 border-amber-500/30"
+                      : "bg-[var(--accent)]/10 text-[color:var(--accent)] border-[var(--accent)]/20"
+                  }`}
+                >
+                  {diagrams.length} / 5 Diagrams Used
+                </span>
+              </div>
               <p className="text-xs text-[color:var(--muted)]">
-                Add an architecture diagram to <span className="font-semibold text-[color:var(--foreground)]">{workspace.name}</span>.
+                Add an architecture diagram to <span className="font-semibold text-[color:var(--foreground)]">{workspace.name}</span> (5 diagrams allowed per workspace).
               </p>
             </div>
+
+            {diagrams.length >= 5 && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-400 space-y-1">
+                <div className="font-semibold flex items-center gap-1.5">
+                  <FiAlertTriangle className="size-4 text-amber-400" />
+                  <span>Workspace Diagram Limit Reached (5/5)</span>
+                </div>
+                <p className="text-[11px] text-amber-300/80 leading-relaxed">
+                  You have created all 5 allowed diagrams for this workspace. Delete an existing diagram to create a new one.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-4">
               <div>
@@ -736,10 +813,11 @@ export default function WorkspaceDetailPage() {
                 </label>
                 <input
                   type="text"
+                  disabled={diagrams.length >= 5}
                   value={newDiagramName}
                   onChange={(e) => setNewDiagramName(e.target.value)}
                   placeholder="e.g. Auth & Session Flow"
-                  className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)]"
+                  className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)] disabled:opacity-50"
                   autoFocus
                 />
               </div>
@@ -748,11 +826,12 @@ export default function WorkspaceDetailPage() {
                   Description
                 </label>
                 <textarea
+                  disabled={diagrams.length >= 5}
                   value={newDiagramDesc}
                   onChange={(e) => setNewDiagramDesc(e.target.value)}
                   placeholder="Brief description of the topology flow..."
                   rows={3}
-                  className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)] resize-none"
+                  className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)] resize-none disabled:opacity-50"
                 />
               </div>
             </div>
@@ -772,9 +851,10 @@ export default function WorkspaceDetailPage() {
               <button
                 type="button"
                 onClick={handleCreateDiagram}
-                className="btn-primary px-4 py-2 rounded-lg text-xs font-semibold text-white cursor-pointer"
+                disabled={diagrams.length >= 5}
+                className="btn-primary px-4 py-2 rounded-lg text-xs font-semibold text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Create Diagram
+                {diagrams.length >= 5 ? "Limit Reached (5/5)" : "Create Diagram"}
               </button>
             </div>
           </div>

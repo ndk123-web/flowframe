@@ -1,17 +1,18 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import type { Node, Edge } from "@xyflow/react";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { useThemeStore } from "@/store/useThemeStore";
 import {
   Grid3X3,
   ZoomIn,
@@ -25,6 +26,14 @@ import {
   Activity,
   Layers,
   SlidersHorizontal,
+  Check,
+  Sun,
+  Moon,
+  Palette,
+  Terminal,
+  FastForward,
+  Cpu,
+  Share2,
 } from "lucide-react";
 
 interface CanvasSettingsSheetProps {
@@ -64,6 +73,8 @@ interface CanvasSettingsSheetProps {
   theme?: "light" | "dark";
 }
 
+type SettingsTab = "canvas" | "simulation" | "specs" | "export" | "appearance";
+
 export default function CanvasSettingsSheet({
   isOpen,
   onOpenChange,
@@ -94,16 +105,26 @@ export default function CanvasSettingsSheet({
   onImport,
   onDownloadImage,
   onClearCanvas,
+  theme: propTheme,
 }: CanvasSettingsSheetProps) {
+  const { theme: storeTheme, setTheme } = useThemeStore();
+  const currentTheme = propTheme || storeTheme || "dark";
+  const [activeTab, setActiveTab] = useState<SettingsTab>("canvas");
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+
   // Compute component breakdown from real current architecture
   const clientCount = nodes.filter(
     (n) => n.data?.type === "client" || n.type === "client"
   ).length;
   const gatewayCount = nodes.filter(
-    (n) => n.data?.type === "apiGateway"
+    (n) => n.data?.type === "api-gateway" || n.data?.type === "apiGateway"
   ).length;
-  const lbCount = nodes.filter((n) => n.data?.type === "loadBalancer").length;
-  const serverCount = nodes.filter((n) => n.data?.type === "server").length;
+  const lbCount = nodes.filter(
+    (n) => n.data?.type === "load-balancer" || n.data?.type === "loadBalancer"
+  ).length;
+  const serverCount = nodes.filter(
+    (n) => n.data?.type === "server" || n.type === "server"
+  ).length;
   const dbCount = nodes.filter(
     (n) => n.data?.type === "postgres" || n.data?.type === "database"
   ).length;
@@ -111,375 +132,665 @@ export default function CanvasSettingsSheet({
     (n) => n.data?.type === "redis" || n.data?.type === "cache"
   ).length;
   const queueCount = nodes.filter(
-    (n) => n.data?.type === "messageQueue" || n.data?.type === "kafka"
+    (n) => n.data?.type === "message-queue" || n.data?.type === "messageQueue"
+  ).length;
+  const pubsubCount = nodes.filter(
+    (n) => n.data?.type === "pubsub" || n.data?.type === "pubSub"
+  ).length;
+  const storageCount = nodes.filter(
+    (n) => n.data?.type === "storage"
+  ).length;
+  const cdnCount = nodes.filter(
+    (n) => n.data?.type === "cdn"
+  ).length;
+  const dnsCount = nodes.filter(
+    (n) => n.data?.type === "dns"
   ).length;
 
+  const TABS = [
+    {
+      id: "canvas" as const,
+      label: "Canvas & Grid",
+      icon: <Grid3X3 className="size-4 shrink-0" />,
+    },
+    {
+      id: "simulation" as const,
+      label: "Simulation & Flow",
+      icon: <Activity className="size-4 shrink-0" />,
+    },
+    {
+      id: "specs" as const,
+      label: "Architecture Specs",
+      icon: <Layers className="size-4 shrink-0" />,
+    },
+    {
+      id: "export" as const,
+      label: "Export & Backup",
+      icon: <Download className="size-4 shrink-0" />,
+    },
+    {
+      id: "appearance" as const,
+      label: "Theme & Styling",
+      icon: <Palette className="size-4 shrink-0" />,
+    },
+  ];
+
   return (
-    <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full sm:max-w-md p-0 flex flex-col bg-[var(--surface)] text-[color:var(--foreground)] border-l border-[var(--border)] overflow-hidden"
-      >
-        <SheetHeader className="px-5 py-4 border-b border-[var(--border)] shrink-0 bg-[var(--surface)]/60">
-          <div className="flex items-center gap-2">
-            <div className="size-8 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/25 flex items-center justify-center text-[color:var(--accent)]">
-              <SlidersHorizontal className="size-4" />
-            </div>
-            <div>
-              <SheetTitle className="text-sm font-bold tracking-tight text-[color:var(--foreground)]">
-                Canvas Settings
-              </SheetTitle>
-              <SheetDescription className="text-xs text-[color:var(--muted)]">
-                Viewport, technical grid, architecture statistics, and simulation rules.
-              </SheetDescription>
-            </div>
-          </div>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6 scrollbar-thin">
-          {/* ─── 1. View & Navigation ──────────────────────────────────── */}
-          <section className="space-y-3">
-            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[color:var(--muted)]">
-              <Grid3X3 className="size-3.5" />
-              <span>Canvas View & Grid</span>
-            </div>
-
-            {/* Grid Pattern */}
-            <div className="space-y-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/50 p-3">
-              <label className="text-xs font-semibold text-[color:var(--foreground)] block">
-                Grid Pattern
-              </label>
-              <div className="grid grid-cols-4 gap-1">
-                {(["dots", "lines", "cross", "none"] as const).map((pat) => (
-                  <Button
-                    key={pat}
-                    variant={bgPattern === pat ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setBgPattern(pat)}
-                    className="text-xs capitalize font-mono h-8"
-                  >
-                    {pat}
-                  </Button>
-                ))}
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl sm:max-w-3xl p-0 gap-0 overflow-hidden border-border bg-card text-foreground rounded-2xl shadow-2xl">
+        <div className="flex flex-col sm:flex-row min-h-[520px] max-h-[85vh]">
+          {/* ── Left Sidebar Navigation ──────────────────────────────── */}
+          <div className="w-full sm:w-56 border-b sm:border-b-0 sm:border-r border-border bg-muted/20 p-4 flex flex-col justify-between shrink-0">
+            <div className="space-y-4">
+              <div className="px-1">
+                <h2 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
+                  <SlidersHorizontal className="size-4 text-primary" />
+                  <span>Canvas Settings</span>
+                </h2>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Workspace preferences
+                </p>
               </div>
 
-              {/* Grid Opacity & Size */}
-              {bgPattern !== "none" && (
-                <div className="pt-2 space-y-2.5">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-xs text-[color:var(--muted)]">
-                      <span>Opacity</span>
-                      <span className="font-mono text-[color:var(--foreground)]">
+              <nav className="space-y-1">
+                {TABS.map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition cursor-pointer ${
+                        isActive
+                          ? "bg-primary/10 text-primary font-semibold border border-primary/25 shadow-xs"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                      }`}
+                    >
+                      {tab.icon}
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Bottom Status summary */}
+            <div className="pt-3 border-t border-border/60 text-[11px] font-mono text-muted-foreground hidden sm:block px-1">
+              <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{nodes.length} Nodes · {edges.length} Edges</span>
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">
+                Simulator Ready
+              </div>
+            </div>
+          </div>
+
+          {/* ── Right Content Panel ───────────────────────────────────── */}
+          <div className="flex-1 p-5 sm:p-6 overflow-y-auto max-h-[75vh] space-y-5 scrollbar-thin">
+            {/* ── TAB 1: Canvas & Grid ──────────────────────────────── */}
+            {activeTab === "canvas" && (
+              <div className="space-y-5">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">
+                    Canvas View & Grid
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Configure background grid rendering, snap behavior, and minimap radar.
+                  </p>
+                </div>
+
+                {/* Grid Pattern Selector */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-foreground">
+                    Background Pattern
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {(
+                      [
+                        { id: "dots", label: "Dots", desc: "Technical dots" },
+                        { id: "lines", label: "Lines", desc: "Graph paper" },
+                        { id: "cross", label: "Cross", desc: "Crosshair marks" },
+                        { id: "none", label: "None", desc: "Clean solid" },
+                      ] as const
+                    ).map((pat) => {
+                      const isSelected = bgPattern === pat.id;
+                      return (
+                        <div
+                          key={pat.id}
+                          onClick={() => setBgPattern(pat.id)}
+                          className={`rounded-xl border p-3 transition cursor-pointer flex flex-col justify-between gap-1.5 relative ${
+                            isSelected
+                              ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                              : "border-border hover:border-border/80 bg-muted/10 hover:bg-muted/30"
+                          }`}
+                        >
+                          {isSelected && (
+                            <div className="absolute top-2 right-2 size-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                              <Check className="size-2.5 stroke-[3]" />
+                            </div>
+                          )}
+                          <span className="text-xs font-semibold text-foreground">
+                            {pat.label}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            {pat.desc}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Grid Opacity Slider (when not none) */}
+                {bgPattern !== "none" && (
+                  <div className="rounded-xl border border-border bg-muted/10 p-4 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-foreground">Pattern Opacity</span>
+                      <Badge variant="outline" className="font-mono text-[10px]">
                         {Math.round(bgOpacity * 100)}%
-                      </span>
+                      </Badge>
                     </div>
                     <input
                       type="range"
                       min="0.05"
-                      max="0.50"
+                      max="0.40"
                       step="0.05"
                       value={bgOpacity}
                       onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
-                      className="w-full h-1.5 rounded-lg bg-[var(--surface)] appearance-none cursor-pointer accent-[var(--accent)]"
+                      className="w-full h-1.5 rounded-lg bg-muted appearance-none cursor-pointer accent-primary"
                     />
                   </div>
+                )}
 
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="text-xs text-[color:var(--foreground)]">Snap to Grid</span>
+                {/* Snap to Grid & Size */}
+                <div className="rounded-xl border border-border bg-muted/10 p-4 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-semibold text-foreground block">
+                      Snap to Grid
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Automatically aligns dragged nodes to a uniform {gridSize}px grid.
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {snapToGrid && (
+                      <select
+                        value={gridSize}
+                        onChange={(e) => setGridSize(Number(e.target.value))}
+                        className="rounded-lg border border-border bg-card px-2 py-1 text-xs font-mono outline-none cursor-pointer"
+                      >
+                        <option value={15}>15px</option>
+                        <option value={20}>20px</option>
+                        <option value={30}>30px</option>
+                      </select>
+                    )}
                     <Button
-                      variant={snapToGrid ? "secondary" : "outline"}
+                      type="button"
+                      variant={snapToGrid ? "default" : "outline"}
                       size="sm"
                       onClick={() => setSnapToGrid(!snapToGrid)}
-                      className="text-xs h-7 px-2.5 font-mono"
+                      className="text-xs font-mono h-8 cursor-pointer"
                     >
-                      {snapToGrid ? "Enabled (20px)" : "Freeform"}
+                      {snapToGrid ? "Enabled" : "Freeform"}
                     </Button>
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Viewport Zoom & Minimap */}
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/50 p-3 space-y-2.5">
-              <span className="text-xs font-semibold text-[color:var(--foreground)] block">
-                Viewport Navigation
-              </span>
-              <div className="grid grid-cols-3 gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onZoomIn}
-                  className="text-xs gap-1.5 h-8"
-                  title="Zoom In (Ctrl +)"
-                >
-                  <ZoomIn className="size-3.5" />
-                  <span>Zoom In</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onZoomOut}
-                  className="text-xs gap-1.5 h-8"
-                  title="Zoom Out (Ctrl -)"
-                >
-                  <ZoomOut className="size-3.5" />
-                  <span>Zoom Out</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onFitView}
-                  className="text-xs gap-1.5 h-8"
-                  title="Fit all nodes in view"
-                >
-                  <Maximize2 className="size-3.5" />
-                  <span>Fit View</span>
-                </Button>
-              </div>
+                {/* Radar Minimap */}
+                <div className="rounded-xl border border-border bg-muted/10 p-4 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-semibold text-foreground block">
+                      Bird&apos;s-Eye Minimap
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Displays a floating navigation radar in the bottom corner.
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant={showMinimap ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setShowMinimap(!showMinimap)}
+                    className="text-xs font-mono h-8 cursor-pointer shrink-0"
+                  >
+                    {showMinimap ? "Visible" : "Hidden"}
+                  </Button>
+                </div>
 
-              <div className="flex items-center justify-between pt-1 border-t border-[var(--border)]">
-                <div className="flex items-center gap-1.5 text-xs text-[color:var(--foreground)]">
-                  <Map className="size-3.5 text-[color:var(--muted)]" />
-                  <span>Radar Minimap</span>
-                </div>
-                <Button
-                  variant={showMinimap ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => setShowMinimap(!showMinimap)}
-                  className="text-xs h-7 px-2.5"
-                >
-                  {showMinimap ? "Visible" : "Hidden"}
-                </Button>
-              </div>
-            </div>
-          </section>
-
-          <Separator />
-
-          {/* ─── 2. Architecture Information (Read-Only) ─────────────── */}
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[color:var(--muted)]">
-                <Layers className="size-3.5" />
-                <span>Architecture Topology</span>
-              </div>
-              <Badge variant="outline" className="font-mono text-[10px]">
-                Live Readout
-              </Badge>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/50 p-3">
-                <p className="text-[10px] uppercase font-bold text-[color:var(--muted)]">
-                  Total Nodes
-                </p>
-                <p className="text-2xl font-bold font-mono tracking-tight text-[color:var(--foreground)] mt-0.5">
-                  {nodes.length}
-                </p>
-              </div>
-              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/50 p-3">
-                <p className="text-[10px] uppercase font-bold text-[color:var(--muted)]">
-                  Active Connections
-                </p>
-                <p className="text-2xl font-bold font-mono tracking-tight text-[color:var(--accent)] mt-0.5">
-                  {edges.length}
-                </p>
-              </div>
-            </div>
-
-            {/* Component Breakdown */}
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/50 p-3 space-y-2">
-              <span className="text-[11px] font-semibold text-[color:var(--foreground)] block">
-                Component Breakdown
-              </span>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                <div className="flex items-center justify-between py-0.5">
-                  <span className="text-[color:var(--muted)]">Clients:</span>
-                  <span className="font-mono font-semibold">{clientCount}</span>
-                </div>
-                <div className="flex items-center justify-between py-0.5">
-                  <span className="text-[color:var(--muted)]">Gateways:</span>
-                  <span className="font-mono font-semibold">{gatewayCount}</span>
-                </div>
-                <div className="flex items-center justify-between py-0.5">
-                  <span className="text-[color:var(--muted)]">Balancers:</span>
-                  <span className="font-mono font-semibold">{lbCount}</span>
-                </div>
-                <div className="flex items-center justify-between py-0.5">
-                  <span className="text-[color:var(--muted)]">Servers:</span>
-                  <span className="font-mono font-semibold">{serverCount}</span>
-                </div>
-                <div className="flex items-center justify-between py-0.5">
-                  <span className="text-[color:var(--muted)]">Databases:</span>
-                  <span className="font-mono font-semibold">{dbCount}</span>
-                </div>
-                <div className="flex items-center justify-between py-0.5">
-                  <span className="text-[color:var(--muted)]">Caches:</span>
-                  <span className="font-mono font-semibold">{cacheCount}</span>
-                </div>
-                <div className="flex items-center justify-between py-0.5">
-                  <span className="text-[color:var(--muted)]">Queues:</span>
-                  <span className="font-mono font-semibold">{queueCount}</span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <Separator />
-
-          {/* ─── 3. Visualization Controls ────────────────────────────── */}
-          <section className="space-y-3">
-            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[color:var(--muted)]">
-              <Activity className="size-3.5" />
-              <span>Simulation & Flow Rules</span>
-            </div>
-
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/50 p-3 space-y-3">
-              {/* Playback Speed */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-[color:var(--foreground)]">Playback Speed</span>
-                  <span className="font-mono text-[color:var(--accent)]">{speed}x</span>
-                </div>
-                <div className="grid grid-cols-3 gap-1">
-                  {[0.5, 1, 2].map((s) => (
+                {/* Viewport Zoom & Fit Controls */}
+                <div className="rounded-xl border border-border bg-muted/10 p-4 space-y-2.5">
+                  <span className="text-xs font-semibold text-foreground block">
+                    Quick Viewport Controls
+                  </span>
+                  <div className="grid grid-cols-3 gap-2">
                     <Button
-                      key={s}
-                      variant={speed === s ? "default" : "outline"}
+                      type="button"
+                      variant="outline"
                       size="sm"
-                      onClick={() => setSpeed(s)}
-                      className="text-xs font-mono h-7"
+                      onClick={onZoomIn}
+                      className="text-xs gap-1.5 h-8 font-medium cursor-pointer"
                     >
-                      {s}x
+                      <ZoomIn className="size-3.5 text-primary" />
+                      <span>Zoom In</span>
                     </Button>
-                  ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={onZoomOut}
+                      className="text-xs gap-1.5 h-8 font-medium cursor-pointer"
+                    >
+                      <ZoomOut className="size-3.5 text-primary" />
+                      <span>Zoom Out</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={onFitView}
+                      className="text-xs gap-1.5 h-8 font-medium cursor-pointer"
+                    >
+                      <Maximize2 className="size-3.5 text-primary" />
+                      <span>Fit All</span>
+                    </Button>
+                  </div>
                 </div>
               </div>
-
-              {/* Hide Response Packets */}
-              <div className="flex items-center justify-between pt-2 border-t border-[var(--border)]">
-                <div>
-                  <span className="text-xs font-semibold text-[color:var(--foreground)] block">
-                    Hide Response Packets
-                  </span>
-                  <span className="text-[11px] text-[color:var(--muted)]">
-                    Only show forward request hops
-                  </span>
-                </div>
-                <Button
-                  variant={hideResponse ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => setHideResponse(!hideResponse)}
-                  className="text-xs h-7 px-2.5"
-                >
-                  {hideResponse ? "Hidden" : "Shown"}
-                </Button>
-              </div>
-
-              {/* Parallel Requests */}
-              <div className="flex items-center justify-between pt-2 border-t border-[var(--border)]">
-                <div>
-                  <span className="text-xs font-semibold text-[color:var(--foreground)] block">
-                    Parallel Simulation
-                  </span>
-                  <span className="text-[11px] text-[color:var(--muted)]">
-                    Animate concurrent branch requests
-                  </span>
-                </div>
-                <Button
-                  variant={parallelResponse ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => setParallelResponse(!parallelResponse)}
-                  className="text-xs h-7 px-2.5"
-                >
-                  {parallelResponse ? "Enabled" : "Sequential"}
-                </Button>
-              </div>
-
-              {/* Live Logs */}
-              <div className="flex items-center justify-between pt-2 border-t border-[var(--border)]">
-                <div>
-                  <span className="text-xs font-semibold text-[color:var(--foreground)] block">
-                    Live Execution Logs
-                  </span>
-                  <span className="text-[11px] text-[color:var(--muted)]">
-                    Display frame-by-frame debug panel
-                  </span>
-                </div>
-                <Button
-                  variant={debugEnabled ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => setDebugEnabled(!debugEnabled)}
-                  className="text-xs h-7 px-2.5"
-                >
-                  {debugEnabled ? "Visible" : "Collapsed"}
-                </Button>
-              </div>
-            </div>
-          </section>
-
-          <Separator />
-
-          {/* ─── 4. Export & Management ───────────────────────────────── */}
-          <section className="space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-[color:var(--muted)] block">
-              Canvas Actions
-            </span>
-
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onExport}
-                className="text-xs gap-1.5 h-8 justify-start"
-              >
-                <Download className="size-3.5 text-[color:var(--muted)]" />
-                <span>Export JSON</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onImport}
-                className="text-xs gap-1.5 h-8 justify-start"
-              >
-                <Upload className="size-3.5 text-[color:var(--muted)]" />
-                <span>Import JSON</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onDownloadImage}
-                className="text-xs gap-1.5 h-8 justify-start col-span-2"
-              >
-                <ImageIcon className="size-3.5 text-[color:var(--muted)]" />
-                <span>Download Diagram Image (PNG)</span>
-              </Button>
-            </div>
-
-            {nodes.length > 0 && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => {
-                  if (
-                    typeof window !== "undefined" &&
-                    window.confirm(
-                      "Clear all components and connections from the canvas?"
-                    )
-                  ) {
-                    onClearCanvas();
-                    onOpenChange(false);
-                  }
-                }}
-                className="w-full text-xs gap-1.5 h-8 mt-1"
-              >
-                <Trash2 className="size-3.5" />
-                <span>Clear Canvas Architecture</span>
-              </Button>
             )}
-          </section>
+
+            {/* ── TAB 2: Simulation & Flow ──────────────────────────── */}
+            {activeTab === "simulation" && (
+              <div className="space-y-5">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">
+                    Simulation & Engine Rules
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Control execution speeds, response packet behavior, and debug stream.
+                  </p>
+                </div>
+
+                {/* Speed Multiplier */}
+                <div className="rounded-xl border border-border bg-muted/10 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-semibold text-foreground block">
+                        Playback Speed
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        Time dilation multiplier for animated request packet hops.
+                      </span>
+                    </div>
+                    <Badge variant="outline" className="font-mono text-xs px-2 py-0.5 bg-primary/10 text-primary border-primary/25">
+                      {speed}x
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2">
+                    {[0.5, 1, 2, 5].map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setSpeed(s)}
+                        className={`py-2 rounded-lg text-xs font-mono font-bold transition border cursor-pointer ${
+                          speed === s
+                            ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                            : "bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted"
+                        }`}
+                      >
+                        {s}x
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Execution Logs Drawer Toggle */}
+                <div className="rounded-xl border border-border bg-muted/10 p-4 flex items-center justify-between gap-3">
+                  <div className="flex items-start gap-2.5">
+                    <div className="size-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0 mt-0.5">
+                      <Terminal className="size-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-semibold text-foreground block">
+                        Execution Logs & Timeline
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        Bottom docked console showing packet frames, cache hits, and step logs.
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant={debugEnabled ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setDebugEnabled(!debugEnabled)}
+                    className="text-xs font-mono h-8 cursor-pointer shrink-0"
+                  >
+                    {debugEnabled ? "Open" : "Closed"}
+                  </Button>
+                </div>
+
+                {/* Hide Response Packets */}
+                <div className="rounded-xl border border-border bg-muted/10 p-4 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-semibold text-foreground block">
+                      Hide Response Packets
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Only show forward client request hops without return animations.
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant={hideResponse ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setHideResponse(!hideResponse)}
+                    className="text-xs font-mono h-8 cursor-pointer shrink-0"
+                  >
+                    {hideResponse ? "Hidden" : "Shown"}
+                  </Button>
+                </div>
+
+                {/* Parallel Requests */}
+                <div className="rounded-xl border border-border bg-muted/10 p-4 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-semibold text-foreground block">
+                      Parallel Request Simulation
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Animate concurrent fanout hops across multiple nodes simultaneously.
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant={parallelResponse ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setParallelResponse(!parallelResponse)}
+                    className="text-xs font-mono h-8 cursor-pointer shrink-0"
+                  >
+                    {parallelResponse ? "Parallel" : "Sequential"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB 3: Architecture Specs ─────────────────────────── */}
+            {activeTab === "specs" && (
+              <div className="space-y-5">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">
+                    Architecture Specifications
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Live system topology metrics and component inventory.
+                  </p>
+                </div>
+
+                {/* Live Node & Edge Counters */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-border bg-muted/10 p-4">
+                    <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+                      Total Nodes
+                    </p>
+                    <p className="text-2xl font-bold font-mono text-foreground mt-1">
+                      {nodes.length}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Configured topology nodes
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-muted/10 p-4">
+                    <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+                      Active Connections
+                    </p>
+                    <p className="text-2xl font-bold font-mono text-primary mt-1">
+                      {edges.length}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Directional network edges
+                    </p>
+                  </div>
+                </div>
+
+                {/* Categorized Component Breakdown */}
+                <div className="rounded-xl border border-border bg-muted/10 p-4 space-y-3">
+                  <span className="text-xs font-semibold text-foreground block">
+                    Component Inventory
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border">
+                      <span className="text-muted-foreground">Clients:</span>
+                      <span className="font-mono font-bold text-foreground">{clientCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border">
+                      <span className="text-muted-foreground">Gateways:</span>
+                      <span className="font-mono font-bold text-foreground">{gatewayCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border">
+                      <span className="text-muted-foreground">Load Balancers:</span>
+                      <span className="font-mono font-bold text-foreground">{lbCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border">
+                      <span className="text-muted-foreground">Servers:</span>
+                      <span className="font-mono font-bold text-foreground">{serverCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border">
+                      <span className="text-muted-foreground">Postgres DBs:</span>
+                      <span className="font-mono font-bold text-foreground">{dbCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border">
+                      <span className="text-muted-foreground">Redis Caches:</span>
+                      <span className="font-mono font-bold text-foreground">{cacheCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border">
+                      <span className="text-muted-foreground">Message Queues:</span>
+                      <span className="font-mono font-bold text-foreground">{queueCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border">
+                      <span className="text-muted-foreground">PubSub Brokers:</span>
+                      <span className="font-mono font-bold text-foreground">{pubsubCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border">
+                      <span className="text-muted-foreground">Storage Buckets:</span>
+                      <span className="font-mono font-bold text-foreground">{storageCount}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB 4: Export & Backup ────────────────────────────── */}
+            {activeTab === "export" && (
+              <div className="space-y-5">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">
+                    Export, Backup & Reset
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Save high-resolution diagram screenshots, export JSON, or reset the workspace.
+                  </p>
+                </div>
+
+                {/* Export HD PNG Image */}
+                <div className="rounded-xl border border-border bg-muted/10 p-4 flex items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-semibold text-foreground flex items-center gap-2">
+                      <ImageIcon className="size-4 text-primary" />
+                      <span>Export HD Architecture Image</span>
+                    </span>
+                    <span className="text-[11px] text-muted-foreground block">
+                      Renders all canvas nodes and connections as a high-res PNG image.
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={onDownloadImage}
+                    className="gap-1.5 h-8 text-xs font-semibold cursor-pointer shrink-0"
+                  >
+                    <Download className="size-3.5" />
+                    <span>Download PNG</span>
+                  </Button>
+                </div>
+
+                {/* Export / Import JSON Flow */}
+                <div className="rounded-xl border border-border bg-muted/10 p-4 space-y-3">
+                  <div>
+                    <span className="text-xs font-semibold text-foreground block">
+                      Diagram JSON Backup
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Save or load full topology coordinates, connections, and node configurations.
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={onExport}
+                      className="gap-1.5 h-8 text-xs font-medium cursor-pointer flex-1"
+                    >
+                      <Download className="size-3.5 text-primary" />
+                      <span>Export JSON File</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={onImport}
+                      className="gap-1.5 h-8 text-xs font-medium cursor-pointer flex-1"
+                    >
+                      <Upload className="size-3.5 text-primary" />
+                      <span>Import JSON File</span>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Reset / Clear Canvas Action */}
+                <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-semibold text-destructive block">
+                      Clear Entire Canvas
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Removes all nodes, edges, and frames from the current canvas.
+                    </span>
+                  </div>
+                  {confirmClearOpen ? (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          onClearCanvas();
+                          setConfirmClearOpen(false);
+                          onOpenChange(false);
+                        }}
+                        className="h-8 text-xs font-semibold cursor-pointer"
+                      >
+                        Confirm Clear
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setConfirmClearOpen(false)}
+                        className="h-8 text-xs cursor-pointer"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setConfirmClearOpen(true)}
+                      className="h-8 text-xs text-destructive border-destructive/40 hover:bg-destructive/10 cursor-pointer shrink-0"
+                    >
+                      <Trash2 className="size-3.5 mr-1" />
+                      <span>Clear Canvas</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB 5: Theme & Styling ────────────────────────────── */}
+            {activeTab === "appearance" && (
+              <div className="space-y-5">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">
+                    Workspace Theme & Appearance
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Customize editor canvas dark and light mode aesthetics.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Dark Mode */}
+                  <div
+                    onClick={() => setTheme("dark")}
+                    className={`rounded-xl border p-4 transition cursor-pointer flex flex-col justify-between gap-3 relative ${
+                      currentTheme === "dark"
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                        : "border-border hover:border-border/80 bg-muted/10 hover:bg-muted/30"
+                    }`}
+                  >
+                    {currentTheme === "dark" && (
+                      <div className="absolute top-3 right-3 size-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                        <Check className="size-2.5 stroke-[3]" />
+                      </div>
+                    )}
+                    <div className="size-10 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-100 shadow-xs">
+                      <Moon className="size-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-foreground">
+                        Dark Studio Mode
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        High-contrast deep slate canvas optimized for long engineering sessions.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Light Mode */}
+                  <div
+                    onClick={() => setTheme("light")}
+                    className={`rounded-xl border p-4 transition cursor-pointer flex flex-col justify-between gap-3 relative ${
+                      currentTheme === "light"
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                        : "border-border hover:border-border/80 bg-muted/10 hover:bg-muted/30"
+                    }`}
+                  >
+                    {currentTheme === "light" && (
+                      <div className="absolute top-3 right-3 size-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                        <Check className="size-2.5 stroke-[3]" />
+                      </div>
+                    )}
+                    <div className="size-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-amber-500 shadow-xs">
+                      <Sun className="size-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-foreground">
+                        Light Blueprint Mode
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Clean technical white paper appearance for presentation and exports.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

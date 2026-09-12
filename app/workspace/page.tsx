@@ -1,16 +1,9 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import dynamic from "next/dynamic";
-
-const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-[var(--surface-muted)] text-xs text-[color:var(--foreground)]/50">
-      Loading Monaco Editor...
-    </div>
-  ),
-});
+import FlowFrameCodeEditor from "@/components/FlowFrameCodeEditor";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 import {
   ReactFlow,
@@ -66,6 +59,7 @@ import {
   FiSkipBack,
   FiSkipForward,
   FiCpu,
+  FiBox,
 } from "react-icons/fi";
 import AIAssistantDrawer from "@/components/AIAssistantDrawer";
 import CanvasToolbar from "@/components/CanvasToolbar";
@@ -95,7 +89,11 @@ import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 // Auth & API
 import { useAuthStore } from "@/store/useAuthStore";
 import { useThemeStore } from "@/store/useThemeStore";
-import { getDiagramById, updateDiagram, getSharedDiagram } from "@/services/diagramApi";
+import {
+  getDiagramById,
+  updateDiagram,
+  getSharedDiagram,
+} from "@/services/diagramApi";
 import FlowLoader from "@/components/FlowLoader";
 
 // Header
@@ -203,6 +201,244 @@ const COMPONENTS_LIBRARY: ComponentMetadata[] = [
     colorClass: "border-l-indigo-500 shadow-indigo-500/10 text-indigo-400",
   },
 ];
+// Pre-built Architecture DSL Presets for Code Editor
+export const DSL_PRESETS: Record<string, { label: string; code: string }> = {
+  cacheAside: {
+    label: "Cache Aside",
+    code: `// FlowFrame Architecture DSL - Cache Aside Pattern
+define CLIENT c1 {
+  label: "Web Client",
+  requests: [
+    {
+      endpoint: "/api/v1/posts",
+      allowedMethods: ["GET", "POST"],
+      key: "rohan"
+    }
+  ]
+}
+
+define SERVER s1 {
+  label: "API Server",
+  capacity: 100,
+  tcpConnectionsToPostgres: 5,
+  acceptedEndpoints: [
+    {
+      endpoint: "/api/v1/posts",
+      allowedMethod: ["GET", "POST"]
+    }
+  ]
+}
+
+define REDIS r1 {
+  label: "Redis Cache",
+  data: [
+    { key: "rohan", value: "cached post data" }
+  ]
+}
+
+define POSTGRES db1 {
+  label: "PostgreSQL Database",
+  table: "posts",
+  data: [
+    { key: "rohan", value: "persistent database record" }
+  ]
+}
+
+connect c1 -> s1
+connect s1 -> r1
+connect s1 -> db1
+`,
+  },
+  loadBalancing: {
+    label: "Load Balancer",
+    code: `// FlowFrame Architecture DSL - Load Balancing Pattern
+define CLIENT c1 {
+  label: "Web Client",
+  requests: [
+    {
+      endpoint: "/api/v1/posts",
+      allowedMethods: ["GET", "POST"],
+      key: "rohan"
+    }
+  ]
+}
+
+define LOADBALANCER lb1 {
+  label: "Load Balancer",
+  strategy: "ROUND_ROBIN"
+}
+
+define SERVER s1 {
+  label: "Server 1",
+  capacity: 100,
+  acceptedEndpoints: [
+    {
+      endpoint: "/api/v1/posts",
+      allowedMethod: ["GET", "POST"]
+    }
+  ]
+}
+
+define SERVER s2 {
+  label: "Server 2",
+  capacity: 100,
+  acceptedEndpoints: [
+    {
+      endpoint: "/api/v1/posts",
+      allowedMethod: ["GET", "POST"]
+    }
+  ]
+}
+
+define SERVER s3 {
+  label: "Server 3",
+  capacity: 100,
+  acceptedEndpoints: [
+    {
+      endpoint: "/api/v1/posts",
+      allowedMethod: ["GET", "POST"]
+    }
+  ]
+}
+
+connect c1 -> lb1
+connect lb1 -> s1
+connect lb1 -> s2
+connect lb1 -> s3
+`,
+  },
+  apiGateway: {
+    label: "API Gateway",
+    code: `// FlowFrame Architecture DSL - API Gateway Routing Pattern
+define CLIENT c1 {
+  label: "Mobile Client",
+  requests: [
+    {
+      endpoint: "/api/v1/posts",
+      allowedMethods: ["GET", "POST"],
+      key: "rohan"
+    },
+    {
+      endpoint: "/api/v1/users",
+      allowedMethods: ["GET"],
+      key: "user_101"
+    }
+  ]
+}
+
+define GATEWAY gw1 {
+  label: "API Gateway",
+  strategy: "ROUND_ROBIN",
+  routes: [
+    {
+      path: "/api/v1/posts",
+      target: s1
+    },
+    {
+      path: "/api/v1/users",
+      target: s2
+    }
+  ]
+}
+
+define SERVER s1 {
+  label: "Posts Server",
+  capacity: 100,
+  acceptedEndpoints: [
+    {
+      endpoint: "/api/v1/posts",
+      allowedMethod: ["GET", "POST"]
+    }
+  ]
+}
+
+define SERVER s2 {
+  label: "Users Server",
+  capacity: 100,
+  acceptedEndpoints: [
+    {
+      endpoint: "/api/v1/users",
+      allowedMethod: ["GET"]
+    }
+  ]
+}
+
+connect c1 -> gw1
+connect gw1 -> s1
+connect gw1 -> s2
+`,
+  },
+  messageQueue: {
+    label: "Message Queue",
+    code: `// FlowFrame Architecture DSL - Asynchronous Message Queue Pattern
+define CLIENT c1 {
+  label: "Mobile App",
+  requests: [
+    {
+      endpoint: "/api/v1/orders",
+      allowedMethods: ["POST"]
+    }
+  ]
+}
+
+define SERVER producer {
+  label: "Order Producer API",
+  capacity: 100,
+  acceptedEndpoints: [
+    {
+      endpoint: "/api/v1/orders",
+      allowedMethod: ["POST"]
+    }
+  ]
+}
+
+define MESSAGEQUEUE mq1 {
+  label: "RabbitMQ Order Queue",
+  processingType: "FIFO",
+  queueSize: 25,
+  overflowBehavior: "REJECT"
+}
+
+define SERVER consumer {
+  label: "Order Processor Worker",
+  capacity: 50,
+  prefetchLimit: 1
+}
+
+connect c1 -> producer
+connect producer -> mq1
+connect mq1 -> consumer
+`,
+  },
+  pubSub: {
+    label: "PubSub Fanout",
+    code: `// FlowFrame Architecture DSL - Event PubSub Fanout Pattern
+define SERVER paymentServer {
+  label: "Payment Server",
+  capacity: 100
+}
+
+define PUBSUB eventBroker {
+  label: "Redis Event Broker",
+  topic: "order.completed"
+}
+
+define SERVER emailWorker {
+  label: "Email Worker",
+  registeredTopics: ["order.completed"]
+}
+
+define SERVER analyticsWorker {
+  label: "Analytics Worker",
+  registeredTopics: ["order.completed"]
+}
+
+connect paymentServer -> eventBroker
+connect eventBroker -> emailWorker
+connect eventBroker -> analyticsWorker
+`,
+  },
+};
 
 // Pre-built Architecture templates
 const TEMPLATES = {
@@ -981,7 +1217,14 @@ function CustomNode({ id, data, selected }: any) {
             <div className="min-w-0 flex-1 leading-tight">
               <p
                 className="font-semibold text-[color:var(--foreground)] truncate"
-                style={{ fontSize: typeof data.fontSize === "number" ? `${data.fontSize}px` : (isDiamond ? "10px" : "12.5px") }}
+                style={{
+                  fontSize:
+                    typeof data.fontSize === "number"
+                      ? `${data.fontSize}px`
+                      : isDiamond
+                        ? "10px"
+                        : "12.5px",
+                }}
               >
                 {data.label}
               </p>
@@ -1519,7 +1762,10 @@ function DebugPanel({
       <div className="font-mono text-xs p-2 text-center sm:text-left flex items-center gap-2">
         <span className="inline-block w-2 h-2 rounded-full bg-violet-400/60 animate-ping shrink-0" />
         <span className={textColor}>
-          Simulation logs ready — click <strong className="text-violet-400">Play</strong> or <strong className="text-violet-400">Reframe</strong> to stream live execution logs.
+          Simulation logs ready — click{" "}
+          <strong className="text-violet-400">Play</strong> or{" "}
+          <strong className="text-violet-400">Reframe</strong> to stream live
+          execution logs.
         </span>
       </div>
     );
@@ -1764,7 +2010,8 @@ function ShapeNode({ data, selected }: any) {
       : hexToRgba(color, 0.45);
   const labelColor = hexToRgba(color, 0.9);
 
-  const customFontSize = typeof data.fontSize === "number" ? data.fontSize : undefined;
+  const customFontSize =
+    typeof data.fontSize === "number" ? data.fontSize : undefined;
 
   return (
     <div
@@ -1921,7 +2168,9 @@ function WorkspaceInner({
   const { theme, toggleTheme, setTheme } = useThemeStore();
   const [diagramTitle, setDiagramTitle] = useState<string>("");
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [isLoadingDiagram, setIsLoadingDiagram] = useState<boolean>(Boolean((workspaceId && diagramId) || shareId));
+  const [isLoadingDiagram, setIsLoadingDiagram] = useState<boolean>(
+    Boolean((workspaceId && diagramId) || shareId),
+  );
 
   // Load diagram from backend if workspaceId and diagramId are provided, or if shareId is provided
   useEffect(() => {
@@ -1997,7 +2246,7 @@ function WorkspaceInner({
           edges,
           configs: nodeConfigs,
         },
-        token
+        token,
       );
       setSuccessToast("Diagram saved to MongoDB successfully!");
     } catch (err: any) {
@@ -2028,8 +2277,10 @@ function WorkspaceInner({
   // Dynamic top-bar configs
   const [hideResponse, setHideResponse] = useState(false);
   const [parallelResponse, setParallelResponse] = useState(false);
-  const [debugEnabled, setDebugEnabled] = useState(true);
-  const [bgPattern, setBgPattern] = useState<"dots" | "lines" | "cross" | "none">("dots");
+  const [debugEnabled, setDebugEnabled] = useState(false);
+  const [bgPattern, setBgPattern] = useState<
+    "dots" | "lines" | "cross" | "none"
+  >("dots");
   const [bgOpacity, setBgOpacity] = useState<number>(0.12);
   const [showBgControls, setShowBgControls] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -2072,7 +2323,9 @@ function WorkspaceInner({
           eps.push({
             id: `${n.id}-${idx}`,
             label: `${n.data?.label || n.id}: ${r.endpoint || "/"}`,
-            method: Array.isArray(r.allowedMethods) ? r.allowedMethods[0] : r.method || "GET",
+            method: Array.isArray(r.allowedMethods)
+              ? r.allowedMethods[0]
+              : r.method || "GET",
           });
         });
       }
@@ -2087,9 +2340,10 @@ function WorkspaceInner({
   // Floating Panel Visibility States
   const [showCanvasTip, setShowCanvasTip] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [showWelcomeModal, setShowWelcomeModal] = useState(!Boolean(workspaceId && diagramId));
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  const [initialAIPrompt, setInitialAIPrompt] = useState<string>("");
 
   // Auto-open AI Architecture Assistant if ?ai=true is in URL query parameters
   useEffect(() => {
@@ -2097,6 +2351,10 @@ function WorkspaceInner({
       const params = new URLSearchParams(window.location.search);
       if (params.get("ai") === "true") {
         setIsAIAssistantOpen(true);
+      }
+      const promptParam = params.get("prompt");
+      if (promptParam) {
+        setInitialAIPrompt(promptParam);
       }
     }
   }, []);
@@ -2107,10 +2365,24 @@ function WorkspaceInner({
   const [isShapesExpanded, setIsShapesExpanded] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Left Sidebar Mode: Library vs Monaco Code Editor
-  const monacoEditorRef = useRef<any>(null);
+  // Workspace Mode: Minimal Canvas vs Dominant Full IDE Code Editor
+  const [workspaceMode, setWorkspaceMode] = useState<"canvas" | "editor">(
+    "canvas",
+  );
   const [sidebarTab, setSidebarTab] = useState<"library" | "editor">("library");
-  const [dslCode, setDslCode] = useState<string>(`// FlowFrame Architecture DSL Script
+
+  // Read ?tab=editor query parameter to immediately open in Full IDE mode
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "editor") {
+        setWorkspaceMode("editor");
+      }
+    }
+  }, []);
+
+  const [dslCode, setDslCode] =
+    useState<string>(`// FlowFrame Architecture DSL Script
 // Define system nodes and connections
 
 // define "client" 
@@ -2777,12 +3049,14 @@ connect s1 -> r1
             );
             simulation.runSimulation(clientId);
 
-            const runFrames = (simulation.getFrames() as any[]).map((frame) => ({
-              ...frame,
-              sourceIp,
-              payloadSummary:
-                frame.payloadSummary || `lookupKey=${reqItem.lookupKey}`,
-            }));
+            const runFrames = (simulation.getFrames() as any[]).map(
+              (frame) => ({
+                ...frame,
+                sourceIp,
+                payloadSummary:
+                  frame.payloadSummary || `lookupKey=${reqItem.lookupKey}`,
+              }),
+            );
 
             allFrames.push({
               runIndex: i,
@@ -2822,9 +3096,16 @@ connect s1 -> r1
       setValidationWarning(null);
       setSuccessToast("DSL compiled & architecture generated!");
 
-      const firstClient = output.nodes.find((n: any) => n.data?.type === "client");
+      const firstClient = output.nodes.find(
+        (n: any) => n.data?.type === "client",
+      );
       if (firstClient) {
-        handleStartSimulation(firstClient.id, output.nodes, output.edges, output.nodeConfigs);
+        handleStartSimulation(
+          firstClient.id,
+          output.nodes,
+          output.edges,
+          output.nodeConfigs,
+        );
       }
     } catch (err: any) {
       setValidationWarning(`DSL Compilation Error: ${err.message || err}`);
@@ -2833,7 +3114,9 @@ connect s1 -> r1
 
   // Register custom .flow language, syntax highlighter, autocompletion & bracket pairs for Monaco Editor
   const handleEditorWillMount = useCallback((monaco: any) => {
-    if (!monaco.languages.getLanguages().some((lang: any) => lang.id === "flow")) {
+    if (
+      !monaco.languages.getLanguages().some((lang: any) => lang.id === "flow")
+    ) {
       monaco.languages.register({ id: "flow" });
 
       // Auto-closing brackets & quotes configuration
@@ -2886,7 +3169,10 @@ connect s1 -> r1
         ],
         tokenizer: {
           root: [
-            [/[a-zA-Z_]\w*/, { cases: { "@keywords": "keyword", "@default": "identifier" } }],
+            [
+              /[a-zA-Z_]\w*/,
+              { cases: { "@keywords": "keyword", "@default": "identifier" } },
+            ],
             [/[{}()\[\]]/, "@brackets"],
             [/->/, "operator.special"],
             [/[:]/, "delimiter"],
@@ -2906,7 +3192,11 @@ connect s1 -> r1
           { token: "identifier", foreground: "9CDCFE" },
           { token: "string", foreground: "CE9178" },
           { token: "number", foreground: "B5CEA8" },
-          { token: "operator.special", foreground: "569CD6", fontStyle: "bold" },
+          {
+            token: "operator.special",
+            foreground: "569CD6",
+            fontStyle: "bold",
+          },
           { token: "comment", foreground: "6A9955", fontStyle: "italic" },
         ],
         colors: {
@@ -2922,7 +3212,11 @@ connect s1 -> r1
           { token: "identifier", foreground: "001080" },
           { token: "string", foreground: "A31515" },
           { token: "number", foreground: "098658" },
-          { token: "operator.special", foreground: "0000FF", fontStyle: "bold" },
+          {
+            token: "operator.special",
+            foreground: "0000FF",
+            fontStyle: "bold",
+          },
           { token: "comment", foreground: "008000", fontStyle: "italic" },
         ],
         colors: {
@@ -2976,6 +3270,12 @@ connect s1 -> r1
       setFrameIndex(0);
       setValidationWarning(null);
       setSelectedNodeId(null);
+
+      // Sync corresponding DSL code into editor state if preset exists
+      const matchingDsl = DSL_PRESETS[templateKey as keyof typeof DSL_PRESETS];
+      if (matchingDsl) {
+        setDslCode(matchingDsl.code);
+      }
 
       // Center the loaded template on the canvas
       setTimeout(() => {
@@ -3175,10 +3475,11 @@ connect s1 -> r1
       flatFrames.push(...runFrames);
 
       if (!parallelResponse) {
-        const maxTime = run.frames.length > 0
-          ? Math.max(...run.frames.map((f: any) => f.timestamp))
-          : -1;
-        globalTimestampOffset += (maxTime + 1);
+        const maxTime =
+          run.frames.length > 0
+            ? Math.max(...run.frames.map((f: any) => f.timestamp))
+            : -1;
+        globalTimestampOffset += maxTime + 1;
       }
     });
 
@@ -3578,27 +3879,26 @@ connect s1 -> r1
   // Keyboard controls listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // If code editor tab is active or Monaco has focus, NEVER intercept any keyboard keys!
-      if (sidebarTab === "editor") {
-        return;
-      }
-      if (monacoEditorRef.current?.hasTextFocus && monacoEditorRef.current.hasTextFocus()) {
+      // If code editor tab is active or workspace is in Full IDE Editor mode, NEVER intercept any keyboard keys!
+      if (workspaceMode === "editor" || sidebarTab === "editor") {
         return;
       }
 
       const activeEl = document.activeElement as HTMLElement | null;
       const targetEl = e.target as HTMLElement | null;
 
-      // Ignore shortcut keys if user is typing in Monaco Editor or form inputs
+      // Ignore shortcut keys if user is typing in CodeMirror Editor, Monaco, or form inputs
       const isInputFocused =
         activeEl?.tagName === "INPUT" ||
         activeEl?.tagName === "TEXTAREA" ||
         activeEl?.tagName === "SELECT" ||
         Boolean(activeEl?.isContentEditable) ||
+        Boolean(activeEl?.closest(".cm-editor")) ||
+        Boolean(targetEl?.closest(".cm-editor")) ||
         Boolean(activeEl?.closest(".monaco-editor")) ||
         Boolean(targetEl?.closest(".monaco-editor")) ||
-        Boolean(document.querySelector(".monaco-editor")?.contains(activeEl)) ||
-        Boolean(document.querySelector(".monaco-editor")?.contains(targetEl));
+        Boolean(document.querySelector(".cm-editor")?.contains(activeEl)) ||
+        Boolean(document.querySelector(".cm-editor")?.contains(targetEl));
 
       if (isInputFocused) {
         return;
@@ -3623,7 +3923,7 @@ connect s1 -> r1
     // Use bubbling phase (false) so textareas and editors receive keystrokes without interference
     window.addEventListener("keydown", handleKeyDown, false);
     return () => window.removeEventListener("keydown", handleKeyDown, false);
-  }, [sidebarTab, frameGroups.length]);
+  }, [workspaceMode, sidebarTab, frameGroups.length]);
 
   // Clear Canvas handler
   const handleClearCanvas = () => {
@@ -3646,11 +3946,11 @@ connect s1 -> r1
         edges,
         nodeConfigs,
       };
-      
+
       const jsonString = JSON.stringify(exportData, null, 2);
       const blob = new Blob([jsonString], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      
+
       const link = document.createElement("a");
       link.href = url;
       link.download = `flow-frame-export-${new Date().toISOString().split("T")[0]}.json`;
@@ -3658,7 +3958,7 @@ connect s1 -> r1
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
+
       setSuccessToast("Architecture flow exported successfully!");
     } catch (err: any) {
       setValidationWarning(`Export failed: ${err.message || err}`);
@@ -3702,12 +4002,14 @@ connect s1 -> r1
         setNodeConfigs(data.nodeConfigs || {});
 
         setSuccessToast("Architecture flow imported successfully!");
-        
+
         setTimeout(() => {
           fitView({ duration: 800 });
         }, 100);
       } catch (err: any) {
-        setValidationWarning(`Import failed: ${err.message || "Invalid JSON structure."}`);
+        setValidationWarning(
+          `Import failed: ${err.message || "Invalid JSON structure."}`,
+        );
       } finally {
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
@@ -3725,7 +4027,9 @@ connect s1 -> r1
 
   // Download canvas flow as PNG screenshot
   const downloadCanvasImage = () => {
-    const reactFlowElement = document.querySelector(".react-flow") as HTMLElement;
+    const reactFlowElement = document.querySelector(
+      ".react-flow",
+    ) as HTMLElement;
     if (!reactFlowElement) return;
 
     toPng(reactFlowElement, {
@@ -3743,14 +4047,19 @@ connect s1 -> r1
     })
       .then((dataUrl) => {
         const a = document.createElement("a");
-        a.setAttribute("download", `flow-frame-architecture-${new Date().toISOString().split("T")[0]}.png`);
+        a.setAttribute(
+          "download",
+          `flow-frame-architecture-${new Date().toISOString().split("T")[0]}.png`,
+        );
         a.setAttribute("href", dataUrl);
         a.click();
         setSuccessToast("Architecture image downloaded successfully!");
       })
       .catch((error) => {
         console.error("Failed to download canvas image:", error);
-        setValidationWarning(`Failed to capture image: ${error.message || error}`);
+        setValidationWarning(
+          `Failed to capture image: ${error.message || error}`,
+        );
       });
   };
 
@@ -3767,918 +4076,1263 @@ connect s1 -> r1
         alwaysGlass={true}
       />
 
-      {/* Modern Full-Screen Canvas Workspace with Side-by-Side Shapes Sidebar */}
-      <div
-        className="flex-1 w-full min-h-0 flex flex-row relative overflow-hidden"
-        data-resizable-container
-      >
-        {/* Draw.io / Miro-Style Left Shapes Sidebar */}
-        <aside
-          className={`flex flex-col z-10 shrink-0 h-full overflow-hidden transition-all duration-300 relative border-r border-[var(--border)] bg-[var(--surface)] ${
-            isSidebarFloating
-              ? "absolute rounded-2xl shadow-2xl border"
-              : "relative"
-          } ${"max-md:fixed max-md:top-0 max-md:left-0 max-md:z-30 max-md:w-72 max-md:h-full max-md:shadow-2xl max-md:transition-transform max-md:duration-300"} ${
-            isSidebarOpenMobile
-              ? "max-md:translate-x-0"
-              : "max-md:-translate-x-full"
-          }`}
-          style={{
-            width: isSidebarFloating ? 288 : (isSidebarCollapsed ? 56 : sidebarWidth),
-            left: isSidebarFloating ? sidebarPosition.x : undefined,
-            top: isSidebarFloating ? sidebarPosition.y : undefined,
-            height: isSidebarFloating ? "calc(100vh - 160px)" : "100%",
-          }}
-        >
-          {/* Resize Handle (only active in docked mode on desktop when expanded) */}
-          {!isSidebarFloating && !isSidebarCollapsed && (
-            <div
-              onMouseDown={handleResizeMouseDown}
-              className="absolute right-0 top-0 bottom-0 w-1 hover:w-2 bg-transparent hover:bg-[var(--accent)]/25 cursor-col-resize transition-all z-20 max-md:hidden"
-            />
-          )}
-
-          {isSidebarCollapsed ? (
-            /* Collapsed Vertical Tool Rail (56px / w-14) */
-            <div className="flex-1 flex flex-col items-center justify-between py-3 px-1 w-full bg-[var(--surface)] select-none">
-              <div className="flex flex-col items-center gap-2.5 w-full">
-                {/* Expand Button */}
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarCollapsed(false)}
-                  className="p-2 rounded-xl text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition cursor-pointer"
-                  title="Expand Shapes Sidebar"
+      {/* Workspace Dual Modes: Full IDE Code Editor Mode vs Minimal Canvas Mode */}
+      {workspaceMode === "editor" ? (
+        <div className="flex-1 w-full min-h-0 flex flex-col relative overflow-hidden bg-[var(--surface)]">
+          {/* Top IDE Toolbar */}
+          <div className="h-12 border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-4 flex items-center justify-between shrink-0 select-none gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-2 bg-[var(--bg-elevated)] border border-[var(--border)] px-3 py-1.5 rounded-lg shadow-xs">
+                <FiCode className="size-4 text-blue-400" />
+                <span className="text-xs font-mono font-bold text-foreground">
+                  architecture.flow
+                </span>
+                <Badge
+                  variant="outline"
+                  className="text-[9px] font-mono px-1.5 py-0 bg-blue-500/10 text-blue-400 border-blue-500/20"
                 >
-                  <FiChevronRight className="w-4 h-4" />
-                </button>
+                  Flow Code
+                </Badge>
+              </div>
 
-                <div className="w-8 h-px bg-[var(--border)]" />
+              <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+                <span>{nodes.length} Nodes</span>
+                <span>·</span>
+                <span>{edges.length} Edges</span>
+              </div>
+            </div>
 
-                {/* Library tab button */}
+            {/* Quick Template Presets for DSL */}
+            <div className="hidden lg:flex items-center gap-1 bg-[var(--surface-muted)] p-1 rounded-lg border border-[var(--border)] text-xs">
+              <span className="text-[10px] uppercase font-mono font-bold px-1.5 text-muted-foreground">
+                Presets:
+              </span>
+              {Object.entries(DSL_PRESETS).map(([key, preset]) => (
                 <button
+                  key={key}
                   type="button"
                   onClick={() => {
-                    setSidebarTab("library");
-                    setIsSidebarCollapsed(false);
+                    setDslCode(preset.code);
+                    setSuccessToast(
+                      `Pasted "${preset.label}" code into editor`,
+                    );
                   }}
-                  className={`p-2.5 rounded-xl transition cursor-pointer ${
-                    sidebarTab === "library"
-                      ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
-                      : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
-                  }`}
-                  title="Component & Shape Library"
+                  className="px-2 py-0.5 rounded text-[11px] font-medium hover:bg-[var(--surface)] text-foreground/75 hover:text-foreground transition cursor-pointer"
+                  title={`Paste ${preset.label} architecture DSL into editor (no auto-run)`}
                 >
-                  <FiGrid className="w-4 h-4" />
+                  {preset.label}
                 </button>
-
-                {/* Code Editor tab button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSidebarTab("editor");
-                    setIsSidebarCollapsed(false);
-                  }}
-                  className={`p-2.5 rounded-xl transition cursor-pointer ${
-                    sidebarTab === "editor"
-                      ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
-                      : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
-                  }`}
-                  title="Monaco Architecture DSL Editor"
-                >
-                  <FiCode className="w-4 h-4" />
-                </button>
-
-                {/* Architecture Templates button */}
-                <button
-                  type="button"
-                  onClick={() => setShowWelcomeModal(true)}
-                  className="p-2.5 rounded-xl text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition cursor-pointer"
-                  title="Architecture Templates"
-                >
-                  <FiFolder className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Bottom Clear Canvas */}
-              <button
-                type="button"
-                onClick={handleClearCanvas}
-                className="p-2.5 rounded-xl text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
-                title="Clear Canvas"
-              >
-                <FiTrash2 className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Mode Switcher Header: Library vs Monaco Code Editor */}
-              <div className="p-2 border-b border-[var(--border)] bg-[var(--surface)] shrink-0 flex items-center gap-1.5">
-                <div className="flex-1 flex items-center gap-1 bg-[var(--surface-muted)] p-1 rounded-xl border border-[var(--border)]">
-                  <button
-                    type="button"
-                    onClick={() => setSidebarTab("library")}
-                    className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                      sidebarTab === "library"
-                        ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-sm border border-[var(--border)] font-bold"
-                        : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
-                    }`}
-                  >
-                    <FiGrid className="w-3.5 h-3.5" />
-                    <span>Library</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSidebarTab("editor")}
-                    className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                      sidebarTab === "editor"
-                        ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-sm border border-[var(--border)] font-bold"
-                        : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
-                    }`}
-                  >
-                    <FiCode className="w-3.5 h-3.5" />
-                    <span>Code Editor</span>
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarCollapsed(true)}
-                  className="p-1.5 rounded-lg text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition cursor-pointer hidden md:flex"
-                  title="Collapse Sidebar"
-                >
-                  <FiChevronLeft className="w-4 h-4" />
-                </button>
-              </div>
-
-          {sidebarTab === "editor" ? (
-            /* Monaco Code Editor Panel in Left Sidebar */
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-[var(--background)] p-3 gap-2">
-              <div className="flex items-center justify-between pb-2 border-b border-[var(--border)] shrink-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
-                    Monaco Editor
-                  </span>
-                  <span className="text-[9px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-1.5 py-0.5 rounded font-mono font-bold">
-                    DSL / TS
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={handleRunDSL}
-                    className="rounded bg-violet-600 hover:bg-violet-500 text-white text-[10px] px-2.5 py-1 font-bold shadow-md transition cursor-pointer flex items-center gap-1"
-                    title="Compile DSL script and render architecture on canvas"
-                  >
-                    <FiPlay className="w-3 h-3 fill-current" />
-                    <span>Run Flow</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(dslCode);
-                      setSuccessToast("Code copied to clipboard!");
-                    }}
-                    className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-2 py-1 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] transition cursor-pointer"
-                    title="Copy Code"
-                  >
-                    Copy
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDslCode("")}
-                    className="rounded hover:bg-rose-500/10 text-[10px] px-2 py-1 border border-rose-500/20 font-semibold text-rose-400 transition cursor-pointer"
-                    title="Clear Editor"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex-1 w-full h-full min-h-0 rounded-xl overflow-hidden border border-[var(--border)] shadow-inner bg-[#1e1e1e]">
-                <MonacoEditor
-                  height="100%"
-                  language="flow"
-                  theme={theme === "dark" ? "flow-dark" : "flow-light"}
-                  beforeMount={handleEditorWillMount}
-                  onMount={(editor) => {
-                    monacoEditorRef.current = editor;
-                  }}
-                  value={dslCode}
-                  onChange={(val) => setDslCode(val || "")}
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 12,
-                    lineNumbers: "on",
-                    scrollBeyondLastLine: false,
-                    wordWrap: "on",
-                    automaticLayout: true,
-                    tabSize: 2,
-                    padding: { top: 8, bottom: 8 },
-                    formatOnType: false,
-                    formatOnPaste: false,
-                    autoClosingBrackets: "always",
-                    autoClosingQuotes: "always",
-                    autoSurround: "languageDefined",
-                    quickSuggestions: false,
-                    suggestOnTriggerCharacters: false,
-                    acceptSuggestionOnEnter: "off",
-                    acceptSuggestionOnCommitCharacter: false,
-                    tabCompletion: "off",
-                    wordBasedSuggestions: "off",
-                    inlineSuggest: { enabled: false },
-                    snippetSuggestions: "none",
-                    parameterHints: { enabled: false },
-                    suggest: {
-                      showWords: false,
-                      showKeywords: false,
-                      showSnippets: false,
-                      showClasses: false,
-                      showFunctions: false,
-                      showVariables: false,
-                      showConstants: false,
-                      preview: false,
-                      showInlineDetails: false,
-                      snippetsPreventQuickSuggestions: false,
-                    },
-                  }}
-                />
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Sidebar Title & Search Shape */}
-              <div
-                className={`p-3 border-b border-[var(--border)] flex flex-col gap-2 shrink-0 bg-[var(--surface)] ${
-                  isSidebarFloating
-                    ? "cursor-grab active:cursor-grabbing select-none"
-                    : ""
-                }`}
-                onMouseDown={handleHeaderMouseDown}
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
-                    Shape Library
-                  </h2>
-                  <div className="flex items-center gap-1.5">
-                    {/* Modern Help Button */}
-                    <button
-                      type="button"
-                      onClick={() => setShowHelpModal(true)}
-                      className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center gap-1"
-                      title="How to Use Guide"
-                    >
-                      <svg
-                        className="w-3.5 h-3.5 text-violet-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                        <line
-                          x1="12"
-                          y1="17"
-                          x2="12.01"
-                          y2="17"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                      <span>Help</span>
-                    </button>
-                    {/* Dock / Float Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => setIsSidebarFloating(!isSidebarFloating)}
-                      className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center gap-1"
-                      title={isSidebarFloating ? "Dock Sidebar" : "Float Sidebar"}
-                    >
-                      <svg
-                        className="w-3 h-3"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                      >
-                        <path d="M12 2v20M17 5H7" />
-                      </svg>
-                      <span>{isSidebarFloating ? "Dock" : "Float"}</span>
-                    </button>
-                    {/* Mobile Close Button */}
-                    <button
-                      type="button"
-                      onClick={() => setIsSidebarOpenMobile(false)}
-                      className="md:hidden rounded-full hover:bg-[var(--surface-muted)] text-xs font-bold h-6 w-6 flex items-center justify-center border border-[var(--border)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] cursor-pointer"
-                      title="Close Sidebar"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
-                    <svg
-                      className="w-3.5 h-3.5 text-[color:var(--foreground)]/40"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                    >
-                      <circle cx="11" cy="11" r="8" />
-                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                    </svg>
-                  </span>
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Type to search shapes..."
-                    className="w-full pl-8 pr-7 py-1.5 bg-[var(--surface-muted)]/70 hover:bg-[var(--surface-muted)] focus:bg-[var(--surface)] text-xs text-[color:var(--foreground)] placeholder-[color:var(--foreground)]/40 border border-[var(--border)] rounded-lg outline-none focus:border-violet-500/80 transition-all duration-150"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery("")}
-                      className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-xs text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)] font-bold cursor-pointer"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Collapsible Accordion Lists */}
-              <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-2">
-            {/* 1. Templates Section */}
-            <div className="space-y-1">
-              <button
-                type="button"
-                onClick={() => setIsTemplatesExpanded(!isTemplatesExpanded)}
-                className="w-full flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)] transition duration-150 text-left font-semibold cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  <FiChevronRight
-                    className={`w-3 h-3 text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isTemplatesExpanded ? "rotate-90" : "rotate-0"}`}
-                  />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
-                    Templates
-                  </span>
-                </div>
-                <span className="text-[9px] text-[color:var(--foreground)]/40 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-mono">
-                  {Object.keys(TEMPLATES).length}
-                </span>
-              </button>
-
-              {isTemplatesExpanded && (
-                <div className="grid grid-cols-2 gap-2 p-1">
-                  {Object.entries({
-                    cacheAside: {
-                      label: "Cache Aside",
-                      icon: (
-                        <svg
-                          className="w-5 h-5 text-violet-400 group-hover:scale-110 transition duration-150"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <rect
-                            x="2"
-                            y="3"
-                            width="20"
-                            height="14"
-                            rx="2"
-                            ry="2"
-                          />
-                          <line x1="2" y1="10" x2="22" y2="10" />
-                          <line x1="12" y1="10" x2="12" y2="21" />
-                        </svg>
-                      ),
-                      description:
-                        "Write/read path caching strategy prioritizing low latency using Redis Cache and Postgres DB.",
-                      color: "hover:border-violet-500/40 text-violet-400",
-                    },
-                    loadBalancing: {
-                      label: "Load Balancer",
-                      icon: (
-                        <svg
-                          className="w-5 h-5 text-blue-400 group-hover:scale-110 transition duration-150"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <circle cx="12" cy="12" r="10" />
-                          <line x1="12" y1="2" x2="12" y2="22" />
-                          <line x1="12" y1="12" x2="22" y2="12" />
-                        </svg>
-                      ),
-                      description:
-                        "Distribute client requests across multiple backend web server nodes using Round Robin routing.",
-                      color: "hover:border-blue-500/40 text-blue-400",
-                    },
-                    valetKey: {
-                      label: "Valet Key",
-                      icon: (
-                        <svg
-                          className="w-5 h-5 text-yellow-400 group-hover:scale-110 transition duration-150"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <rect
-                            x="3"
-                            y="11"
-                            width="18"
-                            height="11"
-                            rx="2"
-                            ry="2"
-                          />
-                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                        </svg>
-                      ),
-                      description:
-                        "Clients fetch secure signed URLs from server, then upload files directly to Cloud Storage.",
-                      color: "hover:border-yellow-500/40 text-yellow-400",
-                    },
-                    apiGateway: {
-                      label: "API Gateway",
-                      icon: (
-                        <svg
-                          className="w-5 h-5 text-fuchsia-400 group-hover:scale-110 transition duration-150"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M9 3H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM21 3h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" />
-                        </svg>
-                      ),
-                      description:
-                        "Central entry point routes requests dynamically to Post or User services based on path prefixes.",
-                      color: "hover:border-fuchsia-500/40 text-fuchsia-400",
-                    },
-                  }).map(([key, value]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => loadTemplate(key as any)}
-                      onMouseEnter={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        setHoveredComponent({
-                          type: key as any,
-                          label: value.label,
-                          icon: "",
-                          description: value.description,
-                          colorClass: "",
-                        });
-                        setHoverTooltipX(rect.right + 12);
-                        setHoverTooltipY(rect.top + rect.height / 2);
-                      }}
-                      onMouseLeave={() => setHoveredComponent(null)}
-                      className={`flex flex-col items-center justify-center p-3.5 rounded-xl border border-[var(--border)]/70 bg-[var(--surface)]/40 ${value.color} hover:bg-[var(--surface)]/80 transition duration-150 text-center cursor-pointer group shadow-sm`}
-                    >
-                      {value.icon}
-                      <span className="text-[9.5px] font-semibold text-[color:var(--foreground)]/65 mt-1.5 truncate max-w-full">
-                        {value.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              ))}
             </div>
 
-            <div className="h-px bg-[var(--border)]/40" />
-
-            {/* 2. Components & Shapes Unified Section */}
-            <div className="space-y-1">
-              <button
-                type="button"
-                onClick={() => setIsComponentsExpanded(!isComponentsExpanded)}
-                className="w-full flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)] transition duration-150 text-left font-semibold cursor-pointer"
+            {/* Actions: Run, Copy, Switch to Canvas */}
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={handleRunDSL}
+                className="h-8 px-3 gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs cursor-pointer"
+                title="Compile DSL script, update architecture, and run simulation"
               >
-                <div className="flex items-center gap-2">
-                  <FiChevronRight
-                    className={`w-3 h-3 text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isComponentsExpanded ? "rotate-90" : "rotate-0"}`}
-                  />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
-                    Components & Shapes
-                  </span>
-                </div>
-                <span className="text-[9px] text-[color:var(--foreground)]/40 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-mono">
-                  {filteredComponents.length + SHAPES_LIBRARY.length}
-                </span>
-              </button>
+                <FiPlay className="size-3.5 fill-current" />
+                <span>Compile & Run Flow</span>
+              </Button>
 
-              {isComponentsExpanded && (
-                <div className="space-y-3 p-1">
-                  {/* Category 1: System Components */}
-                  <div>
-                    <h3 className="text-[9px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/40 mb-1.5 px-1">
-                      System Components
-                    </h3>
-                    <div className="grid grid-cols-3 gap-2">
-                      {filteredComponents.map((item) => (
-                        <button
-                          key={item.type}
-                          type="button"
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, item.type)}
-                          onDragEnd={handleDragEnd}
-                          onClick={() => addComponent(item.type)}
-                          onMouseEnter={(e) => {
-                            if (draggingType) return; // don't show tooltip while dragging
-                            const rect =
-                              e.currentTarget.getBoundingClientRect();
-                            setHoveredComponent(item);
-                            setHoverTooltipX(rect.right + 12);
-                            setHoverTooltipY(rect.top + rect.height / 2);
-                          }}
-                          onMouseLeave={() => setHoveredComponent(null)}
-                          className={`aspect-square rounded-xl border bg-[var(--surface)]/30 hover:bg-[var(--surface)] hover:border-violet-500/50 flex flex-col items-center justify-center transition duration-150 cursor-grab active:cursor-grabbing group relative shadow-sm ${
-                            draggingType === item.type
-                              ? "border-violet-500/60 bg-violet-500/10 scale-95"
-                              : "border-[var(--border)]"
-                          }`}
-                          title={`${item.label} — click to add or drag onto canvas`}
-                        >
-                          <ComponentIcon
-                            type={item.type}
-                            className="w-6 h-6 group-hover:scale-110 transition duration-150 text-[color:var(--foreground)]/65 group-hover:text-violet-400"
-                          />
-                          <span className="text-[8px] font-bold text-[color:var(--foreground)]/50 mt-1 truncate max-w-full px-1">
-                            {item.label}
-                          </span>
-                        </button>
-                      ))}
-                      {filteredComponents.length === 0 && (
-                        <div className="col-span-3 text-center py-6 text-xs text-[color:var(--foreground)]/40">
-                          No matching components
-                        </div>
-                      )}
-                    </div>
-                  </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(dslCode);
+                  setSuccessToast("DSL code copied to clipboard!");
+                }}
+                className="h-8 px-2.5 gap-1.5 text-xs cursor-pointer"
+                title="Copy DSL script"
+              >
+                <FiCopy className="size-3.5" />
+                <span className="hidden sm:inline">Copy</span>
+              </Button>
 
-                  {/* Category 2: Canvas Shapes */}
-                  <div className="pt-1.5 border-t border-[var(--border)]/20">
-                    <h3 className="text-[9px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/40 mb-1.5 px-1">
-                      Canvas Shapes & Frames
-                    </h3>
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {SHAPES_LIBRARY.map((shape) => (
-                        <button
-                          key={shape.id}
-                          type="button"
-                          draggable
-                          onDragStart={(e) => handleShapeDragStart(e, shape.id)}
-                          onClick={() => addShape(shape.id)}
-                          title={`${shape.label} — click to add or drag onto canvas`}
-                          className="aspect-square rounded-xl border border-[var(--border)] bg-[var(--surface)]/40 flex flex-col items-center justify-center gap-0.5 transition duration-150 cursor-grab active:cursor-grabbing group hover:scale-105 hover:border-violet-500/40 hover:bg-[var(--surface)]"
-                        >
-                          {/* Legitimate vector SVG shape icon */}
-                          <div className="w-5 h-5 flex items-center justify-center group-hover:scale-110 transition duration-150">
-                            {shape.icon}
-                          </div>
-                          <span className="text-[7.5px] font-semibold text-[color:var(--foreground)]/45 leading-none truncate max-w-full px-0.5 group-hover:text-violet-400 transition">
-                            {shape.label}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setWorkspaceMode("canvas")}
+                className="h-8 px-3 gap-1.5 text-xs font-semibold cursor-pointer border-primary/30 text-primary hover:bg-primary/10 shadow-xs"
+                title="Switch back to interactive visual canvas"
+              >
+                <FiBox className="size-3.5" />
+                <span>Canvas View</span>
+              </Button>
             </div>
           </div>
 
-          {/* Sidebar Footer Controls */}
-          <div className="p-3 border-t border-[var(--border)] bg-[var(--surface)]/45 flex flex-col gap-2 shrink-0 bg-[var(--surface)]">
-            <button
-              type="button"
-              onClick={() => {
-                handleStartSimulation();
-                setFrameIndex(0);
-                setIsPlaying(true);
-              }}
-              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] text-[11px] font-bold transition cursor-pointer"
-              title="Re-run simulation with current changes"
-            >
-              <svg
-                className="w-3.5 h-3.5 animate-spin-hover"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2.5"
-              >
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-1.54" />
-              </svg>
-              <span>Re-run Simulation</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowWelcomeModal(true)}
-              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-[var(--border)] bg-[var(--surface)]/85 hover:bg-[var(--surface-muted)] text-[11px] font-semibold text-[color:var(--foreground)]/75 transition cursor-pointer"
-            >
-              <svg
-                className="w-3.5 h-3.5 text-[color:var(--foreground)]/50"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-              </svg>
-              <span>Templates Gallery</span>
-            </button>
-            {/* Import / Export / Share Controls */}
-            <div className="grid grid-cols-3 gap-1.5 w-full animate-fade-in">
-              <button
-                type="button"
-                onClick={handleExportFlow}
-                className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/5 hover:bg-emerald-500/15 hover:border-emerald-500/45 text-emerald-500 dark:text-emerald-400 text-[11px] font-semibold transition cursor-pointer shadow-sm hover:shadow active:scale-95 duration-200"
-                title="Export current architecture flow to a JSON file"
-              >
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                </svg>
-                <span>Export</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleImportClick}
-                className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg border border-cyan-500/25 bg-cyan-500/5 hover:bg-cyan-500/15 hover:border-cyan-500/45 text-cyan-500 dark:text-cyan-400 text-[11px] font-semibold transition cursor-pointer shadow-sm hover:shadow active:scale-95 duration-200"
-                title="Import architecture flow from a JSON file"
-              >
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-                </svg>
-                <span>Import</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleShareFlow}
-                className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg border border-violet-500/25 bg-violet-500/5 hover:bg-violet-500/15 hover:border-violet-500/45 text-violet-500 dark:text-violet-400 text-[11px] font-semibold transition cursor-pointer shadow-sm hover:shadow active:scale-95 duration-200"
-                title="Share this flow on LinkedIn, Twitter, or copy URL"
-              >
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" />
-                </svg>
-                <span>Share</span>
-              </button>
-              {/* Hidden file input for import */}
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleImportFlow}
-                accept=".json"
-                className="hidden"
+          {/* CodeMirror IDE Editor Surface */}
+          <div className="flex-1 flex flex-col min-h-0 relative">
+            <div className="flex-1 min-h-0 relative">
+              <FlowFrameCodeEditor
+                value={dslCode}
+                onChange={setDslCode}
+                theme={theme === "dark" ? "dark" : "light"}
+                onRun={handleRunDSL}
               />
             </div>
 
-            <button
-              type="button"
-              onClick={handleClearCanvas}
-              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 hover:border-rose-500/40 text-rose-500 dark:text-rose-400 text-[11px] font-semibold transition cursor-pointer active:scale-95 duration-200"
-            >
-              <svg
-                className="w-3.5 h-3.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-              <span>Clear Canvas</span>
-            </button>
-          </div>
-            </>
-          )}
-            </>
-          )}
-        </aside>
-
-        {/* Right Canvas Area: Center Canvas Column + Docked Right Inspector */}
-        <div className="flex-1 h-full min-w-0 flex flex-col md:flex-row relative z-0 overflow-hidden">
-          {/* Center Column: Top Technical Bar + ReactFlow Canvas + Bottom Logs Drawer */}
-          <div className="flex-1 h-full min-w-0 flex flex-col relative overflow-hidden">
-            {/* Top Engineering Canvas Toolbar */}
-            <CanvasToolbar
-              title={workspaceId ? (diagramTitle || "Distributed Architecture") : "Architecture Sandbox"}
-              onToggleSidebar={() => setIsSidebarOpenMobile(true)}
-              nodesCount={nodes.length}
-              edgesCount={edges.length}
-              isPlaying={isPlaying}
-              isCompiling={isCompilingSimulation}
-              onPlayToggle={() => {
-                if (isCompilingSimulation) return;
-                if (simulationFrames.length === 0) {
-                  handleStartSimulation();
-                } else {
-                  setIsPlaying((prev) => !prev);
-                }
-              }}
-              onPrevFrame={goToPreviousFrame}
-              onNextFrame={goToNextFrame}
-              onReset={resetPlayback}
-              frameIndex={frameIndex}
-              totalFrames={simulationFrames.length}
-              speed={speed}
-              onSpeedChange={setSpeed}
-              requestEndpoints={clientEndpoints}
-              selectedRequestId={clientEndpoints[activeReqIdx]?.id}
-              onSelectRequest={(id) => {
-                const idx = clientEndpoints.findIndex((ep) => ep.id === id);
-                if (idx !== -1) setActiveReqIdx(idx);
-              }}
-              onOpenSettings={() => setIsSettingsOpen(true)}
-              debugEnabled={debugEnabled}
-              onToggleLogs={() => setDebugEnabled((prev) => !prev)}
-              isAssistantOpen={isAIAssistantOpen}
-              onToggleAssistant={() => setIsAIAssistantOpen((prev) => !prev)}
-              onSave={workspaceId && diagramId ? handleSaveDiagramToBackend : undefined}
-              isSaving={isSaving}
-            />
-          {/* Full-Screen React Flow Canvas */}
-          <div
-            className={`flex-1 min-h-0 relative z-0 w-full transition-all duration-150 ${
-              isDragOverCanvas ? "ring-2 ring-inset ring-violet-500/50" : ""
-            }`}
-            onDrop={handleCanvasDrop}
-            onDragOver={handleCanvasDragOver}
-            onDragLeave={handleCanvasDragLeave}
-          >
-            {/* Drop overlay hint */}
-            {isDragOverCanvas && (
-              <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-                <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-violet-400/60 bg-violet-500/10 px-8 py-5 backdrop-blur-sm shadow-xl">
-                  <span className="text-3xl">+</span>
-                  <p className="text-sm font-bold text-violet-300">
-                    Drop to place node
-                  </p>
+            {/* Status / Console Bar */}
+            <div className="border-t border-[var(--border)] bg-[var(--surface-muted)]/80 px-4 py-2 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span
+                    className={`size-2 rounded-full ${validationWarning ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`}
+                  />
+                  <span className="text-[11px] font-bold text-foreground">
+                    {validationWarning ? "Advisory" : "Engine Ready"}
+                  </span>
                 </div>
+                {validationWarning ? (
+                  <span className="text-[11px] text-amber-500 truncate max-w-lg">
+                    {validationWarning}
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-muted-foreground truncate max-w-lg">
+                    FlowFrame DSL compiler initialized · Ready for simulation
+                  </span>
+                )}
               </div>
-            )}
 
-            {/* Canvas Loading Overlay with Engineering FlowLoader */}
-            {isLoadingDiagram && (
-              <div className="absolute inset-0 z-30 flex items-center justify-center bg-[var(--background)]/85 backdrop-blur-md transition-all">
-                <FlowLoader
-                  label="Loading Architecture Diagram..."
-                  sublabel="Fetching nodes, connections & configurations from database"
-                />
-              </div>
-            )}
-
-            {/* Simulation Compiling HUD Indicator */}
-            {isCompilingSimulation && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-                <FlowLoader
-                  size="hud"
-                  label="Compiling Simulation Engine"
-                  sublabel="Tracing network paths & allocating buffer queues"
-                />
-              </div>
-            )}
-
-            {/* Interactive Canvas Tip / First-Time Hint Banner */}
-            {showCanvasTip && !isLoadingDiagram && (
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full border border-violet-500/30 bg-[var(--surface)]/90 backdrop-blur-md px-3.5 py-1.5 shadow-lg text-xs animate-fade-in pointer-events-auto max-w-[90vw]">
-                <span className="flex h-2 w-2 rounded-full bg-violet-400 animate-pulse shrink-0" />
-                <span className="text-[color:var(--foreground)]/85 text-[11px] truncate">
-                  <strong className="text-violet-400 font-semibold">Tip:</strong> Click any <strong>Client node</strong> directly on the canvas to trigger request simulations!
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground shrink-0">
+                <span className="px-1.5 py-0.5 rounded bg-muted border border-border">
+                  Ctrl+Enter to compile
                 </span>
+                <span className="px-1.5 py-0.5 rounded bg-muted border border-border">
+                  Tab size: 2
+                </span>
+                <span className="px-1.5 py-0.5 rounded bg-muted border border-border">
+                  UTF-8
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Modern Full-Screen Canvas Workspace with Side-by-Side Shapes Sidebar */
+        <div
+          className="flex-1 w-full min-h-0 flex flex-row relative overflow-hidden"
+          data-resizable-container
+        >
+          {/* Draw.io / Miro-Style Left Shapes Sidebar */}
+          <aside
+            className={`flex flex-col z-10 shrink-0 h-full overflow-hidden transition-all duration-300 relative border-r border-[var(--border)] bg-[var(--surface)] ${
+              isSidebarFloating
+                ? "absolute rounded-2xl shadow-2xl border"
+                : "relative"
+            } ${"max-md:fixed max-md:top-0 max-md:left-0 max-md:z-30 max-md:w-72 max-md:h-full max-md:shadow-2xl max-md:transition-transform max-md:duration-300"} ${
+              isSidebarOpenMobile
+                ? "max-md:translate-x-0"
+                : "max-md:-translate-x-full"
+            }`}
+            style={{
+              width: isSidebarFloating
+                ? 288
+                : isSidebarCollapsed
+                  ? 56
+                  : sidebarWidth,
+              left: isSidebarFloating ? sidebarPosition.x : undefined,
+              top: isSidebarFloating ? sidebarPosition.y : undefined,
+              height: isSidebarFloating ? "calc(100vh - 160px)" : "100%",
+            }}
+          >
+            {/* Resize Handle (only active in docked mode on desktop when expanded) */}
+            {!isSidebarFloating && !isSidebarCollapsed && (
+              <div
+                onMouseDown={handleResizeMouseDown}
+                className="absolute right-0 top-0 bottom-0 w-1 hover:w-2 bg-transparent hover:bg-[var(--accent)]/25 cursor-col-resize transition-all z-20 max-md:hidden"
+              />
+            )}
+
+            {isSidebarCollapsed ? (
+              /* Collapsed Vertical Tool Rail (56px / w-14) */
+              <div className="flex-1 flex flex-col items-center justify-between py-3 px-1 w-full bg-[var(--surface)] select-none">
+                <div className="flex flex-col items-center gap-2.5 w-full">
+                  {/* Expand Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsSidebarCollapsed(false)}
+                    className="p-2 rounded-xl text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition cursor-pointer"
+                    title="Expand Shapes Sidebar"
+                  >
+                    <FiChevronRight className="w-4 h-4" />
+                  </button>
+
+                  <div className="w-8 h-px bg-[var(--border)]" />
+
+                  {/* Library tab button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSidebarTab("library");
+                      setIsSidebarCollapsed(false);
+                    }}
+                    className={`p-2.5 rounded-xl transition cursor-pointer ${
+                      sidebarTab === "library"
+                        ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
+                        : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                    }`}
+                    title="Component & Shape Library"
+                  >
+                    <FiGrid className="w-4 h-4" />
+                  </button>
+
+                  {/* Code Editor tab button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSidebarTab("editor");
+                      setIsSidebarCollapsed(false);
+                    }}
+                    className={`p-2.5 rounded-xl transition cursor-pointer ${
+                      sidebarTab === "editor"
+                        ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
+                        : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                    }`}
+                    title="Monaco Architecture DSL Editor"
+                  >
+                    <FiCode className="w-4 h-4" />
+                  </button>
+
+                  {/* Architecture Templates button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowWelcomeModal(true)}
+                    className="p-2.5 rounded-xl text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition cursor-pointer"
+                    title="Architecture Templates"
+                  >
+                    <FiFolder className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Bottom Clear Canvas */}
                 <button
                   type="button"
-                  onClick={() => setShowCanvasTip(false)}
-                  className="text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)] ml-1 text-sm font-bold cursor-pointer shrink-0"
-                  title="Dismiss tip"
+                  onClick={handleClearCanvas}
+                  className="p-2.5 rounded-xl text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                  title="Clear Canvas"
                 >
-                  ×
+                  <FiTrash2 className="w-4 h-4" />
                 </button>
               </div>
-            )}
-
-            <ReactFlow
-              nodes={styledNodes}
-              edges={animatedEdges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              nodeTypes={nodeTypes}
-              edgeTypes={edgeTypes}
-              onNodeClick={onNodeClick}
-              onPaneClick={onPaneClick}
-              fitView
-              fitViewOptions={{ padding: 0.2 }}
-              snapToGrid={snapToGrid}
-              snapGrid={[gridSize, gridSize]}
-              minZoom={0.2}
-              maxZoom={2.5}
-              style={{ width: "100%", height: "100%" }}
-            >
-              {bgPattern !== "none" && (
-                <Background
-                  variant={
-                    bgPattern === "lines"
-                      ? BackgroundVariant.Lines
-                      : bgPattern === "cross"
-                      ? BackgroundVariant.Cross
-                      : BackgroundVariant.Dots
-                  }
-                  gap={gridSize}
-                  size={bgPattern === "dots" ? 1.5 : 1}
-                  color={
-                    theme === "dark"
-                      ? `rgba(148, 163, 184, ${bgOpacity})`
-                      : `rgba(15, 23, 42, ${bgOpacity})`
-                  }
-                />
-              )}
-              {showMinimap && (
-                <MiniMap
-                  nodeStrokeWidth={2}
-                  zoomable
-                  pannable
-                  style={{
-                    backgroundColor: theme === "dark" ? "rgba(15, 23, 42, 0.85)" : "rgba(255, 255, 255, 0.85)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "12px",
-                    backdropFilter: "blur(12px)",
-                    boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
-                  }}
-                  maskColor={theme === "dark" ? "rgba(0, 0, 0, 0.45)" : "rgba(241, 245, 249, 0.55)"}
-                />
-              )}
-            </ReactFlow>
-
-            {/* Minimal Floating Canvas Controls Dock */}
-            <CanvasControlsBar
-              onZoomIn={() => zoomIn({ duration: 200 })}
-              onZoomOut={() => zoomOut({ duration: 200 })}
-              onFitView={() => fitView({ duration: 400 })}
-              showMinimap={showMinimap}
-              onToggleMinimap={() => setShowMinimap((prev) => !prev)}
-              bgPattern={bgPattern}
-              onToggleGrid={() => setBgPattern((prev) => (prev === "none" ? "dots" : "none"))}
-            />
-
-            {/* Professional Clean Empty State */}
-            {nodes.length === 0 && !isLoadingDiagram && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none select-none">
-                <div className="flex flex-col items-center text-center max-w-sm px-6 py-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-md shadow-2xl">
-                  <div className="w-12 h-12 rounded-xl bg-[var(--surface-muted)] border border-[var(--border)] flex items-center justify-center mb-3 text-[color:var(--accent)]">
-                    <FiGrid className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-sm font-bold text-[color:var(--foreground)] mb-1 tracking-tight">
-                    Architecture Canvas is Empty
-                  </h3>
-                  <p className="text-xs text-[color:var(--foreground)]/60 mb-4 leading-relaxed font-sans">
-                    Drag components from the library or load a production template to simulate distributed requests in real-time.
-                  </p>
-                  <div className="flex items-center gap-2 pointer-events-auto">
+            ) : (
+              <>
+                {/* Mode Switcher Header: Library vs Monaco Code Editor */}
+                <div className="p-2 border-b border-[var(--border)] bg-[var(--surface)] shrink-0 flex items-center gap-1.5">
+                  <div className="flex-1 flex items-center gap-1 bg-[var(--surface-muted)] p-1 rounded-xl border border-[var(--border)]">
                     <button
                       type="button"
-                      onClick={() => {
-                        if (isSidebarCollapsed) setIsSidebarCollapsed(false);
-                        setSidebarTab("library");
-                        setIsTemplatesExpanded(true);
-                      }}
-                      className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent)] text-white hover:brightness-110 shadow-xs cursor-pointer transition"
+                      onClick={() => setSidebarTab("library")}
+                      className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        sidebarTab === "library"
+                          ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-sm border border-[var(--border)] font-bold"
+                          : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+                      }`}
                     >
-                      Browse Templates
+                      <FiGrid className="w-3.5 h-3.5" />
+                      <span>Library</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSidebarTab("editor")}
+                      className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        sidebarTab === "editor"
+                          ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-sm border border-[var(--border)] font-bold"
+                          : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+                      }`}
+                    >
+                      <FiCode className="w-3.5 h-3.5" />
+                      <span>Code Editor</span>
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsSidebarCollapsed(true)}
+                    className="p-1.5 rounded-lg text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition cursor-pointer hidden md:flex"
+                    title="Collapse Sidebar"
+                  >
+                    <FiChevronLeft className="w-4 h-4" />
+                  </button>
                 </div>
-              </div>
-            )}
 
-            {/* System Health & Load Monitor Overlay */}
-            {systemMetrics &&
-              (showMetrics ? (
-                <div className="absolute top-16 left-4 z-10 w-72 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md shadow-lg p-3 flex flex-col gap-2.5 font-sans select-none pointer-events-auto">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-1.5">
+                {sidebarTab === "editor" ? (
+                  /* FlowFrame DSL Code Editor Panel in Left Sidebar */
+                  <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-[var(--background)] p-3 gap-2">
+                    <div className="flex items-center justify-between pb-2 border-b border-[var(--border)] shrink-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
+                          Flow Editor
+                        </span>
+                        <span className="text-[9px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded font-mono font-bold">
+                          DSL
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={handleRunDSL}
+                          className="rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] px-2 py-1 font-bold shadow-xs transition cursor-pointer flex items-center gap-1"
+                          title="Compile DSL script and render architecture on canvas"
+                        >
+                          <FiPlay className="w-3 h-3 fill-current" />
+                          <span>Run</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setWorkspaceMode("editor")}
+                          className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-2 py-1 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center gap-1"
+                          title="Expand to Full IDE Workspace"
+                        >
+                          <FiMaximize2 className="w-3 h-3" />
+                          <span className="hidden sm:inline">Full IDE</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(dslCode);
+                            setSuccessToast("Code copied to clipboard!");
+                          }}
+                          className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-2 py-1 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] transition cursor-pointer"
+                          title="Copy Code"
+                        >
+                          Copy
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDslCode("")}
+                          className="rounded hover:bg-rose-500/10 text-[10px] px-2 py-1 border border-rose-500/20 font-semibold text-rose-400 transition cursor-pointer"
+                          title="Clear Editor"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Quick Presets Pills */}
+                    <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-thin shrink-0 text-[10px]">
+                      <span className="text-muted-foreground uppercase font-mono font-bold shrink-0">
+                        Presets:
+                      </span>
+                      {Object.entries(DSL_PRESETS).map(([key, preset]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => {
+                            setDslCode(preset.code);
+                            setSuccessToast(
+                              `Pasted "${preset.label}" code into editor`,
+                            );
+                          }}
+                          className="px-1.5 py-0.5 rounded bg-[var(--surface-muted)] hover:bg-[var(--bg-elevated)] border border-[var(--border)] text-foreground/75 hover:text-foreground shrink-0 transition cursor-pointer text-[10px]"
+                          title={`Paste ${preset.label} DSL code into editor`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex-1 w-full h-full min-h-0 rounded-xl overflow-hidden border border-[var(--border)] shadow-inner relative">
+                      <FlowFrameCodeEditor
+                        value={dslCode}
+                        onChange={setDslCode}
+                        theme={theme === "dark" ? "dark" : "light"}
+                        onRun={handleRunDSL}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Sidebar Title & Search Shape */}
+                    <div
+                      className={`p-3 border-b border-[var(--border)] flex flex-col gap-2 shrink-0 bg-[var(--surface)] ${
+                        isSidebarFloating
+                          ? "cursor-grab active:cursor-grabbing select-none"
+                          : ""
+                      }`}
+                      onMouseDown={handleHeaderMouseDown}
+                    >
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-xs font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
+                          Shape Library
+                        </h2>
+                        <div className="flex items-center gap-1.5">
+                          {/* Modern Help Button */}
+                          <button
+                            type="button"
+                            onClick={() => setShowHelpModal(true)}
+                            className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center gap-1"
+                            title="How to Use Guide"
+                          >
+                            <svg
+                              className="w-3.5 h-3.5 text-violet-400"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <circle cx="12" cy="12" r="10" />
+                              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                              <line
+                                x1="12"
+                                y1="17"
+                                x2="12.01"
+                                y2="17"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                            <span>Help</span>
+                          </button>
+                          {/* Dock / Float Toggle */}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setIsSidebarFloating(!isSidebarFloating)
+                            }
+                            className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-1.5 py-0.5 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer flex items-center gap-1"
+                            title={
+                              isSidebarFloating
+                                ? "Dock Sidebar"
+                                : "Float Sidebar"
+                            }
+                          >
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                            >
+                              <path d="M12 2v20M17 5H7" />
+                            </svg>
+                            <span>{isSidebarFloating ? "Dock" : "Float"}</span>
+                          </button>
+                          {/* Mobile Close Button */}
+                          <button
+                            type="button"
+                            onClick={() => setIsSidebarOpenMobile(false)}
+                            className="md:hidden rounded-full hover:bg-[var(--surface-muted)] text-xs font-bold h-6 w-6 flex items-center justify-center border border-[var(--border)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] cursor-pointer"
+                            title="Close Sidebar"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
+                          <svg
+                            className="w-3.5 h-3.5 text-[color:var(--foreground)]/40"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                          >
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                          </svg>
+                        </span>
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Type to search shapes..."
+                          className="w-full pl-8 pr-7 py-1.5 bg-[var(--surface-muted)]/70 hover:bg-[var(--surface-muted)] focus:bg-[var(--surface)] text-xs text-[color:var(--foreground)] placeholder-[color:var(--foreground)]/40 border border-[var(--border)] rounded-lg outline-none focus:border-violet-500/80 transition-all duration-150"
+                        />
+                        {searchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setSearchQuery("")}
+                            className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-xs text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)] font-bold cursor-pointer"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Collapsible Accordion Lists */}
+                    <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-2">
+                      {/* 1. Templates Section */}
+                      <div className="space-y-1">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setIsTemplatesExpanded(!isTemplatesExpanded)
+                          }
+                          className="w-full flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)] transition duration-150 text-left font-semibold cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <FiChevronRight
+                              className={`w-3 h-3 text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isTemplatesExpanded ? "rotate-90" : "rotate-0"}`}
+                            />
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
+                              Templates
+                            </span>
+                          </div>
+                          <span className="text-[9px] text-[color:var(--foreground)]/40 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-mono">
+                            {Object.keys(TEMPLATES).length}
+                          </span>
+                        </button>
+
+                        {isTemplatesExpanded && (
+                          <div className="grid grid-cols-2 gap-2 p-1">
+                            {Object.entries({
+                              cacheAside: {
+                                label: "Cache Aside",
+                                icon: (
+                                  <svg
+                                    className="w-5 h-5 text-violet-400 group-hover:scale-110 transition duration-150"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                  >
+                                    <rect
+                                      x="2"
+                                      y="3"
+                                      width="20"
+                                      height="14"
+                                      rx="2"
+                                      ry="2"
+                                    />
+                                    <line x1="2" y1="10" x2="22" y2="10" />
+                                    <line x1="12" y1="10" x2="12" y2="21" />
+                                  </svg>
+                                ),
+                                description:
+                                  "Write/read path caching strategy prioritizing low latency using Redis Cache and Postgres DB.",
+                                color:
+                                  "hover:border-violet-500/40 text-violet-400",
+                              },
+                              loadBalancing: {
+                                label: "Load Balancer",
+                                icon: (
+                                  <svg
+                                    className="w-5 h-5 text-blue-400 group-hover:scale-110 transition duration-150"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                  >
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="2" x2="12" y2="22" />
+                                    <line x1="12" y1="12" x2="22" y2="12" />
+                                  </svg>
+                                ),
+                                description:
+                                  "Distribute client requests across multiple backend web server nodes using Round Robin routing.",
+                                color: "hover:border-blue-500/40 text-blue-400",
+                              },
+                              valetKey: {
+                                label: "Valet Key",
+                                icon: (
+                                  <svg
+                                    className="w-5 h-5 text-yellow-400 group-hover:scale-110 transition duration-150"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                  >
+                                    <rect
+                                      x="3"
+                                      y="11"
+                                      width="18"
+                                      height="11"
+                                      rx="2"
+                                      ry="2"
+                                    />
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                  </svg>
+                                ),
+                                description:
+                                  "Clients fetch secure signed URLs from server, then upload files directly to Cloud Storage.",
+                                color:
+                                  "hover:border-yellow-500/40 text-yellow-400",
+                              },
+                              apiGateway: {
+                                label: "API Gateway",
+                                icon: (
+                                  <svg
+                                    className="w-5 h-5 text-fuchsia-400 group-hover:scale-110 transition duration-150"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                  >
+                                    <path d="M9 3H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM21 3h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" />
+                                  </svg>
+                                ),
+                                description:
+                                  "Central entry point routes requests dynamically to Post or User services based on path prefixes.",
+                                color:
+                                  "hover:border-fuchsia-500/40 text-fuchsia-400",
+                              },
+                            }).map(([key, value]) => (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() => loadTemplate(key as any)}
+                                onMouseEnter={(e) => {
+                                  const rect =
+                                    e.currentTarget.getBoundingClientRect();
+                                  setHoveredComponent({
+                                    type: key as any,
+                                    label: value.label,
+                                    icon: "",
+                                    description: value.description,
+                                    colorClass: "",
+                                  });
+                                  setHoverTooltipX(rect.right + 12);
+                                  setHoverTooltipY(rect.top + rect.height / 2);
+                                }}
+                                onMouseLeave={() => setHoveredComponent(null)}
+                                className={`flex flex-col items-center justify-center p-3.5 rounded-xl border border-[var(--border)]/70 bg-[var(--surface)]/40 ${value.color} hover:bg-[var(--surface)]/80 transition duration-150 text-center cursor-pointer group shadow-sm`}
+                              >
+                                {value.icon}
+                                <span className="text-[9.5px] font-semibold text-[color:var(--foreground)]/65 mt-1.5 truncate max-w-full">
+                                  {value.label}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="h-px bg-[var(--border)]/40" />
+
+                      {/* 2. Components & Shapes Unified Section */}
+                      <div className="space-y-1">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setIsComponentsExpanded(!isComponentsExpanded)
+                          }
+                          className="w-full flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)] transition duration-150 text-left font-semibold cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <FiChevronRight
+                              className={`w-3 h-3 text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isComponentsExpanded ? "rotate-90" : "rotate-0"}`}
+                            />
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
+                              Components & Shapes
+                            </span>
+                          </div>
+                          <span className="text-[9px] text-[color:var(--foreground)]/40 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-mono">
+                            {filteredComponents.length + SHAPES_LIBRARY.length}
+                          </span>
+                        </button>
+
+                        {isComponentsExpanded && (
+                          <div className="space-y-3 p-1">
+                            {/* Category 1: System Components */}
+                            <div>
+                              <h3 className="text-[9px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/40 mb-1.5 px-1">
+                                System Components
+                              </h3>
+                              <div className="grid grid-cols-3 gap-2">
+                                {filteredComponents.map((item) => (
+                                  <button
+                                    key={item.type}
+                                    type="button"
+                                    draggable
+                                    onDragStart={(e) =>
+                                      handleDragStart(e, item.type)
+                                    }
+                                    onDragEnd={handleDragEnd}
+                                    onClick={() => addComponent(item.type)}
+                                    onMouseEnter={(e) => {
+                                      if (draggingType) return; // don't show tooltip while dragging
+                                      const rect =
+                                        e.currentTarget.getBoundingClientRect();
+                                      setHoveredComponent(item);
+                                      setHoverTooltipX(rect.right + 12);
+                                      setHoverTooltipY(
+                                        rect.top + rect.height / 2,
+                                      );
+                                    }}
+                                    onMouseLeave={() =>
+                                      setHoveredComponent(null)
+                                    }
+                                    className={`aspect-square rounded-xl border bg-[var(--surface)]/30 hover:bg-[var(--surface)] hover:border-violet-500/50 flex flex-col items-center justify-center transition duration-150 cursor-grab active:cursor-grabbing group relative shadow-sm ${
+                                      draggingType === item.type
+                                        ? "border-violet-500/60 bg-violet-500/10 scale-95"
+                                        : "border-[var(--border)]"
+                                    }`}
+                                    title={`${item.label} — click to add or drag onto canvas`}
+                                  >
+                                    <ComponentIcon
+                                      type={item.type}
+                                      className="w-6 h-6 group-hover:scale-110 transition duration-150 text-[color:var(--foreground)]/65 group-hover:text-violet-400"
+                                    />
+                                    <span className="text-[8px] font-bold text-[color:var(--foreground)]/50 mt-1 truncate max-w-full px-1">
+                                      {item.label}
+                                    </span>
+                                  </button>
+                                ))}
+                                {filteredComponents.length === 0 && (
+                                  <div className="col-span-3 text-center py-6 text-xs text-[color:var(--foreground)]/40">
+                                    No matching components
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Category 2: Canvas Shapes */}
+                            <div className="pt-1.5 border-t border-[var(--border)]/20">
+                              <h3 className="text-[9px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/40 mb-1.5 px-1">
+                                Canvas Shapes & Frames
+                              </h3>
+                              <div className="grid grid-cols-5 gap-1.5">
+                                {SHAPES_LIBRARY.map((shape) => (
+                                  <button
+                                    key={shape.id}
+                                    type="button"
+                                    draggable
+                                    onDragStart={(e) =>
+                                      handleShapeDragStart(e, shape.id)
+                                    }
+                                    onClick={() => addShape(shape.id)}
+                                    title={`${shape.label} — click to add or drag onto canvas`}
+                                    className="aspect-square rounded-xl border border-[var(--border)] bg-[var(--surface)]/40 flex flex-col items-center justify-center gap-0.5 transition duration-150 cursor-grab active:cursor-grabbing group hover:scale-105 hover:border-violet-500/40 hover:bg-[var(--surface)]"
+                                  >
+                                    {/* Legitimate vector SVG shape icon */}
+                                    <div className="w-5 h-5 flex items-center justify-center group-hover:scale-110 transition duration-150">
+                                      {shape.icon}
+                                    </div>
+                                    <span className="text-[7.5px] font-semibold text-[color:var(--foreground)]/45 leading-none truncate max-w-full px-0.5 group-hover:text-violet-400 transition">
+                                      {shape.label}
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Sidebar Footer Controls */}
+                    <div className="p-3 border-t border-[var(--border)] bg-[var(--surface)]/45 flex flex-col gap-2 shrink-0 bg-[var(--surface)]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleStartSimulation();
+                          setFrameIndex(0);
+                          setIsPlaying(true);
+                        }}
+                        className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] text-[11px] font-bold transition cursor-pointer"
+                        title="Re-run simulation with current changes"
+                      >
+                        <svg
+                          className="w-3.5 h-3.5 animate-spin-hover"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                        >
+                          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-1.54" />
+                        </svg>
+                        <span>Re-run Simulation</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowWelcomeModal(true)}
+                        className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-[var(--border)] bg-[var(--surface)]/85 hover:bg-[var(--surface-muted)] text-[11px] font-semibold text-[color:var(--foreground)]/75 transition cursor-pointer"
+                      >
+                        <svg
+                          className="w-3.5 h-3.5 text-[color:var(--foreground)]/50"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                        </svg>
+                        <span>Templates Gallery</span>
+                      </button>
+                      {/* Import / Export / Share Controls */}
+                      <div className="grid grid-cols-3 gap-1.5 w-full animate-fade-in">
+                        <button
+                          type="button"
+                          onClick={handleExportFlow}
+                          className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/5 hover:bg-emerald-500/15 hover:border-emerald-500/45 text-emerald-500 dark:text-emerald-400 text-[11px] font-semibold transition cursor-pointer shadow-sm hover:shadow active:scale-95 duration-200"
+                          title="Export current architecture flow to a JSON file"
+                        >
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+                            />
+                          </svg>
+                          <span>Export</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleImportClick}
+                          className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg border border-cyan-500/25 bg-cyan-500/5 hover:bg-cyan-500/15 hover:border-cyan-500/45 text-cyan-500 dark:text-cyan-400 text-[11px] font-semibold transition cursor-pointer shadow-sm hover:shadow active:scale-95 duration-200"
+                          title="Import architecture flow from a JSON file"
+                        >
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+                            />
+                          </svg>
+                          <span>Import</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleShareFlow}
+                          className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg border border-violet-500/25 bg-violet-500/5 hover:bg-violet-500/15 hover:border-violet-500/45 text-violet-500 dark:text-violet-400 text-[11px] font-semibold transition cursor-pointer shadow-sm hover:shadow active:scale-95 duration-200"
+                          title="Share this flow on LinkedIn, Twitter, or copy URL"
+                        >
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"
+                            />
+                          </svg>
+                          <span>Share</span>
+                        </button>
+                        {/* Hidden file input for import */}
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={handleImportFlow}
+                          accept=".json"
+                          className="hidden"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleClearCanvas}
+                        className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 hover:border-rose-500/40 text-rose-500 dark:text-rose-400 text-[11px] font-semibold transition cursor-pointer active:scale-95 duration-200"
+                      >
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        <span>Clear Canvas</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </aside>
+
+          {/* Right Canvas Area: Center Canvas Column + Docked Right Inspector */}
+          <div className="flex-1 h-full min-w-0 flex flex-col md:flex-row relative z-0 overflow-hidden">
+            {/* Center Column: Top Technical Bar + ReactFlow Canvas + Bottom Logs Drawer */}
+            <div className="flex-1 h-full min-w-0 flex flex-col relative overflow-hidden">
+              {/* Top Engineering Canvas Toolbar */}
+              <CanvasToolbar
+                title={
+                  workspaceId
+                    ? diagramTitle || "Distributed Architecture"
+                    : "Architecture Sandbox"
+                }
+                onToggleSidebar={() => setIsSidebarOpenMobile(true)}
+                nodesCount={nodes.length}
+                edgesCount={edges.length}
+                viewMode={workspaceMode}
+                onViewModeChange={setWorkspaceMode}
+                isPlaying={isPlaying}
+                isCompiling={isCompilingSimulation}
+                onPlayToggle={() => {
+                  if (isCompilingSimulation) return;
+                  if (simulationFrames.length === 0) {
+                    handleStartSimulation();
+                  } else {
+                    setIsPlaying((prev) => !prev);
+                  }
+                }}
+                onPrevFrame={goToPreviousFrame}
+                onNextFrame={goToNextFrame}
+                onReset={resetPlayback}
+                frameIndex={frameIndex}
+                totalFrames={simulationFrames.length}
+                speed={speed}
+                onSpeedChange={setSpeed}
+                requestEndpoints={clientEndpoints}
+                selectedRequestId={clientEndpoints[activeReqIdx]?.id}
+                onSelectRequest={(id) => {
+                  const idx = clientEndpoints.findIndex((ep) => ep.id === id);
+                  if (idx !== -1) setActiveReqIdx(idx);
+                }}
+                onOpenSettings={() => setIsSettingsOpen(true)}
+                debugEnabled={debugEnabled}
+                onToggleLogs={() => setDebugEnabled((prev) => !prev)}
+                isAssistantOpen={isAIAssistantOpen}
+                onToggleAssistant={() => setIsAIAssistantOpen((prev) => !prev)}
+                onSave={
+                  workspaceId && diagramId
+                    ? handleSaveDiagramToBackend
+                    : undefined
+                }
+                isSaving={isSaving}
+              />
+              {/* Full-Screen React Flow Canvas */}
+              <div
+                className={`flex-1 min-h-0 relative z-0 w-full transition-all duration-150 ${
+                  isDragOverCanvas ? "ring-2 ring-inset ring-violet-500/50" : ""
+                }`}
+                onDrop={handleCanvasDrop}
+                onDragOver={handleCanvasDragOver}
+                onDragLeave={handleCanvasDragLeave}
+              >
+                {/* Drop overlay hint */}
+                {isDragOverCanvas && (
+                  <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-violet-400/60 bg-violet-500/10 px-8 py-5 backdrop-blur-sm shadow-xl">
+                      <span className="text-3xl">+</span>
+                      <p className="text-sm font-bold text-violet-300">
+                        Drop to place node
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Canvas Loading Overlay with Engineering FlowLoader */}
+                {isLoadingDiagram && (
+                  <div className="absolute inset-0 z-30 flex items-center justify-center bg-[var(--background)]/85 backdrop-blur-md transition-all">
+                    <FlowLoader
+                      label="Loading Architecture Diagram..."
+                      sublabel="Fetching nodes, connections & configurations from database"
+                    />
+                  </div>
+                )}
+
+                {/* Simulation Compiling HUD Indicator */}
+                {isCompilingSimulation && (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+                    <FlowLoader
+                      size="hud"
+                      label="Compiling Simulation Engine"
+                      sublabel="Tracing network paths & allocating buffer queues"
+                    />
+                  </div>
+                )}
+
+                {/* Interactive Canvas Tip / First-Time Hint Banner */}
+                {showCanvasTip && !isLoadingDiagram && (
+                  <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full border border-violet-500/30 bg-[var(--surface)]/90 backdrop-blur-md px-3.5 py-1.5 shadow-lg text-xs animate-fade-in pointer-events-auto max-w-[90vw]">
+                    <span className="flex h-2 w-2 rounded-full bg-violet-400 animate-pulse shrink-0" />
+                    <span className="text-[color:var(--foreground)]/85 text-[11px] truncate">
+                      <strong className="text-violet-400 font-semibold">
+                        Tip:
+                      </strong>{" "}
+                      Click any <strong>Client node</strong> directly on the
+                      canvas to trigger request simulations!
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowCanvasTip(false)}
+                      className="text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)] ml-1 text-sm font-bold cursor-pointer shrink-0"
+                      title="Dismiss tip"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+
+                <ReactFlow
+                  nodes={styledNodes}
+                  edges={animatedEdges}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onConnect={onConnect}
+                  nodeTypes={nodeTypes}
+                  edgeTypes={edgeTypes}
+                  onNodeClick={onNodeClick}
+                  onPaneClick={onPaneClick}
+                  fitView
+                  fitViewOptions={{ padding: 0.2 }}
+                  snapToGrid={snapToGrid}
+                  snapGrid={[gridSize, gridSize]}
+                  minZoom={0.2}
+                  maxZoom={2.5}
+                  style={{ width: "100%", height: "100%" }}
+                >
+                  {bgPattern !== "none" && (
+                    <Background
+                      variant={
+                        bgPattern === "lines"
+                          ? BackgroundVariant.Lines
+                          : bgPattern === "cross"
+                            ? BackgroundVariant.Cross
+                            : BackgroundVariant.Dots
+                      }
+                      gap={gridSize}
+                      size={bgPattern === "dots" ? 1.5 : 1}
+                      color={
+                        theme === "dark"
+                          ? `rgba(148, 163, 184, ${bgOpacity})`
+                          : `rgba(15, 23, 42, ${bgOpacity})`
+                      }
+                    />
+                  )}
+                  {showMinimap && (
+                    <MiniMap
+                      nodeStrokeWidth={2}
+                      zoomable
+                      pannable
+                      style={{
+                        backgroundColor:
+                          theme === "dark"
+                            ? "rgba(15, 23, 42, 0.85)"
+                            : "rgba(255, 255, 255, 0.85)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "12px",
+                        backdropFilter: "blur(12px)",
+                        boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
+                      }}
+                      maskColor={
+                        theme === "dark"
+                          ? "rgba(0, 0, 0, 0.45)"
+                          : "rgba(241, 245, 249, 0.55)"
+                      }
+                    />
+                  )}
+                </ReactFlow>
+
+                {/* Minimal Floating Canvas Controls Dock */}
+                <CanvasControlsBar
+                  onZoomIn={() => zoomIn({ duration: 200 })}
+                  onZoomOut={() => zoomOut({ duration: 200 })}
+                  onFitView={() => fitView({ duration: 400 })}
+                  showMinimap={showMinimap}
+                  onToggleMinimap={() => setShowMinimap((prev) => !prev)}
+                  bgPattern={bgPattern}
+                  onToggleGrid={() =>
+                    setBgPattern((prev) => (prev === "none" ? "dots" : "none"))
+                  }
+                />
+
+                {/* Professional Clean Empty State */}
+                {nodes.length === 0 && !isLoadingDiagram && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none select-none">
+                    <div className="flex flex-col items-center text-center max-w-sm px-6 py-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-md shadow-2xl">
+                      <div className="w-12 h-12 rounded-xl bg-[var(--surface-muted)] border border-[var(--border)] flex items-center justify-center mb-3 text-[color:var(--accent)]">
+                        <FiGrid className="w-6 h-6" />
+                      </div>
+                      <h3 className="text-sm font-bold text-[color:var(--foreground)] mb-1 tracking-tight">
+                        Architecture Canvas is Empty
+                      </h3>
+                      <p className="text-xs text-[color:var(--foreground)]/60 mb-4 leading-relaxed font-sans">
+                        Drag components from the library or load a production
+                        template to simulate distributed requests in real-time.
+                      </p>
+                      <div className="flex items-center gap-2 pointer-events-auto">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isSidebarCollapsed)
+                              setIsSidebarCollapsed(false);
+                            setSidebarTab("library");
+                            setIsTemplatesExpanded(true);
+                          }}
+                          className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent)] text-white hover:brightness-110 shadow-xs cursor-pointer transition"
+                        >
+                          Browse Templates
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* System Health & Load Monitor Overlay */}
+                {systemMetrics &&
+                  (showMetrics ? (
+                    <div className="absolute top-16 left-4 z-10 w-72 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md shadow-lg p-3 flex flex-col gap-2.5 font-sans select-none pointer-events-auto">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-1.5">
+                          <span className="relative flex h-2 w-2">
+                            <span
+                              className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                                systemMetrics.errorRequests.length > 0
+                                  ? "bg-rose-400"
+                                  : systemMetrics.warningRequests?.length > 0
+                                    ? "bg-amber-400"
+                                    : "bg-emerald-400"
+                              }`}
+                            ></span>
+                            <span
+                              className={`relative inline-flex rounded-full h-2 w-2 ${
+                                systemMetrics.errorRequests.length > 0
+                                  ? "bg-rose-500"
+                                  : systemMetrics.warningRequests?.length > 0
+                                    ? "bg-amber-500"
+                                    : "bg-emerald-500"
+                              }`}
+                            ></span>
+                          </span>
+                          <h3 className="text-[10px] font-bold text-[color:var(--foreground)] tracking-tight uppercase">
+                            System Health & Load
+                          </h3>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-mono text-[color:var(--foreground)]/45">
+                            t={systemMetrics.currentTick}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowMetrics(false)}
+                            className="text-xs text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)]/70 transition p-1 hover:bg-[var(--surface-muted)] rounded cursor-pointer leading-none flex items-center justify-center w-5 h-5 border border-transparent"
+                            title="Collapse Overlay"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5 text-center">
+                        <div className="bg-[var(--surface-muted)]/50 p-1.5 rounded-xl border border-[var(--border)]/35">
+                          <p className="text-[8px] uppercase font-semibold text-[color:var(--foreground)]/40 tracking-wider">
+                            In-Flight Req
+                          </p>
+                          <p className="text-xs font-bold text-[color:var(--foreground)] mt-0.5">
+                            {systemMetrics.activeCount} /{" "}
+                            {systemMetrics.totalRequests}
+                          </p>
+                        </div>
+                        <div
+                          className={`p-1.5 rounded-xl border ${
+                            systemMetrics.pendingCount > 0
+                              ? "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                              : "bg-[var(--surface-muted)]/50 border-[var(--border)]/35 text-[color:var(--foreground)]"
+                          }`}
+                        >
+                          <p
+                            className={`text-[8px] uppercase font-semibold tracking-wider ${
+                              systemMetrics.pendingCount > 0
+                                ? "text-rose-400/80"
+                                : "text-[color:var(--foreground)]/40"
+                            }`}
+                          >
+                            Queue Size
+                          </p>
+                          <p className="text-xs font-bold mt-0.5">
+                            {systemMetrics.pendingCount}
+                          </p>
+                        </div>
+                      </div>
+
+                      {systemMetrics.queuedRequests.length > 0 && (
+                        <div className="flex flex-col gap-1 rounded-xl bg-rose-500/5 border border-rose-500/15 p-2">
+                          <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1.5">
+                            <FiClock className="w-3 h-3 text-rose-400 shrink-0" />
+                            <span>Bottleneck: Database Wait</span>
+                          </p>
+                          <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
+                            {systemMetrics.queuedRequests.map(
+                              (req: string, idx: number) => (
+                                <p
+                                  key={idx}
+                                  className="text-[9px] font-mono text-rose-300/90 leading-tight"
+                                >
+                                  • {req} queued
+                                </p>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {systemMetrics.errorRequests.length > 0 && (
+                        <div className="flex flex-col gap-1 rounded-xl bg-rose-500/10 border border-rose-500/20 p-2">
+                          <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1.5">
+                            <FiAlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                            <span>Failures Detected</span>
+                          </p>
+                          <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
+                            {systemMetrics.errorRequests.map(
+                              (err: string, idx: number) => (
+                                <p
+                                  key={idx}
+                                  className="text-[9px] font-mono text-rose-200/90 leading-tight"
+                                >
+                                  • {err}
+                                </p>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {systemMetrics.warningRequests &&
+                        systemMetrics.warningRequests.length > 0 && (
+                          <div className="flex flex-col gap-1 rounded-xl bg-amber-500/10 border border-amber-500/20 p-2">
+                            <p className="text-[8px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1.5">
+                              <FiAlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
+                              <span>Warnings Detected</span>
+                            </p>
+                            <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
+                              {systemMetrics.warningRequests.map(
+                                (warn: string, idx: number) => (
+                                  <p
+                                    key={idx}
+                                    className="text-[9px] font-mono text-amber-200/90 leading-tight"
+                                  >
+                                    • {warn}
+                                  </p>
+                                ),
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                      {systemMetrics.activeCount > 0 &&
+                        systemMetrics.queuedRequests.length === 0 &&
+                        systemMetrics.errorRequests.length === 0 &&
+                        (!systemMetrics.warningRequests ||
+                          systemMetrics.warningRequests.length === 0) && (
+                          <div className="flex items-center gap-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/15 p-1.5 text-emerald-400">
+                            <FiCheckCircle className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <span className="text-[8px] font-bold uppercase tracking-wider">
+                              Processing requests smoothly
+                            </span>
+                          </div>
+                        )}
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowMetrics(true)}
+                      className="absolute top-16 left-4 z-10 rounded-full border border-[var(--border)] bg-[var(--surface)]/90 hover:bg-[var(--surface-muted)] hover:border-[var(--border)]/80 text-[10px] font-bold text-[color:var(--foreground)]/80 transition px-3 py-1.5 flex items-center gap-1.5 shadow-md cursor-pointer pointer-events-auto"
+                      title="Expand Health Overlay"
+                    >
                       <span className="relative flex h-2 w-2">
                         <span
                           className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
@@ -4699,3418 +5353,3209 @@ connect s1 -> r1
                           }`}
                         ></span>
                       </span>
-                      <h3 className="text-[10px] font-bold text-[color:var(--foreground)] tracking-tight uppercase">
-                        System Health & Load
-                      </h3>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9px] font-mono text-[color:var(--foreground)]/45">
-                        t={systemMetrics.currentTick}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setShowMetrics(false)}
-                        className="text-xs text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)]/70 transition p-1 hover:bg-[var(--surface-muted)] rounded cursor-pointer leading-none flex items-center justify-center w-5 h-5 border border-transparent"
-                        title="Collapse Overlay"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-1.5 text-center">
-                    <div className="bg-[var(--surface-muted)]/50 p-1.5 rounded-xl border border-[var(--border)]/35">
-                      <p className="text-[8px] uppercase font-semibold text-[color:var(--foreground)]/40 tracking-wider">
-                        In-Flight Req
-                      </p>
-                      <p className="text-xs font-bold text-[color:var(--foreground)] mt-0.5">
-                        {systemMetrics.activeCount} /{" "}
-                        {systemMetrics.totalRequests}
-                      </p>
-                    </div>
-                    <div
-                      className={`p-1.5 rounded-xl border ${
-                        systemMetrics.pendingCount > 0
-                          ? "bg-rose-500/10 border-rose-500/20 text-rose-400"
-                          : "bg-[var(--surface-muted)]/50 border-[var(--border)]/35 text-[color:var(--foreground)]"
-                      }`}
-                    >
-                      <p
-                        className={`text-[8px] uppercase font-semibold tracking-wider ${
-                          systemMetrics.pendingCount > 0
-                            ? "text-rose-400/80"
-                            : "text-[color:var(--foreground)]/40"
-                        }`}
-                      >
-                        Queue Size
-                      </p>
-                      <p className="text-xs font-bold mt-0.5">
-                        {systemMetrics.pendingCount}
-                      </p>
-                    </div>
-                  </div>
-
-                  {systemMetrics.queuedRequests.length > 0 && (
-                    <div className="flex flex-col gap-1 rounded-xl bg-rose-500/5 border border-rose-500/15 p-2">
-                      <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1.5">
-                        <FiClock className="w-3 h-3 text-rose-400 shrink-0" />
-                        <span>Bottleneck: Database Wait</span>
-                      </p>
-                      <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
-                        {systemMetrics.queuedRequests.map(
-                          (req: string, idx: number) => (
-                            <p
-                              key={idx}
-                              className="text-[9px] font-mono text-rose-300/90 leading-tight"
-                            >
-                              • {req} queued
-                            </p>
-                          ),
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {systemMetrics.errorRequests.length > 0 && (
-                    <div className="flex flex-col gap-1 rounded-xl bg-rose-500/10 border border-rose-500/20 p-2">
-                      <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1.5">
-                        <FiAlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
-                        <span>Failures Detected</span>
-                      </p>
-                      <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
-                        {systemMetrics.errorRequests.map(
-                          (err: string, idx: number) => (
-                            <p
-                              key={idx}
-                              className="text-[9px] font-mono text-rose-200/90 leading-tight"
-                            >
-                              • {err}
-                            </p>
-                          ),
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {systemMetrics.warningRequests &&
-                    systemMetrics.warningRequests.length > 0 && (
-                      <div className="flex flex-col gap-1 rounded-xl bg-amber-500/10 border border-amber-500/20 p-2">
-                        <p className="text-[8px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1.5">
-                          <FiAlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
-                          <span>Warnings Detected</span>
-                        </p>
-                        <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
-                          {systemMetrics.warningRequests.map(
-                            (warn: string, idx: number) => (
-                              <p
-                                key={idx}
-                                className="text-[9px] font-mono text-amber-200/90 leading-tight"
-                              >
-                                • {warn}
-                              </p>
-                            ),
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                  {systemMetrics.activeCount > 0 &&
-                    systemMetrics.queuedRequests.length === 0 &&
-                    systemMetrics.errorRequests.length === 0 &&
-                    (!systemMetrics.warningRequests ||
-                      systemMetrics.warningRequests.length === 0) && (
-                      <div className="flex items-center gap-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/15 p-1.5 text-emerald-400">
-                        <FiCheckCircle className="w-3 h-3 text-emerald-400 shrink-0" />
-                        <span className="text-[8px] font-bold uppercase tracking-wider">
-                          Processing requests smoothly
-                        </span>
-                      </div>
-                    )}
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setShowMetrics(true)}
-                  className="absolute top-16 left-4 z-10 rounded-full border border-[var(--border)] bg-[var(--surface)]/90 hover:bg-[var(--surface-muted)] hover:border-[var(--border)]/80 text-[10px] font-bold text-[color:var(--foreground)]/80 transition px-3 py-1.5 flex items-center gap-1.5 shadow-md cursor-pointer pointer-events-auto"
-                  title="Expand Health Overlay"
-                >
-                  <span className="relative flex h-2 w-2">
-                    <span
-                      className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                        systemMetrics.errorRequests.length > 0
-                          ? "bg-rose-400"
-                          : systemMetrics.warningRequests?.length > 0
-                            ? "bg-amber-400"
-                            : "bg-emerald-400"
-                      }`}
-                    ></span>
-                    <span
-                      className={`relative inline-flex rounded-full h-2 w-2 ${
-                        systemMetrics.errorRequests.length > 0
-                          ? "bg-rose-500"
-                          : systemMetrics.warningRequests?.length > 0
-                            ? "bg-amber-500"
-                            : "bg-emerald-500"
-                      }`}
-                    ></span>
-                  </span>
-                  <FiActivity className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                  <span>Health & Load</span>
-                </button>
-              ))}
-
-          </div>
-
-          {/* Floating Warning Message */}
-          {validationWarning && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4 animate-fade-in">
-              <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 backdrop-blur-xl px-4 py-3 text-xs text-amber-300 flex items-center justify-between shadow-lg">
-                <span className="flex items-center gap-1.5">
-                  <FiAlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                  {validationWarning}
-                </span>
-                <button
-                  onClick={() => setValidationWarning(null)}
-                  className="text-amber-400 font-bold ml-2 text-base hover:text-amber-300 cursor-pointer"
-                >
-                  ×
-                </button>
+                      <FiActivity className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                      <span>Health & Load</span>
+                    </button>
+                  ))}
               </div>
-            </div>
-          )}
 
-          {/* Floating Success Message */}
-          {successToast && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4 animate-fade-in">
-              <div className="rounded-xl border border-emerald-500/50 bg-emerald-500/10 backdrop-blur-xl px-4 py-3 text-xs text-emerald-300 flex items-center justify-between shadow-lg">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {successToast}
-                </span>
-                <button
-                  onClick={() => setSuccessToast(null)}
-                  className="text-emerald-400 font-bold ml-2 text-base hover:text-emerald-300 cursor-pointer"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Bottom Docked Playback / Timeline Terminal Panel */}
-          {debugEnabled && (
-            <div
-              style={{ height: `${panelHeight}px` }}
-              className={`flex flex-col border-t border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xl overflow-hidden shrink-0 z-10 w-full transition-all duration-150 ${selectedNode ? "max-md:hidden" : ""}`}
-            >
-              {/* Drag Handle */}
-              <div
-                onMouseDown={() => setIsDraggingTerminal(true)}
-                className="h-1 w-full cursor-row-resize bg-[var(--border)] hover:bg-[var(--accent)]/60 transition-colors shrink-0"
-                title="Drag to resize terminal panel"
-              />
-
-              <div className="p-3 flex-1 flex flex-col gap-2.5 min-h-0 overflow-y-auto scrollbar-thin">
-                <div className="mx-auto flex w-full max-w-7xl flex-col gap-2.5">
-                  <div className="flex items-center justify-between border-b border-[var(--border)]/60 pb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-[11px] font-mono font-bold tracking-tight uppercase text-[color:var(--foreground)]/80">
-                        Simulation Execution Logs & Timeline
-                      </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--surface-muted)] text-[color:var(--foreground)]/60 border border-[var(--border)]">
-                        Frame {simulationFrames.length > 0 ? frameIndex + 1 : 0} / {simulationFrames.length}
-                      </span>
-                    </div>
-
+              {/* Floating Warning Message */}
+              {validationWarning && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4 animate-fade-in">
+                  <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 backdrop-blur-xl px-4 py-3 text-xs text-amber-300 flex items-center justify-between shadow-lg">
+                    <span className="flex items-center gap-1.5">
+                      <FiAlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                      {validationWarning}
+                    </span>
                     <button
-                      type="button"
-                      onClick={() => setDebugEnabled(false)}
-                      className="p-1 rounded-md text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] text-xs cursor-pointer font-bold"
-                      title="Close Logs Drawer"
+                      onClick={() => setValidationWarning(null)}
+                      className="text-amber-400 font-bold ml-2 text-base hover:text-amber-300 cursor-pointer"
                     >
-                      ✕
+                      ×
                     </button>
                   </div>
+                </div>
+              )}
 
-                  <Timeline
-                    frameIndex={frameIndex}
-                    frameGroups={frameGroups}
-                    onSeek={(idx) => {
-                      setIsPlaying(false);
-                      setFrameIndex(idx);
-                    }}
-                    theme={theme}
+              {/* Floating Success Message */}
+              {successToast && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4 animate-fade-in">
+                  <div className="rounded-xl border border-emerald-500/50 bg-emerald-500/10 backdrop-blur-xl px-4 py-3 text-xs text-emerald-300 flex items-center justify-between shadow-lg">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <svg
+                        className="w-4 h-4 text-emerald-400 shrink-0"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      {successToast}
+                    </span>
+                    <button
+                      onClick={() => setSuccessToast(null)}
+                      className="text-emerald-400 font-bold ml-2 text-base hover:text-emerald-300 cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Bottom Docked Playback / Timeline Terminal Panel */}
+              {debugEnabled && (
+                <div
+                  style={{ height: `${panelHeight}px` }}
+                  className={`flex flex-col border-t border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xl overflow-hidden shrink-0 z-10 w-full transition-all duration-150 ${selectedNode ? "max-md:hidden" : ""}`}
+                >
+                  {/* Drag Handle */}
+                  <div
+                    onMouseDown={() => setIsDraggingTerminal(true)}
+                    className="h-1 w-full cursor-row-resize bg-[var(--border)] hover:bg-[var(--accent)]/60 transition-colors shrink-0"
+                    title="Drag to resize terminal panel"
                   />
 
-                  <div className="min-h-0 flex-1">
-                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/40 p-2.5 shadow-inner">
-                      <DebugPanel
-                        currentFrames={accumulatedFrames}
+                  <div className="p-3 flex-1 flex flex-col gap-2.5 min-h-0 overflow-y-auto scrollbar-thin">
+                    <div className="mx-auto flex w-full max-w-7xl flex-col gap-2.5">
+                      <div className="flex items-center justify-between border-b border-[var(--border)]/60 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-[11px] font-mono font-bold tracking-tight uppercase text-[color:var(--foreground)]/80">
+                            Simulation Execution Logs & Timeline
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--surface-muted)] text-[color:var(--foreground)]/60 border border-[var(--border)]">
+                            Frame{" "}
+                            {simulationFrames.length > 0 ? frameIndex + 1 : 0} /{" "}
+                            {simulationFrames.length}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setDebugEnabled(false)}
+                          className="p-1 rounded-md text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] text-xs cursor-pointer font-bold"
+                          title="Close Logs Drawer"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      <Timeline
                         frameIndex={frameIndex}
+                        frameGroups={frameGroups}
+                        onSeek={(idx) => {
+                          setIsPlaying(false);
+                          setFrameIndex(idx);
+                        }}
                         theme={theme}
                       />
+
+                      <div className="min-h-0 flex-1">
+                        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/40 p-2.5 shadow-inner">
+                          <DebugPanel
+                            currentFrames={accumulatedFrames}
+                            frameIndex={frameIndex}
+                            theme={theme}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Docked Right Inspector Panel — bottom sheet on mobile, right-docked on desktop (Section 15) */}
-        {selectedNode && (
-          <aside
-            className="
+            {/* Docked Right Inspector Panel — bottom sheet on mobile, right-docked on desktop (Section 15) */}
+            {selectedNode && (
+              <aside
+                className="
             fixed inset-x-0 bottom-0 max-h-[60vh] rounded-t-2xl border-t border-[var(--border)] z-50
             md:static md:w-80 md:h-full md:max-h-full md:rounded-none md:border-t-0 md:border-l md:border-[var(--border)] md:z-20
             bg-[var(--surface)] shadow-2xl md:shadow-none flex flex-col overflow-y-auto scrollbar-thin shrink-0 transition-all duration-200
           "
-          >
-            <div className="p-3.5 px-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface-muted)]/50">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-[var(--surface)] text-[color:var(--accent)] border border-[var(--border)] shrink-0">
-                  {String(selectedNode.data?.type || selectedNode.type || "node")}
-                </span>
-                <div className="min-w-0">
-                  <h2 className="text-xs font-bold tracking-tight text-[color:var(--foreground)]">
-                    Node Inspector
-                  </h2>
-                  <p className="text-[10px] font-mono text-[color:var(--foreground)]/50 truncate max-w-[140px]">
-                    {String(selectedNode.data?.label || selectedNode.id)}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedNodeId(null);
-                  setNodes((nds) =>
-                    nds.map((n) => ({ ...n, selected: false })),
-                  );
-                }}
-                className="text-xs text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] h-6 w-6 rounded-md hover:bg-[var(--surface)] flex items-center justify-center font-bold transition cursor-pointer shrink-0"
-                title="Close Inspector"
               >
-                ✕
-              </button>
-            </div>
-
-              <div className="p-4 flex-1 space-y-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleStartSimulation();
-                    setFrameIndex(0);
-                    setIsPlaying(true);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] text-[11px] font-bold transition cursor-pointer"
-                  title="Re-run simulation with current changes"
-                >
-                  <FiRotateCcw className="w-3.5 h-3.5" />
-                  <span>Re-run Simulation</span>
-                </button>
-
-                {/* Rename Node section */}
-                <div>
-                  <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
-                    Label / Component Name
-                  </label>
-                  <input
-                    type="text"
-                    value={(selectedNode.data.label as string) || ""}
-                    maxLength={100}
-                    onChange={(e) => {
-                      const nextVal = e.target.value;
+                <div className="p-3.5 px-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface-muted)]/50">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-[var(--surface)] text-[color:var(--accent)] border border-[var(--border)] shrink-0">
+                      {String(
+                        selectedNode.data?.type || selectedNode.type || "node",
+                      )}
+                    </span>
+                    <div className="min-w-0">
+                      <h2 className="text-xs font-bold tracking-tight text-[color:var(--foreground)]">
+                        Node Inspector
+                      </h2>
+                      <p className="text-[10px] font-mono text-[color:var(--foreground)]/50 truncate max-w-[140px]">
+                        {String(selectedNode.data?.label || selectedNode.id)}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedNodeId(null);
                       setNodes((nds) =>
-                        nds.map((n) =>
-                          n.id === selectedNodeId
-                            ? { ...n, data: { ...n.data, label: nextVal } }
-                            : n,
-                        ),
+                        nds.map((n) => ({ ...n, selected: false })),
                       );
                     }}
-                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[color:var(--foreground)] outline-none focus:border-violet-500 transition"
-                  />
+                    className="text-xs text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] h-6 w-6 rounded-md hover:bg-[var(--surface)] flex items-center justify-center font-bold transition cursor-pointer shrink-0"
+                    title="Close Inspector"
+                  >
+                    ✕
+                  </button>
                 </div>
 
-                <div className="h-px bg-[var(--border)]/70" />
+                <div className="p-4 flex-1 space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleStartSimulation();
+                      setFrameIndex(0);
+                      setIsPlaying(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] text-[11px] font-bold transition cursor-pointer"
+                    title="Re-run simulation with current changes"
+                  >
+                    <FiRotateCcw className="w-3.5 h-3.5" />
+                    <span>Re-run Simulation</span>
+                  </button>
 
-                {/* ── Frame Color Picker (only for shape/frame nodes) ── */}
-                {selectedNode.type === "shapeNode" && (
+                  {/* Rename Node section */}
                   <div>
-                    <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                      Frame Color
+                    <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                      Label / Component Name
                     </label>
-                    {/* Preset swatches */}
-                    <div className="grid grid-cols-6 gap-1.5 mb-2">
-                      {FRAME_COLOR_PRESETS.map((preset) => {
-                        const isCurrent =
-                          ((selectedNode.data.color as string) || "#8b5cf6") ===
-                          preset.color;
-                        return (
-                          <button
-                            key={preset.color}
-                            type="button"
-                            title={preset.label}
-                            onClick={() => {
-                              setNodes((nds) =>
-                                nds.map((n) =>
-                                  n.id === selectedNodeId
-                                    ? {
-                                        ...n,
-                                        data: {
-                                          ...n.data,
-                                          color: preset.color,
-                                        },
-                                      }
-                                    : n,
-                                ),
-                              );
-                            }}
-                            className="aspect-square rounded-lg transition cursor-pointer hover:scale-110"
-                            style={{
-                              background: preset.color,
-                              outline: isCurrent ? `3px solid white` : "none",
-                              outlineOffset: isCurrent ? "2px" : "0",
-                              boxShadow: isCurrent
-                                ? `0 0 0 5px ${preset.color}55`
-                                : "none",
-                            }}
-                          />
+                    <input
+                      type="text"
+                      value={(selectedNode.data.label as string) || ""}
+                      maxLength={100}
+                      onChange={(e) => {
+                        const nextVal = e.target.value;
+                        setNodes((nds) =>
+                          nds.map((n) =>
+                            n.id === selectedNodeId
+                              ? { ...n, data: { ...n.data, label: nextVal } }
+                              : n,
+                          ),
                         );
-                      })}
-                    </div>
-                    {/* Custom hex input */}
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-7 h-7 rounded-md border border-[var(--border)] shrink-0 cursor-pointer"
-                        style={{
-                          background:
-                            (selectedNode.data.color as string) || "#8b5cf6",
-                        }}
-                      />
-                      <input
-                        type="color"
-                        value={(selectedNode.data.color as string) || "#8b5cf6"}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setNodes((nds) =>
-                            nds.map((n) =>
-                              n.id === selectedNodeId
-                                ? { ...n, data: { ...n.data, color: val } }
-                                : n,
-                            ),
-                          );
-                        }}
-                        className="flex-1 h-7 rounded-md border border-[var(--border)] bg-[var(--surface)] cursor-pointer text-xs px-1 outline-none"
-                        title="Custom color"
-                      />
-                      <span className="text-[10px] text-[color:var(--foreground)]/40 font-mono">
-                        {(
-                          (selectedNode.data.color as string) || "#8b5cf6"
-                        ).toUpperCase()}
-                      </span>
-                    </div>
+                      }}
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[color:var(--foreground)] outline-none focus:border-violet-500 transition"
+                    />
+                  </div>
 
-                    {/* Text Alignment Picker */}
-                    <div className="mt-3">
+                  <div className="h-px bg-[var(--border)]/70" />
+
+                  {/* ── Frame Color Picker (only for shape/frame nodes) ── */}
+                  {selectedNode.type === "shapeNode" && (
+                    <div>
                       <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Text Alignment
+                        Frame Color
                       </label>
-                      <div className="grid grid-cols-3 gap-1">
-                        {(["left", "center", "right"] as const).map((align) => {
+                      {/* Preset swatches */}
+                      <div className="grid grid-cols-6 gap-1.5 mb-2">
+                        {FRAME_COLOR_PRESETS.map((preset) => {
                           const isCurrent =
-                            ((selectedNode.data.textAlign as string) ||
-                              "center") === align;
+                            ((selectedNode.data.color as string) ||
+                              "#8b5cf6") === preset.color;
                           return (
                             <button
-                              key={align}
+                              key={preset.color}
                               type="button"
+                              title={preset.label}
                               onClick={() => {
                                 setNodes((nds) =>
                                   nds.map((n) =>
                                     n.id === selectedNodeId
                                       ? {
                                           ...n,
-                                          data: { ...n.data, textAlign: align },
+                                          data: {
+                                            ...n.data,
+                                            color: preset.color,
+                                          },
                                         }
                                       : n,
                                   ),
                                 );
                               }}
-                              className="py-1.5 px-2 text-xs rounded-lg border transition cursor-pointer font-semibold flex items-center justify-center"
+                              className="aspect-square rounded-lg transition cursor-pointer hover:scale-110"
                               style={{
-                                borderColor: isCurrent
-                                  ? "rgba(139,92,246,0.6)"
-                                  : "var(--border)",
-                                background: isCurrent
-                                  ? "rgba(139,92,246,0.12)"
-                                  : "var(--surface)",
-                                color: isCurrent
-                                  ? "#a78bfa"
-                                  : "var(--foreground)",
+                                background: preset.color,
+                                outline: isCurrent ? `3px solid white` : "none",
+                                outlineOffset: isCurrent ? "2px" : "0",
+                                boxShadow: isCurrent
+                                  ? `0 0 0 5px ${preset.color}55`
+                                  : "none",
                               }}
-                            >
-                              {align === "left"
-                                ? "Left"
-                                : align === "right"
-                                  ? "Right"
-                                  : "Center"}
-                            </button>
+                            />
                           );
                         })}
                       </div>
-                    </div>
-
-                    {/* Font Size Picker */}
-                    <div className="mt-3.5 pt-3 border-t border-[var(--border)]/60">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55">
-                          Font Size
-                        </label>
-                        <span className="text-[11px] font-mono text-violet-400 font-bold bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20">
-                          {((selectedNode.data.fontSize as number) || (selectedNode.data.shapeId === "text" ? 15 : selectedNode.data.shapeId === "sticky" ? 12 : 11))}px
-                        </span>
-                      </div>
+                      {/* Custom hex input */}
                       <div className="flex items-center gap-2">
+                        <div
+                          className="w-7 h-7 rounded-md border border-[var(--border)] shrink-0 cursor-pointer"
+                          style={{
+                            background:
+                              (selectedNode.data.color as string) || "#8b5cf6",
+                          }}
+                        />
                         <input
-                          type="range"
-                          min={9}
-                          max={36}
-                          step={1}
-                          value={((selectedNode.data.fontSize as number) || (selectedNode.data.shapeId === "text" ? 15 : selectedNode.data.shapeId === "sticky" ? 12 : 11))}
+                          type="color"
+                          value={
+                            (selectedNode.data.color as string) || "#8b5cf6"
+                          }
                           onChange={(e) => {
-                            const val = Number(e.target.value);
+                            const val = e.target.value;
                             setNodes((nds) =>
                               nds.map((n) =>
                                 n.id === selectedNodeId
-                                  ? { ...n, data: { ...n.data, fontSize: val } }
+                                  ? { ...n, data: { ...n.data, color: val } }
                                   : n,
                               ),
                             );
                           }}
-                          className="flex-1 accent-violet-500 cursor-pointer h-1.5 bg-[var(--surface-muted)] rounded-lg"
+                          className="flex-1 h-7 rounded-md border border-[var(--border)] bg-[var(--surface)] cursor-pointer text-xs px-1 outline-none"
+                          title="Custom color"
                         />
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const curr = (selectedNode.data.fontSize as number) || (selectedNode.data.shapeId === "text" ? 15 : selectedNode.data.shapeId === "sticky" ? 12 : 11);
-                              const next = Math.max(8, curr - 2);
-                              setNodes((nds) =>
-                                nds.map((n) =>
-                                  n.id === selectedNodeId
-                                    ? { ...n, data: { ...n.data, fontSize: next } }
-                                    : n,
-                                ),
+                        <span className="text-[10px] text-[color:var(--foreground)]/40 font-mono">
+                          {(
+                            (selectedNode.data.color as string) || "#8b5cf6"
+                          ).toUpperCase()}
+                        </span>
+                      </div>
+
+                      {/* Text Alignment Picker */}
+                      <div className="mt-3">
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                          Text Alignment
+                        </label>
+                        <div className="grid grid-cols-3 gap-1">
+                          {(["left", "center", "right"] as const).map(
+                            (align) => {
+                              const isCurrent =
+                                ((selectedNode.data.textAlign as string) ||
+                                  "center") === align;
+                              return (
+                                <button
+                                  key={align}
+                                  type="button"
+                                  onClick={() => {
+                                    setNodes((nds) =>
+                                      nds.map((n) =>
+                                        n.id === selectedNodeId
+                                          ? {
+                                              ...n,
+                                              data: {
+                                                ...n.data,
+                                                textAlign: align,
+                                              },
+                                            }
+                                          : n,
+                                      ),
+                                    );
+                                  }}
+                                  className="py-1.5 px-2 text-xs rounded-lg border transition cursor-pointer font-semibold flex items-center justify-center"
+                                  style={{
+                                    borderColor: isCurrent
+                                      ? "rgba(139,92,246,0.6)"
+                                      : "var(--border)",
+                                    background: isCurrent
+                                      ? "rgba(139,92,246,0.12)"
+                                      : "var(--surface)",
+                                    color: isCurrent
+                                      ? "#a78bfa"
+                                      : "var(--foreground)",
+                                  }}
+                                >
+                                  {align === "left"
+                                    ? "Left"
+                                    : align === "right"
+                                      ? "Right"
+                                      : "Center"}
+                                </button>
                               );
-                            }}
-                            className="w-6 h-6 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs font-bold hover:bg-[var(--surface-muted)] flex items-center justify-center transition cursor-pointer"
-                            title="Decrease font size"
-                          >
-                            -
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const curr = (selectedNode.data.fontSize as number) || (selectedNode.data.shapeId === "text" ? 15 : selectedNode.data.shapeId === "sticky" ? 12 : 11);
-                              const next = Math.min(48, curr + 2);
-                              setNodes((nds) =>
-                                nds.map((n) =>
-                                  n.id === selectedNodeId
-                                    ? { ...n, data: { ...n.data, fontSize: next } }
-                                    : n,
-                                ),
-                              );
-                            }}
-                            className="w-6 h-6 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs font-bold hover:bg-[var(--surface-muted)] flex items-center justify-center transition cursor-pointer"
-                            title="Increase font size"
-                          >
-                            +
-                          </button>
+                            },
+                          )}
                         </div>
                       </div>
-                      {/* Quick font presets */}
-                      <div className="flex items-center gap-1.5 mt-2">
-                        {[10, 12, 14, 16, 20, 24].map((sz) => {
-                          const isCur = ((selectedNode.data.fontSize as number) || (selectedNode.data.shapeId === "text" ? 15 : selectedNode.data.shapeId === "sticky" ? 12 : 11)) === sz;
-                          return (
+
+                      {/* Font Size Picker */}
+                      <div className="mt-3.5 pt-3 border-t border-[var(--border)]/60">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55">
+                            Font Size
+                          </label>
+                          <span className="text-[11px] font-mono text-violet-400 font-bold bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20">
+                            {(selectedNode.data.fontSize as number) ||
+                              (selectedNode.data.shapeId === "text"
+                                ? 15
+                                : selectedNode.data.shapeId === "sticky"
+                                  ? 12
+                                  : 11)}
+                            px
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min={9}
+                            max={36}
+                            step={1}
+                            value={
+                              (selectedNode.data.fontSize as number) ||
+                              (selectedNode.data.shapeId === "text"
+                                ? 15
+                                : selectedNode.data.shapeId === "sticky"
+                                  ? 12
+                                  : 11)
+                            }
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              setNodes((nds) =>
+                                nds.map((n) =>
+                                  n.id === selectedNodeId
+                                    ? {
+                                        ...n,
+                                        data: { ...n.data, fontSize: val },
+                                      }
+                                    : n,
+                                ),
+                              );
+                            }}
+                            className="flex-1 accent-violet-500 cursor-pointer h-1.5 bg-[var(--surface-muted)] rounded-lg"
+                          />
+                          <div className="flex items-center gap-1">
                             <button
-                              key={sz}
                               type="button"
                               onClick={() => {
+                                const curr =
+                                  (selectedNode.data.fontSize as number) ||
+                                  (selectedNode.data.shapeId === "text"
+                                    ? 15
+                                    : selectedNode.data.shapeId === "sticky"
+                                      ? 12
+                                      : 11);
+                                const next = Math.max(8, curr - 2);
                                 setNodes((nds) =>
                                   nds.map((n) =>
                                     n.id === selectedNodeId
-                                      ? { ...n, data: { ...n.data, fontSize: sz } }
+                                      ? {
+                                          ...n,
+                                          data: { ...n.data, fontSize: next },
+                                        }
                                       : n,
                                   ),
                                 );
                               }}
-                              className={`px-2 py-0.5 rounded-md text-[10px] font-mono transition cursor-pointer border ${
-                                isCur
-                                  ? "border-violet-500/70 bg-violet-500/20 text-violet-400 font-bold shadow-sm"
-                                  : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
-                              }`}
+                              className="w-6 h-6 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs font-bold hover:bg-[var(--surface-muted)] flex items-center justify-center transition cursor-pointer"
+                              title="Decrease font size"
                             >
-                              {sz}px
+                              -
                             </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Client specific configuration */}
-                {selectedNode.data.type === "client" && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Client Type
-                      </label>
-                      <CustomDropdown
-                        type={(selectedNode.data as any).type}
-                        value={
-                          ((selectedNode.data as any).flavor ||
-                            getDefaultFlavor(
-                              (selectedNode.data as any).type,
-                            )) as string
-                        }
-                        onChange={(flavorId) => {
-                          setNodes((nds) =>
-                            nds.map((n) =>
-                              n.id === selectedNodeId
-                                ? {
-                                    ...n,
-                                    data: { ...n.data, flavor: flavorId },
-                                  }
-                                : n,
-                            ),
-                          );
-                        }}
-                      />
-                    </div>
-
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    <p className="text-xs font-semibold text-violet-400 font-mono">
-                      Client Settings
-                    </p>
-
-                    <label className="flex items-center gap-2 text-xs text-[color:var(--foreground)]/80 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={
-                          nodeConfigs[selectedNode.id]?.valetKeyFlow ?? false
-                        }
-                        onChange={(e) =>
-                          updateNodeConfig(selectedNode.id, {
-                            valetKeyFlow: e.target.checked,
-                          })
-                        }
-                        className="accent-violet-500 cursor-pointer"
-                      />
-                      <span>Valet Key Flow</span>
-                    </label>
-
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    <div>
-                      {(() => {
-                        const requests = nodeConfigs[selectedNode.id]
-                          ?.requests || [
-                          {
-                            endpoint:
-                              nodeConfigs[selectedNode.id]?.endpoint ||
-                              "/api/v1/posts",
-                            method:
-                              nodeConfigs[selectedNode.id]?.method || "GET",
-                            lookupKey:
-                              nodeConfigs[selectedNode.id]?.lookupKey ||
-                              "rohan",
-                            fileName:
-                              nodeConfigs[selectedNode.id]?.fileName ||
-                              "file.png",
-                            isThereFileToUpload:
-                              nodeConfigs[selectedNode.id]
-                                ?.isThereFileToUpload !== false,
-                            targetBucket:
-                              nodeConfigs[selectedNode.id]?.targetBucket ||
-                              "media-uploads",
-                          },
-                        ];
-                        const activeIdx = Math.max(
-                          0,
-                          Math.min(activeReqIdx, requests.length - 1),
-                        );
-                        const activeReq = requests[activeIdx];
-
-                        return (
-                          <div className="space-y-3">
-                            {/* Horizontal Tabs */}
-                            <div className="flex flex-wrap gap-1 border-b border-[var(--border)]/50 pb-1 items-center">
-                              {requests.map((_: any, idx: number) => (
-                                <button
-                                  key={idx}
-                                  type="button"
-                                  onClick={() => setActiveReqIdx(idx)}
-                                  className={`text-[10px] px-2.5 py-1 rounded-t-md font-medium transition cursor-pointer border-t border-x ${
-                                    idx === activeIdx
-                                      ? "bg-[var(--surface-muted)] border-[var(--border)] text-violet-400 font-bold -mb-[5px] pb-[5px]"
-                                      : "border-transparent text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]/50"
-                                  }`}
-                                >
-                                  Req #{idx + 1}
-                                </button>
-                              ))}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const curr =
+                                  (selectedNode.data.fontSize as number) ||
+                                  (selectedNode.data.shapeId === "text"
+                                    ? 15
+                                    : selectedNode.data.shapeId === "sticky"
+                                      ? 12
+                                      : 11);
+                                const next = Math.min(48, curr + 2);
+                                setNodes((nds) =>
+                                  nds.map((n) =>
+                                    n.id === selectedNodeId
+                                      ? {
+                                          ...n,
+                                          data: { ...n.data, fontSize: next },
+                                        }
+                                      : n,
+                                  ),
+                                );
+                              }}
+                              className="w-6 h-6 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs font-bold hover:bg-[var(--surface-muted)] flex items-center justify-center transition cursor-pointer"
+                              title="Increase font size"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                        {/* Quick font presets */}
+                        <div className="flex items-center gap-1.5 mt-2">
+                          {[10, 12, 14, 16, 20, 24].map((sz) => {
+                            const isCur =
+                              ((selectedNode.data.fontSize as number) ||
+                                (selectedNode.data.shapeId === "text"
+                                  ? 15
+                                  : selectedNode.data.shapeId === "sticky"
+                                    ? 12
+                                    : 11)) === sz;
+                            return (
                               <button
+                                key={sz}
                                 type="button"
                                 onClick={() => {
-                                  const nextReqs = [
-                                    ...requests,
-                                    {
-                                      endpoint: "/api/v1/posts",
-                                      method: "GET",
-                                      lookupKey: `key-${requests.length + 1}`,
-                                      fileName: `file-${requests.length + 1}.png`,
-                                      isThereFileToUpload: true,
-                                      targetBucket: "media-uploads",
-                                    },
-                                  ];
-                                  updateNodeConfig(selectedNode.id, {
-                                    requests: nextReqs,
-                                  });
-                                  setActiveReqIdx(nextReqs.length - 1);
+                                  setNodes((nds) =>
+                                    nds.map((n) =>
+                                      n.id === selectedNodeId
+                                        ? {
+                                            ...n,
+                                            data: { ...n.data, fontSize: sz },
+                                          }
+                                        : n,
+                                    ),
+                                  );
                                 }}
-                                className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer ml-auto"
+                                className={`px-2 py-0.5 rounded-md text-[10px] font-mono transition cursor-pointer border ${
+                                  isCur
+                                    ? "border-violet-500/70 bg-violet-500/20 text-violet-400 font-bold shadow-sm"
+                                    : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+                                }`}
                               >
-                                + Add
+                                {sz}px
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Client specific configuration */}
+                  {selectedNode.data.type === "client" && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                          Client Type
+                        </label>
+                        <CustomDropdown
+                          type={(selectedNode.data as any).type}
+                          value={
+                            ((selectedNode.data as any).flavor ||
+                              getDefaultFlavor(
+                                (selectedNode.data as any).type,
+                              )) as string
+                          }
+                          onChange={(flavorId) => {
+                            setNodes((nds) =>
+                              nds.map((n) =>
+                                n.id === selectedNodeId
+                                  ? {
+                                      ...n,
+                                      data: { ...n.data, flavor: flavorId },
+                                    }
+                                  : n,
+                              ),
+                            );
+                          }}
+                        />
+                      </div>
+
+                      <div className="h-px bg-[var(--border)]/70" />
+
+                      <p className="text-xs font-semibold text-violet-400 font-mono">
+                        Client Settings
+                      </p>
+
+                      <label className="flex items-center gap-2 text-xs text-[color:var(--foreground)]/80 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={
+                            nodeConfigs[selectedNode.id]?.valetKeyFlow ?? false
+                          }
+                          onChange={(e) =>
+                            updateNodeConfig(selectedNode.id, {
+                              valetKeyFlow: e.target.checked,
+                            })
+                          }
+                          className="accent-violet-500 cursor-pointer"
+                        />
+                        <span>Valet Key Flow</span>
+                      </label>
+
+                      <div className="h-px bg-[var(--border)]/70" />
+
+                      <div>
+                        {(() => {
+                          const requests = nodeConfigs[selectedNode.id]
+                            ?.requests || [
+                            {
+                              endpoint:
+                                nodeConfigs[selectedNode.id]?.endpoint ||
+                                "/api/v1/posts",
+                              method:
+                                nodeConfigs[selectedNode.id]?.method || "GET",
+                              lookupKey:
+                                nodeConfigs[selectedNode.id]?.lookupKey ||
+                                "rohan",
+                              fileName:
+                                nodeConfigs[selectedNode.id]?.fileName ||
+                                "file.png",
+                              isThereFileToUpload:
+                                nodeConfigs[selectedNode.id]
+                                  ?.isThereFileToUpload !== false,
+                              targetBucket:
+                                nodeConfigs[selectedNode.id]?.targetBucket ||
+                                "media-uploads",
+                            },
+                          ];
+                          const activeIdx = Math.max(
+                            0,
+                            Math.min(activeReqIdx, requests.length - 1),
+                          );
+                          const activeReq = requests[activeIdx];
+
+                          return (
+                            <div className="space-y-3">
+                              {/* Horizontal Tabs */}
+                              <div className="flex flex-wrap gap-1 border-b border-[var(--border)]/50 pb-1 items-center">
+                                {requests.map((_: any, idx: number) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => setActiveReqIdx(idx)}
+                                    className={`text-[10px] px-2.5 py-1 rounded-t-md font-medium transition cursor-pointer border-t border-x ${
+                                      idx === activeIdx
+                                        ? "bg-[var(--surface-muted)] border-[var(--border)] text-violet-400 font-bold -mb-[5px] pb-[5px]"
+                                        : "border-transparent text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]/50"
+                                    }`}
+                                  >
+                                    Req #{idx + 1}
+                                  </button>
+                                ))}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const nextReqs = [
+                                      ...requests,
+                                      {
+                                        endpoint: "/api/v1/posts",
+                                        method: "GET",
+                                        lookupKey: `key-${requests.length + 1}`,
+                                        fileName: `file-${requests.length + 1}.png`,
+                                        isThereFileToUpload: true,
+                                        targetBucket: "media-uploads",
+                                      },
+                                    ];
+                                    updateNodeConfig(selectedNode.id, {
+                                      requests: nextReqs,
+                                    });
+                                    setActiveReqIdx(nextReqs.length - 1);
+                                  }}
+                                  className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer ml-auto"
+                                >
+                                  + Add
+                                </button>
+                              </div>
+
+                              {activeReq ? (
+                                <div className="border border-[var(--border)] rounded-lg p-2 bg-[var(--surface)]/50 space-y-1.5 relative group/req mt-2">
+                                  {requests.length > 1 && (
+                                    <button
+                                      onClick={() => {
+                                        const nextRequests = requests.filter(
+                                          (_: any, i: number) =>
+                                            i !== activeIdx,
+                                        );
+                                        updateNodeConfig(selectedNode.id, {
+                                          requests: nextRequests,
+                                        });
+                                        setActiveReqIdx(
+                                          Math.max(0, activeIdx - 1),
+                                        );
+                                      }}
+                                      className="absolute top-1 right-2 text-rose-500 hover:text-rose-600 text-xs font-bold cursor-pointer"
+                                      title="Delete Request"
+                                    >
+                                      Remove ×
+                                    </button>
+                                  )}
+
+                                  <p className="text-[9px] font-bold text-violet-400">
+                                    Editing Request #{activeIdx + 1}
+                                  </p>
+
+                                  {!nodeConfigs[selectedNode.id]
+                                    ?.valetKeyFlow ? (
+                                    <div className="space-y-1.5">
+                                      <div className="flex gap-1.5">
+                                        <div className="w-[70px] shrink-0">
+                                          <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                            Method
+                                          </label>
+                                          <select
+                                            value={activeReq.method || "GET"}
+                                            onChange={(e) => {
+                                              const currentRequests = [
+                                                ...requests,
+                                              ];
+                                              currentRequests[activeIdx] = {
+                                                ...currentRequests[activeIdx],
+                                                method: e.target.value,
+                                              };
+                                              updateNodeConfig(
+                                                selectedNode.id,
+                                                {
+                                                  requests: currentRequests,
+                                                },
+                                              );
+                                            }}
+                                            className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5 text-xs font-mono outline-none focus:border-violet-500 cursor-pointer text-[color:var(--foreground)]"
+                                          >
+                                            <option value="GET">GET</option>
+                                            <option value="POST">POST</option>
+                                            <option value="PUT">PUT</option>
+                                            <option value="DELETE">
+                                              DELETE
+                                            </option>
+                                            <option value="PATCH">PATCH</option>
+                                          </select>
+                                        </div>
+                                        <div className="flex-1">
+                                          <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                            Path
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={activeReq.endpoint}
+                                            onChange={(e) => {
+                                              const currentRequests = [
+                                                ...requests,
+                                              ];
+                                              currentRequests[activeIdx] = {
+                                                ...currentRequests[activeIdx],
+                                                endpoint: e.target.value,
+                                              };
+                                              updateNodeConfig(
+                                                selectedNode.id,
+                                                {
+                                                  requests: currentRequests,
+                                                },
+                                              );
+                                            }}
+                                            className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
+                                          />
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                          Key
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={activeReq.lookupKey}
+                                          onChange={(e) => {
+                                            const currentRequests = [
+                                              ...requests,
+                                            ];
+                                            currentRequests[activeIdx] = {
+                                              ...currentRequests[activeIdx],
+                                              lookupKey: e.target.value,
+                                            };
+                                            updateNodeConfig(selectedNode.id, {
+                                              requests: currentRequests,
+                                            });
+                                          }}
+                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                          Request Body (JSON)
+                                        </label>
+                                        <textarea
+                                          value={activeReq.body || ""}
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Tab") {
+                                              e.preventDefault();
+                                              const textarea = e.currentTarget;
+                                              const start =
+                                                textarea.selectionStart;
+                                              const end = textarea.selectionEnd;
+                                              const val = textarea.value;
+                                              const newVal =
+                                                val.substring(0, start) +
+                                                "  " +
+                                                val.substring(end);
+
+                                              // Update value in requests
+                                              const currentRequests = [
+                                                ...requests,
+                                              ];
+                                              currentRequests[activeIdx] = {
+                                                ...currentRequests[activeIdx],
+                                                body: newVal,
+                                              };
+                                              updateNodeConfig(
+                                                selectedNode.id,
+                                                {
+                                                  requests: currentRequests,
+                                                },
+                                              );
+
+                                              // Restore selection start/end safely on local ref
+                                              setTimeout(() => {
+                                                textarea.selectionStart =
+                                                  textarea.selectionEnd =
+                                                    start + 2;
+                                              }, 0);
+                                            }
+                                          }}
+                                          onChange={(e) => {
+                                            const currentRequests = [
+                                              ...requests,
+                                            ];
+                                            currentRequests[activeIdx] = {
+                                              ...currentRequests[activeIdx],
+                                              body: e.target.value,
+                                            };
+                                            updateNodeConfig(selectedNode.id, {
+                                              requests: currentRequests,
+                                            });
+                                          }}
+                                          rows={4}
+                                          placeholder='{\n  "topic": "order.created",\n  "amount": 250\n}'
+                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)] resize-none"
+                                        />
+                                        {(() => {
+                                          if (
+                                            activeReq.body &&
+                                            activeReq.body.trim().length > 0
+                                          ) {
+                                            try {
+                                              JSON.parse(activeReq.body);
+                                            } catch (err: any) {
+                                              return (
+                                                <span className="text-[9px] text-rose-500 mt-1 flex items-center gap-1 leading-normal font-mono">
+                                                  <FiAlertCircle className="w-2.5 h-2.5 shrink-0" />
+                                                  <span>{err.message}</span>
+                                                </span>
+                                              );
+                                            }
+                                          }
+                                          return null;
+                                        })()}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-1.5">
+                                      <div className="grid grid-cols-2 gap-1.5">
+                                        <div>
+                                          <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                            Upload File
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={activeReq.fileName}
+                                            onChange={(e) => {
+                                              const currentRequests = [
+                                                ...requests,
+                                              ];
+                                              currentRequests[activeIdx] = {
+                                                ...currentRequests[activeIdx],
+                                                fileName: e.target.value,
+                                              };
+                                              updateNodeConfig(
+                                                selectedNode.id,
+                                                {
+                                                  requests: currentRequests,
+                                                },
+                                              );
+                                            }}
+                                            className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                            Target Bucket
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={
+                                              activeReq.targetBucket ||
+                                              "media-uploads"
+                                            }
+                                            onChange={(e) => {
+                                              const currentRequests = [
+                                                ...requests,
+                                              ];
+                                              currentRequests[activeIdx] = {
+                                                ...currentRequests[activeIdx],
+                                                targetBucket: e.target.value,
+                                              };
+                                              updateNodeConfig(
+                                                selectedNode.id,
+                                                {
+                                                  requests: currentRequests,
+                                                },
+                                              );
+                                            }}
+                                            className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
+                                            placeholder="media-uploads"
+                                          />
+                                        </div>
+                                      </div>
+                                      <label className="flex items-center gap-1 text-[9px] text-[color:var(--foreground)]/80 cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          checked={
+                                            activeReq.isThereFileToUpload
+                                          }
+                                          onChange={(e) => {
+                                            const currentRequests = [
+                                              ...requests,
+                                            ];
+                                            currentRequests[activeIdx] = {
+                                              ...currentRequests[activeIdx],
+                                              isThereFileToUpload:
+                                                e.target.checked,
+                                            };
+                                            updateNodeConfig(selectedNode.id, {
+                                              requests: currentRequests,
+                                            });
+                                          }}
+                                          className="accent-violet-500"
+                                        />
+                                        <span>Attach File Payload</span>
+                                      </label>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="text-[10px] text-[color:var(--foreground)]/50 italic py-4 text-center">
+                                  No requests configured. Click "+ Add" to add
+                                  one.
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Load Balancer Configuration */}
+                  {selectedNode.data.type === "load-balancer" && (
+                    <div className="space-y-4">
+                      <p className="text-xs font-semibold text-blue-400 font-mono">
+                        Load Balancer Settings
+                      </p>
+
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                          Provider / Technology
+                        </label>
+                        <CustomDropdown
+                          type={(selectedNode.data as any).type}
+                          value={
+                            ((selectedNode.data as any).flavor ||
+                              getDefaultFlavor(
+                                (selectedNode.data as any).type,
+                              )) as string
+                          }
+                          onChange={(flavorId) => {
+                            setNodes((nds) =>
+                              nds.map((n) =>
+                                n.id === selectedNodeId
+                                  ? {
+                                      ...n,
+                                      data: { ...n.data, flavor: flavorId },
+                                    }
+                                  : n,
+                              ),
+                            );
+                          }}
+                        />
+                      </div>
+
+                      <div className="h-px bg-[var(--border)]/70" />
+
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                          Balancing Strategy
+                        </label>
+                        <select
+                          value={
+                            nodeConfigs[selectedNode.id]?.strategy ??
+                            "ROUND_ROBIN"
+                          }
+                          onChange={(e) =>
+                            updateNodeConfig(selectedNode.id, {
+                              strategy: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500 cursor-pointer text-[color:var(--foreground)]"
+                        >
+                          <option value="ROUND_ROBIN">Round Robin</option>
+                          <option value="RANDOM">Random Dispatch</option>
+                          <option value="IP_HASH">IP Address Hash</option>
+                          <option value="LEAST_CONNECTIONS">
+                            Least Connections
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* API Gateway Configuration */}
+                  {selectedNode.data.type === "api-gateway" && (
+                    <div className="space-y-4">
+                      <p className="text-xs font-semibold text-fuchsia-400 font-mono">
+                        Gateway Settings
+                      </p>
+
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                          Provider / Technology
+                        </label>
+                        <CustomDropdown
+                          type={(selectedNode.data as any).type}
+                          value={
+                            ((selectedNode.data as any).flavor ||
+                              getDefaultFlavor(
+                                (selectedNode.data as any).type,
+                              )) as string
+                          }
+                          onChange={(flavorId) => {
+                            setNodes((nds) =>
+                              nds.map((n) =>
+                                n.id === selectedNodeId
+                                  ? {
+                                      ...n,
+                                      data: { ...n.data, flavor: flavorId },
+                                    }
+                                  : n,
+                              ),
+                            );
+                          }}
+                        />
+                      </div>
+
+                      <div className="h-px bg-[var(--border)]/70" />
+
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                          Load Balance Strategy
+                        </label>
+                        <select
+                          value={
+                            nodeConfigs[selectedNode.id]?.strategy ??
+                            "ROUND_ROBIN"
+                          }
+                          onChange={(e) =>
+                            updateNodeConfig(selectedNode.id, {
+                              strategy: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500 cursor-pointer"
+                        >
+                          <option value="ROUND_ROBIN">Round Robin</option>
+                          <option value="RANDOM">Random Dispatch</option>
+                          <option value="IP_HASH">IP Address Hash</option>
+                          <option value="LEAST_CONNECTIONS">
+                            Least Connections
+                          </option>
+                        </select>
+                      </div>
+
+                      <div className="h-px bg-[var(--border)]/70" />
+
+                      {/* Route Mappings */}
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                          Route Rules
+                        </label>
+                        <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1 scrollbar-thin">
+                          {Object.entries(
+                            nodeConfigs[selectedNode.id]?.routes || {},
+                          ).map(([path, svc]: [string, any], idx) => (
+                            <div key={idx} className="flex gap-1 items-center">
+                              <input
+                                type="text"
+                                value={path}
+                                placeholder="Path prefix"
+                                onChange={(e) => {
+                                  const routes = (nodeConfigs[selectedNode.id]
+                                    ?.routes || {}) as Record<string, string>;
+                                  const nextRoutes: Record<string, string> = {};
+                                  for (const [k, v] of Object.entries(routes)) {
+                                    if (k === path) {
+                                      nextRoutes[e.target.value] =
+                                        svc as string;
+                                    } else {
+                                      nextRoutes[k] = v;
+                                    }
+                                  }
+                                  updateNodeConfig(selectedNode.id, {
+                                    routes: nextRoutes,
+                                  });
+                                }}
+                                className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono"
+                              />
+                              <input
+                                type="text"
+                                value={svc}
+                                placeholder="Service name"
+                                onChange={(e) => {
+                                  const nextRoutes = {
+                                    ...(nodeConfigs[selectedNode.id]?.routes ||
+                                      {}),
+                                  };
+                                  nextRoutes[path] = e.target.value;
+                                  updateNodeConfig(selectedNode.id, {
+                                    routes: nextRoutes,
+                                  });
+                                }}
+                                className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono"
+                              />
+                              <button
+                                onClick={() => {
+                                  const nextRoutes = {
+                                    ...(nodeConfigs[selectedNode.id]?.routes ||
+                                      {}),
+                                  };
+                                  delete nextRoutes[path];
+                                  updateNodeConfig(selectedNode.id, {
+                                    routes: nextRoutes,
+                                  });
+                                }}
+                                className="text-rose-500 hover:text-rose-600 text-xs px-1 cursor-pointer font-bold"
+                              >
+                                ×
                               </button>
                             </div>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => {
+                            const routes =
+                              nodeConfigs[selectedNode.id]?.routes || {};
+                            const nextRoutes = {
+                              ...routes,
+                              [`/api/v1/route-${Object.keys(routes).length + 1}`]: `NEW_SERVICE`,
+                            };
+                            updateNodeConfig(selectedNode.id, {
+                              routes: nextRoutes,
+                            });
+                          }}
+                          className="w-full mt-2 rounded-lg border border-[var(--border)] py-1 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
+                        >
+                          + Add Route Rule
+                        </button>
+                      </div>
 
-                            {activeReq ? (
-                              <div className="border border-[var(--border)] rounded-lg p-2 bg-[var(--surface)]/50 space-y-1.5 relative group/req mt-2">
-                                {requests.length > 1 && (
-                                  <button
-                                    onClick={() => {
-                                      const nextRequests = requests.filter(
-                                        (_: any, i: number) => i !== activeIdx,
-                                      );
-                                      updateNodeConfig(selectedNode.id, {
-                                        requests: nextRequests,
-                                      });
-                                      setActiveReqIdx(
-                                        Math.max(0, activeIdx - 1),
-                                      );
-                                    }}
-                                    className="absolute top-1 right-2 text-rose-500 hover:text-rose-600 text-xs font-bold cursor-pointer"
-                                    title="Delete Request"
+                      <div className="h-px bg-[var(--border)]/70" />
+
+                      {/* Service Pools Mapping (supports Servers and Load Balancers) */}
+                      {(() => {
+                        const targetNodes = nodes.filter(
+                          (n) =>
+                            n.data.type === "server" ||
+                            n.data.type === "load-balancer",
+                        );
+
+                        if (targetNodes.length === 0) {
+                          return (
+                            <div>
+                              <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                                Service Pools Mapping
+                              </label>
+                              <p className="text-[10px] text-[color:var(--foreground)]/50 italic">
+                                No servers or load balancers on the canvas. Add
+                                a Server or Load Balancer first.
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        const routes =
+                          nodeConfigs[selectedNode.id]?.routes || {};
+                        const routeTargets = Array.from(
+                          new Set(Object.values(routes)),
+                        );
+
+                        return (
+                          <div className="space-y-2">
+                            <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block">
+                              Service Pools Mapping
+                            </label>
+                            <div className="space-y-2 border border-[var(--border)] rounded-lg p-2 bg-[var(--surface)]/50">
+                              {targetNodes.map((targetNode) => {
+                                const targetId = targetNode.id;
+                                const targetLabel = String(
+                                  targetNode.data.label || targetId,
+                                );
+                                const targetType = targetNode.data
+                                  .type as string;
+                                const serviceMapping =
+                                  nodeConfigs[selectedNode.id]
+                                    ?.serviceMapping || {};
+
+                                const isConnectedCorrectly = edges.some(
+                                  (e) =>
+                                    e.source === selectedNode.id &&
+                                    e.target === targetId,
+                                );
+                                const isConnectedBackwards = edges.some(
+                                  (e) =>
+                                    e.source === targetId &&
+                                    e.target === selectedNode.id,
+                                );
+                                const isConnected =
+                                  isConnectedCorrectly || isConnectedBackwards;
+
+                                // Include targetId in dropdown choices alongside route target strings
+                                const dropdownChoices = Array.from(
+                                  new Set([...routeTargets, targetId]),
+                                );
+
+                                let currentVal = serviceMapping[targetId];
+                                if (!currentVal) {
+                                  if (
+                                    routeTargets.map(String).includes(targetId)
+                                  ) {
+                                    currentVal = targetId;
+                                  } else {
+                                    const labelLower =
+                                      targetLabel.toLowerCase();
+                                    if (labelLower.includes("user")) {
+                                      currentVal = "USER_SERVICE";
+                                    } else if (labelLower.includes("post")) {
+                                      currentVal = "POST_SERVICE";
+                                    } else {
+                                      currentVal =
+                                        dropdownChoices[0] ||
+                                        targetId ||
+                                        "DEFAULT_SERVICE";
+                                    }
+                                  }
+                                }
+
+                                return (
+                                  <div
+                                    key={targetId}
+                                    className="flex flex-col gap-1 border-b border-[var(--border)]/35 pb-2 last:border-b-0 last:pb-0"
                                   >
-                                    Remove ×
-                                  </button>
-                                )}
-
-                                <p className="text-[9px] font-bold text-violet-400">
-                                  Editing Request #{activeIdx + 1}
-                                </p>
-
-                                {!nodeConfigs[selectedNode.id]?.valetKeyFlow ? (
-                                  <div className="space-y-1.5">
-                                    <div className="flex gap-1.5">
-                                      <div className="w-[70px] shrink-0">
-                                        <label className="text-[8px] text-[color:var(--foreground)]/50 block">
-                                          Method
-                                        </label>
-                                        <select
-                                          value={activeReq.method || "GET"}
-                                          onChange={(e) => {
-                                            const currentRequests = [
-                                              ...requests,
-                                            ];
-                                            currentRequests[activeIdx] = {
-                                              ...currentRequests[activeIdx],
-                                              method: e.target.value,
-                                            };
-                                            updateNodeConfig(selectedNode.id, {
-                                              requests: currentRequests,
-                                            });
-                                          }}
-                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5 text-xs font-mono outline-none focus:border-violet-500 cursor-pointer text-[color:var(--foreground)]"
-                                        >
-                                          <option value="GET">GET</option>
-                                          <option value="POST">POST</option>
-                                          <option value="PUT">PUT</option>
-                                          <option value="DELETE">DELETE</option>
-                                          <option value="PATCH">PATCH</option>
-                                        </select>
-                                      </div>
-                                      <div className="flex-1">
-                                        <label className="text-[8px] text-[color:var(--foreground)]/50 block">
-                                          Path
-                                        </label>
-                                        <input
-                                          type="text"
-                                          value={activeReq.endpoint}
-                                          onChange={(e) => {
-                                            const currentRequests = [
-                                              ...requests,
-                                            ];
-                                            currentRequests[activeIdx] = {
-                                              ...currentRequests[activeIdx],
-                                              endpoint: e.target.value,
-                                            };
-                                            updateNodeConfig(selectedNode.id, {
-                                              requests: currentRequests,
-                                            });
-                                          }}
-                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
+                                    <div className="flex items-center justify-between gap-1">
+                                      <span className="text-[10px] font-medium text-[color:var(--foreground)]/70 truncate flex items-center gap-1.5">
+                                        <ComponentIcon
+                                          type={targetType}
+                                          className="w-3.5 h-3.5"
                                         />
-                                      </div>
+                                        {targetLabel}
+                                      </span>
+                                      {!isConnected && (
+                                        <span className="text-[8px] text-amber-500 font-semibold bg-amber-500/10 px-1 rounded flex items-center gap-0.5">
+                                          <FiAlertTriangle className="w-2.5 h-2.5" />
+                                          <span>Unlinked</span>
+                                        </span>
+                                      )}
+                                      {isConnectedBackwards && (
+                                        <span className="text-[8px] text-rose-500 font-semibold bg-rose-500/10 px-1 rounded animate-pulse flex items-center gap-0.5">
+                                          <FiAlertCircle className="w-2.5 h-2.5" />
+                                          <span>Reverse</span>
+                                        </span>
+                                      )}
+                                      {isConnectedCorrectly && (
+                                        <span className="text-[8px] text-emerald-400 font-semibold bg-emerald-500/10 px-1 rounded">
+                                          ✓ Linked
+                                        </span>
+                                      )}
                                     </div>
-                                    <div>
-                                      <label className="text-[8px] text-[color:var(--foreground)]/50 block">
-                                        Key
-                                      </label>
-                                      <input
-                                        type="text"
-                                        value={activeReq.lookupKey}
-                                        onChange={(e) => {
-                                          const currentRequests = [...requests];
-                                          currentRequests[activeIdx] = {
-                                            ...currentRequests[activeIdx],
-                                            lookupKey: e.target.value,
-                                          };
-                                          updateNodeConfig(selectedNode.id, {
-                                            requests: currentRequests,
-                                          });
-                                        }}
-                                        className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="text-[8px] text-[color:var(--foreground)]/50 block">
-                                        Request Body (JSON)
-                                      </label>
-                                      <textarea
-                                        value={activeReq.body || ""}
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Tab") {
-                                            e.preventDefault();
-                                            const textarea = e.currentTarget;
-                                            const start =
-                                              textarea.selectionStart;
-                                            const end = textarea.selectionEnd;
-                                            const val = textarea.value;
-                                            const newVal =
-                                              val.substring(0, start) +
-                                              "  " +
-                                              val.substring(end);
-
-                                            // Update value in requests
-                                            const currentRequests = [
-                                              ...requests,
-                                            ];
-                                            currentRequests[activeIdx] = {
-                                              ...currentRequests[activeIdx],
-                                              body: newVal,
-                                            };
-                                            updateNodeConfig(selectedNode.id, {
-                                              requests: currentRequests,
-                                            });
-
-                                            // Restore selection start/end safely on local ref
-                                            setTimeout(() => {
-                                              textarea.selectionStart =
-                                                textarea.selectionEnd =
-                                                  start + 2;
-                                            }, 0);
-                                          }
-                                        }}
-                                        onChange={(e) => {
-                                          const currentRequests = [...requests];
-                                          currentRequests[activeIdx] = {
-                                            ...currentRequests[activeIdx],
-                                            body: e.target.value,
-                                          };
-                                          updateNodeConfig(selectedNode.id, {
-                                            requests: currentRequests,
-                                          });
-                                        }}
-                                        rows={4}
-                                        placeholder='{\n  "topic": "order.created",\n  "amount": 250\n}'
-                                        className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)] resize-none"
-                                      />
-                                      {(() => {
-                                        if (
-                                          activeReq.body &&
-                                          activeReq.body.trim().length > 0
-                                        ) {
-                                          try {
-                                            JSON.parse(activeReq.body);
-                                          } catch (err: any) {
-                                            return (
-                                              <span className="text-[9px] text-rose-500 mt-1 flex items-center gap-1 leading-normal font-mono">
-                                                <FiAlertCircle className="w-2.5 h-2.5 shrink-0" />
-                                                <span>{err.message}</span>
-                                              </span>
-                                            );
-                                          }
-                                        }
-                                        return null;
-                                      })()}
-                                    </div>
+                                    <select
+                                      value={currentVal}
+                                      onChange={(e) => {
+                                        const nextMapping = {
+                                          ...(nodeConfigs[selectedNode.id]
+                                            ?.serviceMapping || {}),
+                                          [targetId]: e.target.value,
+                                        };
+                                        updateNodeConfig(selectedNode.id, {
+                                          serviceMapping: nextMapping,
+                                        });
+                                      }}
+                                      className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1 text-xs outline-none focus:border-violet-500 cursor-pointer"
+                                    >
+                                      {dropdownChoices.map((opt: any) => (
+                                        <option key={opt} value={opt}>
+                                          {opt}
+                                        </option>
+                                      ))}
+                                    </select>
                                   </div>
-                                ) : (
-                                  <div className="space-y-1.5">
-                                    <div className="grid grid-cols-2 gap-1.5">
-                                      <div>
-                                        <label className="text-[8px] text-[color:var(--foreground)]/50 block">
-                                          Upload File
-                                        </label>
-                                        <input
-                                          type="text"
-                                          value={activeReq.fileName}
-                                          onChange={(e) => {
-                                            const currentRequests = [
-                                              ...requests,
-                                            ];
-                                            currentRequests[activeIdx] = {
-                                              ...currentRequests[activeIdx],
-                                              fileName: e.target.value,
-                                            };
-                                            updateNodeConfig(selectedNode.id, {
-                                              requests: currentRequests,
-                                            });
-                                          }}
-                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
-                                        />
-                                      </div>
-                                      <div>
-                                        <label className="text-[8px] text-[color:var(--foreground)]/50 block">
-                                          Target Bucket
-                                        </label>
-                                        <input
-                                          type="text"
-                                          value={
-                                            activeReq.targetBucket ||
-                                            "media-uploads"
-                                          }
-                                          onChange={(e) => {
-                                            const currentRequests = [
-                                              ...requests,
-                                            ];
-                                            currentRequests[activeIdx] = {
-                                              ...currentRequests[activeIdx],
-                                              targetBucket: e.target.value,
-                                            };
-                                            updateNodeConfig(selectedNode.id, {
-                                              requests: currentRequests,
-                                            });
-                                          }}
-                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
-                                          placeholder="media-uploads"
-                                        />
-                                      </div>
-                                    </div>
-                                    <label className="flex items-center gap-1 text-[9px] text-[color:var(--foreground)]/80 cursor-pointer">
-                                      <input
-                                        type="checkbox"
-                                        checked={activeReq.isThereFileToUpload}
-                                        onChange={(e) => {
-                                          const currentRequests = [...requests];
-                                          currentRequests[activeIdx] = {
-                                            ...currentRequests[activeIdx],
-                                            isThereFileToUpload:
-                                              e.target.checked,
-                                          };
-                                          updateNodeConfig(selectedNode.id, {
-                                            requests: currentRequests,
-                                          });
-                                        }}
-                                        className="accent-violet-500"
-                                      />
-                                      <span>Attach File Payload</span>
-                                    </label>
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="text-[10px] text-[color:var(--foreground)]/50 italic py-4 text-center">
-                                No requests configured. Click "+ Add" to add
-                                one.
-                              </div>
-                            )}
+                                );
+                              })}
+                            </div>
                           </div>
                         );
                       })()}
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Load Balancer Configuration */}
-                {selectedNode.data.type === "load-balancer" && (
-                  <div className="space-y-4">
-                    <p className="text-xs font-semibold text-blue-400 font-mono">
-                      Load Balancer Settings
-                    </p>
-
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Provider / Technology
-                      </label>
-                      <CustomDropdown
-                        type={(selectedNode.data as any).type}
-                        value={
-                          ((selectedNode.data as any).flavor ||
-                            getDefaultFlavor(
-                              (selectedNode.data as any).type,
-                            )) as string
-                        }
-                        onChange={(flavorId) => {
-                          setNodes((nds) =>
-                            nds.map((n) =>
-                              n.id === selectedNodeId
-                                ? {
-                                    ...n,
-                                    data: { ...n.data, flavor: flavorId },
-                                  }
-                                : n,
-                            ),
-                          );
-                        }}
-                      />
-                    </div>
-
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
-                        Balancing Strategy
-                      </label>
-                      <select
-                        value={
-                          nodeConfigs[selectedNode.id]?.strategy ??
-                          "ROUND_ROBIN"
-                        }
-                        onChange={(e) =>
-                          updateNodeConfig(selectedNode.id, {
-                            strategy: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500 cursor-pointer text-[color:var(--foreground)]"
-                      >
-                        <option value="ROUND_ROBIN">Round Robin</option>
-                        <option value="RANDOM">Random Dispatch</option>
-                        <option value="IP_HASH">IP Address Hash</option>
-                        <option value="LEAST_CONNECTIONS">
-                          Least Connections
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                {/* API Gateway Configuration */}
-                {selectedNode.data.type === "api-gateway" && (
-                  <div className="space-y-4">
-                    <p className="text-xs font-semibold text-fuchsia-400 font-mono">
-                      Gateway Settings
-                    </p>
-
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Provider / Technology
-                      </label>
-                      <CustomDropdown
-                        type={(selectedNode.data as any).type}
-                        value={
-                          ((selectedNode.data as any).flavor ||
-                            getDefaultFlavor(
-                              (selectedNode.data as any).type,
-                            )) as string
-                        }
-                        onChange={(flavorId) => {
-                          setNodes((nds) =>
-                            nds.map((n) =>
-                              n.id === selectedNodeId
-                                ? {
-                                    ...n,
-                                    data: { ...n.data, flavor: flavorId },
-                                  }
-                                : n,
-                            ),
-                          );
-                        }}
-                      />
-                    </div>
-
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
-                        Load Balance Strategy
-                      </label>
-                      <select
-                        value={
-                          nodeConfigs[selectedNode.id]?.strategy ??
-                          "ROUND_ROBIN"
-                        }
-                        onChange={(e) =>
-                          updateNodeConfig(selectedNode.id, {
-                            strategy: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500 cursor-pointer"
-                      >
-                        <option value="ROUND_ROBIN">Round Robin</option>
-                        <option value="RANDOM">Random Dispatch</option>
-                        <option value="IP_HASH">IP Address Hash</option>
-                        <option value="LEAST_CONNECTIONS">
-                          Least Connections
-                        </option>
-                      </select>
-                    </div>
-
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    {/* Route Mappings */}
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Route Rules
-                      </label>
-                      <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1 scrollbar-thin">
-                        {Object.entries(
-                          nodeConfigs[selectedNode.id]?.routes || {},
-                        ).map(([path, svc]: [string, any], idx) => (
-                          <div key={idx} className="flex gap-1 items-center">
-                            <input
-                              type="text"
-                              value={path}
-                              placeholder="Path prefix"
-                              onChange={(e) => {
-                                const routes = (nodeConfigs[selectedNode.id]
-                                  ?.routes || {}) as Record<string, string>;
-                                const nextRoutes: Record<string, string> = {};
-                                for (const [k, v] of Object.entries(routes)) {
-                                  if (k === path) {
-                                    nextRoutes[e.target.value] = svc as string;
-                                  } else {
-                                    nextRoutes[k] = v;
-                                  }
-                                }
-                                updateNodeConfig(selectedNode.id, {
-                                  routes: nextRoutes,
-                                });
-                              }}
-                              className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono"
-                            />
-                            <input
-                              type="text"
-                              value={svc}
-                              placeholder="Service name"
-                              onChange={(e) => {
-                                const nextRoutes = {
-                                  ...(nodeConfigs[selectedNode.id]?.routes ||
-                                    {}),
-                                };
-                                nextRoutes[path] = e.target.value;
-                                updateNodeConfig(selectedNode.id, {
-                                  routes: nextRoutes,
-                                });
-                              }}
-                              className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono"
-                            />
-                            <button
-                              onClick={() => {
-                                const nextRoutes = {
-                                  ...(nodeConfigs[selectedNode.id]?.routes ||
-                                    {}),
-                                };
-                                delete nextRoutes[path];
-                                updateNodeConfig(selectedNode.id, {
-                                  routes: nextRoutes,
-                                });
-                              }}
-                              className="text-rose-500 hover:text-rose-600 text-xs px-1 cursor-pointer font-bold"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => {
-                          const routes =
-                            nodeConfigs[selectedNode.id]?.routes || {};
-                          const nextRoutes = {
-                            ...routes,
-                            [`/api/v1/route-${Object.keys(routes).length + 1}`]: `NEW_SERVICE`,
-                          };
-                          updateNodeConfig(selectedNode.id, {
-                            routes: nextRoutes,
-                          });
-                        }}
-                        className="w-full mt-2 rounded-lg border border-[var(--border)] py-1 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
-                      >
-                        + Add Route Rule
-                      </button>
-                    </div>
-
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    {/* Service Pools Mapping (supports Servers and Load Balancers) */}
-                    {(() => {
-                      const targetNodes = nodes.filter(
-                        (n) =>
-                          n.data.type === "server" ||
-                          n.data.type === "load-balancer",
-                      );
-
-                      if (targetNodes.length === 0) {
-                        return (
-                          <div>
-                            <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
-                              Service Pools Mapping
-                            </label>
-                            <p className="text-[10px] text-[color:var(--foreground)]/50 italic">
-                              No servers or load balancers on the canvas. Add a Server or Load Balancer first.
-                            </p>
-                          </div>
-                        );
-                      }
-
-                      const routes = nodeConfigs[selectedNode.id]?.routes || {};
-                      const routeTargets = Array.from(
-                        new Set(Object.values(routes)),
-                      );
-
-                      return (
-                        <div className="space-y-2">
-                          <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block">
-                            Service Pools Mapping
-                          </label>
-                          <div className="space-y-2 border border-[var(--border)] rounded-lg p-2 bg-[var(--surface)]/50">
-                            {targetNodes.map((targetNode) => {
-                              const targetId = targetNode.id;
-                              const targetLabel = String(
-                                targetNode.data.label || targetId,
-                              );
-                              const targetType = targetNode.data.type as string;
-                              const serviceMapping =
-                                nodeConfigs[selectedNode.id]?.serviceMapping ||
-                                {};
-
-                              const isConnectedCorrectly = edges.some(
-                                (e) =>
-                                  e.source === selectedNode.id &&
-                                  e.target === targetId,
-                              );
-                              const isConnectedBackwards = edges.some(
-                                (e) =>
-                                  e.source === targetId &&
-                                  e.target === selectedNode.id,
-                              );
-                              const isConnected =
-                                isConnectedCorrectly || isConnectedBackwards;
-
-                              // Include targetId in dropdown choices alongside route target strings
-                              const dropdownChoices = Array.from(
-                                new Set([...routeTargets, targetId]),
-                              );
-
-                              let currentVal = serviceMapping[targetId];
-                              if (!currentVal) {
-                                if (routeTargets.map(String).includes(targetId)) {
-                                  currentVal = targetId;
-                                } else {
-                                  const labelLower = targetLabel.toLowerCase();
-                                  if (labelLower.includes("user")) {
-                                    currentVal = "USER_SERVICE";
-                                  } else if (labelLower.includes("post")) {
-                                    currentVal = "POST_SERVICE";
-                                  } else {
-                                    currentVal =
-                                      dropdownChoices[0] || targetId || "DEFAULT_SERVICE";
-                                  }
-                                }
-                              }
-
-                              return (
-                                <div
-                                  key={targetId}
-                                  className="flex flex-col gap-1 border-b border-[var(--border)]/35 pb-2 last:border-b-0 last:pb-0"
-                                >
-                                  <div className="flex items-center justify-between gap-1">
-                                    <span className="text-[10px] font-medium text-[color:var(--foreground)]/70 truncate flex items-center gap-1.5">
-                                      <ComponentIcon
-                                        type={targetType}
-                                        className="w-3.5 h-3.5"
-                                      />
-                                      {targetLabel}
-                                    </span>
-                                    {!isConnected && (
-                                      <span className="text-[8px] text-amber-500 font-semibold bg-amber-500/10 px-1 rounded flex items-center gap-0.5">
-                                        <FiAlertTriangle className="w-2.5 h-2.5" />
-                                        <span>Unlinked</span>
-                                      </span>
-                                    )}
-                                    {isConnectedBackwards && (
-                                      <span className="text-[8px] text-rose-500 font-semibold bg-rose-500/10 px-1 rounded animate-pulse flex items-center gap-0.5">
-                                        <FiAlertCircle className="w-2.5 h-2.5" />
-                                        <span>Reverse</span>
-                                      </span>
-                                    )}
-                                    {isConnectedCorrectly && (
-                                      <span className="text-[8px] text-emerald-400 font-semibold bg-emerald-500/10 px-1 rounded">
-                                        ✓ Linked
-                                      </span>
-                                    )}
-                                  </div>
-                                  <select
-                                    value={currentVal}
-                                    onChange={(e) => {
-                                      const nextMapping = {
-                                        ...(nodeConfigs[selectedNode.id]
-                                          ?.serviceMapping || {}),
-                                        [targetId]: e.target.value,
-                                      };
-                                      updateNodeConfig(selectedNode.id, {
-                                        serviceMapping: nextMapping,
-                                      });
-                                    }}
-                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1 text-xs outline-none focus:border-violet-500 cursor-pointer"
-                                  >
-                                    {dropdownChoices.map((opt: any) => (
-                                      <option key={opt} value={opt}>
-                                        {opt}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-
-                {/* Redis Configuration */}
-                {selectedNode.data.type === "redis" && (
-                  <div className="space-y-3">
-                    <p className="text-xs font-semibold text-amber-400 font-mono">
-                      Redis Cache Memory
-                    </p>
-
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Provider / Technology
-                      </label>
-                      <CustomDropdown
-                        type={(selectedNode.data as any).type}
-                        value={
-                          ((selectedNode.data as any).flavor ||
-                            getDefaultFlavor(
-                              (selectedNode.data as any).type,
-                            )) as string
-                        }
-                        onChange={(flavorId) => {
-                          setNodes((nds) =>
-                            nds.map((n) =>
-                              n.id === selectedNodeId
-                                ? {
-                                    ...n,
-                                    data: { ...n.data, flavor: flavorId },
-                                  }
-                                : n,
-                            ),
-                          );
-                        }}
-                      />
-                    </div>
-
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    <div className="space-y-1.5">
-                      <p className="text-[9px] text-[color:var(--foreground)]/65">
-                        Cached Pairs
+                  {/* Redis Configuration */}
+                  {selectedNode.data.type === "redis" && (
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold text-amber-400 font-mono">
+                        Redis Cache Memory
                       </p>
-                      {!nodeConfigs[selectedNode.id]?.data ||
-                      nodeConfigs[selectedNode.id].data.length === 0 ? (
-                        <p className="text-xs italic text-[color:var(--foreground)]/50">
-                          No keys stored.
-                        </p>
-                      ) : (
-                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
-                          {nodeConfigs[selectedNode.id].data.map(
-                            (item: any, idx: number) => (
-                              <div
-                                key={idx}
-                                className="flex gap-1.5 items-center"
-                              >
-                                <input
-                                  type="text"
-                                  value={item.key}
-                                  placeholder="Key"
-                                  onChange={(e) => {
-                                    const nextList = [
-                                      ...nodeConfigs[selectedNode.id].data,
-                                    ];
-                                    nextList[idx].key = e.target.value;
-                                    updateNodeConfig(selectedNode.id, {
-                                      data: nextList,
-                                    });
-                                  }}
-                                  className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono"
-                                />
-                                <input
-                                  type="text"
-                                  value={item.val}
-                                  placeholder="Value"
-                                  onChange={(e) => {
-                                    const nextList = [
-                                      ...nodeConfigs[selectedNode.id].data,
-                                    ];
-                                    nextList[idx].val = e.target.value;
-                                    updateNodeConfig(selectedNode.id, {
-                                      data: nextList,
-                                    });
-                                  }}
-                                  className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none"
-                                />
-                                <button
-                                  onClick={() => {
-                                    const nextList = nodeConfigs[
-                                      selectedNode.id
-                                    ].data.filter(
-                                      (_: any, i: number) => i !== idx,
-                                    );
-                                    updateNodeConfig(selectedNode.id, {
-                                      data: nextList,
-                                    });
-                                  }}
-                                  className="text-red-500 hover:text-red-600 text-xs px-1 cursor-pointer"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      )}
-                    </div>
 
-                    <button
-                      onClick={() => {
-                        const prevList =
-                          nodeConfigs[selectedNode.id]?.data ?? [];
-                        updateNodeConfig(selectedNode.id, {
-                          data: [...prevList, { key: "", val: "" }],
-                        });
-                      }}
-                      className="w-full rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
-                    >
-                      + Add Cache Key
-                    </button>
-                  </div>
-                )}
-
-                {/* Postgres Configuration */}
-                {selectedNode.data.type === "postgres" && (
-                  <div className="space-y-3">
-                    <p className="text-xs font-semibold text-cyan-400 font-mono">
-                      Database Records
-                    </p>
-
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Provider / Technology
-                      </label>
-                      <CustomDropdown
-                        type={(selectedNode.data as any).type}
-                        value={
-                          ((selectedNode.data as any).flavor ||
-                            getDefaultFlavor(
-                              (selectedNode.data as any).type,
-                            )) as string
-                        }
-                        onChange={(flavorId) => {
-                          setNodes((nds) =>
-                            nds.map((n) =>
-                              n.id === selectedNodeId
-                                ? {
-                                    ...n,
-                                    data: { ...n.data, flavor: flavorId },
-                                  }
-                                : n,
-                            ),
-                          );
-                        }}
-                      />
-                    </div>
-
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    <div>
-                      <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
-                        Table Name
-                      </label>
-                      <input
-                        type="text"
-                        value={nodeConfigs[selectedNode.id]?.table ?? "users"}
-                        onChange={(e) =>
-                          updateNodeConfig(selectedNode.id, {
-                            table: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-mono outline-none focus:border-violet-500"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <p className="text-[9px] text-[color:var(--foreground)]/65">
-                        Row Entries (ID / Payload)
-                      </p>
-                      {!nodeConfigs[selectedNode.id]?.data ||
-                      nodeConfigs[selectedNode.id].data.length === 0 ? (
-                        <p className="text-xs italic text-[color:var(--foreground)]/50">
-                          No records found.
-                        </p>
-                      ) : (
-                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
-                          {nodeConfigs[selectedNode.id].data.map(
-                            (item: any, idx: number) => (
-                              <div
-                                key={idx}
-                                className="flex gap-1.5 items-center"
-                              >
-                                <input
-                                  type="text"
-                                  value={item.key}
-                                  placeholder="PK"
-                                  onChange={(e) => {
-                                    const nextList = [
-                                      ...nodeConfigs[selectedNode.id].data,
-                                    ];
-                                    nextList[idx].key = e.target.value;
-                                    updateNodeConfig(selectedNode.id, {
-                                      data: nextList,
-                                    });
-                                  }}
-                                  className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono"
-                                />
-                                <input
-                                  type="text"
-                                  value={item.val}
-                                  placeholder="Summary"
-                                  onChange={(e) => {
-                                    const nextList = [
-                                      ...nodeConfigs[selectedNode.id].data,
-                                    ];
-                                    nextList[idx].val = e.target.value;
-                                    updateNodeConfig(selectedNode.id, {
-                                      data: nextList,
-                                    });
-                                  }}
-                                  className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none"
-                                />
-                                <button
-                                  onClick={() => {
-                                    const nextList = nodeConfigs[
-                                      selectedNode.id
-                                    ].data.filter(
-                                      (_: any, i: number) => i !== idx,
-                                    );
-                                    updateNodeConfig(selectedNode.id, {
-                                      data: nextList,
-                                    });
-                                  }}
-                                  className="text-red-500 hover:text-red-600 text-xs px-1 cursor-pointer"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        const prevList =
-                          nodeConfigs[selectedNode.id]?.data ?? [];
-                        updateNodeConfig(selectedNode.id, {
-                          data: [...prevList, { key: "", val: "" }],
-                        });
-                      }}
-                      className="w-full rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer mb-3"
-                    >
-                      + Add DB Row
-                    </button>
-
-                    {/* Connection Pool Status — shown on Postgres node when pool frames are present */}
-                    {(() => {
-                      const poolFrames = currentFrames.filter(
-                        (f) =>
-                          f.action === "POSTGRES_POOL_WAIT" ||
-                          f.action === "POSTGRES_QUERY_HIT" ||
-                          f.action === "POSTGRES_QUERY_MISS",
-                      );
-                      const poolMap = new Map<
-                        string,
-                        {
-                          poolSize: number;
-                          activeConnections: number;
-                          exhausted: boolean;
-                        }
-                      >();
-                      for (const f of poolFrames) {
-                        const ps = (f as any).postgresPoolStatus;
-                        if (ps && ps.serverId && ps.poolSize >= 0) {
-                          poolMap.set(ps.serverId, {
-                            poolSize: ps.poolSize,
-                            activeConnections: ps.activeConnections,
-                            exhausted: ps.exhausted,
-                          });
-                        }
-                      }
-                      if (poolMap.size === 0) return null;
-                      return (
-                        <div
-                          className={`rounded-md border ${theme === "dark" ? "border-cyan-500/25 bg-cyan-500/5" : "border-cyan-400/30 bg-cyan-50"} p-3 mt-3`}
-                        >
-                          <p className="text-[10px] uppercase tracking-widest text-cyan-400 font-bold font-mono mb-2.5">
-                            Connection Pool Status
-                          </p>
-                          <div className="space-y-2.5">
-                            {Array.from(poolMap.entries()).map(
-                              ([serverId, info]) => {
-                                const pct =
-                                  info.poolSize > 0
-                                    ? Math.round(
-                                        (info.activeConnections /
-                                          info.poolSize) *
-                                          100,
-                                      )
-                                    : 0;
-                                const barColor = info.exhausted
-                                  ? "bg-rose-500"
-                                  : pct > 70
-                                    ? "bg-amber-400"
-                                    : "bg-cyan-400";
-                                return (
-                                  <div key={serverId}>
-                                    <div className="flex items-center justify-between mb-1">
-                                      <span
-                                        className={`text-[10px] font-mono text-[color:var(--foreground)]/80 truncate max-w-[90px]`}
-                                      >
-                                        {serverId}
-                                      </span>
-                                      <span
-                                        className={`text-[10px] font-mono font-bold ${info.exhausted ? "text-rose-400" : "text-cyan-400"}`}
-                                      >
-                                        {info.activeConnections}/{info.poolSize}
-                                        {info.exhausted ? " 🔴 WAIT" : ""}
-                                      </span>
-                                    </div>
-                                    <div
-                                      className={`h-1.5 w-full rounded-full ${theme === "dark" ? "bg-slate-800" : "bg-slate-200"} overflow-hidden`}
-                                    >
-                                      <div
-                                        className={`h-full rounded-full transition-all duration-300 ${barColor}`}
-                                        style={{
-                                          width: `${Math.max(2, Math.min(pct, 100))}%`,
-                                        }}
-                                      />
-                                    </div>
-                                  </div>
-                                );
-                              },
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-
-                {/* DNS Configuration */}
-                {selectedNode.data.type === "dns" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-indigo-400 font-mono">
-                        DNS Domain Rules
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const domains =
-                            nodeConfigs[selectedNode.id]?.domains || {};
-                          const newDomain = prompt(
-                            "Enter domain name (e.g., ndkdev.me):",
-                          );
-                          if (newDomain) {
-                            updateNodeConfig(selectedNode.id, {
-                              domains: {
-                                ...domains,
-                                [newDomain]: {},
-                              },
-                            });
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                          Provider / Technology
+                        </label>
+                        <CustomDropdown
+                          type={(selectedNode.data as any).type}
+                          value={
+                            ((selectedNode.data as any).flavor ||
+                              getDefaultFlavor(
+                                (selectedNode.data as any).type,
+                              )) as string
                           }
-                        }}
-                        className="rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 px-2 py-1 text-[10px] font-bold transition cursor-pointer"
-                      >
-                        + Add Domain
-                      </button>
-                    </div>
+                          onChange={(flavorId) => {
+                            setNodes((nds) =>
+                              nds.map((n) =>
+                                n.id === selectedNodeId
+                                  ? {
+                                      ...n,
+                                      data: { ...n.data, flavor: flavorId },
+                                    }
+                                  : n,
+                              ),
+                            );
+                          }}
+                        />
+                      </div>
 
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Provider / Technology
-                      </label>
-                      <CustomDropdown
-                        type={(selectedNode.data as any).type}
-                        value={
-                          ((selectedNode.data as any).flavor ||
-                            getDefaultFlavor(
-                              (selectedNode.data as any).type,
-                            )) as string
-                        }
-                        onChange={(flavorId) => {
-                          setNodes((nds) =>
-                            nds.map((n) =>
-                              n.id === selectedNodeId
-                                ? {
-                                    ...n,
-                                    data: { ...n.data, flavor: flavorId },
-                                  }
-                                : n,
-                            ),
-                          );
-                        }}
-                      />
-                    </div>
+                      <div className="h-px bg-[var(--border)]/70" />
 
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    <div className="space-y-3 max-h-80 overflow-y-auto pr-1 scrollbar-thin">
-                      {Object.entries(
-                        nodeConfigs[selectedNode.id]?.domains || {},
-                      ).map(([domain, subdomains]: [string, any], domIdx) => (
-                        <div
-                          key={domIdx}
-                          className="border border-[var(--border)] rounded-lg p-2 bg-[var(--surface)]/50 space-y-2 relative group/dom"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const nextDomains = {
-                                ...nodeConfigs[selectedNode.id].domains,
-                              };
-                              delete nextDomains[domain];
-                              updateNodeConfig(selectedNode.id, {
-                                domains: nextDomains,
-                              });
-                            }}
-                            className="absolute top-1.5 right-2 text-rose-500 hover:text-rose-600 text-[9px] font-bold cursor-pointer opacity-40 group-hover/dom:opacity-100 transition"
-                            title="Delete Domain"
-                          >
-                            Delete ×
-                          </button>
-
-                          <p className="text-[10px] font-bold text-indigo-400 font-mono">
-                            🌐 {domain}
+                      <div className="space-y-1.5">
+                        <p className="text-[9px] text-[color:var(--foreground)]/65">
+                          Cached Pairs
+                        </p>
+                        {!nodeConfigs[selectedNode.id]?.data ||
+                        nodeConfigs[selectedNode.id].data.length === 0 ? (
+                          <p className="text-xs italic text-[color:var(--foreground)]/50">
+                            No keys stored.
                           </p>
-
-                          <div className="space-y-2 pl-1.5 border-l border-[var(--border)]">
-                            {Object.entries(subdomains || {}).map(
-                              ([sub, subData]: [string, any], subIdx) => (
+                        ) : (
+                          <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
+                            {nodeConfigs[selectedNode.id].data.map(
+                              (item: any, idx: number) => (
                                 <div
-                                  key={subIdx}
-                                  className="bg-[var(--surface)] p-2 rounded border border-[var(--border)]/45 space-y-1.5 relative group/sub"
+                                  key={idx}
+                                  className="flex gap-1.5 items-center"
                                 >
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const nextDomains = {
-                                        ...nodeConfigs[selectedNode.id].domains,
-                                      };
-                                      const nextSubs = {
-                                        ...nextDomains[domain],
-                                      };
-                                      delete nextSubs[sub];
-                                      nextDomains[domain] = nextSubs;
+                                  <input
+                                    type="text"
+                                    value={item.key}
+                                    placeholder="Key"
+                                    onChange={(e) => {
+                                      const nextList = [
+                                        ...nodeConfigs[selectedNode.id].data,
+                                      ];
+                                      nextList[idx].key = e.target.value;
                                       updateNodeConfig(selectedNode.id, {
-                                        domains: nextDomains,
+                                        data: nextList,
                                       });
                                     }}
-                                    className="absolute top-1 right-1 text-rose-500 hover:text-rose-600 text-xs font-bold cursor-pointer opacity-30 group-hover/sub:opacity-100 transition"
-                                    title="Delete Record"
+                                    className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={item.val}
+                                    placeholder="Value"
+                                    onChange={(e) => {
+                                      const nextList = [
+                                        ...nodeConfigs[selectedNode.id].data,
+                                      ];
+                                      nextList[idx].val = e.target.value;
+                                      updateNodeConfig(selectedNode.id, {
+                                        data: nextList,
+                                      });
+                                    }}
+                                    className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none"
+                                  />
+                                  <button
+                                    onClick={() => {
+                                      const nextList = nodeConfigs[
+                                        selectedNode.id
+                                      ].data.filter(
+                                        (_: any, i: number) => i !== idx,
+                                      );
+                                      updateNodeConfig(selectedNode.id, {
+                                        data: nextList,
+                                      });
+                                    }}
+                                    className="text-red-500 hover:text-red-600 text-xs px-1 cursor-pointer"
                                   >
                                     ×
                                   </button>
-
-                                  <div className="grid grid-cols-2 gap-1.5">
-                                    <div>
-                                      <label className="text-[8px] text-[color:var(--foreground)]/50 block">
-                                        Subdomain
-                                      </label>
-                                      <input
-                                        type="text"
-                                        value={sub}
-                                        onChange={(e) => {
-                                          const nextDomains = {
-                                            ...nodeConfigs[selectedNode.id]
-                                              .domains,
-                                          };
-                                          const nextSubs = {
-                                            ...nextDomains[domain],
-                                          };
-                                          const valObj = nextSubs[sub];
-                                          delete nextSubs[sub];
-                                          nextSubs[e.target.value] = valObj;
-                                          nextDomains[domain] = nextSubs;
-                                          updateNodeConfig(selectedNode.id, {
-                                            domains: nextDomains,
-                                          });
-                                        }}
-                                        className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-mono outline-none"
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="text-[8px] text-[color:var(--foreground)]/50 block">
-                                        Record Type
-                                      </label>
-                                      <select
-                                        value={subData.typeOfRecord || "A"}
-                                        onChange={(e) => {
-                                          const nextDomains = {
-                                            ...nodeConfigs[selectedNode.id]
-                                              .domains,
-                                          };
-                                          nextDomains[domain][
-                                            sub
-                                          ].typeOfRecord = e.target.value;
-                                          updateNodeConfig(selectedNode.id, {
-                                            domains: nextDomains,
-                                          });
-                                        }}
-                                        className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5 text-[10px] outline-none cursor-pointer"
-                                      >
-                                        {[
-                                          "A",
-                                          "AAAA",
-                                          "CNAME",
-                                          "MX",
-                                          "PTR",
-                                          "SOA",
-                                          "SRV",
-                                          "TXT",
-                                          "ANY",
-                                        ].map((t) => (
-                                          <option key={t} value={t}>
-                                            {t}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-2 gap-1.5">
-                                    <div>
-                                      <label className="text-[8px] text-[color:var(--foreground)]/50 block">
-                                        Target Node
-                                      </label>
-                                      <select
-                                        value={subData.to || ""}
-                                        onChange={(e) => {
-                                          const nextDomains = {
-                                            ...nodeConfigs[selectedNode.id]
-                                              .domains,
-                                          };
-                                          nextDomains[domain][sub].to =
-                                            e.target.value;
-                                          updateNodeConfig(selectedNode.id, {
-                                            domains: nextDomains,
-                                          });
-                                        }}
-                                        className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5 text-[10px] outline-none cursor-pointer"
-                                      >
-                                        <option value="">
-                                          -- Target Node --
-                                        </option>
-                                        {nodes.map((n) => (
-                                          <option key={n.id} value={n.id}>
-                                            {String(n.data.label || n.id)}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </div>
-                                    <div>
-                                      <label className="text-[8px] text-[color:var(--foreground)]/50 block">
-                                        IP Address
-                                      </label>
-                                      <input
-                                        type="text"
-                                        value={subData.ip || ""}
-                                        onChange={(e) => {
-                                          const nextDomains = {
-                                            ...nodeConfigs[selectedNode.id]
-                                              .domains,
-                                          };
-                                          nextDomains[domain][sub].ip =
-                                            e.target.value;
-                                          updateNodeConfig(selectedNode.id, {
-                                            domains: nextDomains,
-                                          });
-                                        }}
-                                        className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-mono outline-none"
-                                      />
-                                    </div>
-                                  </div>
                                 </div>
                               ),
                             )}
+                          </div>
+                        )}
+                      </div>
 
+                      <button
+                        onClick={() => {
+                          const prevList =
+                            nodeConfigs[selectedNode.id]?.data ?? [];
+                          updateNodeConfig(selectedNode.id, {
+                            data: [...prevList, { key: "", val: "" }],
+                          });
+                        }}
+                        className="w-full rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
+                      >
+                        + Add Cache Key
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Postgres Configuration */}
+                  {selectedNode.data.type === "postgres" && (
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold text-cyan-400 font-mono">
+                        Database Records
+                      </p>
+
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                          Provider / Technology
+                        </label>
+                        <CustomDropdown
+                          type={(selectedNode.data as any).type}
+                          value={
+                            ((selectedNode.data as any).flavor ||
+                              getDefaultFlavor(
+                                (selectedNode.data as any).type,
+                              )) as string
+                          }
+                          onChange={(flavorId) => {
+                            setNodes((nds) =>
+                              nds.map((n) =>
+                                n.id === selectedNodeId
+                                  ? {
+                                      ...n,
+                                      data: { ...n.data, flavor: flavorId },
+                                    }
+                                  : n,
+                              ),
+                            );
+                          }}
+                        />
+                      </div>
+
+                      <div className="h-px bg-[var(--border)]/70" />
+
+                      <div>
+                        <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
+                          Table Name
+                        </label>
+                        <input
+                          type="text"
+                          value={nodeConfigs[selectedNode.id]?.table ?? "users"}
+                          onChange={(e) =>
+                            updateNodeConfig(selectedNode.id, {
+                              table: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-mono outline-none focus:border-violet-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <p className="text-[9px] text-[color:var(--foreground)]/65">
+                          Row Entries (ID / Payload)
+                        </p>
+                        {!nodeConfigs[selectedNode.id]?.data ||
+                        nodeConfigs[selectedNode.id].data.length === 0 ? (
+                          <p className="text-xs italic text-[color:var(--foreground)]/50">
+                            No records found.
+                          </p>
+                        ) : (
+                          <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
+                            {nodeConfigs[selectedNode.id].data.map(
+                              (item: any, idx: number) => (
+                                <div
+                                  key={idx}
+                                  className="flex gap-1.5 items-center"
+                                >
+                                  <input
+                                    type="text"
+                                    value={item.key}
+                                    placeholder="PK"
+                                    onChange={(e) => {
+                                      const nextList = [
+                                        ...nodeConfigs[selectedNode.id].data,
+                                      ];
+                                      nextList[idx].key = e.target.value;
+                                      updateNodeConfig(selectedNode.id, {
+                                        data: nextList,
+                                      });
+                                    }}
+                                    className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none font-mono"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={item.val}
+                                    placeholder="Summary"
+                                    onChange={(e) => {
+                                      const nextList = [
+                                        ...nodeConfigs[selectedNode.id].data,
+                                      ];
+                                      nextList[idx].val = e.target.value;
+                                      updateNodeConfig(selectedNode.id, {
+                                        data: nextList,
+                                      });
+                                    }}
+                                    className="w-1/2 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs outline-none"
+                                  />
+                                  <button
+                                    onClick={() => {
+                                      const nextList = nodeConfigs[
+                                        selectedNode.id
+                                      ].data.filter(
+                                        (_: any, i: number) => i !== idx,
+                                      );
+                                      updateNodeConfig(selectedNode.id, {
+                                        data: nextList,
+                                      });
+                                    }}
+                                    className="text-red-500 hover:text-red-600 text-xs px-1 cursor-pointer"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          const prevList =
+                            nodeConfigs[selectedNode.id]?.data ?? [];
+                          updateNodeConfig(selectedNode.id, {
+                            data: [...prevList, { key: "", val: "" }],
+                          });
+                        }}
+                        className="w-full rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer mb-3"
+                      >
+                        + Add DB Row
+                      </button>
+
+                      {/* Connection Pool Status — shown on Postgres node when pool frames are present */}
+                      {(() => {
+                        const poolFrames = currentFrames.filter(
+                          (f) =>
+                            f.action === "POSTGRES_POOL_WAIT" ||
+                            f.action === "POSTGRES_QUERY_HIT" ||
+                            f.action === "POSTGRES_QUERY_MISS",
+                        );
+                        const poolMap = new Map<
+                          string,
+                          {
+                            poolSize: number;
+                            activeConnections: number;
+                            exhausted: boolean;
+                          }
+                        >();
+                        for (const f of poolFrames) {
+                          const ps = (f as any).postgresPoolStatus;
+                          if (ps && ps.serverId && ps.poolSize >= 0) {
+                            poolMap.set(ps.serverId, {
+                              poolSize: ps.poolSize,
+                              activeConnections: ps.activeConnections,
+                              exhausted: ps.exhausted,
+                            });
+                          }
+                        }
+                        if (poolMap.size === 0) return null;
+                        return (
+                          <div
+                            className={`rounded-md border ${theme === "dark" ? "border-cyan-500/25 bg-cyan-500/5" : "border-cyan-400/30 bg-cyan-50"} p-3 mt-3`}
+                          >
+                            <p className="text-[10px] uppercase tracking-widest text-cyan-400 font-bold font-mono mb-2.5">
+                              Connection Pool Status
+                            </p>
+                            <div className="space-y-2.5">
+                              {Array.from(poolMap.entries()).map(
+                                ([serverId, info]) => {
+                                  const pct =
+                                    info.poolSize > 0
+                                      ? Math.round(
+                                          (info.activeConnections /
+                                            info.poolSize) *
+                                            100,
+                                        )
+                                      : 0;
+                                  const barColor = info.exhausted
+                                    ? "bg-rose-500"
+                                    : pct > 70
+                                      ? "bg-amber-400"
+                                      : "bg-cyan-400";
+                                  return (
+                                    <div key={serverId}>
+                                      <div className="flex items-center justify-between mb-1">
+                                        <span
+                                          className={`text-[10px] font-mono text-[color:var(--foreground)]/80 truncate max-w-[90px]`}
+                                        >
+                                          {serverId}
+                                        </span>
+                                        <span
+                                          className={`text-[10px] font-mono font-bold ${info.exhausted ? "text-rose-400" : "text-cyan-400"}`}
+                                        >
+                                          {info.activeConnections}/
+                                          {info.poolSize}
+                                          {info.exhausted ? " 🔴 WAIT" : ""}
+                                        </span>
+                                      </div>
+                                      <div
+                                        className={`h-1.5 w-full rounded-full ${theme === "dark" ? "bg-slate-800" : "bg-slate-200"} overflow-hidden`}
+                                      >
+                                        <div
+                                          className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+                                          style={{
+                                            width: `${Math.max(2, Math.min(pct, 100))}%`,
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                },
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* DNS Configuration */}
+                  {selectedNode.data.type === "dns" && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold text-indigo-400 font-mono">
+                          DNS Domain Rules
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const domains =
+                              nodeConfigs[selectedNode.id]?.domains || {};
+                            const newDomain = prompt(
+                              "Enter domain name (e.g., ndkdev.me):",
+                            );
+                            if (newDomain) {
+                              updateNodeConfig(selectedNode.id, {
+                                domains: {
+                                  ...domains,
+                                  [newDomain]: {},
+                                },
+                              });
+                            }
+                          }}
+                          className="rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 px-2 py-1 text-[10px] font-bold transition cursor-pointer"
+                        >
+                          + Add Domain
+                        </button>
+                      </div>
+
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                          Provider / Technology
+                        </label>
+                        <CustomDropdown
+                          type={(selectedNode.data as any).type}
+                          value={
+                            ((selectedNode.data as any).flavor ||
+                              getDefaultFlavor(
+                                (selectedNode.data as any).type,
+                              )) as string
+                          }
+                          onChange={(flavorId) => {
+                            setNodes((nds) =>
+                              nds.map((n) =>
+                                n.id === selectedNodeId
+                                  ? {
+                                      ...n,
+                                      data: { ...n.data, flavor: flavorId },
+                                    }
+                                  : n,
+                              ),
+                            );
+                          }}
+                        />
+                      </div>
+
+                      <div className="h-px bg-[var(--border)]/70" />
+
+                      <div className="space-y-3 max-h-80 overflow-y-auto pr-1 scrollbar-thin">
+                        {Object.entries(
+                          nodeConfigs[selectedNode.id]?.domains || {},
+                        ).map(([domain, subdomains]: [string, any], domIdx) => (
+                          <div
+                            key={domIdx}
+                            className="border border-[var(--border)] rounded-lg p-2 bg-[var(--surface)]/50 space-y-2 relative group/dom"
+                          >
                             <button
                               type="button"
                               onClick={() => {
                                 const nextDomains = {
                                   ...nodeConfigs[selectedNode.id].domains,
                                 };
-                                const subCount = Object.keys(
-                                  subdomains || {},
-                                ).length;
-                                nextDomains[domain][
-                                  `subdomain${subCount + 1}`
-                                ] = {
-                                  to: "",
-                                  ip: "192.168.1.1",
-                                  typeOfRecord: "A",
-                                };
+                                delete nextDomains[domain];
                                 updateNodeConfig(selectedNode.id, {
                                   domains: nextDomains,
                                 });
                               }}
-                              className="w-full py-1 text-center border border-dashed border-[var(--border)] hover:bg-[var(--surface)] text-[9px] font-bold text-indigo-400/80 rounded transition cursor-pointer"
+                              className="absolute top-1.5 right-2 text-rose-500 hover:text-rose-600 text-[9px] font-bold cursor-pointer opacity-40 group-hover/dom:opacity-100 transition"
+                              title="Delete Domain"
                             >
-                              + Add Record Rule
+                              Delete ×
                             </button>
-                          </div>
-                        </div>
-                      ))}
-                      {Object.keys(nodeConfigs[selectedNode.id]?.domains || {})
-                        .length === 0 && (
-                        <p className="text-xs italic text-[color:var(--foreground)]/50">
-                          No domains added yet. Click Add Domain above.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
 
-                {/* CDN Configuration */}
-                {selectedNode.data.type === "cdn" && (
-                  <div className="space-y-4">
-                    <p className="text-xs font-semibold text-teal-400 font-mono">
-                      CDN Settings
-                    </p>
+                            <p className="text-[10px] font-bold text-indigo-400 font-mono">
+                              🌐 {domain}
+                            </p>
 
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Provider / Technology
-                      </label>
-                      <CustomDropdown
-                        type={(selectedNode.data as any).type}
-                        value={
-                          ((selectedNode.data as any).flavor ||
-                            getDefaultFlavor(
-                              (selectedNode.data as any).type,
-                            )) as string
-                        }
-                        onChange={(flavorId) => {
-                          setNodes((nds) =>
-                            nds.map((n) =>
-                              n.id === selectedNodeId
-                                ? {
-                                    ...n,
-                                    data: { ...n.data, flavor: flavorId },
-                                  }
-                                : n,
-                            ),
-                          );
-                        }}
-                      />
-                    </div>
-
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
-                        Origin Server / Storage
-                      </label>
-                      <select
-                        value={nodeConfigs[selectedNode.id]?.originId ?? ""}
-                        onChange={(e) =>
-                          updateNodeConfig(selectedNode.id, {
-                            originId: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-teal-500 cursor-pointer"
-                      >
-                        <option value="">-- Select Origin --</option>
-                        {nodes
-                          .filter(
-                            (n) =>
-                              n.id !== selectedNode.id &&
-                              (n.data.type === "server" ||
-                                n.data.type === "storage"),
-                          )
-                          .map((n) => (
-                            <option key={n.id} value={n.id}>
-                              {String(n.data.label || n.id)} (
-                              {String(n.data.type || "")})
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    <div>
-                      <p className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 mb-2">
-                        Cached Keys (Static Content)
-                      </p>
-                      {!nodeConfigs[selectedNode.id]?.cache ||
-                      nodeConfigs[selectedNode.id].cache.length === 0 ? (
-                        <p className="text-xs italic text-[color:var(--foreground)]/50">
-                          CDN Cache is empty.
-                        </p>
-                      ) : (
-                        <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1 scrollbar-thin">
-                          {(nodeConfigs[selectedNode.id]?.cache || []).map(
-                            (item: string, idx: number) => (
-                              <div
-                                key={idx}
-                                className="flex gap-2 items-center"
-                              >
-                                <input
-                                  type="text"
-                                  value={item}
-                                  placeholder="Cache Key (e.g. file.png)"
-                                  onChange={(e) => {
-                                    const nextCache = [
-                                      ...nodeConfigs[selectedNode.id].cache,
-                                    ];
-                                    nextCache[idx] = e.target.value;
-                                    updateNodeConfig(selectedNode.id, {
-                                      cache: nextCache,
-                                    });
-                                  }}
-                                  className="flex-1 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none font-mono focus:border-teal-500"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const nextCache = nodeConfigs[
-                                      selectedNode.id
-                                    ].cache.filter(
-                                      (_: any, i: number) => i !== idx,
-                                    );
-                                    updateNodeConfig(selectedNode.id, {
-                                      cache: nextCache,
-                                    });
-                                  }}
-                                  className="text-rose-500 hover:text-rose-600 text-xs px-1 cursor-pointer font-bold"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const prevCache =
-                            nodeConfigs[selectedNode.id]?.cache ?? [];
-                          updateNodeConfig(selectedNode.id, {
-                            cache: [...prevCache, ""],
-                          });
-                        }}
-                        className="w-full mt-2 rounded-lg border border-[var(--border)] py-1 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
-                      >
-                        + Add Cache Item
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Server Specific Configuration */}
-                {selectedNode.data.type === "server" && (
-                  <div className="space-y-3">
-                    <p className="text-xs font-semibold text-emerald-400 font-mono">
-                      Server Settings
-                    </p>
-
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Runtime / Technology
-                      </label>
-                      <CustomDropdown
-                        type={(selectedNode.data as any).type}
-                        value={
-                          ((selectedNode.data as any).flavor ||
-                            getDefaultFlavor(
-                              (selectedNode.data as any).type,
-                            )) as string
-                        }
-                        onChange={(flavorId) => {
-                          setNodes((nds) =>
-                            nds.map((n) =>
-                              n.id === selectedNodeId
-                                ? {
-                                    ...n,
-                                    data: { ...n.data, flavor: flavorId },
-                                  }
-                                : n,
-                            ),
-                          );
-                        }}
-                      />
-                    </div>
-
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    <div>
-                      <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
-                        Connections Capacity
-                      </label>
-                      <input
-                        type="number"
-                        value={nodeConfigs[selectedNode.id]?.capacity ?? 100}
-                        onChange={(e) =>
-                          updateNodeConfig(selectedNode.id, {
-                            capacity: Number(e.target.value),
-                          })
-                        }
-                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
-                        TCP Connections to Postgres
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min={0}
-                          max={200}
-                          value={
-                            nodeConfigs[selectedNode.id]?.tcpConnections ?? 10
-                          }
-                          onChange={(e) =>
-                            updateNodeConfig(selectedNode.id, {
-                              tcpConnections: Number(e.target.value),
-                            })
-                          }
-                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-cyan-500"
-                        />
-                        <span className="text-[10px] text-[color:var(--foreground)]/45 shrink-0 font-mono">
-                          conns
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[9px] text-[color:var(--foreground)]/40 leading-relaxed">
-                        Pool size for parallel Postgres queries. 0 = no
-                        connections (blocks queries).
-                      </p>
-                    </div>
-
-                    {edges.some(
-                      (e) =>
-                        e.target === selectedNode.id &&
-                        nodes.find((node) => node.id === e.source)?.data
-                          .type === "message-queue",
-                    ) && (
-                      <div className="mt-3">
-                        <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
-                          Prefetch Limit (Competing Consumers)
-                        </label>
-                        <input
-                          type="number"
-                          min={1}
-                          max={100}
-                          value={
-                            nodeConfigs[selectedNode.id]?.prefetchLimit ?? 1
-                          }
-                          onChange={(e) =>
-                            updateNodeConfig(selectedNode.id, {
-                              prefetchLimit: Number(e.target.value),
-                            })
-                          }
-                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500"
-                        />
-                        <p className="mt-1 text-[9px] text-[color:var(--foreground)]/40 leading-relaxed">
-                          Max concurrent messages this consumer can pull from
-                          the queue.
-                        </p>
-                      </div>
-                    )}
-
-                    {edges.some(
-                      (e) =>
-                        e.target === selectedNode.id &&
-                        nodes.find((node) => node.id === e.source)?.data
-                          .type === "pubsub",
-                    ) && (
-                      <div className="mt-3 space-y-2">
-                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
-                          Subscription Topics / Channels
-                        </label>
-
-                        {(() => {
-                          const topics =
-                            nodeConfigs[selectedNode.id]?.subscriptionTopics ||
-                            (nodeConfigs[selectedNode.id]?.subscriptionTopic
-                              ? [nodeConfigs[selectedNode.id].subscriptionTopic]
-                              : ["order.created"]);
-
-                          return (
-                            <div className="space-y-2">
-                              {topics.map((topic: string, index: number) => (
-                                <div
-                                  key={index}
-                                  className="flex items-center gap-1.5"
-                                >
-                                  <input
-                                    type="text"
-                                    value={topic}
-                                    onChange={(e) => {
-                                      const nextTopics = [...topics];
-                                      nextTopics[index] = e.target.value;
-                                      updateNodeConfig(selectedNode.id, {
-                                        subscriptionTopics: nextTopics,
-                                        subscriptionTopic: nextTopics[0] || "",
-                                      });
-                                    }}
-                                    className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-indigo-500 font-mono text-[color:var(--foreground)]"
-                                    placeholder="e.g. order.created"
-                                  />
-                                  {topics.length > 1 && (
+                            <div className="space-y-2 pl-1.5 border-l border-[var(--border)]">
+                              {Object.entries(subdomains || {}).map(
+                                ([sub, subData]: [string, any], subIdx) => (
+                                  <div
+                                    key={subIdx}
+                                    className="bg-[var(--surface)] p-2 rounded border border-[var(--border)]/45 space-y-1.5 relative group/sub"
+                                  >
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        const nextTopics = topics.filter(
-                                          (_: any, i: number) => i !== index,
-                                        );
+                                        const nextDomains = {
+                                          ...nodeConfigs[selectedNode.id]
+                                            .domains,
+                                        };
+                                        const nextSubs = {
+                                          ...nextDomains[domain],
+                                        };
+                                        delete nextSubs[sub];
+                                        nextDomains[domain] = nextSubs;
+                                        updateNodeConfig(selectedNode.id, {
+                                          domains: nextDomains,
+                                        });
+                                      }}
+                                      className="absolute top-1 right-1 text-rose-500 hover:text-rose-600 text-xs font-bold cursor-pointer opacity-30 group-hover/sub:opacity-100 transition"
+                                      title="Delete Record"
+                                    >
+                                      ×
+                                    </button>
+
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                      <div>
+                                        <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                          Subdomain
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={sub}
+                                          onChange={(e) => {
+                                            const nextDomains = {
+                                              ...nodeConfigs[selectedNode.id]
+                                                .domains,
+                                            };
+                                            const nextSubs = {
+                                              ...nextDomains[domain],
+                                            };
+                                            const valObj = nextSubs[sub];
+                                            delete nextSubs[sub];
+                                            nextSubs[e.target.value] = valObj;
+                                            nextDomains[domain] = nextSubs;
+                                            updateNodeConfig(selectedNode.id, {
+                                              domains: nextDomains,
+                                            });
+                                          }}
+                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-mono outline-none"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                          Record Type
+                                        </label>
+                                        <select
+                                          value={subData.typeOfRecord || "A"}
+                                          onChange={(e) => {
+                                            const nextDomains = {
+                                              ...nodeConfigs[selectedNode.id]
+                                                .domains,
+                                            };
+                                            nextDomains[domain][
+                                              sub
+                                            ].typeOfRecord = e.target.value;
+                                            updateNodeConfig(selectedNode.id, {
+                                              domains: nextDomains,
+                                            });
+                                          }}
+                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5 text-[10px] outline-none cursor-pointer"
+                                        >
+                                          {[
+                                            "A",
+                                            "AAAA",
+                                            "CNAME",
+                                            "MX",
+                                            "PTR",
+                                            "SOA",
+                                            "SRV",
+                                            "TXT",
+                                            "ANY",
+                                          ].map((t) => (
+                                            <option key={t} value={t}>
+                                              {t}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                      <div>
+                                        <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                          Target Node
+                                        </label>
+                                        <select
+                                          value={subData.to || ""}
+                                          onChange={(e) => {
+                                            const nextDomains = {
+                                              ...nodeConfigs[selectedNode.id]
+                                                .domains,
+                                            };
+                                            nextDomains[domain][sub].to =
+                                              e.target.value;
+                                            updateNodeConfig(selectedNode.id, {
+                                              domains: nextDomains,
+                                            });
+                                          }}
+                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5 text-[10px] outline-none cursor-pointer"
+                                        >
+                                          <option value="">
+                                            -- Target Node --
+                                          </option>
+                                          {nodes.map((n) => (
+                                            <option key={n.id} value={n.id}>
+                                              {String(n.data.label || n.id)}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div>
+                                        <label className="text-[8px] text-[color:var(--foreground)]/50 block">
+                                          IP Address
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={subData.ip || ""}
+                                          onChange={(e) => {
+                                            const nextDomains = {
+                                              ...nodeConfigs[selectedNode.id]
+                                                .domains,
+                                            };
+                                            nextDomains[domain][sub].ip =
+                                              e.target.value;
+                                            updateNodeConfig(selectedNode.id, {
+                                              domains: nextDomains,
+                                            });
+                                          }}
+                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-mono outline-none"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                ),
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nextDomains = {
+                                    ...nodeConfigs[selectedNode.id].domains,
+                                  };
+                                  const subCount = Object.keys(
+                                    subdomains || {},
+                                  ).length;
+                                  nextDomains[domain][
+                                    `subdomain${subCount + 1}`
+                                  ] = {
+                                    to: "",
+                                    ip: "192.168.1.1",
+                                    typeOfRecord: "A",
+                                  };
+                                  updateNodeConfig(selectedNode.id, {
+                                    domains: nextDomains,
+                                  });
+                                }}
+                                className="w-full py-1 text-center border border-dashed border-[var(--border)] hover:bg-[var(--surface)] text-[9px] font-bold text-indigo-400/80 rounded transition cursor-pointer"
+                              >
+                                + Add Record Rule
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        {Object.keys(
+                          nodeConfigs[selectedNode.id]?.domains || {},
+                        ).length === 0 && (
+                          <p className="text-xs italic text-[color:var(--foreground)]/50">
+                            No domains added yet. Click Add Domain above.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CDN Configuration */}
+                  {selectedNode.data.type === "cdn" && (
+                    <div className="space-y-4">
+                      <p className="text-xs font-semibold text-teal-400 font-mono">
+                        CDN Settings
+                      </p>
+
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                          Provider / Technology
+                        </label>
+                        <CustomDropdown
+                          type={(selectedNode.data as any).type}
+                          value={
+                            ((selectedNode.data as any).flavor ||
+                              getDefaultFlavor(
+                                (selectedNode.data as any).type,
+                              )) as string
+                          }
+                          onChange={(flavorId) => {
+                            setNodes((nds) =>
+                              nds.map((n) =>
+                                n.id === selectedNodeId
+                                  ? {
+                                      ...n,
+                                      data: { ...n.data, flavor: flavorId },
+                                    }
+                                  : n,
+                              ),
+                            );
+                          }}
+                        />
+                      </div>
+
+                      <div className="h-px bg-[var(--border)]/70" />
+
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                          Origin Server / Storage
+                        </label>
+                        <select
+                          value={nodeConfigs[selectedNode.id]?.originId ?? ""}
+                          onChange={(e) =>
+                            updateNodeConfig(selectedNode.id, {
+                              originId: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-teal-500 cursor-pointer"
+                        >
+                          <option value="">-- Select Origin --</option>
+                          {nodes
+                            .filter(
+                              (n) =>
+                                n.id !== selectedNode.id &&
+                                (n.data.type === "server" ||
+                                  n.data.type === "storage"),
+                            )
+                            .map((n) => (
+                              <option key={n.id} value={n.id}>
+                                {String(n.data.label || n.id)} (
+                                {String(n.data.type || "")})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+
+                      <div className="h-px bg-[var(--border)]/70" />
+
+                      <div>
+                        <p className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 mb-2">
+                          Cached Keys (Static Content)
+                        </p>
+                        {!nodeConfigs[selectedNode.id]?.cache ||
+                        nodeConfigs[selectedNode.id].cache.length === 0 ? (
+                          <p className="text-xs italic text-[color:var(--foreground)]/50">
+                            CDN Cache is empty.
+                          </p>
+                        ) : (
+                          <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1 scrollbar-thin">
+                            {(nodeConfigs[selectedNode.id]?.cache || []).map(
+                              (item: string, idx: number) => (
+                                <div
+                                  key={idx}
+                                  className="flex gap-2 items-center"
+                                >
+                                  <input
+                                    type="text"
+                                    value={item}
+                                    placeholder="Cache Key (e.g. file.png)"
+                                    onChange={(e) => {
+                                      const nextCache = [
+                                        ...nodeConfigs[selectedNode.id].cache,
+                                      ];
+                                      nextCache[idx] = e.target.value;
+                                      updateNodeConfig(selectedNode.id, {
+                                        cache: nextCache,
+                                      });
+                                    }}
+                                    className="flex-1 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none font-mono focus:border-teal-500"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const nextCache = nodeConfigs[
+                                        selectedNode.id
+                                      ].cache.filter(
+                                        (_: any, i: number) => i !== idx,
+                                      );
+                                      updateNodeConfig(selectedNode.id, {
+                                        cache: nextCache,
+                                      });
+                                    }}
+                                    className="text-rose-500 hover:text-rose-600 text-xs px-1 cursor-pointer font-bold"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const prevCache =
+                              nodeConfigs[selectedNode.id]?.cache ?? [];
+                            updateNodeConfig(selectedNode.id, {
+                              cache: [...prevCache, ""],
+                            });
+                          }}
+                          className="w-full mt-2 rounded-lg border border-[var(--border)] py-1 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
+                        >
+                          + Add Cache Item
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Server Specific Configuration */}
+                  {selectedNode.data.type === "server" && (
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold text-emerald-400 font-mono">
+                        Server Settings
+                      </p>
+
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                          Runtime / Technology
+                        </label>
+                        <CustomDropdown
+                          type={(selectedNode.data as any).type}
+                          value={
+                            ((selectedNode.data as any).flavor ||
+                              getDefaultFlavor(
+                                (selectedNode.data as any).type,
+                              )) as string
+                          }
+                          onChange={(flavorId) => {
+                            setNodes((nds) =>
+                              nds.map((n) =>
+                                n.id === selectedNodeId
+                                  ? {
+                                      ...n,
+                                      data: { ...n.data, flavor: flavorId },
+                                    }
+                                  : n,
+                              ),
+                            );
+                          }}
+                        />
+                      </div>
+
+                      <div className="h-px bg-[var(--border)]/70" />
+
+                      <div>
+                        <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
+                          Connections Capacity
+                        </label>
+                        <input
+                          type="number"
+                          value={nodeConfigs[selectedNode.id]?.capacity ?? 100}
+                          onChange={(e) =>
+                            updateNodeConfig(selectedNode.id, {
+                              capacity: Number(e.target.value),
+                            })
+                          }
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
+                          TCP Connections to Postgres
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            max={200}
+                            value={
+                              nodeConfigs[selectedNode.id]?.tcpConnections ?? 10
+                            }
+                            onChange={(e) =>
+                              updateNodeConfig(selectedNode.id, {
+                                tcpConnections: Number(e.target.value),
+                              })
+                            }
+                            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-cyan-500"
+                          />
+                          <span className="text-[10px] text-[color:var(--foreground)]/45 shrink-0 font-mono">
+                            conns
+                          </span>
+                        </div>
+                        <p className="mt-1 text-[9px] text-[color:var(--foreground)]/40 leading-relaxed">
+                          Pool size for parallel Postgres queries. 0 = no
+                          connections (blocks queries).
+                        </p>
+                      </div>
+
+                      {edges.some(
+                        (e) =>
+                          e.target === selectedNode.id &&
+                          nodes.find((node) => node.id === e.source)?.data
+                            .type === "message-queue",
+                      ) && (
+                        <div className="mt-3">
+                          <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
+                            Prefetch Limit (Competing Consumers)
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={100}
+                            value={
+                              nodeConfigs[selectedNode.id]?.prefetchLimit ?? 1
+                            }
+                            onChange={(e) =>
+                              updateNodeConfig(selectedNode.id, {
+                                prefetchLimit: Number(e.target.value),
+                              })
+                            }
+                            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500"
+                          />
+                          <p className="mt-1 text-[9px] text-[color:var(--foreground)]/40 leading-relaxed">
+                            Max concurrent messages this consumer can pull from
+                            the queue.
+                          </p>
+                        </div>
+                      )}
+
+                      {edges.some(
+                        (e) =>
+                          e.target === selectedNode.id &&
+                          nodes.find((node) => node.id === e.source)?.data
+                            .type === "pubsub",
+                      ) && (
+                        <div className="mt-3 space-y-2">
+                          <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                            Subscription Topics / Channels
+                          </label>
+
+                          {(() => {
+                            const topics =
+                              nodeConfigs[selectedNode.id]
+                                ?.subscriptionTopics ||
+                              (nodeConfigs[selectedNode.id]?.subscriptionTopic
+                                ? [
+                                    nodeConfigs[selectedNode.id]
+                                      .subscriptionTopic,
+                                  ]
+                                : ["order.created"]);
+
+                            return (
+                              <div className="space-y-2">
+                                {topics.map((topic: string, index: number) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-center gap-1.5"
+                                  >
+                                    <input
+                                      type="text"
+                                      value={topic}
+                                      onChange={(e) => {
+                                        const nextTopics = [...topics];
+                                        nextTopics[index] = e.target.value;
                                         updateNodeConfig(selectedNode.id, {
                                           subscriptionTopics: nextTopics,
                                           subscriptionTopic:
                                             nextTopics[0] || "",
                                         });
                                       }}
-                                      className="text-rose-500 hover:text-rose-600 text-xs px-2 font-bold cursor-pointer transition-colors"
-                                      title="Remove Topic"
-                                    >
-                                      ×
-                                    </button>
-                                  )}
-                                </div>
-                              ))}
+                                      className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-indigo-500 font-mono text-[color:var(--foreground)]"
+                                      placeholder="e.g. order.created"
+                                    />
+                                    {topics.length > 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const nextTopics = topics.filter(
+                                            (_: any, i: number) => i !== index,
+                                          );
+                                          updateNodeConfig(selectedNode.id, {
+                                            subscriptionTopics: nextTopics,
+                                            subscriptionTopic:
+                                              nextTopics[0] || "",
+                                          });
+                                        }}
+                                        className="text-rose-500 hover:text-rose-600 text-xs px-2 font-bold cursor-pointer transition-colors"
+                                        title="Remove Topic"
+                                      >
+                                        ×
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
 
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const nextTopics = [
-                                    ...topics,
-                                    `topic-${topics.length + 1}`,
-                                  ];
-                                  updateNodeConfig(selectedNode.id, {
-                                    subscriptionTopics: nextTopics,
-                                    subscriptionTopic: nextTopics[0] || "",
-                                  });
-                                }}
-                                className="w-full mt-1.5 rounded-lg border border-[var(--border)] py-1 text-center text-[10px] hover:bg-[var(--surface)] transition font-semibold cursor-pointer text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const nextTopics = [
+                                      ...topics,
+                                      `topic-${topics.length + 1}`,
+                                    ];
+                                    updateNodeConfig(selectedNode.id, {
+                                      subscriptionTopics: nextTopics,
+                                      subscriptionTopic: nextTopics[0] || "",
+                                    });
+                                  }}
+                                  className="w-full mt-1.5 rounded-lg border border-[var(--border)] py-1 text-center text-[10px] hover:bg-[var(--surface)] transition font-semibold cursor-pointer text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
+                                >
+                                  + Add Topic / Channel
+                                </button>
+                              </div>
+                            );
+                          })()}
+                          <p className="mt-1 text-[9px] text-[color:var(--foreground)]/40 leading-relaxed">
+                            Topics/channels this server subscribes to on the
+                            Pub/Sub broker.
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="h-px bg-[var(--border)]/70 my-2" />
+
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                          Exposed Endpoints
+                        </label>
+                        <div className="space-y-3 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
+                          {Object.entries(
+                            nodeConfigs[selectedNode.id]?.endpoints || {},
+                          ).map(([path, methods]: [string, any], idx) => {
+                            const allHttpMethods = [
+                              "GET",
+                              "POST",
+                              "PUT",
+                              "DELETE",
+                              "PATCH",
+                            ];
+                            return (
+                              <div
+                                key={idx}
+                                className="border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50 space-y-2 relative group/ep"
                               >
-                                + Add Topic / Channel
-                              </button>
-                            </div>
-                          );
-                        })()}
-                        <p className="mt-1 text-[9px] text-[color:var(--foreground)]/40 leading-relaxed">
-                          Topics/channels this server subscribes to on the
-                          Pub/Sub broker.
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="h-px bg-[var(--border)]/70 my-2" />
-
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Exposed Endpoints
-                      </label>
-                      <div className="space-y-3 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
-                        {Object.entries(
-                          nodeConfigs[selectedNode.id]?.endpoints || {},
-                        ).map(([path, methods]: [string, any], idx) => {
-                          const allHttpMethods = [
-                            "GET",
-                            "POST",
-                            "PUT",
-                            "DELETE",
-                            "PATCH",
-                          ];
-                          return (
-                            <div
-                              key={idx}
-                              className="border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50 space-y-2 relative group/ep"
-                            >
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const nextEndpoints = {
-                                    ...(nodeConfigs[selectedNode.id]
-                                      ?.endpoints || {}),
-                                  };
-                                  delete nextEndpoints[path];
-                                  updateNodeConfig(selectedNode.id, {
-                                    endpoints: nextEndpoints,
-                                  });
-                                }}
-                                className="absolute top-1.5 right-1.5 text-rose-500 hover:text-rose-600 text-xs font-bold px-1 cursor-pointer opacity-40 group-hover/ep:opacity-100 transition"
-                                title="Delete Endpoint"
-                              >
-                                ×
-                              </button>
-
-                              <div>
-                                <label className="text-[8px] text-[color:var(--foreground)]/50 block mb-0.5">
-                                  Route Path
-                                </label>
-                                <input
-                                  type="text"
-                                  value={path}
-                                  placeholder="api/v1/resource"
-                                  onChange={(e) => {
-                                    const endpoints = (nodeConfigs[
-                                      selectedNode.id
-                                    ]?.endpoints || {}) as Record<string, any>;
-                                    const nextEndpoints: Record<string, any> =
-                                      {};
-                                    for (const [k, v] of Object.entries(
-                                      endpoints,
-                                    )) {
-                                      if (k === path) {
-                                        nextEndpoints[e.target.value] = v;
-                                      } else {
-                                        nextEndpoints[k] = v;
-                                      }
-                                    }
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const nextEndpoints = {
+                                      ...(nodeConfigs[selectedNode.id]
+                                        ?.endpoints || {}),
+                                    };
+                                    delete nextEndpoints[path];
                                     updateNodeConfig(selectedNode.id, {
                                       endpoints: nextEndpoints,
                                     });
                                   }}
-                                  className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500"
-                                />
-                              </div>
+                                  className="absolute top-1.5 right-1.5 text-rose-500 hover:text-rose-600 text-xs font-bold px-1 cursor-pointer opacity-40 group-hover/ep:opacity-100 transition"
+                                  title="Delete Endpoint"
+                                >
+                                  ×
+                                </button>
 
-                              <div>
-                                <label className="text-[8px] text-[color:var(--foreground)]/50 block mb-1">
-                                  Allowed Methods
-                                </label>
-                                <div className="flex flex-wrap gap-1">
-                                  {allHttpMethods.map((m) => {
-                                    const isSelected = (methods || []).includes(
-                                      m,
-                                    );
-                                    return (
-                                      <button
-                                        key={m}
-                                        type="button"
-                                        onClick={() => {
-                                          const nextEndpoints = {
-                                            ...(nodeConfigs[selectedNode.id]
-                                              ?.endpoints || {}),
-                                          };
-                                          const currentMethods =
-                                            nextEndpoints[path] || [];
-                                          let updatedMethods: any[];
-                                          if (isSelected) {
-                                            updatedMethods =
-                                              currentMethods.filter(
-                                                (item: string) => item !== m,
-                                              );
-                                          } else {
-                                            updatedMethods = [
-                                              ...currentMethods,
-                                              m,
-                                            ];
-                                          }
-                                          nextEndpoints[path] = updatedMethods;
-                                          updateNodeConfig(selectedNode.id, {
-                                            endpoints: nextEndpoints,
-                                          });
-                                        }}
-                                        className={`text-[8px] px-1.5 py-0.5 rounded font-mono font-bold transition cursor-pointer border ${
-                                          isSelected
-                                            ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
-                                            : "bg-[var(--surface-muted)] border-[var(--border)] text-[color:var(--foreground)]/55 hover:border-[var(--border)]/80 hover:text-[color:var(--foreground)]"
-                                        }`}
-                                      >
-                                        {m}
-                                      </button>
-                                    );
-                                  })}
+                                <div>
+                                  <label className="text-[8px] text-[color:var(--foreground)]/50 block mb-0.5">
+                                    Route Path
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={path}
+                                    placeholder="api/v1/resource"
+                                    onChange={(e) => {
+                                      const endpoints = (nodeConfigs[
+                                        selectedNode.id
+                                      ]?.endpoints || {}) as Record<
+                                        string,
+                                        any
+                                      >;
+                                      const nextEndpoints: Record<string, any> =
+                                        {};
+                                      for (const [k, v] of Object.entries(
+                                        endpoints,
+                                      )) {
+                                        if (k === path) {
+                                          nextEndpoints[e.target.value] = v;
+                                        } else {
+                                          nextEndpoints[k] = v;
+                                        }
+                                      }
+                                      updateNodeConfig(selectedNode.id, {
+                                        endpoints: nextEndpoints,
+                                      });
+                                    }}
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="text-[8px] text-[color:var(--foreground)]/50 block mb-1">
+                                    Allowed Methods
+                                  </label>
+                                  <div className="flex flex-wrap gap-1">
+                                    {allHttpMethods.map((m) => {
+                                      const isSelected = (
+                                        methods || []
+                                      ).includes(m);
+                                      return (
+                                        <button
+                                          key={m}
+                                          type="button"
+                                          onClick={() => {
+                                            const nextEndpoints = {
+                                              ...(nodeConfigs[selectedNode.id]
+                                                ?.endpoints || {}),
+                                            };
+                                            const currentMethods =
+                                              nextEndpoints[path] || [];
+                                            let updatedMethods: any[];
+                                            if (isSelected) {
+                                              updatedMethods =
+                                                currentMethods.filter(
+                                                  (item: string) => item !== m,
+                                                );
+                                            } else {
+                                              updatedMethods = [
+                                                ...currentMethods,
+                                                m,
+                                              ];
+                                            }
+                                            nextEndpoints[path] =
+                                              updatedMethods;
+                                            updateNodeConfig(selectedNode.id, {
+                                              endpoints: nextEndpoints,
+                                            });
+                                          }}
+                                          className={`text-[8px] px-1.5 py-0.5 rounded font-mono font-bold transition cursor-pointer border ${
+                                            isSelected
+                                              ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                                              : "bg-[var(--surface-muted)] border-[var(--border)] text-[color:var(--foreground)]/55 hover:border-[var(--border)]/80 hover:text-[color:var(--foreground)]"
+                                          }`}
+                                        >
+                                          {m}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const endpoints =
+                              nodeConfigs[selectedNode.id]?.endpoints || {};
+                            const nextEndpoints = {
+                              ...endpoints,
+                              [`api/v1/endpoint-${Object.keys(endpoints).length + 1}`]:
+                                ["GET"],
+                            };
+                            updateNodeConfig(selectedNode.id, {
+                              endpoints: nextEndpoints,
+                            });
+                          }}
+                          className="w-full mt-2 rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
+                        >
+                          + Add Endpoint Rule
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Message Queue Configuration */}
+                  {selectedNode.data.type === "message-queue" && (
+                    <div className="space-y-4">
+                      <p className="text-xs font-semibold text-pink-400 font-mono">
+                        Message Queue Settings
+                      </p>
+
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                          Provider / Broker
+                        </label>
+                        <CustomDropdown
+                          type={(selectedNode.data as any).type}
+                          value={
+                            ((selectedNode.data as any).flavor ||
+                              getDefaultFlavor(
+                                (selectedNode.data as any).type,
+                              )) as string
+                          }
+                          onChange={(flavorId) => {
+                            setNodes((nds) =>
+                              nds.map((n) =>
+                                n.id === selectedNodeId
+                                  ? {
+                                      ...n,
+                                      data: { ...n.data, flavor: flavorId },
+                                    }
+                                  : n,
+                              ),
+                            );
+                          }}
+                        />
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const endpoints =
-                            nodeConfigs[selectedNode.id]?.endpoints || {};
-                          const nextEndpoints = {
-                            ...endpoints,
-                            [`api/v1/endpoint-${Object.keys(endpoints).length + 1}`]:
-                              ["GET"],
-                          };
-                          updateNodeConfig(selectedNode.id, {
-                            endpoints: nextEndpoints,
-                          });
-                        }}
-                        className="w-full mt-2 rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
-                      >
-                        + Add Endpoint Rule
-                      </button>
+                      <div className="h-px bg-[var(--border)]/70" />
+
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                          Processing Type
+                        </label>
+                        <select
+                          value={
+                            nodeConfigs[selectedNode.id]?.processingType ??
+                            "FIFO"
+                          }
+                          onChange={(e) =>
+                            updateNodeConfig(selectedNode.id, {
+                              processingType: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500 cursor-pointer text-[color:var(--foreground)]"
+                        >
+                          <option value="FIFO">
+                            FIFO (First In, First Out)
+                          </option>
+                          <option value="LIFO">
+                            LIFO (Last In, First Out)
+                          </option>
+                          <option value="PRIORITY">
+                            PRIORITY (Priority Queue)
+                          </option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
+                          Queue Size Limit
+                        </label>
+                        <input
+                          type="number"
+                          value={nodeConfigs[selectedNode.id]?.queueSize ?? 10}
+                          onChange={(e) =>
+                            updateNodeConfig(selectedNode.id, {
+                              queueSize: Number(e.target.value),
+                            })
+                          }
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                          Overflow Behavior
+                        </label>
+                        <select
+                          value={
+                            nodeConfigs[selectedNode.id]?.overflowBehavior ??
+                            "REJECT"
+                          }
+                          onChange={(e) =>
+                            updateNodeConfig(selectedNode.id, {
+                              overflowBehavior: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500 cursor-pointer text-[color:var(--foreground)]"
+                        >
+                          <option value="REJECT">
+                            Reject (Immediate Error)
+                          </option>
+                          <option value="BLOCK">
+                            Block Producer (Wait for consumer)
+                          </option>
+                          <option value="UNLIMITED">
+                            Unlimited Size (No limit)
+                          </option>
+                        </select>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Message Queue Configuration */}
-                {selectedNode.data.type === "message-queue" && (
-                  <div className="space-y-4">
-                    <p className="text-xs font-semibold text-pink-400 font-mono">
-                      Message Queue Settings
-                    </p>
-
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Provider / Broker
-                      </label>
-                      <CustomDropdown
-                        type={(selectedNode.data as any).type}
-                        value={
-                          ((selectedNode.data as any).flavor ||
-                            getDefaultFlavor(
-                              (selectedNode.data as any).type,
-                            )) as string
-                        }
-                        onChange={(flavorId) => {
-                          setNodes((nds) =>
-                            nds.map((n) =>
-                              n.id === selectedNodeId
-                                ? {
-                                    ...n,
-                                    data: { ...n.data, flavor: flavorId },
-                                  }
-                                : n,
-                            ),
-                          );
-                        }}
-                      />
-                    </div>
-
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
-                        Processing Type
-                      </label>
-                      <select
-                        value={
-                          nodeConfigs[selectedNode.id]?.processingType ?? "FIFO"
-                        }
-                        onChange={(e) =>
-                          updateNodeConfig(selectedNode.id, {
-                            processingType: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500 cursor-pointer text-[color:var(--foreground)]"
-                      >
-                        <option value="FIFO">FIFO (First In, First Out)</option>
-                        <option value="LIFO">LIFO (Last In, First Out)</option>
-                        <option value="PRIORITY">
-                          PRIORITY (Priority Queue)
-                        </option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-[9px] text-[color:var(--foreground)]/60 block mb-0.5">
-                        Queue Size Limit
-                      </label>
-                      <input
-                        type="number"
-                        value={nodeConfigs[selectedNode.id]?.queueSize ?? 10}
-                        onChange={(e) =>
-                          updateNodeConfig(selectedNode.id, {
-                            queueSize: Number(e.target.value),
-                          })
-                        }
-                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
-                        Overflow Behavior
-                      </label>
-                      <select
-                        value={
-                          nodeConfigs[selectedNode.id]?.overflowBehavior ??
-                          "REJECT"
-                        }
-                        onChange={(e) =>
-                          updateNodeConfig(selectedNode.id, {
-                            overflowBehavior: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-pink-500 cursor-pointer text-[color:var(--foreground)]"
-                      >
-                        <option value="REJECT">Reject (Immediate Error)</option>
-                        <option value="BLOCK">
-                          Block Producer (Wait for consumer)
-                        </option>
-                        <option value="UNLIMITED">
-                          Unlimited Size (No limit)
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                {/* Pub/Sub Broker Configuration */}
-                {selectedNode.data.type === "pubsub" && (
-                  <div className="space-y-4">
-                    <p className="text-xs font-semibold text-indigo-400 font-mono">
-                      Pub/Sub Broker Settings
-                    </p>
-
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                        Provider / Technology
-                      </label>
-                      <CustomDropdown
-                        type={selectedNode.data.type}
-                        value={
-                          ((selectedNode.data as any).flavor ||
-                            getDefaultFlavor(selectedNode.data.type)) as string
-                        }
-                        onChange={(flavorId) => {
-                          setNodes((nds) =>
-                            nds.map((n) =>
-                              n.id === selectedNodeId
-                                ? {
-                                    ...n,
-                                    data: { ...n.data, flavor: flavorId },
-                                  }
-                                : n,
-                            ),
-                          );
-                        }}
-                      />
-                    </div>
-
-                    <div className="h-px bg-[var(--border)]/70" />
-
-                    <div>
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
-                        Active Subscribers (Connected)
-                      </label>
-                      {(() => {
-                        const subscriberEdges = edges.filter(
-                          (e) => e.source === selectedNode.id,
-                        );
-                        if (subscriberEdges.length === 0) {
-                          return (
-                            <p className="text-[10px] text-[color:var(--foreground)]/45 italic leading-normal">
-                              No subscribers connected. Connect an outgoing line
-                              from the Pub/Sub broker to a Web Server node.
-                            </p>
-                          );
-                        }
-                        return (
-                          <div className="space-y-1.5 mt-2">
-                            {subscriberEdges.map((edge) => {
-                              const targetNode = nodes.find(
-                                (n) => n.id === edge.target,
-                              );
-                              const targetLabel =
-                                (targetNode?.data?.label as string) ||
-                                edge.target;
-                              const targetTopics =
-                                nodeConfigs[edge.target]?.subscriptionTopics ||
-                                (nodeConfigs[edge.target]?.subscriptionTopic
-                                  ? [nodeConfigs[edge.target].subscriptionTopic]
-                                  : ["order.created"]);
-                              return (
-                                <div
-                                  key={edge.id}
-                                  className="flex justify-between items-center text-xs p-2 rounded border border-[var(--border)] bg-[var(--surface)]/50 gap-2"
-                                >
-                                  <span className="font-semibold text-[color:var(--foreground)]/80 shrink-0">
-                                    {targetLabel}
-                                  </span>
-                                  <div className="flex flex-wrap gap-1 max-w-[65%] justify-end">
-                                    {targetTopics.map(
-                                      (topic: string, tIdx: number) => (
-                                        <span
-                                          key={tIdx}
-                                          className="font-mono text-[9px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded shrink-0"
-                                        >
-                                          {topic}
-                                        </span>
-                                      ),
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                )}
-
-                {/* Storage bucket configuration */}
-                {selectedNode.data.type === "storage" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-yellow-400 font-mono">
-                        Storage Buckets
+                  {/* Pub/Sub Broker Configuration */}
+                  {selectedNode.data.type === "pubsub" && (
+                    <div className="space-y-4">
+                      <p className="text-xs font-semibold text-indigo-400 font-mono">
+                        Pub/Sub Broker Settings
                       </p>
-                      <button
-                        onClick={() => {
-                          const currentBuckets = nodeConfigs[selectedNode.id]
-                            ?.buckets || ["media-uploads"];
-                          const nextBuckets = [
-                            ...currentBuckets,
-                            `bucket-${currentBuckets.length + 1}`,
-                          ];
-                          updateNodeConfig(selectedNode.id, {
-                            buckets: nextBuckets,
-                          });
-                        }}
-                        className="rounded bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 px-2 py-1 text-[10px] font-bold transition cursor-pointer"
-                      >
-                        + Add Bucket
-                      </button>
-                    </div>
 
-                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
-                      {(
-                        nodeConfigs[selectedNode.id]?.buckets || [
-                          "media-uploads",
-                        ]
-                      ).map((b: string, idx: number) => (
-                        <div key={idx} className="flex gap-2 items-center">
-                          <input
-                            type="text"
-                            value={b}
-                            onChange={(e) => {
-                              const nextList = [
-                                ...(nodeConfigs[selectedNode.id]?.buckets || [
-                                  "media-uploads",
-                                ]),
-                              ];
-                              nextList[idx] = e.target.value;
-                              updateNodeConfig(selectedNode.id, {
-                                buckets: nextList,
-                              });
-                            }}
-                            className="flex-1 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none font-mono focus:border-yellow-500"
-                          />
-                          <button
-                            onClick={() => {
-                              const currentBuckets = nodeConfigs[
-                                selectedNode.id
-                              ]?.buckets || ["media-uploads"];
-                              if (currentBuckets.length <= 1) return;
-                              const nextBuckets = currentBuckets.filter(
-                                (_: any, i: number) => i !== idx,
-                              );
-                              updateNodeConfig(selectedNode.id, {
-                                buckets: nextBuckets,
-                              });
-                            }}
-                            className="text-rose-500 hover:text-rose-600 text-xs font-bold px-2 cursor-pointer"
-                            title="Delete Bucket"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
+                          Provider / Technology
+                        </label>
+                        <CustomDropdown
+                          type={selectedNode.data.type}
+                          value={
+                            ((selectedNode.data as any).flavor ||
+                              getDefaultFlavor(
+                                selectedNode.data.type,
+                              )) as string
+                          }
+                          onChange={(flavorId) => {
+                            setNodes((nds) =>
+                              nds.map((n) =>
+                                n.id === selectedNodeId
+                                  ? {
+                                      ...n,
+                                      data: { ...n.data, flavor: flavorId },
+                                    }
+                                  : n,
+                              ),
+                            );
+                          }}
+                        />
+                      </div>
 
-                    <div className="h-px bg-[var(--border)]/70" />
+                      <div className="h-px bg-[var(--border)]/70" />
 
-                    {/* Uploaded Files Section */}
-                    <div>
-                      <p className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 mb-2">
-                        Live Uploaded Files
-                      </p>
-                      {(() => {
-                        const filesMap =
-                          storageFilesByBucket[selectedNode.id] || {};
-                        const buckets = nodeConfigs[selectedNode.id]
-                          ?.buckets || ["media-uploads"];
-                        const allFiles = Object.values(filesMap).flat();
-
-                        if (allFiles.length === 0) {
-                          return (
-                            <div className="text-xs text-[color:var(--foreground)]/50 italic bg-[var(--surface)]/30 rounded-lg p-3 border border-[var(--border)]/50">
-                              No files uploaded. Run client simulation to
-                              upload.
-                            </div>
+                      <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-1">
+                          Active Subscribers (Connected)
+                        </label>
+                        {(() => {
+                          const subscriberEdges = edges.filter(
+                            (e) => e.source === selectedNode.id,
                           );
-                        }
-
-                        return (
-                          <div className="space-y-3 max-h-60 overflow-y-auto pr-1 scrollbar-thin">
-                            {buckets.map((bucketName: string) => {
-                              const filesInBucket = filesMap[bucketName] || [];
-                              return (
-                                <div
-                                  key={bucketName}
-                                  className="border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50 space-y-1.5"
-                                >
-                                  <div className="flex items-center justify-between border-b border-[var(--border)]/45 pb-1">
-                                    <span className="text-[10px] font-bold text-yellow-500 font-mono">
-                                      📁 {bucketName}
+                          if (subscriberEdges.length === 0) {
+                            return (
+                              <p className="text-[10px] text-[color:var(--foreground)]/45 italic leading-normal">
+                                No subscribers connected. Connect an outgoing
+                                line from the Pub/Sub broker to a Web Server
+                                node.
+                              </p>
+                            );
+                          }
+                          return (
+                            <div className="space-y-1.5 mt-2">
+                              {subscriberEdges.map((edge) => {
+                                const targetNode = nodes.find(
+                                  (n) => n.id === edge.target,
+                                );
+                                const targetLabel =
+                                  (targetNode?.data?.label as string) ||
+                                  edge.target;
+                                const targetTopics =
+                                  nodeConfigs[edge.target]
+                                    ?.subscriptionTopics ||
+                                  (nodeConfigs[edge.target]?.subscriptionTopic
+                                    ? [
+                                        nodeConfigs[edge.target]
+                                          .subscriptionTopic,
+                                      ]
+                                    : ["order.created"]);
+                                return (
+                                  <div
+                                    key={edge.id}
+                                    className="flex justify-between items-center text-xs p-2 rounded border border-[var(--border)] bg-[var(--surface)]/50 gap-2"
+                                  >
+                                    <span className="font-semibold text-[color:var(--foreground)]/80 shrink-0">
+                                      {targetLabel}
                                     </span>
-                                    <span className="text-[9px] text-[color:var(--foreground)]/55 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-semibold">
-                                      {filesInBucket.length} file
-                                      {filesInBucket.length !== 1 ? "s" : ""}
-                                    </span>
-                                  </div>
-
-                                  {filesInBucket.length === 0 ? (
-                                    <p className="text-[10px] italic text-[color:var(--foreground)]/45">
-                                      Empty bucket
-                                    </p>
-                                  ) : (
-                                    <div className="space-y-1">
-                                      {filesInBucket.map(
-                                        (fileObj: any, fileIdx: number) => {
-                                          const fileName =
-                                            typeof fileObj === "string"
-                                              ? fileObj
-                                              : fileObj.name;
-                                          const info =
-                                            typeof fileObj === "string"
-                                              ? null
-                                              : fileObj.info;
-
-                                          return (
-                                            <div
-                                              key={fileIdx}
-                                              className="text-[11px] bg-[var(--surface)] p-1.5 rounded border border-[var(--border)]/35 font-mono flex flex-col gap-0.5"
-                                            >
-                                              <div className="flex justify-between items-center text-xs font-semibold text-[color:var(--foreground)]/80">
-                                                <span>📄 {fileName}</span>
-                                              </div>
-                                              {info && (
-                                                <div className="text-[9px] text-[color:var(--foreground)]/50 mt-0.5 flex flex-col gap-0.5 border-t border-[var(--border)]/20 pt-1">
-                                                  {info.sourceIp && (
-                                                    <span>
-                                                      IP: {info.sourceIp}
-                                                    </span>
-                                                  )}
-                                                  {info.requestId && (
-                                                    <span className="truncate">
-                                                      Req: {info.requestId}
-                                                    </span>
-                                                  )}
-                                                </div>
-                                              )}
-                                            </div>
-                                          );
-                                        },
+                                    <div className="flex flex-wrap gap-1 max-w-[65%] justify-end">
+                                      {targetTopics.map(
+                                        (topic: string, tIdx: number) => (
+                                          <span
+                                            key={tIdx}
+                                            className="font-mono text-[9px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded shrink-0"
+                                          >
+                                            {topic}
+                                          </span>
+                                        ),
                                       )}
                                     </div>
-                                  )}
-                                </div>
-                              );
-                            })}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Storage bucket configuration */}
+                  {selectedNode.data.type === "storage" && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold text-yellow-400 font-mono">
+                          Storage Buckets
+                        </p>
+                        <button
+                          onClick={() => {
+                            const currentBuckets = nodeConfigs[selectedNode.id]
+                              ?.buckets || ["media-uploads"];
+                            const nextBuckets = [
+                              ...currentBuckets,
+                              `bucket-${currentBuckets.length + 1}`,
+                            ];
+                            updateNodeConfig(selectedNode.id, {
+                              buckets: nextBuckets,
+                            });
+                          }}
+                          className="rounded bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 px-2 py-1 text-[10px] font-bold transition cursor-pointer"
+                        >
+                          + Add Bucket
+                        </button>
+                      </div>
+
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
+                        {(
+                          nodeConfigs[selectedNode.id]?.buckets || [
+                            "media-uploads",
+                          ]
+                        ).map((b: string, idx: number) => (
+                          <div key={idx} className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              value={b}
+                              onChange={(e) => {
+                                const nextList = [
+                                  ...(nodeConfigs[selectedNode.id]?.buckets || [
+                                    "media-uploads",
+                                  ]),
+                                ];
+                                nextList[idx] = e.target.value;
+                                updateNodeConfig(selectedNode.id, {
+                                  buckets: nextList,
+                                });
+                              }}
+                              className="flex-1 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none font-mono focus:border-yellow-500"
+                            />
+                            <button
+                              onClick={() => {
+                                const currentBuckets = nodeConfigs[
+                                  selectedNode.id
+                                ]?.buckets || ["media-uploads"];
+                                if (currentBuckets.length <= 1) return;
+                                const nextBuckets = currentBuckets.filter(
+                                  (_: any, i: number) => i !== idx,
+                                );
+                                updateNodeConfig(selectedNode.id, {
+                                  buckets: nextBuckets,
+                                });
+                              }}
+                              className="text-rose-500 hover:text-rose-600 text-xs font-bold px-2 cursor-pointer"
+                              title="Delete Bucket"
+                            >
+                              ×
+                            </button>
                           </div>
-                        );
-                      })()}
+                        ))}
+                      </div>
+
+                      <div className="h-px bg-[var(--border)]/70" />
+
+                      {/* Uploaded Files Section */}
+                      <div>
+                        <p className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 mb-2">
+                          Live Uploaded Files
+                        </p>
+                        {(() => {
+                          const filesMap =
+                            storageFilesByBucket[selectedNode.id] || {};
+                          const buckets = nodeConfigs[selectedNode.id]
+                            ?.buckets || ["media-uploads"];
+                          const allFiles = Object.values(filesMap).flat();
+
+                          if (allFiles.length === 0) {
+                            return (
+                              <div className="text-xs text-[color:var(--foreground)]/50 italic bg-[var(--surface)]/30 rounded-lg p-3 border border-[var(--border)]/50">
+                                No files uploaded. Run client simulation to
+                                upload.
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="space-y-3 max-h-60 overflow-y-auto pr-1 scrollbar-thin">
+                              {buckets.map((bucketName: string) => {
+                                const filesInBucket =
+                                  filesMap[bucketName] || [];
+                                return (
+                                  <div
+                                    key={bucketName}
+                                    className="border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50 space-y-1.5"
+                                  >
+                                    <div className="flex items-center justify-between border-b border-[var(--border)]/45 pb-1">
+                                      <span className="text-[10px] font-bold text-yellow-500 font-mono">
+                                        📁 {bucketName}
+                                      </span>
+                                      <span className="text-[9px] text-[color:var(--foreground)]/55 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-semibold">
+                                        {filesInBucket.length} file
+                                        {filesInBucket.length !== 1 ? "s" : ""}
+                                      </span>
+                                    </div>
+
+                                    {filesInBucket.length === 0 ? (
+                                      <p className="text-[10px] italic text-[color:var(--foreground)]/45">
+                                        Empty bucket
+                                      </p>
+                                    ) : (
+                                      <div className="space-y-1">
+                                        {filesInBucket.map(
+                                          (fileObj: any, fileIdx: number) => {
+                                            const fileName =
+                                              typeof fileObj === "string"
+                                                ? fileObj
+                                                : fileObj.name;
+                                            const info =
+                                              typeof fileObj === "string"
+                                                ? null
+                                                : fileObj.info;
+
+                                            return (
+                                              <div
+                                                key={fileIdx}
+                                                className="text-[11px] bg-[var(--surface)] p-1.5 rounded border border-[var(--border)]/35 font-mono flex flex-col gap-0.5"
+                                              >
+                                                <div className="flex justify-between items-center text-xs font-semibold text-[color:var(--foreground)]/80">
+                                                  <span>📄 {fileName}</span>
+                                                </div>
+                                                {info && (
+                                                  <div className="text-[9px] text-[color:var(--foreground)]/50 mt-0.5 flex flex-col gap-0.5 border-t border-[var(--border)]/20 pt-1">
+                                                    {info.sourceIp && (
+                                                      <span>
+                                                        IP: {info.sourceIp}
+                                                      </span>
+                                                    )}
+                                                    {info.requestId && (
+                                                      <span className="truncate">
+                                                        Req: {info.requestId}
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            );
+                                          },
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="h-px bg-[var(--border)]/70 pt-2" />
+
+                  {/* Delete component helper */}
+                  <button
+                    onClick={() => {
+                      setNodes((nds) =>
+                        nds.filter((n) => n.id !== selectedNodeId),
+                      );
+                      setEdges((eds) =>
+                        eds.filter(
+                          (e) =>
+                            e.source !== selectedNodeId &&
+                            e.target !== selectedNodeId,
+                        ),
+                      );
+                      setSelectedNodeId(null);
+                    }}
+                    className="w-full rounded-lg border border-rose-500/30 text-rose-500 dark:text-rose-400 py-2 text-center text-xs hover:bg-rose-500/10 transition font-semibold cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <FiTrash2 className="w-3.5 h-3.5" />
+                    <span>Delete Component</span>
+                  </button>
+                </div>
+              </aside>
+            )}
+
+            {/* Docked Right AI Architecture Assistant Panel */}
+            <AIAssistantDrawer
+              isOpen={isAIAssistantOpen}
+              onClose={() => setIsAIAssistantOpen(false)}
+              nodes={nodes}
+              edges={edges}
+              nodeConfigs={nodeConfigs}
+              theme={theme}
+              initialPrompt={initialAIPrompt}
+              onApplyDsl={(code: string, explanation: string) => {
+                try {
+                  const output = compileDSL(code);
+                  if (!output.nodes || output.nodes.length === 0) {
+                    setValidationWarning(
+                      "No nodes generated from AI architecture DSL.",
+                    );
+                    return;
+                  }
+                  setDslCode(code);
+                  setNodes(output.nodes);
+                  setEdges(output.edges);
+                  setNodeConfigs(output.nodeConfigs || {});
+                  setValidationWarning(null);
+                  setSuccessToast(
+                    explanation || "AI Architecture applied to canvas!",
+                  );
+                  setTimeout(() => {
+                    fitView({ duration: 600 });
+                  }, 150);
+                } catch (err: any) {
+                  setValidationWarning(
+                    `Failed to apply architecture: ${err.message || err}`,
+                  );
+                }
+              }}
+              onRunSimulation={() => {
+                handleStartSimulation();
+              }}
+            />
+
+            {/* Dedicated Canvas Settings Sheet */}
+            <CanvasSettingsSheet
+              isOpen={isSettingsOpen}
+              onOpenChange={setIsSettingsOpen}
+              bgPattern={bgPattern}
+              setBgPattern={setBgPattern}
+              bgOpacity={bgOpacity}
+              setBgOpacity={setBgOpacity}
+              snapToGrid={snapToGrid}
+              setSnapToGrid={setSnapToGrid}
+              gridSize={gridSize}
+              setGridSize={setGridSize}
+              showMinimap={showMinimap}
+              setShowMinimap={setShowMinimap}
+              onZoomIn={() => zoomIn({ duration: 200 })}
+              onZoomOut={() => zoomOut({ duration: 200 })}
+              onFitView={() => fitView({ duration: 400 })}
+              nodes={nodes}
+              edges={edges}
+              speed={speed}
+              setSpeed={setSpeed}
+              hideResponse={hideResponse}
+              setHideResponse={setHideResponse}
+              parallelResponse={parallelResponse}
+              setParallelResponse={setParallelResponse}
+              debugEnabled={debugEnabled}
+              setDebugEnabled={setDebugEnabled}
+              onExport={handleExportFlow}
+              onImport={handleImportClick}
+              onDownloadImage={downloadCanvasImage}
+              onClearCanvas={handleClearCanvas}
+              theme={theme}
+            />
+          </div>
+
+          {/* ── Help / How to Use Modal ────────────────────────────────────── */}
+          {showHelpModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md transition-all">
+              <div className="w-[500px] max-w-[95vw] rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl space-y-4">
+                <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="w-5 h-5 text-violet-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                      <line
+                        x1="12"
+                        y1="17"
+                        x2="12.01"
+                        y2="17"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-[color:var(--foreground)]">
+                      FlowFrame Sandbox Guide
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowHelpModal(false)}
+                    className="rounded-full hover:bg-[var(--surface-muted)] text-sm font-bold h-7 w-7 flex items-center justify-center border border-[var(--border)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] cursor-pointer transition"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="space-y-4 max-h-[60vh] overflow-y-auto scrollbar-thin pr-1 text-xs text-[color:var(--foreground)]/75">
+                  {/* 1. Placing components */}
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex items-center justify-center shrink-0">
+                      <svg
+                        className="w-4 h-4 text-violet-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <line x1="9" y1="3" x2="9" y2="21" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-[color:var(--foreground)] mb-0.5">
+                        1. Add & Manage Nodes
+                      </h3>
+                      <p className="leading-relaxed">
+                        Drag shapes and system components (Client, Load
+                        Balancer, Web Server, Message Queue, Event Broker,
+                        Storage, Database) from the left sidebar directly onto
+                        the canvas, or click any library element to place it.
+                      </p>
                     </div>
                   </div>
-                )}
 
-                <div className="h-px bg-[var(--border)]/70 pt-2" />
-
-                {/* Delete component helper */}
-                <button
-                  onClick={() => {
-                    setNodes((nds) =>
-                      nds.filter((n) => n.id !== selectedNodeId),
-                    );
-                    setEdges((eds) =>
-                      eds.filter(
-                        (e) =>
-                          e.source !== selectedNodeId &&
-                          e.target !== selectedNodeId,
-                      ),
-                    );
-                    setSelectedNodeId(null);
-                  }}
-                  className="w-full rounded-lg border border-rose-500/30 text-rose-500 dark:text-rose-400 py-2 text-center text-xs hover:bg-rose-500/10 transition font-semibold cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <FiTrash2 className="w-3.5 h-3.5" />
-                  <span>Delete Component</span>
-                </button>
-              </div>
-            </aside>
-          )}
-
-          {/* Docked Right AI Architecture Assistant Panel */}
-          <AIAssistantDrawer
-            isOpen={isAIAssistantOpen}
-            onClose={() => setIsAIAssistantOpen(false)}
-            nodes={nodes}
-            edges={edges}
-            nodeConfigs={nodeConfigs}
-            theme={theme}
-            onApplyDsl={(code: string, explanation: string) => {
-              try {
-                const output = compileDSL(code);
-                if (!output.nodes || output.nodes.length === 0) {
-                  setValidationWarning("No nodes generated from AI architecture DSL.");
-                  return;
-                }
-                setDslCode(code);
-                setNodes(output.nodes);
-                setEdges(output.edges);
-                setNodeConfigs(output.nodeConfigs || {});
-                setValidationWarning(null);
-                setSuccessToast(explanation || "AI Architecture applied to canvas!");
-                setTimeout(() => {
-                  fitView({ duration: 600 });
-                }, 150);
-              } catch (err: any) {
-                setValidationWarning(`Failed to apply architecture: ${err.message || err}`);
-              }
-            }}
-            onRunSimulation={() => {
-              handleStartSimulation();
-            }}
-          />
-
-          {/* Dedicated Canvas Settings Sheet */}
-          <CanvasSettingsSheet
-            isOpen={isSettingsOpen}
-            onOpenChange={setIsSettingsOpen}
-            bgPattern={bgPattern}
-            setBgPattern={setBgPattern}
-            bgOpacity={bgOpacity}
-            setBgOpacity={setBgOpacity}
-            snapToGrid={snapToGrid}
-            setSnapToGrid={setSnapToGrid}
-            gridSize={gridSize}
-            setGridSize={setGridSize}
-            showMinimap={showMinimap}
-            setShowMinimap={setShowMinimap}
-            onZoomIn={() => zoomIn({ duration: 200 })}
-            onZoomOut={() => zoomOut({ duration: 200 })}
-            onFitView={() => fitView({ duration: 400 })}
-            nodes={nodes}
-            edges={edges}
-            speed={speed}
-            setSpeed={setSpeed}
-            hideResponse={hideResponse}
-            setHideResponse={setHideResponse}
-            parallelResponse={parallelResponse}
-            setParallelResponse={setParallelResponse}
-            debugEnabled={debugEnabled}
-            setDebugEnabled={setDebugEnabled}
-            onExport={handleExportFlow}
-            onImport={handleImportClick}
-            onDownloadImage={downloadCanvasImage}
-            onClearCanvas={handleClearCanvas}
-            theme={theme}
-          />
-        </div>
-
-        {/* Welcome Modal & Template Picker Dialog */}
-        {showWelcomeModal && (
-          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-md z-40 flex items-center justify-center p-4">
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto scrollbar-thin z-50 relative flex flex-col gap-5">
-              <button
-                type="button"
-                onClick={() => setShowWelcomeModal(false)}
-                className="absolute top-4 right-4 text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] h-8 w-8 rounded-full flex items-center justify-center font-bold transition cursor-pointer"
-                title="Close"
-              >
-                ×
-              </button>
-
-              <div className="text-center">
-                <ComponentIcon
-                  type="client"
-                  className="w-10 h-10 mx-auto text-violet-400"
-                />
-                <h1 className="text-xl font-bold tracking-tight text-[color:var(--foreground)] mt-2">
-                  Welcome to FlowFrame Sandbox
-                </h1>
-                <p className="text-xs text-[color:var(--foreground)]/60 mt-1">
-                  Design, simulate, and observe distributed system patterns in
-                  real-time.
-                </p>
-              </div>
-
-              <div className="h-px bg-[var(--border)]/70 w-full" />
-
-              <div className="space-y-2">
-                <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45">
-                  Select an Architecture Template to Start:
-                </p>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      loadTemplate("cacheAside");
-                      setShowWelcomeModal(false);
-                    }}
-                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-violet-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
-                  >
-                    <div className="flex items-center gap-2">
+                  {/* 2. Resizing & Layout */}
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex items-center justify-center shrink-0">
                       <svg
-                        className="w-5 h-5 text-violet-400 group-hover:scale-110 transition duration-150"
+                        className="w-4 h-4 text-blue-400"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
                         strokeWidth="2"
                       >
-                        <rect
-                          x="2"
-                          y="3"
-                          width="20"
-                          height="14"
-                          rx="2"
-                          ry="2"
-                        />
-                        <line x1="2" y1="10" x2="22" y2="10" />
-                        <line x1="12" y1="10" x2="12" y2="21" />
+                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
                       </svg>
-                      <span className="font-bold text-xs group-hover:text-violet-400 transition">
-                        Cache Aside
-                      </span>
                     </div>
-                    <p className="text-[10px] text-[color:var(--foreground)]/50 mt-1.5 leading-normal">
-                      Write/read path caching strategy prioritizing low latency
-                      using Redis Cache and Postgres DB.
-                    </p>
-                  </button>
+                    <div>
+                      <h3 className="font-bold text-[color:var(--foreground)] mb-0.5">
+                        2. Resizing & Organization
+                      </h3>
+                      <p className="leading-relaxed">
+                        Reposition elements by dragging. Click a node to reveal
+                        boundary resize handles. Drag decorative shapes like
+                        **Sticky Notes** or **Text** elements to label your
+                        stack, or use **Rectangle frames** to visually group
+                        multiple servers.
+                      </p>
+                    </div>
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      loadTemplate("loadBalancing");
-                      setShowWelcomeModal(false);
-                    }}
-                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-blue-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
-                  >
-                    <div className="flex items-center gap-2">
+                  {/* 3. Multi-port handles */}
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex items-center justify-center shrink-0">
                       <svg
-                        className="w-5 h-5 text-blue-400 group-hover:scale-110 transition duration-150"
+                        className="w-4 h-4 text-emerald-400"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
-                        strokeWidth="2"
+                        strokeWidth="2.5"
                       >
-                        <circle cx="12" cy="12" r="10" />
-                        <line x1="12" y1="2" x2="12" y2="22" />
-                        <line x1="12" y1="12" x2="22" y2="12" />
-                      </svg>
-                      <span className="font-bold text-xs group-hover:text-blue-400 transition">
-                        Load Balancing
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-[color:var(--foreground)]/50 mt-1.5 leading-normal">
-                      Distribute client requests across multiple backend web
-                      server nodes using Round Robin routing.
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      loadTemplate("valetKey");
-                      setShowWelcomeModal(false);
-                    }}
-                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-yellow-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <svg
-                        className="w-5 h-5 text-yellow-400 group-hover:scale-110 transition duration-150"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <rect
-                          x="3"
-                          y="11"
-                          width="18"
-                          height="11"
-                          rx="2"
-                          ry="2"
-                        />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                      </svg>
-                      <span className="font-bold text-xs group-hover:text-yellow-400 transition">
-                        Valet Key
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-[color:var(--foreground)]/50 mt-1.5 leading-normal">
-                      Clients fetch secure signed URLs from server, then upload
-                      files directly to Cloud Storage.
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      loadTemplate("apiGateway");
-                      setShowWelcomeModal(false);
-                    }}
-                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-fuchsia-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <svg
-                        className="w-5 h-5 text-fuchsia-400 group-hover:scale-110 transition duration-150"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path d="M9 3H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM21 3h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" />
-                      </svg>
-                      <span className="font-bold text-xs group-hover:text-fuchsia-400 transition">
-                        API Gateway
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-[color:var(--foreground)]/50 mt-1.5 leading-normal">
-                      Central entry point routes requests dynamically to Post or
-                      User services based on path prefixes.
-                    </p>
-                  </button>
-
-                  {/* <button
-                    type="button"
-                    onClick={() => {
-                      loadTemplate("messageQueue");
-                      setShowWelcomeModal(false);
-                    }}
-                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-emerald-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition duration-150" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <rect x="2" y="4" width="20" height="7" rx="2" />
-                        <rect x="2" y="13" width="20" height="7" rx="2" />
-                      </svg>
-                      <span className="font-bold text-xs group-hover:text-emerald-400 transition">
-                        Message Queue
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-[color:var(--foreground)]/50 mt-1.5 leading-normal">
-                      Asynchronous job processing architecture leveraging Message Queue buffering & worker servers.
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      loadTemplate("pubSub");
-                      setShowWelcomeModal(false);
-                    }}
-                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-pink-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-pink-400 group-hover:scale-110 transition duration-150" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                         <circle cx="18" cy="5" r="3" />
                         <circle cx="6" cy="19" r="3" />
-                        <circle cx="6" cy="5" r="3" />
-                        <path d="M6 8v8M8 5h7" />
+                        <path d="M6 16V9a4 4 0 0 1 4-4h5" />
                       </svg>
-                      <span className="font-bold text-xs group-hover:text-pink-400 transition">
-                        Pub/Sub Broker
-                      </span>
                     </div>
-                    <p className="text-[10px] text-[color:var(--foreground)]/50 mt-1.5 leading-normal">
-                      Event-driven notification and analytics message fans dispatching to isolated subscriber groups.
-                    </p>
-                  </button> */}
+                    <div>
+                      <h3 className="font-bold text-[color:var(--foreground)] mb-0.5">
+                        3. Multi-Port Connections
+                      </h3>
+                      <p className="leading-relaxed">
+                        Link nodes by dragging from output handles (Right &
+                        Bottom) to input handles (Left & Top). Custom multi-port
+                        handles allow you to clean up your canvas routing and
+                        prevent overlapping lines when nodes have multiple
+                        connections.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 4. Requests & Simulations */}
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex items-center justify-center shrink-0">
+                      <svg
+                        className="w-4 h-4 text-amber-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                      >
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-[color:var(--foreground)] mb-0.5">
+                        4. Trigger Packet Animations
+                      </h3>
+                      <p className="leading-relaxed">
+                        Select the Client node to write requests and payload
+                        parameters in the inspector (JSON request body supports
+                        the **Tab** key). Click `Re-run Simulation` or hit the
+                        **Spacebar** to see packets route in real-time through
+                        your architecture!
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="h-px bg-[var(--border)]/70 w-full" />
-
-              <div className="flex justify-between items-center">
-                <p className="text-[10px] text-[color:var(--foreground)]/40">
-                  Or design your own custom architecture.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowWelcomeModal(false)}
-                  className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 hover:bg-[var(--surface-muted)] text-xs font-semibold px-4 py-2 transition cursor-pointer"
-                >
-                  Start with Blank Canvas →
-                </button>
+                <div className="border-t border-[var(--border)] pt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowHelpModal(false)}
+                    className="rounded-xl border border-violet-500/30 bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 text-xs font-semibold px-4 py-2 transition cursor-pointer"
+                  >
+                    Got it, close guide
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ── Help / How to Use Modal ────────────────────────────────────── */}
-        {showHelpModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md transition-all">
-            <div className="w-[500px] max-w-[95vw] rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl space-y-4">
-              <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
-                <div className="flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5 text-violet-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                    <line
-                      x1="12"
-                      y1="17"
-                      x2="12.01"
-                      y2="17"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-[color:var(--foreground)]">
-                    FlowFrame Sandbox Guide
-                  </h2>
-                </div>
+          {/* ── Share Modal ────────────────────────────────────────────────── */}
+          {showShareModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md transition-all animate-fade-in p-4">
+              <div className="w-[500px] max-w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl space-y-5 relative">
                 <button
                   type="button"
-                  onClick={() => setShowHelpModal(false)}
-                  className="rounded-full hover:bg-[var(--surface-muted)] text-sm font-bold h-7 w-7 flex items-center justify-center border border-[var(--border)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] cursor-pointer transition"
+                  onClick={() => setShowShareModal(false)}
+                  className="absolute top-4 right-4 text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] h-8 w-8 rounded-full flex items-center justify-center font-bold transition cursor-pointer"
+                  title="Close"
                 >
                   ×
                 </button>
-              </div>
 
-              <div className="space-y-4 max-h-[60vh] overflow-y-auto scrollbar-thin pr-1 text-xs text-[color:var(--foreground)]/75">
-                {/* 1. Placing components */}
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex items-center justify-center shrink-0">
+                <div className="text-center">
+                  <div className="w-10 h-10 mx-auto rounded-full bg-violet-500/10 flex items-center justify-center text-violet-400">
                     <svg
-                      className="w-4 h-4 text-violet-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <line x1="9" y1="3" x2="9" y2="21" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-[color:var(--foreground)] mb-0.5">
-                      1. Add & Manage Nodes
-                    </h3>
-                    <p className="leading-relaxed">
-                      Drag shapes and system components (Client, Load Balancer,
-                      Web Server, Message Queue, Event Broker, Storage,
-                      Database) from the left sidebar directly onto the canvas,
-                      or click any library element to place it.
-                    </p>
-                  </div>
-                </div>
-
-                {/* 2. Resizing & Layout */}
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex items-center justify-center shrink-0">
-                    <svg
-                      className="w-4 h-4 text-blue-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-[color:var(--foreground)] mb-0.5">
-                      2. Resizing & Organization
-                    </h3>
-                    <p className="leading-relaxed">
-                      Reposition elements by dragging. Click a node to reveal
-                      boundary resize handles. Drag decorative shapes like
-                      **Sticky Notes** or **Text** elements to label your stack,
-                      or use **Rectangle frames** to visually group multiple
-                      servers.
-                    </p>
-                  </div>
-                </div>
-
-                {/* 3. Multi-port handles */}
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex items-center justify-center shrink-0">
-                    <svg
-                      className="w-4 h-4 text-emerald-400"
+                      className="w-5 h-5"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                       strokeWidth="2.5"
                     >
-                      <circle cx="18" cy="5" r="3" />
-                      <circle cx="6" cy="19" r="3" />
-                      <path d="M6 16V9a4 4 0 0 1 4-4h5" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"
+                      />
                     </svg>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-[color:var(--foreground)] mb-0.5">
-                      3. Multi-Port Connections
-                    </h3>
-                    <p className="leading-relaxed">
-                      Link nodes by dragging from output handles (Right &
-                      Bottom) to input handles (Left & Top). Custom multi-port
-                      handles allow you to clean up your canvas routing and
-                      prevent overlapping lines when nodes have multiple
-                      connections.
+                  <h2 className="text-lg font-bold tracking-tight text-[color:var(--foreground)] mt-2">
+                    Save & Share Your Flow
+                  </h2>
+                  <p className="text-xs text-[color:var(--foreground)]/60 mt-1">
+                    Download your architecture diagram as an image and copy a
+                    post template to share on your networks.
+                  </p>
+                </div>
+
+                <div className="h-px bg-[var(--border)]/70 w-full" />
+
+                {/* Public Shareable Link */}
+                {(diagramId || shareId) && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] uppercase font-bold tracking-widest text-violet-400 font-mono">
+                        Public Share Link
+                      </p>
+                      <span className="text-[10px] text-emerald-400 font-mono font-semibold">
+                        Public Access Ready
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={`${typeof window !== "undefined" ? window.location.origin : ""}/share/${diagramId || shareId}`}
+                        className="flex-1 rounded-xl border border-violet-500/30 bg-[var(--surface-muted)] px-3 py-2 text-xs font-mono text-violet-400 select-all outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const url = `${typeof window !== "undefined" ? window.location.origin : ""}/share/${diagramId || shareId}`;
+                          navigator.clipboard.writeText(url);
+                          setSuccessToast(
+                            "Public share link copied to clipboard!",
+                          );
+                        }}
+                        className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition shadow-sm cursor-pointer whitespace-nowrap"
+                      >
+                        Copy Link
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-[color:var(--foreground)]/50">
+                      Anyone with this link can view, inspect, and run
+                      simulations on this architecture.
                     </p>
                   </div>
-                </div>
+                )}
 
-                {/* 4. Requests & Simulations */}
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex items-center justify-center shrink-0">
-                    <svg
-                      className="w-4 h-4 text-amber-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                    >
-                      <polygon points="5 3 19 12 5 21 5 3" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-[color:var(--foreground)] mb-0.5">
-                      4. Trigger Packet Animations
-                    </h3>
-                    <p className="leading-relaxed">
-                      Select the Client node to write requests and payload
-                      parameters in the inspector (JSON request body supports
-                      the **Tab** key). Click `Re-run Simulation` or hit the
-                      **Spacebar** to see packets route in real-time through
-                      your architecture!
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-[var(--border)] pt-3 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowHelpModal(false)}
-                  className="rounded-xl border border-violet-500/30 bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 text-xs font-semibold px-4 py-2 transition cursor-pointer"
-                >
-                  Got it, close guide
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Share Modal ────────────────────────────────────────────────── */}
-        {showShareModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md transition-all animate-fade-in p-4">
-            <div className="w-[500px] max-w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl space-y-5 relative">
-              <button
-                type="button"
-                onClick={() => setShowShareModal(false)}
-                className="absolute top-4 right-4 text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] h-8 w-8 rounded-full flex items-center justify-center font-bold transition cursor-pointer"
-                title="Close"
-              >
-                ×
-              </button>
-
-              <div className="text-center">
-                <div className="w-10 h-10 mx-auto rounded-full bg-violet-500/10 flex items-center justify-center text-violet-400">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
-                  </svg>
-                </div>
-                <h2 className="text-lg font-bold tracking-tight text-[color:var(--foreground)] mt-2">
-                  Save & Share Your Flow
-                </h2>
-                <p className="text-xs text-[color:var(--foreground)]/60 mt-1">
-                  Download your architecture diagram as an image and copy a post template to share on your networks.
-                </p>
-              </div>
-
-              <div className="h-px bg-[var(--border)]/70 w-full" />
-
-              {/* Public Shareable Link */}
-              {(diagramId || shareId) && (
+                {/* Save Image / PNG Export Section */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-violet-400 font-mono">
-                      Public Share Link
-                    </p>
-                    <span className="text-[10px] text-emerald-400 font-mono font-semibold">
-                      Public Access Ready
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={`${typeof window !== "undefined" ? window.location.origin : ""}/share/${diagramId || shareId}`}
-                      className="flex-1 rounded-xl border border-violet-500/30 bg-[var(--surface-muted)] px-3 py-2 text-xs font-mono text-violet-400 select-all outline-none"
-                    />
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45">
+                    Export Image
+                  </p>
+                  <button
+                    type="button"
+                    onClick={downloadCanvasImage}
+                    className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/15 text-violet-500 dark:text-violet-400 text-xs font-semibold transition active:scale-95 text-center cursor-pointer shadow-sm hover:shadow"
+                  >
+                    <svg
+                      className="w-4 h-4 shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"
+                      />
+                    </svg>
+                    <span>Download Diagram as PNG Image</span>
+                  </button>
+                </div>
+
+                {/* Social Sharing Intents */}
+                <div className="space-y-2">
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45">
+                    2. Share on Social Media
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Share on LinkedIn */}
                     <button
                       type="button"
                       onClick={() => {
-                        const url = `${typeof window !== "undefined" ? window.location.origin : ""}/share/${diagramId || shareId}`;
-                        navigator.clipboard.writeText(url);
-                        setSuccessToast("Public share link copied to clipboard!");
+                        const templateText = `I just designed this distributed system architecture flow on FlowFrame.\n\nFlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues.`;
+                        navigator.clipboard.writeText(templateText);
+                        setSuccessToast(
+                          "Caption copied to clipboard! Opening LinkedIn...",
+                        );
+                        window.open(
+                          `https://www.linkedin.com/shareArticle?mini=true&&text=${templateText}`,
+                          "_blank",
+                          "noopener,noreferrer",
+                        );
                       }}
-                      className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition shadow-sm cursor-pointer whitespace-nowrap"
+                      className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-[#0a66c2]/20 bg-[#0a66c2]/5 hover:bg-[#0a66c2]/15 text-[#0a66c2] dark:text-[#378fe9] text-xs font-semibold transition active:scale-95 text-center cursor-pointer shadow-sm hover:shadow"
+                      title="Copies caption text and opens LinkedIn post editor"
                     >
-                      Copy Link
+                      <svg
+                        className="w-4 h-4 fill-current shrink-0"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.779-1.75-1.75s.784-1.75 1.75-1.75 1.75.779 1.75 1.75-.784 1.75-1.75 1.75zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                      </svg>
+                      <span>Share on LinkedIn</span>
+                    </button>
+
+                    {/* Share on X */}
+                    <a
+                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                        "I just designed this distributed system architecture flow on FlowFrame.\n\nFlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues.",
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/15 text-sky-500 dark:text-sky-400 text-xs font-semibold transition active:scale-95 text-center shadow-sm hover:shadow"
+                      title="Opens Twitter/X post composer with pre-filled caption text"
+                    >
+                      <svg
+                        className="w-4 h-4 fill-current shrink-0"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                      </svg>
+                      <span>Post on X (Twitter)</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* LinkedIn Post Copy Paste Template */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45">
+                      3. Copy Post Template
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const templateText = `I just designed this distributed system architecture flow on FlowFrame.\n\nFlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues.`;
+                        navigator.clipboard.writeText(templateText);
+                        setCopiedTemplate(true);
+                        setTimeout(() => setCopiedTemplate(false), 2000);
+                      }}
+                      className="text-[10px] text-violet-400 hover:text-violet-300 font-bold tracking-tight bg-transparent border-0 cursor-pointer"
+                    >
+                      {copiedTemplate ? "Copied ✓" : "Copy Template"}
                     </button>
                   </div>
-                  <p className="text-[10px] text-[color:var(--foreground)]/50">
-                    Anyone with this link can view, inspect, and run simulations on this architecture.
-                  </p>
-                </div>
-              )}
-
-              {/* Save Image / PNG Export Section */}
-              <div className="space-y-2">
-                <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45">
-                  Export Image
-                </p>
-                <button
-                  type="button"
-                  onClick={downloadCanvasImage}
-                  className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/15 text-violet-500 dark:text-violet-400 text-xs font-semibold transition active:scale-95 text-center cursor-pointer shadow-sm hover:shadow"
-                >
-                  <svg
-                    className="w-4 h-4 shrink-0"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
-                  </svg>
-                  <span>Download Diagram as PNG Image</span>
-                </button>
-              </div>
-
-              {/* Social Sharing Intents */}
-              <div className="space-y-2">
-                <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45">
-                  2. Share on Social Media
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Share on LinkedIn */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const templateText = `I just designed this distributed system architecture flow on FlowFrame.\n\nFlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues.`;
-                      navigator.clipboard.writeText(templateText);
-                      setSuccessToast("Caption copied to clipboard! Opening LinkedIn...");
-                      window.open(`https://www.linkedin.com/shareArticle?mini=true&&text=${templateText}`, "_blank", "noopener,noreferrer");
-                    }}
-                    className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-[#0a66c2]/20 bg-[#0a66c2]/5 hover:bg-[#0a66c2]/15 text-[#0a66c2] dark:text-[#378fe9] text-xs font-semibold transition active:scale-95 text-center cursor-pointer shadow-sm hover:shadow"
-                    title="Copies caption text and opens LinkedIn post editor"
-                  >
-                    <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
-                      <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.779-1.75-1.75s.784-1.75 1.75-1.75 1.75.779 1.75 1.75-.784 1.75-1.75 1.75zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-                    </svg>
-                    <span>Share on LinkedIn</span>
-                  </button>
-
-                  {/* Share on X */}
-                  <a
-                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                      "I just designed this distributed system architecture flow on FlowFrame.\n\nFlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues."
-                    )}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/15 text-sky-500 dark:text-sky-400 text-xs font-semibold transition active:scale-95 text-center shadow-sm hover:shadow"
-                    title="Opens Twitter/X post composer with pre-filled caption text"
-                  >
-                    <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
-                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                    </svg>
-                    <span>Post on X (Twitter)</span>
-                  </a>
-                </div>
-              </div>
-
-              {/* LinkedIn Post Copy Paste Template */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45">
-                    3. Copy Post Template
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const templateText = `I just designed this distributed system architecture flow on FlowFrame.\n\nFlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues.`;
-                      navigator.clipboard.writeText(templateText);
-                      setCopiedTemplate(true);
-                      setTimeout(() => setCopiedTemplate(false), 2000);
-                    }}
-                    className="text-[10px] text-violet-400 hover:text-violet-300 font-bold tracking-tight bg-transparent border-0 cursor-pointer"
-                  >
-                    {copiedTemplate ? "Copied ✓" : "Copy Template"}
-                  </button>
-                </div>
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-[10px] text-[color:var(--foreground)]/60 leading-relaxed font-sans max-h-24 overflow-y-auto scrollbar-thin select-all">
-                  <p className="font-semibold text-[color:var(--foreground)]/80">I just designed this distributed system architecture flow on FlowFrame.</p>
-                  <p className="mt-1">FlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues.</p>
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-[10px] text-[color:var(--foreground)]/60 leading-relaxed font-sans max-h-24 overflow-y-auto scrollbar-thin select-all">
+                    <p className="font-semibold text-[color:var(--foreground)]/80">
+                      I just designed this distributed system architecture flow
+                      on FlowFrame.
+                    </p>
+                    <p className="mt-1">
+                      FlowFrame is an interactive visual simulator for testing
+                      load balancing, caching, and message queues.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Mobile Sidebar Backdrop Overlay */}
       {isSidebarOpenMobile && (

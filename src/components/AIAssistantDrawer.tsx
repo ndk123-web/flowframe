@@ -28,6 +28,7 @@ interface AIAssistantDrawerProps {
   onApplyDsl: (code: string, explanation: string) => void;
   onRunSimulation?: () => void;
   theme?: "light" | "dark";
+  initialPrompt?: string;
 }
 
 interface ChatMessage {
@@ -47,6 +48,7 @@ export default function AIAssistantDrawer({
   nodeConfigs,
   onApplyDsl,
   onRunSimulation,
+  initialPrompt,
 }: AIAssistantDrawerProps) {
   // Mode: "create" (Generate architecture on canvas) or "ask" (Technical Q&A / Canvas explanation)
   const [mode, setMode] = useState<"create" | "ask">("create");
@@ -63,6 +65,14 @@ export default function AIAssistantDrawer({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Prefill initial prompt if passed from dashboard quick AI
+  useEffect(() => {
+    if (isOpen && initialPrompt && initialPrompt.trim().length > 0) {
+      setInput(initialPrompt);
+      setMode("create");
+    }
+  }, [isOpen, initialPrompt]);
 
   // Auto-scroll messages to bottom
   useEffect(() => {

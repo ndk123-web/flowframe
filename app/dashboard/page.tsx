@@ -9,6 +9,9 @@ import { useToastStore } from "@/store/useToastStore";
 import { useThemeStore } from "@/store/useThemeStore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import DashboardAmbientArchitecture from "@/components/DashboardAmbientArchitecture";
+import DashboardSettingsDialog from "@/components/DashboardSettingsDialog";
+import DashboardQuickAI from "@/components/DashboardQuickAI";
 import {
   FiGrid,
   FiClock,
@@ -84,156 +87,6 @@ interface WorkspaceItem {
   iconType: "cart" | "chat" | "card" | "zap";
 }
 
-const AVATAR_PRESETS = [
-  // 1. Robots & Cyber Bots
-  {
-    id: "bot-1",
-    category: "robots" as const,
-    label: "Circuit Master",
-    url: "https://api.dicebear.com/7.x/bottts/svg?seed=CircuitMaster",
-  },
-  {
-    id: "bot-2",
-    category: "robots" as const,
-    label: "Byte Commander",
-    url: "https://api.dicebear.com/7.x/bottts/svg?seed=ByteCommander",
-  },
-  {
-    id: "bot-3",
-    category: "robots" as const,
-    label: "Cyber Architect",
-    url: "https://api.dicebear.com/7.x/bottts/svg?seed=CyberArchitect",
-  },
-  {
-    id: "bot-4",
-    category: "robots" as const,
-    label: "Quantum Dev",
-    url: "https://api.dicebear.com/7.x/bottts/svg?seed=QuantumDev",
-  },
-  {
-    id: "bot-5",
-    category: "robots" as const,
-    label: "Node Runner",
-    url: "https://api.dicebear.com/7.x/bottts/svg?seed=NodeRunner",
-  },
-  {
-    id: "bot-6",
-    category: "robots" as const,
-    label: "Data Daemon",
-    url: "https://api.dicebear.com/7.x/bottts/svg?seed=DataDaemon",
-  },
-  // 2. Pixel Art & Retro Hackers
-  {
-    id: "pix-1",
-    category: "pixel" as const,
-    label: "Lead Architect",
-    url: "https://api.dicebear.com/7.x/pixel-art/svg?seed=Architect",
-  },
-  {
-    id: "pix-2",
-    category: "pixel" as const,
-    label: "Core Coder",
-    url: "https://api.dicebear.com/7.x/pixel-art/svg?seed=Coder",
-  },
-  {
-    id: "pix-3",
-    category: "pixel" as const,
-    label: "Cyber Hacker",
-    url: "https://api.dicebear.com/7.x/pixel-art/svg?seed=Hacker",
-  },
-  {
-    id: "pix-4",
-    category: "pixel" as const,
-    label: "System Admin",
-    url: "https://api.dicebear.com/7.x/pixel-art/svg?seed=SysAdmin",
-  },
-  {
-    id: "pix-5",
-    category: "pixel" as const,
-    label: "Cloud Engineer",
-    url: "https://api.dicebear.com/7.x/pixel-art/svg?seed=CloudEngineer",
-  },
-  {
-    id: "pix-6",
-    category: "pixel" as const,
-    label: "SecOps Specialist",
-    url: "https://api.dicebear.com/7.x/pixel-art/svg?seed=SecurityPro",
-  },
-  // 3. Illustrated Dev Personas
-  {
-    id: "per-1",
-    category: "personas" as const,
-    label: "Felix",
-    url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
-  },
-  {
-    id: "per-2",
-    category: "personas" as const,
-    label: "Aiden",
-    url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Aiden",
-  },
-  {
-    id: "per-3",
-    category: "personas" as const,
-    label: "Zoe",
-    url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Zoe",
-  },
-  {
-    id: "per-4",
-    category: "personas" as const,
-    label: "Leo",
-    url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Leo",
-  },
-  {
-    id: "per-5",
-    category: "personas" as const,
-    label: "Maya",
-    url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maya",
-  },
-  {
-    id: "per-6",
-    category: "personas" as const,
-    label: "Sasha",
-    url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sasha",
-  },
-  // 4. Studio Developer Portraits
-  {
-    id: "stu-1",
-    category: "portraits" as const,
-    label: "Alex Studio",
-    url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=128&q=80",
-  },
-  {
-    id: "stu-2",
-    category: "portraits" as const,
-    label: "Jordan Studio",
-    url: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=128&q=80",
-  },
-  {
-    id: "stu-3",
-    category: "portraits" as const,
-    label: "Marcus Studio",
-    url: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=128&q=80",
-  },
-  {
-    id: "stu-4",
-    category: "portraits" as const,
-    label: "Elena Studio",
-    url: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=128&q=80",
-  },
-  {
-    id: "stu-5",
-    category: "portraits" as const,
-    label: "David Studio",
-    url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=128&q=80",
-  },
-  {
-    id: "stu-6",
-    category: "portraits" as const,
-    label: "Taylor Studio",
-    url: "https://images.unsplash.com/photo-1628157582853-a796fa650a6a?auto=format&fit=crop&w=128&q=80",
-  },
-];
 
 export default function DashboardPage() {
   const { theme, toggleTheme, setTheme } = useThemeStore();
@@ -251,13 +104,14 @@ export default function DashboardPage() {
   const [selectedWsId, setSelectedWsId] = useState<string | null>(null);
   const [expandedWorkspaces, setExpandedWorkspaces] = useState<Record<string, boolean>>({});
   const [workspaceDiagramsMap, setWorkspaceDiagramsMap] = useState<Record<string, RecentDiagramDTO[]>>({});
-  const [aiPrompt, setAiPrompt] = useState("");
+  const [loadingWsDiagrams, setLoadingWsDiagrams] = useState<Record<string, boolean>>({});
 
   const toggleWorkspaceExpand = async (wsId: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setExpandedWorkspaces((prev) => ({ ...prev, [wsId]: !prev[wsId] }));
     if (!workspaceDiagramsMap[wsId] && token) {
+      setLoadingWsDiagrams((prev) => ({ ...prev, [wsId]: true }));
       try {
         const diags = await getWorkspaceDiagrams(wsId, token);
         setWorkspaceDiagramsMap((prev) => ({
@@ -274,6 +128,8 @@ export default function DashboardPage() {
         }));
       } catch (err) {
         console.error("Failed to fetch diagrams for workspace:", err);
+      } finally {
+        setLoadingWsDiagrams((prev) => ({ ...prev, [wsId]: false }));
       }
     }
   };
@@ -301,18 +157,9 @@ export default function DashboardPage() {
   const { user, token, isAuthenticated, _hasHydrated, logout, updateUser } = useAuthStore();
   const showToast = useToastStore((s) => s.showToast);
 
-  // Settings Modal states
+  // Settings Dialog state
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
-  const [profileAvatarUrl, setProfileAvatarUrl] = useState(user?.avatar || "");
-  const [profileName, setProfileName] = useState(user?.name || "");
-  const [selectedAvatarCategory, setSelectedAvatarCategory] = useState<"all" | "robots" | "pixel" | "personas" | "portraits">("all");
 
-  useEffect(() => {
-    if (user) {
-      setProfileAvatarUrl(user.avatar || "");
-      setProfileName(user.name || "");
-    }
-  }, [user]);
 
   // Auth Guard with Zustand Hydration check
   useEffect(() => {
@@ -380,6 +227,10 @@ export default function DashboardPage() {
 
   const handleCreateWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (workspaces.length >= 5) {
+      showToast("Workspace limit reached (5/5). Free plan allows up to 5 workspaces.", "error");
+      return;
+    }
     if (!newWsName.trim()) {
       showToast("Workspace name is required", "error");
       return;
@@ -521,33 +372,44 @@ export default function DashboardPage() {
 
       {/* ── Collapsible Left Sidebar (Canva / IDE / ChatGPT style) ────── */}
       <aside
-        className={`fixed md:sticky top-0 h-screen shrink-0 border-r border-[var(--border)] bg-[var(--surface)] flex flex-col justify-between transition-all duration-200 z-50 md:z-30 ${
-          sidebarCollapsed ? "md:w-16" : "md:w-64"
+        className={`fixed md:sticky top-0 h-screen shrink-0 border-r border-[var(--border)] bg-[var(--surface)] flex flex-col transition-all duration-200 z-50 md:z-30 overflow-hidden ${
+          sidebarCollapsed ? "md:w-16 w-16" : "md:w-72 w-72"
         } ${
           mobileMenuOpen
-            ? "translate-x-0 w-64 shadow-2xl"
-            : "-translate-x-full md:translate-x-0 w-64 md:w-auto"
+            ? "translate-x-0 shadow-2xl"
+            : "-translate-x-full md:translate-x-0"
         }`}
       >
-        {/* Sidebar Header: Logo & Collapse Button */}
-        <div>
-          <div className="p-3.5 border-b border-[var(--border)] flex items-center justify-between">
-            <Link
-              href="/"
-              className="flex items-center gap-2.5 min-w-0 group"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <div className="relative h-8 w-8 shrink-0 flex items-center justify-center">
-                <Image
-                  src={theme === "dark" ? "/logo/flow-frame-dark.png" : "/logo/flow-frame-light.png"}
-                  alt="FlowFrame"
-                  width={32}
-                  height={32}
-                  priority
-                  className="h-full w-full object-contain"
-                />
-              </div>
-              {(!sidebarCollapsed || mobileMenuOpen) && (
+        {/* ── 1. Sidebar Header: Logo & Collapse Button (Pinned Top) ────── */}
+        <div className="shrink-0 h-14 px-3.5 border-b border-[var(--border)] flex items-center justify-between bg-[var(--surface)]">
+          {sidebarCollapsed && !mobileMenuOpen ? (
+            <div className="w-full flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed(false)}
+                className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted/50 transition cursor-pointer"
+                title="Open and expand sidebar"
+              >
+                <FiMenu className="size-5 text-primary" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link
+                href="/"
+                className="flex items-center gap-2.5 min-w-0 group"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <div className="relative h-8 w-8 shrink-0 flex items-center justify-center">
+                  <Image
+                    src={theme === "dark" ? "/logo/flow-frame-dark.png" : "/logo/flow-frame-light.png"}
+                    alt="FlowFrame"
+                    width={32}
+                    height={32}
+                    priority
+                    className="h-full w-full object-contain"
+                  />
+                </div>
                 <div className="min-w-0 leading-tight">
                   <span className="text-sm font-bold tracking-tight text-[color:var(--foreground)] block truncate">
                     FlowFrame
@@ -556,148 +418,201 @@ export default function DashboardPage() {
                     Architecture Hub
                   </span>
                 </div>
-              )}
-            </Link>
+              </Link>
 
-            <div className="flex items-center">
-              <button
-                type="button"
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="hidden md:flex p-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition cursor-pointer"
-                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              >
-                {sidebarCollapsed ? (
-                  <FiChevronRight className="w-4 h-4" />
-                ) : (
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setSidebarCollapsed(true)}
+                  className="hidden md:flex p-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition cursor-pointer"
+                  title="Collapse sidebar"
+                >
                   <FiChevronLeft className="w-4 h-4" />
-                )}
-              </button>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex md:hidden p-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition"
+                >
+                  <FiX className="w-4 h-4" />
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── 2. Scrollable Navigation Area (Pinned Middle) ───────────── */}
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-3 py-4 space-y-6">
+          {sidebarCollapsed && !mobileMenuOpen ? (
+            /* Collapsed Icons Only */
+            <div className="space-y-2 flex flex-col items-center">
               <button
                 type="button"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex md:hidden p-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition"
+                onClick={() => {
+                  setActiveNav("workspaces");
+                  setSelectedWsId(null);
+                }}
+                className={`p-2.5 rounded-lg transition cursor-pointer ${
+                  activeNav === "workspaces"
+                    ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
+                    : "text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)]"
+                }`}
+                title="Workspaces"
               >
-                <FiX className="w-4 h-4" />
+                <FiFolder className="w-4 h-4" />
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveNav("recent");
+                  setSelectedWsId(null);
+                }}
+                className={`p-2.5 rounded-lg transition cursor-pointer ${
+                  activeNav === "recent"
+                    ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
+                    : "text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)]"
+                }`}
+                title="Recent Diagrams"
+              >
+                <FiClock className="w-4 h-4" />
+              </button>
+
+              <div className="w-6 h-px bg-[var(--border)] my-1" />
+
+              <Link
+                href="/scenarios"
+                className="p-2.5 rounded-lg text-[color:var(--muted)] hover:text-emerald-400 hover:bg-[var(--bg-elevated)] transition"
+                title="Interactive Scenarios"
+              >
+                <FiSliders className="w-4 h-4" />
+              </Link>
+
+              <Link
+                href="/learn"
+                className="p-2.5 rounded-lg text-[color:var(--muted)] hover:text-indigo-400 hover:bg-[var(--bg-elevated)] transition"
+                title="Learn Academy"
+              >
+                <FiBookOpen className="w-4 h-4" />
+              </Link>
+
+              <Link
+                href="/learn/glossary"
+                className="p-2.5 rounded-lg text-[color:var(--muted)] hover:text-amber-400 hover:bg-[var(--bg-elevated)] transition"
+                title="Systems Glossary"
+              >
+                <FiBookmark className="w-4 h-4" />
+              </Link>
+
+              <Link
+                href="/docs"
+                className="p-2.5 rounded-lg text-[color:var(--muted)] hover:text-cyan-400 hover:bg-[var(--bg-elevated)] transition"
+                title="Documentation"
+              >
+                <FiFileText className="w-4 h-4" />
+              </Link>
+
+              <div className="w-6 h-px bg-[var(--border)] my-1" />
+
+              <Link
+                href="/workspace?tab=editor"
+                className="p-2.5 rounded-lg text-[color:var(--muted)] hover:text-blue-400 hover:bg-[var(--bg-elevated)] transition"
+                title="Architecture DSL"
+              >
+                <FiCode className="w-4 h-4" />
+              </Link>
+
+              <Link
+                href="/scenarios"
+                className="p-2.5 rounded-lg text-[color:var(--muted)] hover:text-violet-400 hover:bg-[var(--bg-elevated)] transition"
+                title="Templates Library"
+              >
+                <FiBox className="w-4 h-4" />
+              </Link>
             </div>
-          </div>
-
-          {/* Sidebar Nav Items */}
-          <div className="p-2 space-y-3">
-            {sidebarCollapsed && !mobileMenuOpen ? (
-              /* Collapsed Icons Only */
-              <div className="space-y-2 flex flex-col items-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveNav("workspaces");
-                    setSelectedWsId(null);
-                  }}
-                  className={`p-2.5 rounded-lg transition cursor-pointer ${
-                    activeNav === "workspaces"
-                      ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
-                      : "text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)]"
-                  }`}
-                  title="Workspaces"
-                >
-                  <FiFolder className="w-4 h-4" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveNav("recent");
-                    setSelectedWsId(null);
-                  }}
-                  className={`p-2.5 rounded-lg transition cursor-pointer ${
-                    activeNav === "recent"
-                      ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
-                      : "text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)]"
-                  }`}
-                  title="Recent Diagrams"
-                >
-                  <FiClock className="w-4 h-4" />
-                </button>
-
-                <div className="w-6 h-px bg-[var(--border)] my-1" />
-
-                <Link
-                  href="/scenarios"
-                  className="p-2.5 rounded-lg text-[color:var(--muted)] hover:text-emerald-400 hover:bg-[var(--bg-elevated)] transition"
-                  title="Scenarios"
-                >
-                  <FiSliders className="w-4 h-4" />
-                </Link>
-
-                <Link
-                  href="/learn"
-                  className="p-2.5 rounded-lg text-[color:var(--muted)] hover:text-indigo-400 hover:bg-[var(--bg-elevated)] transition"
-                  title="Learn Academy"
-                >
-                  <FiBookOpen className="w-4 h-4" />
-                </Link>
-
-                <Link
-                  href="/learn/glossary"
-                  className="p-2.5 rounded-lg text-[color:var(--muted)] hover:text-amber-400 hover:bg-[var(--bg-elevated)] transition"
-                  title="Systems Glossary"
-                >
-                  <FiBookmark className="w-4 h-4" />
-                </Link>
-
-                <Link
-                  href="/docs"
-                  className="p-2.5 rounded-lg text-[color:var(--muted)] hover:text-cyan-400 hover:bg-[var(--bg-elevated)] transition"
-                  title="Documentation"
-                >
-                  <FiFileText className="w-4 h-4" />
-                </Link>
-              </div>
-            ) : (
-              /* Expanded Hierarchical Sidebar */
-              <>
-                {/* 1. WORKSPACES HIERARCHY */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between px-2.5 py-1">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
+          ) : (
+            /* Expanded Structured Navigation */
+            <>
+              {/* ── Group 1: Workspaces ── */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between px-2 mb-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
                       Workspaces
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setCreateModalOpen(true)}
-                      className="p-1 rounded text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:bg-[var(--bg-elevated)] transition cursor-pointer"
-                      title="Create New Workspace"
-                    >
-                      <FiPlus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-0.5">
-                    {/* All Workspaces Root Filter */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveNav("workspaces");
-                        setSelectedWsId(null);
-                        setMobileMenuOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                        activeNav === "workspaces" && selectedWsId === null
-                          ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
-                          : "text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)]"
+                    <span
+                      className={`text-[9px] font-mono px-1.5 py-0.2 rounded-full border ${
+                        workspaces.length >= 5
+                          ? "bg-amber-500/10 text-amber-500 border-amber-500/30 font-semibold"
+                          : "bg-muted/40 text-muted-foreground border-border/80"
                       }`}
+                      title={`${workspaces.length} of 5 workspaces used`}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <FiGrid className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">All Systems</span>
-                      </div>
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[var(--bg-elevated)] text-[color:var(--muted)]">
-                        {workspaces.length}
-                      </span>
-                    </button>
+                      {workspaces.length}/5
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (workspaces.length >= 5) {
+                        showToast("Workspace limit reached (5/5). Free plan allows 5 workspaces.", "error");
+                        return;
+                      }
+                      setCreateModalOpen(true);
+                    }}
+                    className={`p-1 rounded transition cursor-pointer ${
+                      workspaces.length >= 5
+                        ? "text-muted-foreground/40 hover:text-muted-foreground/60"
+                        : "text-muted-foreground hover:text-primary hover:bg-muted/40"
+                    }`}
+                    title={workspaces.length >= 5 ? "Limit reached (5/5 Workspaces)" : "Create New Workspace"}
+                  >
+                    <FiPlus className="size-3.5" />
+                  </button>
+                </div>
 
-                    {/* Workspaces Tree with Expandable Child Diagrams */}
-                    {workspaces.map((ws) => {
+                <div className="space-y-1">
+                  {/* All Workspaces Root Filter */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveNav("workspaces");
+                      setSelectedWsId(null);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition cursor-pointer ${
+                      activeNav === "workspaces" && selectedWsId === null
+                        ? "bg-primary/10 text-primary font-semibold border border-primary/20"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <FiGrid className="size-3.5 shrink-0" />
+                      <span className="truncate">All Workspaces</span>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0 bg-muted/30">
+                      {loading ? "..." : workspaces.length}
+                    </Badge>
+                  </button>
+
+                  {/* Workspaces Tree with Loading Skeleton */}
+                  {loading ? (
+                    <div className="py-2.5 px-3 space-y-2">
+                      <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
+                        <div className="relative size-3.5 shrink-0">
+                          <div className="absolute inset-0 rounded-full border border-primary/25" />
+                          <div className="absolute inset-0 rounded-full border border-primary border-t-transparent animate-spin" />
+                        </div>
+                        <span>Loading workspaces...</span>
+                      </div>
+                      <div className="space-y-1.5 pt-0.5">
+                        <div className="h-7 w-full rounded-lg bg-muted/40 animate-pulse" />
+                        <div className="h-7 w-5/6 rounded-lg bg-muted/30 animate-pulse" />
+                        <div className="h-7 w-4/6 rounded-lg bg-muted/20 animate-pulse" />
+                      </div>
+                    </div>
+                  ) : (
+                    workspaces.map((ws) => {
                       const isExpanded = !!expandedWorkspaces[ws.id];
                       const childDiagrams =
                         workspaceDiagramsMap[ws.id] ||
@@ -705,68 +620,74 @@ export default function DashboardPage() {
                       const isSelected = activeNav === "workspaces" && selectedWsId === ws.id;
 
                       return (
-                        <div key={ws.id} className="space-y-0.5">
+                        <div key={ws.id} className="space-y-1">
                           <div
-                            className={`group flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition cursor-pointer ${
+                            className={`group flex items-center justify-between px-2.5 py-2 rounded-lg text-xs transition cursor-pointer ${
                               isSelected
-                                ? "bg-[var(--accent)]/15 text-[color:var(--accent)] font-semibold"
-                                : "text-[color:var(--foreground)]/80 hover:bg-[var(--bg-elevated)] hover:text-[color:var(--foreground)]"
+                                ? "bg-primary/10 text-primary font-semibold border border-primary/20"
+                                : "text-foreground/85 hover:bg-muted/40 hover:text-foreground"
                             }`}
                             onClick={() => {
                               setSelectedWsId(ws.id);
                               setActiveNav("workspaces");
                             }}
                           >
-                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
                               <button
                                 type="button"
                                 onClick={(e) => toggleWorkspaceExpand(ws.id, e)}
-                                className="p-0.5 rounded text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition cursor-pointer"
+                                className="p-0.5 rounded text-muted-foreground hover:text-foreground transition cursor-pointer"
                                 title={isExpanded ? "Collapse" : "Expand"}
                               >
                                 {isExpanded ? (
-                                  <FiChevronDown className="w-3.5 h-3.5" />
+                                  <FiChevronDown className="size-3.5" />
                                 ) : (
-                                  <FiChevronRight className="w-3.5 h-3.5" />
+                                  <FiChevronRight className="size-3.5" />
                                 )}
                               </button>
-                              <FiFolder className="w-3.5 h-3.5 text-[color:var(--accent)] shrink-0" />
-                              <span className="truncate text-xs">{ws.name}</span>
+                              <FiFolder className="size-3.5 text-primary shrink-0" />
+                              <span className="truncate text-xs font-medium">{ws.name}</span>
                             </div>
-                            <span
-                              className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border shrink-0 ${
+                            <Badge
+                              variant="outline"
+                              className={`text-[9px] font-mono font-bold px-1.5 py-0 shrink-0 ml-1.5 ${
                                 ws.env === "PROD"
-                                  ? "bg-[var(--red-muted)] border-[var(--red)]/25 text-[color:var(--red)]"
+                                  ? "bg-red-500/10 border-red-500/25 text-red-500"
                                   : ws.env === "STAGING"
-                                  ? "bg-[var(--amber-muted)] border-[var(--amber)]/25 text-[color:var(--amber)]"
-                                  : "bg-[var(--accent)]/10 border-[var(--accent)]/20 text-[color:var(--accent)]"
+                                  ? "bg-amber-500/10 border-amber-500/25 text-amber-500"
+                                  : "bg-primary/10 border-primary/20 text-primary"
                               }`}
                             >
                               {ws.env}
-                            </span>
+                            </Badge>
                           </div>
 
                           {/* Expanded Child Architecture Diagrams */}
                           {isExpanded && (
-                            <div className="pl-6 pr-1 py-0.5 space-y-0.5 border-l border-[var(--border)] ml-4">
-                              {childDiagrams.length > 0 ? (
+                            <div className="ml-4 pl-3 py-1 space-y-1 border-l border-border/70 my-1">
+                              {loadingWsDiagrams[ws.id] ? (
+                                <div className="flex items-center gap-2 px-2.5 py-1 text-[11px] text-muted-foreground font-mono">
+                                  <div className="size-3 rounded-full border border-primary/40 border-t-primary animate-spin shrink-0" />
+                                  <span>Loading diagrams...</span>
+                                </div>
+                              ) : childDiagrams.length > 0 ? (
                                 childDiagrams.map((diag) => (
                                   <Link
                                     key={diag.id}
                                     href={`/dashboard/workspace/${ws.id}/${diag.id}`}
-                                    className="flex items-center gap-2 px-2 py-1 rounded text-[11px] text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:bg-[var(--bg-elevated)] transition truncate"
+                                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:text-primary hover:bg-muted/40 transition truncate"
                                     title={diag.title}
                                   >
-                                    <FiLayers className="w-3 h-3 shrink-0 text-[color:var(--muted)]" />
+                                    <FiLayers className="size-3.5 shrink-0 text-muted-foreground" />
                                     <span className="truncate">{diag.title}</span>
                                   </Link>
                                 ))
                               ) : (
-                                <div className="px-2 py-1 text-[10px] text-[color:var(--muted)] italic flex items-center justify-between">
+                                <div className="px-2 py-1 text-[11px] text-muted-foreground italic flex items-center justify-between">
                                   <span>No diagrams yet</span>
                                   <Link
                                     href={`/dashboard/workspace/${ws.id}`}
-                                    className="text-[color:var(--accent)] hover:underline not-italic font-medium"
+                                    className="text-primary hover:underline not-italic font-medium"
                                   >
                                     + Add
                                   </Link>
@@ -776,117 +697,197 @@ export default function DashboardPage() {
                           )}
                         </div>
                       );
-                    })}
-                  </div>
+                    })
+                  )}
+
+                  {/* Quick Create Workspace Action */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (workspaces.length >= 5) {
+                        showToast("Workspace limit reached (5/5). Free plan allows 5 workspaces.", "error");
+                        return;
+                      }
+                      setCreateModalOpen(true);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium border border-dashed transition cursor-pointer mt-1 ${
+                      workspaces.length >= 5
+                        ? "border-amber-500/25 bg-amber-500/5 text-amber-500/80 hover:bg-amber-500/10"
+                        : "text-muted-foreground hover:text-primary hover:bg-muted/30 border-border/80 hover:border-primary/40"
+                    }`}
+                    title={workspaces.length >= 5 ? "Workspace limit reached (5/5)" : "Create Workspace"}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FiPlus className="size-3.5 text-primary shrink-0" />
+                      <span className="truncate">
+                        {workspaces.length >= 5 ? "Workspace Limit (5/5)" : "Create Workspace"}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono shrink-0 opacity-70">
+                      {workspaces.length}/5
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="h-px bg-border/60" />
+
+              {/* ── Group 2: Activity ── */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between px-2 mb-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveNav("recent");
+                      setSelectedWsId(null);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <FiClock className="size-3 text-primary" />
+                    <span>Recent Activity</span>
+                  </button>
+                  {recentDiagrams.length > 0 && (
+                    <Badge variant="outline" className="text-[9px] font-mono px-1.5 py-0 bg-muted/30">
+                      {recentDiagrams.length}
+                    </Badge>
+                  )}
                 </div>
 
-                {/* 2. RECENT ACTIVITY / DIAGRAMS */}
-                <div className="pt-2 space-y-1">
-                  <div className="flex items-center justify-between px-2.5 py-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveNav("recent");
-                        setSelectedWsId(null);
-                        setMobileMenuOpen(false);
-                      }}
-                      className="text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)] hover:text-[color:var(--foreground)] flex items-center gap-1.5 transition cursor-pointer"
-                    >
-                      <FiClock className="w-3 h-3 text-[color:var(--accent)]" />
-                      <span>Recent Activity</span>
-                    </button>
-                    {recentDiagrams.length > 0 && (
-                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[var(--bg-elevated)] text-[color:var(--muted)]">
-                        {recentDiagrams.length}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="space-y-0.5">
-                    {recentDiagrams.slice(0, 5).map((diag) => (
+                <div className="space-y-1">
+                  {loading ? (
+                    <div className="py-2 px-3 space-y-2">
+                      <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
+                        <div className="relative size-3 shrink-0">
+                          <div className="absolute inset-0 rounded-full border border-amber-500/25" />
+                          <div className="absolute inset-0 rounded-full border border-amber-500 border-t-transparent animate-spin" />
+                        </div>
+                        <span>Loading activity...</span>
+                      </div>
+                      <div className="space-y-1.5 pt-0.5">
+                        <div className="h-6 w-full rounded-md bg-muted/30 animate-pulse" />
+                        <div className="h-6 w-3/4 rounded-md bg-muted/20 animate-pulse" />
+                      </div>
+                    </div>
+                  ) : recentDiagrams.length > 0 ? (
+                    recentDiagrams.slice(0, 4).map((diag) => (
                       <Link
                         key={diag.id}
                         href={`/dashboard/workspace/${diag.workspace_id}/${diag.id}`}
-                        className="flex flex-col px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-elevated)] transition group"
+                        className="flex flex-col px-3 py-2 rounded-lg hover:bg-muted/40 border border-transparent hover:border-border/60 transition group"
                         title={`Open ${diag.title}`}
                       >
-                        <div className="flex items-center justify-between gap-1.5">
-                          <span className="text-xs font-medium text-[color:var(--foreground)] truncate group-hover:text-[color:var(--accent)] transition-colors">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium text-foreground truncate group-hover:text-primary transition-colors">
                             {diag.title}
                           </span>
-                          <span className="text-[9px] font-mono text-[color:var(--muted)] shrink-0">
+                          <span className="text-[9px] font-mono text-muted-foreground shrink-0">
                             {formatDate(diag.updated_at)}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[10px] text-[color:var(--muted)] truncate mt-0.5">
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground truncate mt-0.5">
                           <span className="truncate">{diag.workspace_name}</span>
                           <span>·</span>
                           <span className="font-mono">{diag.nodes_count || 0} nodes</span>
                         </div>
                       </Link>
-                    ))}
-                    {recentDiagrams.length === 0 && (
-                      <p className="px-2.5 py-1 text-[11px] text-[color:var(--muted)] italic">
-                        No recent diagrams opened
-                      </p>
-                    )}
-                  </div>
+                    ))
+                  ) : (
+                    <p className="px-3 py-1 text-[11px] text-muted-foreground italic">
+                      No recent diagrams opened
+                    </p>
+                  )}
                 </div>
+              </div>
 
-                {/* 3. EXPLORE & LEARN */}
-                <div className="pt-2 space-y-1">
-                  <p className="px-2.5 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
-                    Explore & Learn
-                  </p>
-                  <div className="h-px bg-[var(--border)] my-1" />
+              {/* Divider */}
+              <div className="h-px bg-border/60" />
 
-                  <Link
-                    href="/scenarios"
-                    className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition"
-                    title="Scenarios"
-                  >
-                    <FiSliders className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
-                    <span>Scenarios</span>
-                  </Link>
+              {/* ── Group 3: Learning ── */}
+              <div className="space-y-1.5">
+                <p className="px-2 mb-1 text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+                  Learning
+                </p>
 
+                <div className="space-y-1">
                   <Link
                     href="/learn"
-                    className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition"
                     title="Learn Academy"
                   >
-                    <FiBookOpen className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
+                    <FiBookOpen className="size-4 shrink-0 text-indigo-400" />
                     <span>Learn Academy</span>
                   </Link>
 
                   <Link
+                    href="/scenarios"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition"
+                    title="Scenarios"
+                  >
+                    <FiSliders className="size-4 shrink-0 text-emerald-400" />
+                    <span>Interactive Scenarios</span>
+                  </Link>
+
+                  <Link
                     href="/learn/glossary"
-                    className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition"
                     title="Systems Glossary"
                   >
-                    <FiBookmark className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                    <FiBookmark className="size-4 shrink-0 text-amber-400" />
                     <span>Systems Glossary</span>
                   </Link>
 
                   <Link
                     href="/docs"
-                    className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition"
                     title="Documentation"
                   >
-                    <FiFileText className="w-3.5 h-3.5 shrink-0 text-cyan-400" />
+                    <FiFileText className="size-4 shrink-0 text-cyan-400" />
                     <span>Documentation</span>
                   </Link>
                 </div>
-              </>
-            )}
-          </div>
+              </div>
+
+              {/* Divider */}
+              <div className="h-px bg-border/60" />
+
+              {/* ── Group 4: Tools ── */}
+              <div className="space-y-1.5">
+                <p className="px-2 mb-1 text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+                  Tools
+                </p>
+
+                <div className="space-y-1">
+                  <Link
+                    href="/workspace?tab=editor"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition"
+                    title="DSL / Code Editor"
+                  >
+                    <FiCode className="size-4 shrink-0 text-blue-400" />
+                    <span>Architecture DSL</span>
+                  </Link>
+
+                  <Link
+                    href="/scenarios"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition"
+                    title="Architecture Templates"
+                  >
+                    <FiBox className="size-4 shrink-0 text-violet-400" />
+                    <span>Templates Library</span>
+                  </Link>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Sidebar Bottom: Anchored User Profile Card (Canva / IDE style - opens Settings on click) */}
-        <div className="p-2.5 border-t border-[var(--border)] bg-[var(--surface-muted)]/30">
+        {/* ── 3. Sidebar Bottom: Anchored User Profile Card (Pinned Bottom) ── */}
+        <div className="shrink-0 p-3 border-t border-[var(--border)] bg-[var(--surface-muted)]/30">
           <button
             type="button"
             onClick={() => setSettingsModalOpen(true)}
-            className={`w-full flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-[var(--bg-elevated)] border border-transparent hover:border-[var(--border)] transition cursor-pointer text-left group ${
+            className={`w-full flex items-center gap-3 p-2 rounded-xl hover:bg-[var(--bg-elevated)] border border-transparent hover:border-[var(--border)] transition cursor-pointer text-left group ${
               sidebarCollapsed && !mobileMenuOpen ? "justify-center px-0" : "justify-between"
             }`}
             title="Open Account Preferences & Settings"
@@ -900,11 +901,14 @@ export default function DashboardPage() {
                     className="w-8 h-8 rounded-lg object-cover ring-1 ring-[var(--border)] group-hover:ring-[var(--accent)] transition"
                   />
                 ) : (
-                  <img
-                    src={`https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.email)}`}
-                    alt={user.name || "User"}
-                    className="w-8 h-8 rounded-lg object-cover bg-[var(--accent)]/10 ring-1 ring-[var(--border)] group-hover:ring-[var(--accent)] transition"
-                  />
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-mono font-bold text-xs select-none ring-1 ring-[var(--border)] group-hover:ring-[var(--accent)] transition">
+                    {(user.name || user.email || "FF")
+                      .split(" ")
+                      .map((s: string) => s[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </div>
                 )}
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[var(--surface)]" />
               </div>
@@ -939,9 +943,22 @@ export default function DashboardPage() {
               type="button"
               onClick={() => setMobileMenuOpen(true)}
               className="md:hidden p-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] text-[color:var(--muted)]"
+              title="Open mobile menu"
             >
               <FiMenu className="w-4 h-4" />
             </button>
+
+            {sidebarCollapsed && (
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed(false)}
+                className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-card hover:bg-muted/60 text-muted-foreground hover:text-foreground transition cursor-pointer text-xs font-medium shadow-xs shrink-0"
+                title="Open sidebar"
+              >
+                <FiMenu className="size-3.5 text-primary" />
+                <span className="text-[11px] font-mono">Open Sidebar</span>
+              </button>
+            )}
             <div className="min-w-0">
               <h1 className="text-sm font-bold text-[color:var(--foreground)] flex items-center gap-2">
                 <span>FlowFrame Lab</span>
@@ -980,177 +997,211 @@ export default function DashboardPage() {
         <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-8 space-y-8">
           {/* ── 1. Personalized User Dashboard Header & Stats ────────────────── */}
           <section className="space-y-6">
-            {/* User Greeting Banner */}
-            <div className="rounded-2xl border border-border bg-card p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
-              <div className="flex items-center gap-4 min-w-0">
+            {/* User Greeting Banner with Subtle Ambient Architecture Diagram */}
+            <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="absolute inset-0 pointer-events-none opacity-25 dark:opacity-15 flex items-center justify-end overflow-hidden pr-2">
+                <DashboardAmbientArchitecture />
+              </div>
+
+              <div className="relative z-10 flex items-center gap-4 min-w-0">
                 <div className="relative shrink-0">
                   {user.avatar ? (
                     <img
                       src={user.avatar}
                       alt={user.name || "User"}
-                      className="size-14 rounded-2xl object-cover ring-2 ring-primary/20 shadow-sm"
+                      className="size-12 sm:size-13 rounded-xl object-cover ring-2 ring-primary/20 shadow-xs"
                     />
                   ) : (
-                    <img
-                      src={`https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.email || "flowframe")}`}
-                      alt={user.name || "User"}
-                      className="size-14 rounded-2xl object-cover bg-primary/10 ring-2 ring-primary/20 shadow-sm"
-                    />
+                    <div className="size-12 sm:size-13 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-mono font-bold text-base shadow-xs select-none">
+                      {(user.name || user.email || "FF")
+                        .split(" ")
+                        .map((s: string) => s[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </div>
                   )}
-                  <span className="absolute -bottom-1 -right-1 size-3.5 rounded-full bg-emerald-500 ring-2 ring-card" title="Online" />
+                  <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full bg-emerald-500 ring-2 ring-card" title="Online" />
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground truncate">
+
+                <div className="min-w-0 space-y-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
                       Welcome back, {user.name || "Architect"}
                     </h2>
-                    <Badge variant="outline" className="font-mono text-[10px] uppercase text-primary border-primary/25 bg-primary/10">
-                      Developer Tier
+                    <Badge variant="outline" className="text-[10px] font-mono px-2 py-0.2 bg-primary/10 text-primary border-primary/20 font-medium">
+                      Starter Plan
                     </Badge>
                   </div>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">
-                    {user.email} · Manage your distributed systems architectures, topologies, and simulations.
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-normal">
+                    Model, simulate, and optimize your distributed system topologies.
                   </p>
                 </div>
               </div>
 
               {/* Quick Action Buttons */}
-              <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+              <div className="relative z-10 flex items-center gap-2.5 shrink-0">
                 <Button
-                  onClick={() => setCreateModalOpen(true)}
-                  className="gap-2 shadow-xs cursor-pointer"
+                  onClick={() => {
+                    if (workspaces.length >= 5) {
+                      showToast("Workspace limit reached (5/5). Free plan allows up to 5 workspaces.", "error");
+                      return;
+                    }
+                    setCreateModalOpen(true);
+                  }}
+                  disabled={workspaces.length >= 5}
+                  size="sm"
+                  className={`h-9 px-3.5 gap-2 shadow-xs font-semibold text-xs ${
+                    workspaces.length >= 5 ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+                  }`}
                 >
-                  <FiPlus className="size-4" />
-                  <span>New Workspace</span>
+                  <FiPlus className="size-3.5" />
+                  <span>{workspaces.length >= 5 ? "Limit Reached (5/5)" : "New Workspace"}</span>
                 </Button>
-                <Button variant="outline" asChild className="gap-2 shadow-xs">
+                <Button variant="outline" size="sm" asChild className="h-9 px-3.5 gap-2 shadow-xs font-semibold text-xs cursor-pointer">
                   <Link href="/workspace">
-                    <FiBox className="size-4 text-primary" />
+                    <FiBox className="size-3.5 text-primary" />
                     <span>Open Canvas</span>
                   </Link>
                 </Button>
               </div>
             </div>
 
-            {/* 4 Developer Metric Stat Cards */}
+            {/* 4 Unified Developer Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-              {/* Stat 1: Workspaces */}
-              <div className="rounded-xl border border-border bg-card p-4.5 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all duration-150">
-                <div className="flex items-center justify-between mb-3">
+              {/* Card 1: Workspaces */}
+              <div className="rounded-xl border border-border bg-card/90 p-4 shadow-xs hover:border-primary/40 transition-all duration-150 flex flex-col justify-between gap-3">
+                <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">Workspaces</span>
-                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                    <FiFolder className="size-4" />
+                  <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <FiFolder className="size-3.5" />
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <div className="text-2xl font-bold font-mono text-card-foreground">
-                    {workspaces.length}
+                <div>
+                  <div className="flex items-baseline gap-1.5 font-mono">
+                    <span className="text-2xl font-bold tracking-tight text-foreground">
+                      {workspaces.length}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-sans">/ 5 limit</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
-                    <span>{workspaces.filter((w) => w.env === "DEV").length} DEV</span>
-                    <span>·</span>
-                    <span>{workspaces.filter((w) => w.env === "PROD").length} PROD</span>
-                    {workspaces.filter((w) => w.starred).length > 0 && (
-                      <>
-                        <span>·</span>
-                        <span className="text-amber-500 font-medium">★ {workspaces.filter((w) => w.starred).length}</span>
-                      </>
-                    )}
+                  <div className="w-full bg-muted/40 h-1 rounded-full overflow-hidden mt-2 mb-1.5">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        workspaces.length >= 5 ? "bg-amber-500" : "bg-primary"
+                      }`}
+                      style={{ width: `${Math.min(100, (workspaces.length / 5) * 100)}%` }}
+                    />
                   </div>
-                </div>
-              </div>
-
-              {/* Stat 2: Total Topologies / Diagrams */}
-              <div className="rounded-xl border border-border bg-card p-4.5 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all duration-150">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-medium text-muted-foreground">Architecture Diagrams</span>
-                  <div className="size-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
-                    <DiagramIcon className="size-4" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-2xl font-bold font-mono text-card-foreground">
-                    {workspaces.reduce((acc, w) => acc + (w.diagrams_count || 0), 0)}
-                  </div>
-                  <div className="text-[11px] text-muted-foreground">
-                    Across all environments
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>{5 - workspaces.length > 0 ? `${5 - workspaces.length} slots left` : "Limit reached"}</span>
+                    <span className="font-mono text-primary/80">{workspaces.filter((w) => w.env === "DEV").length} DEV · {workspaces.filter((w) => w.env === "PROD").length} PROD</span>
                   </div>
                 </div>
               </div>
 
-              {/* Stat 3: Recent Activity */}
-              <div className="rounded-xl border border-border bg-card p-4.5 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all duration-150">
-                <div className="flex items-center justify-between mb-3">
+              {/* Card 2: Diagrams Capacity */}
+              <div className="rounded-xl border border-border bg-card/90 p-4 shadow-xs hover:border-primary/40 transition-all duration-150 flex flex-col justify-between gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">Total Diagrams</span>
+                  <div className="size-7 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                    <DiagramIcon className="size-3.5" />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-baseline gap-1.5 font-mono">
+                    <span className="text-2xl font-bold tracking-tight text-foreground">
+                      {workspaces.reduce((acc, w) => acc + (w.diagrams_count || 0), 0)}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-sans">
+                      / {Math.max(5, workspaces.length * 5)} quota
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted/40 h-1 rounded-full overflow-hidden mt-2 mb-1.5">
+                    <div
+                      className="h-full rounded-full bg-indigo-500 transition-all duration-300"
+                      style={{
+                        width: `${
+                          workspaces.length > 0
+                            ? Math.min(
+                                100,
+                                (workspaces.reduce((acc, w) => acc + (w.diagrams_count || 0), 0) /
+                                  (workspaces.length * 5)) *
+                                  100
+                              )
+                            : 0
+                        }%`,
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>5 per workspace</span>
+                    <span className="font-mono text-indigo-400">
+                      {Math.max(0, (workspaces.length * 5) - workspaces.reduce((acc, w) => acc + (w.diagrams_count || 0), 0))} available
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Recent Activity */}
+              <div className="rounded-xl border border-border bg-card/90 p-4 shadow-xs hover:border-primary/40 transition-all duration-150 flex flex-col justify-between gap-3">
+                <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">Recent Sessions</span>
-                  <div className="size-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
-                    <FiClock className="size-4" />
+                  <div className="size-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                    <FiClock className="size-3.5" />
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <div className="text-2xl font-bold font-mono text-card-foreground">
-                    {recentDiagrams.length}
+                <div>
+                  <div className="flex items-baseline gap-1.5 font-mono">
+                    <span className="text-2xl font-bold tracking-tight text-foreground">
+                      {recentDiagrams.length}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-sans">diagrams active</span>
                   </div>
-                  <div className="text-[11px] text-muted-foreground truncate">
-                    {recentDiagrams[0] ? recentDiagrams[0].title : "No active sessions"}
+                  <div className="w-full bg-muted/40 h-1 rounded-full overflow-hidden mt-2 mb-1.5">
+                    <div
+                      className="h-full rounded-full bg-amber-500 transition-all duration-300"
+                      style={{
+                        width: `${Math.min(100, (recentDiagrams.length / 5) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground truncate">
+                    <span className="truncate">{recentDiagrams[0] ? recentDiagrams[0].title : "No active sessions"}</span>
+                    <span className="font-mono text-amber-500/90 shrink-0 ml-1">
+                      {recentDiagrams[0] ? formatDate(recentDiagrams[0].updated_at) : "Idle"}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Stat 4: Simulator Engine Status */}
-              <div className="rounded-xl border border-border bg-card p-4.5 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all duration-150">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-medium text-muted-foreground">Engine Status</span>
-                  <div className="size-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                    <FiActivity className="size-4" />
+              {/* Card 4: Simulation Engine */}
+              <div className="rounded-xl border border-border bg-card/90 p-4 shadow-xs hover:border-primary/40 transition-all duration-150 flex flex-col justify-between gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">Simulation Engine</span>
+                  <div className="size-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                    <FiActivity className="size-3.5" />
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <div className="text-sm font-bold font-mono text-card-foreground flex items-center gap-2">
-                    <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>v2.0 Operational</span>
+                <div>
+                  <div className="flex items-center gap-2 font-mono">
+                    <span className="size-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-xl font-bold tracking-tight text-foreground">
+                      Operational
+                    </span>
                   </div>
-                  <div className="text-[11px] text-muted-foreground">
-                    Rust Core Simulator Ready
+                  <div className="w-full bg-muted/40 h-1 rounded-full overflow-hidden mt-2 mb-1.5">
+                    <div className="h-full rounded-full bg-emerald-500 w-full" />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>Architecture runtime</span>
+                    <span className="font-mono text-emerald-400 font-medium">Ready</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Quick Generator & Templates Command Bar */}
-            <div className="rounded-xl border border-border bg-card p-3 sm:p-4 shadow-xs">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const prompt = aiPrompt.trim();
-                  router.push(
-                    `/workspace?ai=true${prompt ? `&prompt=${encodeURIComponent(prompt)}` : ""}`
-                  );
-                }}
-                className="flex flex-col sm:flex-row items-center gap-2.5"
-              >
-                <div className="relative flex-1 w-full">
-                  <FiZap className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-primary" />
-                  <input
-                    type="text"
-                    value={aiPrompt}
-                    onChange={(e) => setAiPrompt(e.target.value)}
-                    placeholder="AI Quick Prompt: e.g. API Gateway routing to User and Order microservices with Redis cache-aside..."
-                    className="w-full rounded-lg border border-border bg-muted/25 pl-10 pr-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition"
-                  />
-                </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
-                  <Button type="submit" size="sm" className="gap-1.5 shadow-xs">
-                    <span>Generate on Canvas</span>
-                    <FiArrowRight className="size-3.5" />
-                  </Button>
-                  <Button variant="outline" size="sm" asChild className="hidden sm:inline-flex shadow-xs">
-                    <Link href="/scenarios">
-                      <span>Templates</span>
-                    </Link>
-                  </Button>
-                </div>
-              </form>
-            </div>
+            {/* Quick AI Architecture Studio */}
+            <DashboardQuickAI />
           </section>
 
           {/* ── 2. Recent Diagrams Section ───────────────────────────── */}
@@ -1394,10 +1445,25 @@ export default function DashboardPage() {
                       </div>
 
                       <div className="flex items-center justify-between pt-3 border-t border-border text-xs">
-                        <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground">
-                          <DiagramIcon className="size-3.5 text-primary" /> {ws.diagrams_count} diagram{ws.diagrams_count !== 1 ? "s" : ""}
-                        </span>
-                        <span className="text-[10px] font-mono text-muted-foreground">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <DiagramIcon className="size-3.5 text-primary shrink-0" />
+                          <span className="text-[11px] font-mono text-muted-foreground truncate">
+                            {ws.diagrams_count} <span className="text-muted-foreground/60">/ 5 diagrams</span>
+                          </span>
+                          {ws.diagrams_count >= 5 ? (
+                            <Badge
+                              variant="outline"
+                              className="text-[8px] font-mono px-1 py-0 bg-amber-500/10 text-amber-500 border-amber-500/25 shrink-0"
+                            >
+                              5/5 Full
+                            </Badge>
+                          ) : (
+                            <span className="text-[9px] font-mono text-muted-foreground/60 shrink-0">
+                              ({5 - ws.diagrams_count} left)
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-mono text-muted-foreground shrink-0">
                           {formatDate(ws.updated_at)}
                         </span>
                       </div>
@@ -1407,18 +1473,36 @@ export default function DashboardPage() {
                   {/* Create New Workspace Card */}
                   <button
                     type="button"
-                    onClick={() => setCreateModalOpen(true)}
-                    className="group relative overflow-hidden rounded-xl border-2 border-dashed border-border hover:border-primary/60 bg-card/30 p-5 transition-all duration-200 hover:bg-card cursor-pointer flex flex-col items-center justify-center gap-2.5 min-h-[180px]"
+                    onClick={() => {
+                      if (workspaces.length >= 5) {
+                        showToast("Workspace limit reached (5/5). Free plan allows 5 workspaces.", "error");
+                        return;
+                      }
+                      setCreateModalOpen(true);
+                    }}
+                    className={`group relative overflow-hidden rounded-xl border-2 border-dashed p-5 transition-all duration-200 flex flex-col items-center justify-center gap-2.5 min-h-[180px] ${
+                      workspaces.length >= 5
+                        ? "border-amber-500/30 bg-amber-500/5 cursor-not-allowed hover:border-amber-500/40"
+                        : "border-border hover:border-primary/60 bg-card/30 hover:bg-card cursor-pointer"
+                    }`}
                   >
-                    <div className="size-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                    <div
+                      className={`size-10 rounded-xl border flex items-center justify-center transition-transform ${
+                        workspaces.length >= 5
+                          ? "bg-amber-500/10 border-amber-500/20 text-amber-500"
+                          : "bg-primary/10 border-primary/20 text-primary group-hover:scale-110"
+                      }`}
+                    >
                       <PlusIcon className="size-5" />
                     </div>
                     <div className="text-center">
                       <p className="text-xs font-semibold text-card-foreground group-hover:text-primary transition-colors">
-                        New Workspace
+                        {workspaces.length >= 5 ? "Workspace Limit Reached" : "New Workspace"}
                       </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Add a new system environment
+                      <p className="text-[11px] text-muted-foreground mt-0.5 font-mono">
+                        {workspaces.length >= 5
+                          ? "5 of 5 workspaces used"
+                          : `Add environment (${5 - workspaces.length} slots left)`}
                       </p>
                     </div>
                   </button>
@@ -1461,8 +1545,11 @@ export default function DashboardPage() {
                       </div>
 
                       <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground shrink-0 justify-between sm:justify-end">
-                        <span className="flex items-center gap-1.5">
-                          <DiagramIcon className="size-3.5 text-primary" /> {ws.diagrams_count}
+                        <span className="flex items-center gap-1.5 font-mono text-[11px]">
+                          <DiagramIcon className="size-3.5 text-primary" /> {ws.diagrams_count} / 5
+                          {ws.diagrams_count >= 5 && (
+                            <span className="text-[9px] text-amber-500 font-bold">(Full)</span>
+                          )}
                         </span>
                         <span>{formatDate(ws.updated_at)}</span>
                         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -1606,9 +1693,14 @@ export default function DashboardPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 animate-in fade-in duration-150">
           <div className="w-full max-w-md rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] p-6 shadow-2xl space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-              <h3 className="text-base font-bold text-[color:var(--foreground)]">
-                Create New Architecture Workspace
-              </h3>
+              <div>
+                <h3 className="text-base font-bold text-[color:var(--foreground)]">
+                  Create New Architecture Workspace
+                </h3>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Plan Quota: <span className="font-mono font-semibold text-foreground">{workspaces.length} / 5</span> Workspaces Used
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setCreateModalOpen(false)}
@@ -1618,6 +1710,17 @@ export default function DashboardPage() {
               </button>
             </div>
 
+            {workspaces.length >= 5 && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-400 space-y-1">
+                <div className="font-semibold flex items-center gap-1.5">
+                  <span>Workspace Limit Reached (5/5)</span>
+                </div>
+                <p className="text-[11px] text-amber-300/80 leading-relaxed">
+                  Your plan allows a maximum of 5 workspaces (with 5 diagrams per workspace). Delete an unused workspace to create a new one.
+                </p>
+              </div>
+            )}
+
             <form onSubmit={handleCreateWorkspace} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-[color:var(--foreground)]">
@@ -1626,10 +1729,11 @@ export default function DashboardPage() {
                 <input
                   type="text"
                   required
+                  disabled={workspaces.length >= 5}
                   placeholder="e.g. Order Processing Pipeline"
                   value={newWsName}
                   onChange={(e) => setNewWsName(e.target.value)}
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)] focus:outline-none focus:border-[var(--accent)]"
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)] focus:outline-none focus:border-[var(--accent)] disabled:opacity-50"
                   autoFocus
                 />
               </div>
@@ -1640,10 +1744,11 @@ export default function DashboardPage() {
                 </label>
                 <textarea
                   rows={3}
+                  disabled={workspaces.length >= 5}
                   placeholder="e.g. Microservices architecture with API Gateway and RabbitMQ."
                   value={newWsDesc}
                   onChange={(e) => setNewWsDesc(e.target.value)}
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)] focus:outline-none focus:border-[var(--accent)]"
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)] focus:outline-none focus:border-[var(--accent)] disabled:opacity-50"
                 />
               </div>
 
@@ -1656,8 +1761,9 @@ export default function DashboardPage() {
                     <button
                       key={env}
                       type="button"
+                      disabled={workspaces.length >= 5}
                       onClick={() => setNewWsEnv(env)}
-                      className={`py-2 text-xs font-mono font-bold rounded-lg border transition cursor-pointer ${
+                      className={`py-2 text-xs font-mono font-bold rounded-lg border transition cursor-pointer disabled:opacity-50 ${
                         newWsEnv === env
                           ? "border-[var(--accent)] bg-[var(--accent)]/15 text-[color:var(--accent)]"
                           : "border-[var(--border)] bg-[var(--bg-elevated)] text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
@@ -1679,10 +1785,14 @@ export default function DashboardPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="btn-primary rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm transition cursor-pointer disabled:opacity-50"
+                  disabled={isSubmitting || workspaces.length >= 5}
+                  className="btn-primary rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? "Creating..." : "Create Workspace"}
+                  {workspaces.length >= 5
+                    ? "Limit Reached (5/5)"
+                    : isSubmitting
+                    ? "Creating..."
+                    : "Create Workspace"}
                 </button>
               </div>
             </form>
@@ -1818,254 +1928,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ── Account Preferences & Settings Modal (Canva / IDE style) ── */}
-      {settingsModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 animate-in fade-in duration-150">
-          <div className="w-full max-w-lg rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto scrollbar-thin">
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/15 border border-[var(--accent)]/30 flex items-center justify-center text-[color:var(--accent)]">
-                  <FiSettings className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-[color:var(--foreground)]">
-                    Account & Preferences
-                  </h3>
-                  <p className="text-[11px] text-[color:var(--muted)]">
-                    Personalize your developer profile and simulation settings
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSettingsModalOpen(false)}
-                className="p-1.5 rounded-lg text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition cursor-pointer"
-                title="Close"
-              >
-                <FiX className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Section 1: Appearance / Theme Switcher */}
-            <div className="space-y-2.5">
-              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
-                Interface Theme
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setTheme("dark")}
-                  className={`flex items-center justify-between p-3.5 rounded-xl border transition cursor-pointer text-left ${
-                    theme === "dark"
-                      ? "bg-[var(--bg-elevated)] border-[var(--accent)] text-[color:var(--foreground)] shadow-xs"
-                      : "bg-[var(--surface)] border-[var(--border)] text-[color:var(--muted)] hover:bg-[var(--surface-muted)]"
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <FiMoon className={`w-4 h-4 ${theme === "dark" ? "text-[color:var(--accent)]" : ""}`} />
-                    <div>
-                      <p className="text-xs font-bold text-[color:var(--foreground)]">Dark Theme</p>
-                      <p className="text-[10px] text-[color:var(--muted)]">Engineering dark mode</p>
-                    </div>
-                  </div>
-                  {theme === "dark" && <FiCheck className="w-4 h-4 text-[color:var(--accent)]" />}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setTheme("light")}
-                  className={`flex items-center justify-between p-3.5 rounded-xl border transition cursor-pointer text-left ${
-                    theme === "light"
-                      ? "bg-[var(--bg-elevated)] border-[var(--accent)] text-[color:var(--foreground)] shadow-xs"
-                      : "bg-[var(--surface)] border-[var(--border)] text-[color:var(--muted)] hover:bg-[var(--surface-muted)]"
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <FiSun className={`w-4 h-4 ${theme === "light" ? "text-amber-500" : ""}`} />
-                    <div>
-                      <p className="text-xs font-bold text-[color:var(--foreground)]">Light Theme</p>
-                      <p className="text-[10px] text-[color:var(--muted)]">High-contrast light</p>
-                    </div>
-                  </div>
-                  {theme === "light" && <FiCheck className="w-4 h-4 text-[color:var(--accent)]" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Section 2: Profile Picture & Name */}
-            <div className="space-y-3 pt-2 border-t border-[var(--border)]">
-              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
-                Developer Profile
-              </label>
-
-              <div className="flex items-center gap-4">
-                <div className="relative shrink-0">
-                  <img
-                    src={
-                      profileAvatarUrl ||
-                      user.avatar ||
-                      `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.email)}`
-                    }
-                    alt="Profile Preview"
-                    className="w-14 h-14 rounded-2xl object-cover ring-2 ring-[var(--accent)] shadow-md"
-                  />
-                </div>
-                <div className="min-w-0 flex-1 space-y-1">
-                  <p className="text-xs font-bold text-[color:var(--foreground)] truncate">
-                    {profileName || user.name || "Engineer"}
-                  </p>
-                  <p className="text-[10px] font-mono text-[color:var(--muted)] truncate">
-                    {user.email}
-                  </p>
-                  <span className="inline-block text-[9px] font-mono font-bold uppercase tracking-wider text-[color:var(--accent)] bg-[var(--accent)]/10 border border-[var(--accent)]/20 px-2 py-0.5 rounded">
-                    {user.type_of_signin || "Email"} Account
-                  </span>
-                </div>
-              </div>
-
-              {/* Name field */}
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-[color:var(--foreground)]">
-                  Display Name
-                </label>
-                <input
-                  type="text"
-                  value={profileName}
-                  onChange={(e) => setProfileName(e.target.value)}
-                  placeholder="Your Name"
-                  className="w-full px-3 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)] transition"
-                />
-              </div>
-
-              {/* Avatar URL field */}
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-[color:var(--foreground)]">
-                  Profile Picture URL
-                </label>
-                <input
-                  type="url"
-                  value={profileAvatarUrl}
-                  onChange={(e) => setProfileAvatarUrl(e.target.value)}
-                  placeholder="https://example.com/avatar.png"
-                  className="w-full px-3 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)] transition font-mono text-[11px]"
-                />
-              </div>
-
-              {/* Quick Avatar Presets */}
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-semibold text-[color:var(--foreground)]">
-                    Developer Avatar Presets ({AVATAR_PRESETS.length})
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const randIdx = Math.floor(Math.random() * AVATAR_PRESETS.length);
-                      setProfileAvatarUrl(AVATAR_PRESETS[randIdx].url);
-                      showToast(`Selected ${AVATAR_PRESETS[randIdx].label}`, "info");
-                    }}
-                    className="flex items-center gap-1 text-[10px] font-semibold text-[color:var(--accent)] hover:underline cursor-pointer"
-                  >
-                    <FiShuffle className="w-3 h-3" />
-                    <span>Surprise Me</span>
-                  </button>
-                </div>
-
-                {/* Category Pills */}
-                <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
-                  {(
-                    [
-                      { id: "all", label: "All" },
-                      { id: "robots", label: "Robots" },
-                      { id: "pixel", label: "Pixel Art" },
-                      { id: "personas", label: "Personas" },
-                      { id: "portraits", label: "Portraits" },
-                    ] as const
-                  ).map((cat) => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setSelectedAvatarCategory(cat.id)}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition cursor-pointer shrink-0 ${
-                        selectedAvatarCategory === cat.id
-                          ? "bg-[var(--accent)] text-white shadow-xs"
-                          : "bg-[var(--surface-muted)] text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Avatar Grid */}
-                <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-44 overflow-y-auto p-2 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/40 scrollbar-thin">
-                  {AVATAR_PRESETS.filter(
-                    (p) => selectedAvatarCategory === "all" || p.category === selectedAvatarCategory
-                  ).map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => setProfileAvatarUrl(preset.url)}
-                      className={`group relative aspect-square rounded-xl overflow-hidden border-2 transition cursor-pointer hover:scale-105 ${
-                        profileAvatarUrl === preset.url
-                          ? "border-[var(--accent)] ring-2 ring-[var(--accent)]/40 scale-105"
-                          : "border-[var(--border)] opacity-80 hover:opacity-100 hover:border-[var(--accent)]/50"
-                      }`}
-                      title={preset.label}
-                    >
-                      <img
-                        src={preset.url}
-                        alt={preset.label}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                      {profileAvatarUrl === preset.url && (
-                        <div className="absolute inset-0 bg-[var(--accent)]/20 flex items-center justify-center">
-                          <FiCheck className="w-3.5 h-3.5 text-white drop-shadow" />
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    updateUser({
-                      name: profileName.trim() || undefined,
-                      avatar: profileAvatarUrl.trim() || undefined,
-                    });
-                    showToast("Profile updated successfully!", "success");
-                  }}
-                  className="w-full btn-primary py-2 px-4 rounded-lg text-white font-semibold text-xs transition cursor-pointer shadow-xs"
-                >
-                  Save Profile Changes
-                </button>
-              </div>
-            </div>
-
-            {/* Section 3: Session & Sign Out */}
-            <div className="pt-4 border-t border-[var(--border)] flex items-center justify-between">
-              <span className="text-xs text-[color:var(--muted)]">Active session</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setSettingsModalOpen(false);
-                  logout();
-                  router.push("/signin");
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs font-semibold transition cursor-pointer"
-              >
-                <FiLogOut className="w-3.5 h-3.5" />
-                <span>Sign Out</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Engineering Account Preferences & Settings Dialog ── */}
+      <DashboardSettingsDialog open={settingsModalOpen} onOpenChange={setSettingsModalOpen} />
     </div>
   );
 }
