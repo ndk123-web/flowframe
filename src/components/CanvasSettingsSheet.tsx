@@ -34,6 +34,8 @@ import {
   FastForward,
   Cpu,
   Share2,
+  Minus,
+  Waves,
 } from "lucide-react";
 
 interface CanvasSettingsSheetProps {
@@ -42,6 +44,8 @@ interface CanvasSettingsSheetProps {
   // View controls
   bgPattern: "dots" | "lines" | "cross" | "none";
   setBgPattern: (pattern: "dots" | "lines" | "cross" | "none") => void;
+  connectionStyle: "default" | "smooth" | "straight";
+  setConnectionStyle: (style: "default" | "smooth" | "straight") => void;
   bgOpacity: number;
   setBgOpacity: (opacity: number) => void;
   snapToGrid: boolean;
@@ -68,6 +72,7 @@ interface CanvasSettingsSheetProps {
   // Export / Import
   onExport: () => void;
   onImport: () => void;
+  onShare: () => void;
   onDownloadImage: () => void;
   onClearCanvas: () => void;
   theme?: "light" | "dark";
@@ -80,6 +85,8 @@ export default function CanvasSettingsSheet({
   onOpenChange,
   bgPattern,
   setBgPattern,
+  connectionStyle,
+  setConnectionStyle,
   bgOpacity,
   setBgOpacity,
   snapToGrid,
@@ -103,6 +110,7 @@ export default function CanvasSettingsSheet({
   setDebugEnabled,
   onExport,
   onImport,
+  onShare,
   onDownloadImage,
   onClearCanvas,
   theme: propTheme,
@@ -302,6 +310,72 @@ export default function CanvasSettingsSheet({
                     />
                   </div>
                 )}
+
+                {/* Connection Style Selector */}
+                <div className="space-y-2">
+                  <div>
+                    <label className="text-xs font-semibold text-foreground">
+                      Connection Style
+                    </label>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Choose how links between architecture nodes are drawn.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {[
+                      {
+                        id: "default" as const,
+                        label: "Default",
+                        desc: "React Flow default",
+                        icon: Activity,
+                      },
+                      {
+                        id: "smooth" as const,
+                        label: "Smooth",
+                        desc: "Stepped paths",
+                        icon: Waves,
+                      },
+                      {
+                        id: "straight" as const,
+                        label: "Straight",
+                        desc: "Direct paths",
+                        icon: Minus,
+                      },
+                    ].map((style) => {
+                      const Icon = style.icon;
+                      const isSelected = connectionStyle === style.id;
+                      return (
+                        <button
+                          key={style.id}
+                          type="button"
+                          onClick={() => setConnectionStyle(style.id)}
+                          className={`rounded-xl border p-3 text-left transition cursor-pointer flex items-center gap-3 relative ${
+                            isSelected
+                              ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                              : "border-border hover:border-border/80 bg-muted/10 hover:bg-muted/30"
+                          }`}
+                        >
+                          <span className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${isSelected ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                            <Icon className="size-4" />
+                          </span>
+                          <span>
+                            <span className="text-xs font-semibold text-foreground block">
+                              {style.label}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {style.desc}
+                            </span>
+                          </span>
+                          {isSelected && (
+                            <span className="absolute top-2 right-2 size-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                              <Check className="size-2.5 stroke-[3]" />
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 {/* Snap to Grid & Size */}
                 <div className="rounded-xl border border-border bg-muted/10 p-4 flex items-center justify-between gap-3">
@@ -666,6 +740,29 @@ export default function CanvasSettingsSheet({
                       <span>Import JSON File</span>
                     </Button>
                   </div>
+                </div>
+
+                {/* Share Flow */}
+                <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-semibold text-foreground flex items-center gap-2">
+                      <Share2 className="size-4 text-primary" />
+                      <span>Share Architecture Flow</span>
+                    </span>
+                    <span className="text-[11px] text-muted-foreground block mt-0.5">
+                      Copy a public link or share the architecture on social media.
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={onShare}
+                    className="gap-1.5 h-8 text-xs font-semibold cursor-pointer shrink-0"
+                  >
+                    <Share2 className="size-3.5 text-primary" />
+                    <span>Share</span>
+                  </Button>
                 </div>
 
                 {/* Reset / Clear Canvas Action */}

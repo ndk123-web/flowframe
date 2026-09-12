@@ -25,6 +25,8 @@ import {
   type Node,
   type Edge,
   type EdgeProps,
+  getStraightPath,
+  getBezierPath,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { motion } from "framer-motion";
@@ -1323,15 +1325,29 @@ function PacketEdge(props: EdgeProps) {
     data,
   } = props;
 
-  const [edgePath] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-    borderRadius: 10,
-  });
+  const connectionStyle = data?.connectionStyle ?? "default";
+  const [edgePath] =
+    connectionStyle === "straight"
+      ? getStraightPath({ sourceX, sourceY, targetX, targetY })
+      : connectionStyle === "smooth"
+        ? getSmoothStepPath({
+            sourceX,
+            sourceY,
+            targetX,
+            targetY,
+            sourcePosition,
+            targetPosition,
+            borderRadius: 12,
+            offset: 20,
+          })
+        : getBezierPath({
+            sourceX,
+            sourceY,
+            sourcePosition,
+            targetX,
+            targetY,
+            targetPosition,
+          });
 
   const isActive = Boolean(data?.active);
   const duration = Number(data?.packetDuration ?? 1.8);
@@ -2281,6 +2297,9 @@ function WorkspaceInner({
   const [bgPattern, setBgPattern] = useState<
     "dots" | "lines" | "cross" | "none"
   >("dots");
+  const [connectionStyle, setConnectionStyle] = useState<
+    "default" | "smooth" | "straight"
+  >("default");
   const [bgOpacity, setBgOpacity] = useState<number>(0.12);
   const [showBgControls, setShowBgControls] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -4021,6 +4040,8 @@ connect s1 -> r1
 
   // Share flow handler
   const handleShareFlow = () => {
+    // Close the settings dialog before opening the independent share surface.
+    setIsSettingsOpen(false);
     setShowShareModal(true);
     setCopiedTemplate(false);
   };
@@ -4839,97 +4860,6 @@ connect s1 -> r1
                       </button>
                       <button
                         type="button"
-                        onClick={() => setShowWelcomeModal(true)}
-                        className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-[var(--border)] bg-[var(--surface)]/85 hover:bg-[var(--surface-muted)] text-[11px] font-semibold text-[color:var(--foreground)]/75 transition cursor-pointer"
-                      >
-                        <svg
-                          className="w-3.5 h-3.5 text-[color:var(--foreground)]/50"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                        </svg>
-                        <span>Templates Gallery</span>
-                      </button>
-                      {/* Import / Export / Share Controls */}
-                      <div className="grid grid-cols-3 gap-1.5 w-full animate-fade-in">
-                        <button
-                          type="button"
-                          onClick={handleExportFlow}
-                          className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/5 hover:bg-emerald-500/15 hover:border-emerald-500/45 text-emerald-500 dark:text-emerald-400 text-[11px] font-semibold transition cursor-pointer shadow-sm hover:shadow active:scale-95 duration-200"
-                          title="Export current architecture flow to a JSON file"
-                        >
-                          <svg
-                            className="w-3.5 h-3.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-                            />
-                          </svg>
-                          <span>Export</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleImportClick}
-                          className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg border border-cyan-500/25 bg-cyan-500/5 hover:bg-cyan-500/15 hover:border-cyan-500/45 text-cyan-500 dark:text-cyan-400 text-[11px] font-semibold transition cursor-pointer shadow-sm hover:shadow active:scale-95 duration-200"
-                          title="Import architecture flow from a JSON file"
-                        >
-                          <svg
-                            className="w-3.5 h-3.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
-                            />
-                          </svg>
-                          <span>Import</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleShareFlow}
-                          className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg border border-violet-500/25 bg-violet-500/5 hover:bg-violet-500/15 hover:border-violet-500/45 text-violet-500 dark:text-violet-400 text-[11px] font-semibold transition cursor-pointer shadow-sm hover:shadow active:scale-95 duration-200"
-                          title="Share this flow on LinkedIn, Twitter, or copy URL"
-                        >
-                          <svg
-                            className="w-3.5 h-3.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"
-                            />
-                          </svg>
-                          <span>Share</span>
-                        </button>
-                        {/* Hidden file input for import */}
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleImportFlow}
-                          accept=".json"
-                          className="hidden"
-                        />
-                      </div>
-
-                      <button
-                        type="button"
                         onClick={handleClearCanvas}
                         className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 hover:border-rose-500/40 text-rose-500 dark:text-rose-400 text-[11px] font-semibold transition cursor-pointer active:scale-95 duration-200"
                       >
@@ -5069,7 +4999,10 @@ connect s1 -> r1
 
                 <ReactFlow
                   nodes={styledNodes}
-                  edges={animatedEdges}
+                  edges={animatedEdges.map((edge) => ({
+                    ...edge,
+                    data: { ...edge.data, connectionStyle },
+                  }))}
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
                   onConnect={onConnect}
@@ -8160,6 +8093,8 @@ connect s1 -> r1
               onOpenChange={setIsSettingsOpen}
               bgPattern={bgPattern}
               setBgPattern={setBgPattern}
+              connectionStyle={connectionStyle}
+              setConnectionStyle={setConnectionStyle}
               bgOpacity={bgOpacity}
               setBgOpacity={setBgOpacity}
               snapToGrid={snapToGrid}
@@ -8183,9 +8118,17 @@ connect s1 -> r1
               setDebugEnabled={setDebugEnabled}
               onExport={handleExportFlow}
               onImport={handleImportClick}
+              onShare={handleShareFlow}
               onDownloadImage={downloadCanvasImage}
               onClearCanvas={handleClearCanvas}
               theme={theme}
+            />
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImportFlow}
+              accept=".json"
+              className="hidden"
             />
           </div>
 
@@ -8353,19 +8296,35 @@ connect s1 -> r1
 
           {/* ── Share Modal ────────────────────────────────────────────────── */}
           {showShareModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md transition-all animate-fade-in p-4">
-              <div className="w-[500px] max-w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl space-y-5 relative">
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm animate-fade-in"
+              role="presentation"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget) {
+                  setShowShareModal(false);
+                }
+              }}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="share-flow-title"
+                className="relative flex max-h-[min(760px,calc(100dvh-2rem))] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-white/15 bg-[var(--surface)] shadow-[0_24px_90px_rgba(0,0,0,0.4)]"
+              >
+                <div className="h-1 w-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-400" />
+                <div className="overflow-y-auto p-5 sm:p-7">
                 <button
                   type="button"
                   onClick={() => setShowShareModal(false)}
-                  className="absolute top-4 right-4 text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] h-8 w-8 rounded-full flex items-center justify-center font-bold transition cursor-pointer"
+                  className="absolute right-4 top-5 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] text-lg font-semibold text-[color:var(--foreground)]/50 transition hover:bg-[var(--surface-muted)] hover:text-[color:var(--foreground)] cursor-pointer"
                   title="Close"
+                  aria-label="Close share dialog"
                 >
                   ×
                 </button>
 
-                <div className="text-center">
-                  <div className="w-10 h-10 mx-auto rounded-full bg-violet-500/10 flex items-center justify-center text-violet-400">
+                <div className="pr-10 text-left">
+                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-violet-400/20 bg-violet-500/10 text-violet-400">
                     <svg
                       className="w-5 h-5"
                       fill="none"
@@ -8385,10 +8344,10 @@ connect s1 -> r1
                       />
                     </svg>
                   </div>
-                  <h2 className="text-lg font-bold tracking-tight text-[color:var(--foreground)] mt-2">
+                  <h2 id="share-flow-title" className="mt-2 text-xl font-bold tracking-tight text-[color:var(--foreground)]">
                     Save & Share Your Flow
                   </h2>
-                  <p className="text-xs text-[color:var(--foreground)]/60 mt-1">
+                  <p className="mt-1 max-w-md text-xs leading-relaxed text-[color:var(--foreground)]/60">
                     Download your architecture diagram as an image and copy a
                     post template to share on your networks.
                   </p>
@@ -8550,6 +8509,7 @@ connect s1 -> r1
                       load balancing, caching, and message queues.
                     </p>
                   </div>
+                </div>
                 </div>
               </div>
             </div>
