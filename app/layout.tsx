@@ -62,7 +62,7 @@ export default function RootLayout({
               (function() {
                 try {
                   var raw = localStorage.getItem('flowframe-theme');
-                  var theme = 'dark';
+                  var theme = 'light';
                   if (raw) {
                     try {
                       var parsed = JSON.parse(raw);
@@ -74,8 +74,8 @@ export default function RootLayout({
                     } catch (e) {
                       if (raw === 'light' || raw === 'dark') theme = raw;
                     }
-                  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-                    theme = 'light';
+                  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    theme = 'dark';
                   }
                   document.documentElement.setAttribute('data-theme', theme);
                 } catch (e) {}
