@@ -11,21 +11,28 @@ interface ThemeState {
   toggleTheme: () => void;
 }
 
+function applyTheme(theme: Theme) {
+  if (typeof document === "undefined") return;
+  document.documentElement.setAttribute("data-theme", theme);
+  if (theme === "dark") {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+  document.documentElement.style.colorScheme = theme;
+}
+
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
       theme: "light",
       setTheme: (theme: Theme) => {
-        if (typeof document !== "undefined") {
-          document.documentElement.setAttribute("data-theme", theme);
-        }
+        applyTheme(theme);
         set({ theme });
       },
       toggleTheme: () => {
         const nextTheme = get().theme === "dark" ? "light" : "dark";
-        if (typeof document !== "undefined") {
-          document.documentElement.setAttribute("data-theme", nextTheme);
-        }
+        applyTheme(nextTheme);
         set({ theme: nextTheme });
       },
     }),
@@ -33,8 +40,8 @@ export const useThemeStore = create<ThemeState>()(
       name: "flowframe-theme",
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => (state) => {
-        if (state && typeof document !== "undefined") {
-          document.documentElement.setAttribute("data-theme", state.theme);
+        if (state) {
+          applyTheme(state.theme);
         }
       },
     }
