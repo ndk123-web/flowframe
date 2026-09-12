@@ -2,9 +2,9 @@ name: CI / Automated Tests
 
 on:
   push:
-    branches: [ "main", "master", "feature/**", "feature/*" ]
+    branches: ["main", "master", "feature/**", "feature/*"]
   pull_request:
-    branches: [ "main", "master", "feature/**", "feature/*" ]
+    branches: ["main", "master", "feature/**", "feature/*"]
 
 jobs:
   test:
@@ -26,7 +26,7 @@ jobs:
 
       # Install dependencies cleanly
       - name: Install Dependencies
-        run: npm ci
+        run: npm install
 
       # Run Vitest unit tests
       - name: Run Vitest Unit Tests

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import DashboardAmbientArchitecture from "@/components/DashboardAmbientArchitecture";
 import DashboardSettingsDialog from "@/components/DashboardSettingsDialog";
 import DashboardQuickAI from "@/components/DashboardQuickAI";
+import GitHubStarButton from "@/components/GitHubStarButton";
 import {
   FiGrid,
   FiClock,
@@ -975,6 +976,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <GitHubStarButton className="hidden md:inline-flex" />
             <Button variant="outline" size="sm" asChild className="gap-1.5 h-8 text-xs">
               <Link href="/workspace">
                 <FiBox className="size-3.5 text-primary" />

@@ -29,6 +29,7 @@ import {
   Box,
 } from "lucide-react";
 import { FiGithub } from "react-icons/fi";
+import GitHubStarButton from "@/components/GitHubStarButton";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "cn";
 
@@ -189,22 +190,8 @@ export default function SiteHeader({
 
         {/* Right Actions */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* GitHub (Desktop only) */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon-sm" asChild className="hidden sm:inline-flex">
-                <a
-                  href="https://github.com/ndk123-web/flowframe"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="GitHub Repository"
-                >
-                  <FiGithub className="size-4" />
-                </a>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>View on GitHub</TooltipContent>
-          </Tooltip>
+          {/* GitHub Star Counter Button */}
+          <GitHubStarButton />
 
           {/* Canvas CTA */}
           {!hideSandboxLink && (
@@ -489,19 +476,8 @@ export default function SiteHeader({
                   </div>
                 </div>
 
-                {/* GitHub link */}
-                <a
-                  href="https://github.com/ndk123-web/flowframe"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between px-3 py-2 rounded-lg border border-border/80 bg-card hover:bg-muted/40 text-xs text-muted-foreground hover:text-foreground transition group"
-                >
-                  <div className="flex items-center gap-2">
-                    <FiGithub className="size-4" />
-                    <span>GitHub Repository</span>
-                  </div>
-                  <ExternalLink className="size-3 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-                </a>
+                {/* GitHub link with live stars */}
+                <GitHubStarButton variant="drawer" />
               </div>
             </SheetContent>
           </Sheet>
