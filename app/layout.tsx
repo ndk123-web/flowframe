@@ -4,6 +4,7 @@ import "./globals.css";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { Analytics } from "@vercel/analytics/next";
 import ToastContainer from "@/components/Toast";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -25,6 +26,12 @@ export const metadata: Metadata = {
   title: "FlowFrame | Distributed Systems Simulator",
   description:
     "Design architectures and simulate distributed request flow frame-by-frame.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "FlowFrame",
+  },
   icons: {
     icon: [
       { url: "/logo/flow-frame-dark.png" },
@@ -82,6 +89,7 @@ export default function RootLayout({
       >
         {children}
         <ToastContainer />
+        <PWAInstallPrompt />
         <Analytics />
       </body>
 
