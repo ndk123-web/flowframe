@@ -2082,6 +2082,7 @@ function WorkspaceInner({
   const [searchQuery, setSearchQuery] = useState("");
 
   // Left Sidebar Mode: Library vs Monaco Code Editor
+  const monacoEditorRef = useRef<any>(null);
   const [sidebarTab, setSidebarTab] = useState<"library" | "editor">("library");
   const [dslCode, setDslCode] = useState<string>(`// FlowFrame Architecture DSL Script
 // Define system nodes and connections
@@ -3549,6 +3550,14 @@ connect s1 -> r1
   // Keyboard controls listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // If code editor tab is active or Monaco has focus, NEVER intercept any keyboard keys!
+      if (sidebarTab === "editor") {
+        return;
+      }
+      if (monacoEditorRef.current?.hasTextFocus && monacoEditorRef.current.hasTextFocus()) {
+        return;
+      }
+
       const activeEl = document.activeElement as HTMLElement | null;
       const targetEl = e.target as HTMLElement | null;
 
@@ -3557,7 +3566,7 @@ connect s1 -> r1
         activeEl?.tagName === "INPUT" ||
         activeEl?.tagName === "TEXTAREA" ||
         activeEl?.tagName === "SELECT" ||
-        activeEl?.isContentEditable ||
+        Boolean(activeEl?.isContentEditable) ||
         Boolean(activeEl?.closest(".monaco-editor")) ||
         Boolean(targetEl?.closest(".monaco-editor")) ||
         Boolean(document.querySelector(".monaco-editor")?.contains(activeEl)) ||
@@ -3583,9 +3592,10 @@ connect s1 -> r1
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown, true);
-    return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [frameGroups.length]);
+    // Use bubbling phase (false) so textareas and editors receive keystrokes without interference
+    window.addEventListener("keydown", handleKeyDown, false);
+    return () => window.removeEventListener("keydown", handleKeyDown, false);
+  }, [sidebarTab, frameGroups.length]);
 
   // Clear Canvas handler
   const handleClearCanvas = () => {
@@ -3921,6 +3931,9 @@ connect s1 -> r1
                   language="flow"
                   theme={theme === "dark" ? "flow-dark" : "flow-light"}
                   beforeMount={handleEditorWillMount}
+                  onMount={(editor) => {
+                    monacoEditorRef.current = editor;
+                  }}
                   value={dslCode}
                   onChange={(val) => setDslCode(val || "")}
                   options={{
@@ -3933,7 +3946,7 @@ connect s1 -> r1
                     tabSize: 2,
                     padding: { top: 8, bottom: 8 },
                     formatOnType: false,
-                    formatOnPaste: true,
+                    formatOnPaste: false,
                     autoClosingBrackets: "always",
                     autoClosingQuotes: "always",
                     autoSurround: "languageDefined",
@@ -3943,6 +3956,21 @@ connect s1 -> r1
                     acceptSuggestionOnCommitCharacter: false,
                     tabCompletion: "off",
                     wordBasedSuggestions: "off",
+                    inlineSuggest: { enabled: false },
+                    snippetSuggestions: "none",
+                    parameterHints: { enabled: false },
+                    suggest: {
+                      showWords: false,
+                      showKeywords: false,
+                      showSnippets: false,
+                      showClasses: false,
+                      showFunctions: false,
+                      showVariables: false,
+                      showConstants: false,
+                      preview: false,
+                      showInlineDetails: false,
+                      snippetsPreventQuickSuggestions: false,
+                    },
                   }}
                 />
               </div>
@@ -7695,6 +7723,39 @@ connect s1 -> r1
               </div>
             </aside>
           )}
+
+          {/* Docked Right AI Architecture Assistant Panel */}
+          <AIAssistantDrawer
+            isOpen={isAIAssistantOpen}
+            onClose={() => setIsAIAssistantOpen(false)}
+            nodes={nodes}
+            edges={edges}
+            nodeConfigs={nodeConfigs}
+            theme={theme}
+            onApplyDsl={(code: string, explanation: string) => {
+              try {
+                const output = compileDSL(code);
+                if (!output.nodes || output.nodes.length === 0) {
+                  setValidationWarning("No nodes generated from AI architecture DSL.");
+                  return;
+                }
+                setDslCode(code);
+                setNodes(output.nodes);
+                setEdges(output.edges);
+                setNodeConfigs(output.nodeConfigs || {});
+                setValidationWarning(null);
+                setSuccessToast(explanation || "AI Architecture applied to canvas!");
+                setTimeout(() => {
+                  fitView({ duration: 600 });
+                }, 150);
+              } catch (err: any) {
+                setValidationWarning(`Failed to apply architecture: ${err.message || err}`);
+              }
+            }}
+            onRunSimulation={() => {
+              handleStartSimulation();
+            }}
+          />
         </div>
 
         {/* Welcome Modal & Template Picker Dialog */}
@@ -8281,39 +8342,6 @@ connect s1 -> r1
           </p>
         </div>
       )}
-
-      {/* AI Architecture Assistant Drawer */}
-      <AIAssistantDrawer
-        isOpen={isAIAssistantOpen}
-        onClose={() => setIsAIAssistantOpen(false)}
-        nodes={nodes}
-        edges={edges}
-        nodeConfigs={nodeConfigs}
-        theme={theme}
-        onApplyDsl={(code: string, explanation: string) => {
-          try {
-            const output = compileDSL(code);
-            if (!output.nodes || output.nodes.length === 0) {
-              setValidationWarning("No nodes generated from AI architecture DSL.");
-              return;
-            }
-            setDslCode(code);
-            setNodes(output.nodes);
-            setEdges(output.edges);
-            setNodeConfigs(output.nodeConfigs || {});
-            setValidationWarning(null);
-            setSuccessToast(explanation || "AI Architecture applied to canvas!");
-            setTimeout(() => {
-              fitView({ duration: 600 });
-            }, 150);
-          } catch (err: any) {
-            setValidationWarning(`Failed to apply architecture: ${err.message || err}`);
-          }
-        }}
-        onRunSimulation={() => {
-          handleStartSimulation();
-        }}
-      />
     </main>
   );
 }

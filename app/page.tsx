@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
-import ArchitectureBackground from "@/components/ArchitectureBackground";
 import { ComponentIcon } from "@/components/ComponentIcons";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -327,9 +326,6 @@ function HowItWorks() {
   return (
     <Reveal>
       <section className="relative mx-auto max-w-6xl px-4 sm:px-6 py-24 sm:py-28 overflow-hidden">
-        {/* Ambient Vertical Architecture Simulation directly behind the four steps */}
-        <ArchitectureBackground variant="section" />
-
         <div className="relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
