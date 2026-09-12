@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import SiteHeader from "@/components/SiteHeader";
 import { useThemeStore } from "@/store/useThemeStore";
+import { FiAlertTriangle, FiGlobe } from "react-icons/fi";
 import { TERMS } from "../page";
 
 interface Section {
@@ -162,10 +163,10 @@ app.get('/api/v1/users/:id', async (req, res) => {
     diagram: `  Status Code Families:
   ─────────────────────────────────────────
   1xx  Informational   (connecting...)
-  2xx  ✅ Success       (request completed!)
-  3xx  ↪ Redirect      (resource moved)
-  4xx  ⚠️ Client Error  (invalid request body)
-  5xx  💥 Server Error  (database crashed)
+  2xx  Success         (request completed!)
+  3xx  Redirect        (resource moved)
+  4xx  Client Error    (invalid request body)
+  5xx  Server Error    (database crashed)
   ─────────────────────────────────────────`,
     sections: [
       { title: "1. What is it?", body: "HTTP Status Codes are standardized 3-digit integers returned in every server response. They serve as metadata indicating how the request was handled." },
@@ -1251,13 +1252,19 @@ export default function TermDetailPage({ params }: { params: Promise<{ termId: s
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.14 }} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {term.misconception && (
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-5 space-y-2">
-              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-400 font-mono">⚠️ Common Misconception</p>
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-400 font-mono flex items-center gap-1.5">
+                <FiAlertTriangle className="w-3 h-3 shrink-0" />
+                <span>Common Misconception</span>
+              </p>
               <p className="text-sm text-[color:var(--foreground)]/80 leading-relaxed">{term.misconception}</p>
             </div>
           )}
           {term.realWorld && (
             <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-5 space-y-2">
-              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-emerald-400 font-mono">🌍 Real World Usage</p>
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-emerald-400 font-mono flex items-center gap-1.5">
+                <FiGlobe className="w-3 h-3 shrink-0" />
+                <span>Real World Usage</span>
+              </p>
               <p className="text-sm text-[color:var(--foreground)]/80 leading-relaxed">{term.realWorld}</p>
             </div>
           )}

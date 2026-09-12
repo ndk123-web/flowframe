@@ -69,6 +69,30 @@ const SCENARIOS: ScenarioCard[] = [
     expectedFrames: 24,
     flowDiagram: "Client → Auth Server → Pre-Signed URL → Cloud Storage",
   },
+  {
+    id: "event-driven",
+    title: "Event-Driven Architecture (Pub/Sub Fan-Out)",
+    problemStatement: "How do you broadcast domain events across decoupled subscriber microservices asynchronously without blocking client threads?",
+    concept: "Topic-Based Pub/Sub & Parallel Fanout",
+    investigation: "Watch a publisher dispatch domain events to a Pub/Sub Broker, which fans out parallel message dispatches to Email and Analytics services.",
+    href: "/scenarios/event-driven",
+    difficulty: "Intermediate",
+    focus: ["Pub/Sub Broker", "Event Fan-Out", "Decoupled Consumers"],
+    expectedFrames: 14,
+    flowDiagram: "Client → Publisher → Pub/Sub Broker ⇉ Email / Analytics",
+  },
+  {
+    id: "simple-message-queue",
+    title: "Message Queue & Worker Pipeline",
+    problemStatement: "How can a system absorb traffic spikes and buffer resource-intensive background jobs across a pool of competing workers?",
+    concept: "FIFO Queue Buffering & Worker Load Leveling",
+    investigation: "Inspect how bursty HTTP tasks enter a FIFO Message Queue, get pulled by Worker Server 1 and 2, and commit persisted records into PostgreSQL.",
+    href: "/scenarios/simple-message-queue",
+    difficulty: "Intermediate",
+    focus: ["Message Queue", "Worker Pool", "Postgres Persistence"],
+    expectedFrames: 25,
+    flowDiagram: "Client → Web Server → Message Queue ⇉ Worker 1 / 2 → Postgres",
+  },
 ];
 
 const DIFFICULTY_STYLE: Record<string, string> = {

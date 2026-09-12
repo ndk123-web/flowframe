@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { FiZap } from "react-icons/fi";
 import { useAuthStore } from "@/store/useAuthStore";
 import WorkspacePage from "../../../../workspace/page";
 
@@ -17,7 +18,7 @@ export default function DashboardDiagramEditorPage() {
           <div className="relative">
             <div className="w-14 h-14 rounded-full border-4 border-blue-500/20 border-t-blue-500 animate-spin" />
             <div className="absolute inset-0 flex items-center justify-center text-sm">
-              ⚡
+              <FiZap className="w-5 h-5 text-blue-500" />
             </div>
           </div>
           <div className="text-center space-y-1">

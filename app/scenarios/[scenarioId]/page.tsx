@@ -21,6 +21,14 @@ import Link from "next/link";
 import SiteHeader from "@/components/SiteHeader";
 import { ComponentIcon } from "@/components/ComponentIcons";
 import { useThemeStore } from "@/store/useThemeStore";
+import {
+  FiAlertTriangle,
+  FiAlertCircle,
+  FiClock,
+  FiCheckCircle,
+  FiActivity,
+  FiRotateCcw,
+} from "react-icons/fi";
 
 type Frame = {
   requestId: string;
@@ -364,8 +372,8 @@ function CustomNode({ id, data, selected }: any) {
             </span>
           )}
           {data.status === "error" && (
-            <p className="text-[9px] font-bold text-rose-400 mt-0.5 animate-pulse flex items-center gap-0.5">
-              <span>⚠️</span>{" "}
+            <p className="text-[9px] font-bold text-rose-400 mt-0.5 animate-pulse flex items-center gap-1">
+              <FiAlertCircle className="w-2.5 h-2.5 shrink-0" />
               <span
                 className="truncate max-w-[95px]"
                 title={data.statusMessage}
@@ -375,8 +383,8 @@ function CustomNode({ id, data, selected }: any) {
             </p>
           )}
           {data.status === "warning" && (
-            <p className="text-[9px] font-bold text-amber-400 mt-0.5 flex items-center gap-0.5">
-              <span>⚠️</span>{" "}
+            <p className="text-[9px] font-bold text-amber-400 mt-0.5 flex items-center gap-1">
+              <FiAlertTriangle className="w-2.5 h-2.5 shrink-0" />
               <span
                 className="truncate max-w-[95px]"
                 title={data.statusMessage}
@@ -584,8 +592,9 @@ function GraphCanvas({
 
             {systemMetrics.queuedRequests.length > 0 && (
               <div className="flex flex-col gap-1 rounded-xl bg-rose-500/5 border border-rose-500/15 p-2">
-                <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
-                  <span>⏳</span> Bottleneck: Database Wait
+                <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1.5">
+                  <FiClock className="w-3 h-3 text-rose-400 shrink-0" />
+                  <span>Bottleneck: Database Wait</span>
                 </p>
                 <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
                   {systemMetrics.queuedRequests.map(
@@ -604,8 +613,9 @@ function GraphCanvas({
 
             {systemMetrics.errorRequests.length > 0 && (
               <div className="flex flex-col gap-1 rounded-xl bg-rose-500/10 border border-rose-500/20 p-2">
-                <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
-                  <span>❌</span> Failures Detected
+                <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1.5">
+                  <FiAlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                  <span>Failures Detected</span>
                 </p>
                 <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
                   {systemMetrics.errorRequests.map((err: string, idx: number) => (
@@ -624,7 +634,7 @@ function GraphCanvas({
               systemMetrics.queuedRequests.length === 0 &&
               systemMetrics.errorRequests.length === 0 && (
                 <div className="flex items-center gap-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/15 p-1.5 text-emerald-400">
-                  <span className="text-xs">⚡</span>
+                  <FiCheckCircle className="w-3 h-3 text-emerald-400 shrink-0" />
                   <span className="text-[8px] font-bold uppercase tracking-wider">
                     Processing requests smoothly
                   </span>
@@ -656,7 +666,8 @@ function GraphCanvas({
                 }`}
               ></span>
             </span>
-            <span>⚡ Health & Load</span>
+            <FiActivity className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <span>Health & Load</span>
           </button>
         )
       )}
@@ -1843,7 +1854,7 @@ function NodeInspectorPanel({
                               className={`text-[10px] font-mono font-bold ${info.exhausted ? "text-rose-400" : "text-cyan-400"}`}
                             >
                               {info.activeConnections}/{info.poolSize}
-                              {info.exhausted ? " 🔴 WAIT" : ""}
+                              {info.exhausted ? " [WAIT]" : ""}
                             </span>
                           </div>
                           <div
@@ -2068,7 +2079,7 @@ function getFormattedLogText(frame: Frame) {
   if (normAction.includes("POSTGRES_POOL_WAIT")) {
     const payloadStr = frame.payloadSummary ? ` — ${frame.payloadSummary}` : "";
     return {
-      text: `${flow} | ⏳ POSTGRES POOL WAIT${payloadStr}`,
+      text: `${flow} | [WAIT] POSTGRES POOL WAIT${payloadStr}`,
       type: "error",
     };
   }
@@ -2076,7 +2087,7 @@ function getFormattedLogText(frame: Frame) {
   if (normAction.includes("POSTGRES_CONNECTION_ERROR")) {
     const payloadStr = frame.payloadSummary ? ` — ${frame.payloadSummary}` : "";
     return {
-      text: `${flow} | ❌ POSTGRES CONNECTION ERROR${payloadStr}`,
+      text: `${flow} | [ERROR] POSTGRES CONNECTION ERROR${payloadStr}`,
       type: "error",
     };
   }
@@ -2137,7 +2148,7 @@ function DebugPanel({
       <div className="font-mono text-xs p-2 text-center sm:text-left flex items-center gap-2">
         <span className="inline-block w-2 h-2 rounded-full bg-blue-400/60 animate-ping shrink-0" />
         <span className={textColor}>
-          Simulation logs ready — click <strong className="text-blue-400">Play ▶</strong> to stream live execution logs.
+          Simulation logs ready — click <strong className="text-blue-400">Play</strong> to stream live execution logs.
         </span>
       </div>
     );
@@ -2255,6 +2266,16 @@ function createDefaultConfig(type: string, id: string, label: string) {
       return {
         buckets: ["media-uploads"],
       };
+    case "pubsub":
+      return {
+        topics: ["order.created", "user.signup"],
+      };
+    case "message-queue":
+      return {
+        processingType: "FIFO",
+        queueSize: 10,
+        overflowBehavior: "REJECT",
+      };
     default:
       return {};
   }
@@ -2309,7 +2330,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
       const role = getNodeRole(label);
       const defaultConfig = createDefaultConfig(role, n.id, label);
 
-      if (scenarioId === "simple-valet-key") {
+      if (scenarioId === "simple-valet-key" || scenarioId === "valet-key") {
         if (role === "client") {
           defaultConfig.requests = [
             { fileName: "avatar-1.png", targetBucket: "media-uploads" },
@@ -2317,7 +2338,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             { fileName: "portfolio-banner.jpg", targetBucket: "media-uploads" },
           ];
         }
-      } else if (scenarioId === "simple-api-gateway") {
+      } else if (scenarioId === "simple-api-gateway" || scenarioId === "api-gateway") {
         if (role === "client") {
           defaultConfig.requests = [
             { endpoint: "/api/v1/posts/list", lookupKey: "bob", method: "GET" },
@@ -2343,7 +2364,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             };
           }
         }
-      } else if (scenarioId === "simple-load-balancer") {
+      } else if (scenarioId === "simple-load-balancer" || scenarioId === "load-balancer") {
         if (role === "client") {
           defaultConfig.requests = [
             { endpoint: "/api/v1/posts", method: "GET" },
@@ -2355,7 +2376,7 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
             "api/v1/posts": ["GET", "POST", "PUT", "DELETE", "PATCH"],
           };
         }
-      } else if (scenarioId === "simple-cache") {
+      } else if (scenarioId === "simple-cache" || scenarioId === "cache-aside") {
         if (role === "client") {
           defaultConfig.requests = [
             { endpoint: "/api/v1/getData", lookupKey: "rohan", method: "GET" },
@@ -2366,6 +2387,68 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
           defaultConfig.endpoints = {
             "api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"],
           };
+        }
+      } else if (
+        scenarioId === "simple-pub-sub" ||
+        scenarioId === "pub-sub" ||
+        scenarioId === "event-driven" ||
+        scenarioId === "simple-event-driven"
+      ) {
+        if (role === "client") {
+          defaultConfig.requests = [
+            {
+              endpoint: "/api/v1/getData",
+              method: "POST",
+              body: '{\n  "topic": "order.created",\n  "amount": 250\n}',
+            },
+            {
+              endpoint: "/api/v1/getData",
+              method: "POST",
+              body: '{\n  "topic": "user.signup",\n  "userId": "usr_42"\n}',
+            },
+          ];
+        } else if (role === "server") {
+          defaultConfig.endpoints = {
+            "/api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+            "api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          };
+          if (n.id === "subscriber-1") {
+            defaultConfig.subscriptionTopics = ["order.created"];
+          } else if (n.id === "subscriber-2") {
+            defaultConfig.subscriptionTopics = ["order.created", "user.signup"];
+          }
+        } else if (role === "pubsub") {
+          defaultConfig.topics = ["order.created", "user.signup"];
+        }
+      } else if (
+        scenarioId === "simple-message-queue" ||
+        scenarioId === "message-queue"
+      ) {
+        if (role === "client") {
+          defaultConfig.requests = [
+            {
+              endpoint: "/api/v1/posts",
+              method: "POST",
+              body: '{\n  "task": "process_video",\n  "priority": 1\n}',
+            },
+            {
+              endpoint: "/api/v1/posts",
+              method: "POST",
+              body: '{\n  "task": "generate_report",\n  "priority": 2\n}',
+            },
+          ];
+        } else if (role === "server") {
+          defaultConfig.endpoints = {
+            "/api/v1/posts": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+            "api/v1/posts": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          };
+          if (n.id === "consumer-1" || n.id === "consumer-2") {
+            defaultConfig.prefetchLimit = 1;
+          }
+        } else if (role === "message-queue") {
+          defaultConfig.processingType = "FIFO";
+          defaultConfig.queueSize = 10;
+          defaultConfig.overflowBehavior = "REJECT";
         }
       }
       initialConfigs[n.id] = defaultConfig;
@@ -2921,30 +3004,6 @@ export default function ScenarioPage({ params }: ScenarioPropsPage) {
                   {frameIndex + 1}/{frameGroups.length || 0}
                 </span>
               </div>
-            </div>
-          </div>
-
-          {/* Info grid — desktop only */}
-          <div className="mt-2 hidden sm:grid grid-cols-3 gap-3 text-[11px] text-[color:var(--foreground)]/60 border-t border-[var(--border)]/30 pt-2">
-            <div className="flex items-start gap-2">
-              <span className="text-blue-400 font-mono">↔</span>
-              <span>
-                <strong>Hide Response:</strong> Toggle response packets from
-                servers
-              </span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-blue-400 font-mono">∥</span>
-              <span>
-                <strong>Parallel:</strong> Show simultaneous request-response
-                flows
-              </span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-emerald-400 font-mono">&gt;_</span>
-              <span>
-                <strong>Debug:</strong> Open detailed frame inspection panel
-              </span>
             </div>
           </div>
         </header>

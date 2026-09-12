@@ -243,3 +243,15 @@ body {
 .animate-flow-pulse {
   animation: flowPulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
+
+@keyframes packetSlide {
+  0% { left: 12px; opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { left: calc(100% - 24px); opacity: 0; }
+}
+
+@keyframes shimmerTrack {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}

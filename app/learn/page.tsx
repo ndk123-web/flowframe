@@ -149,7 +149,9 @@ function StructuredBlueprintBox({
                 <div className="w-full h-0.5 bg-[var(--border)] relative overflow-hidden rounded-full">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400 to-transparent w-full animate-flow-pulse" />
                 </div>
-                <span className="absolute right-0 text-[9px] text-blue-400/80 font-bold -mr-0.5">▶</span>
+                <svg className="absolute right-0 w-2.5 h-2.5 fill-blue-400/80 -mr-1" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
               </div>
             )}
           </React.Fragment>
@@ -370,7 +372,7 @@ export default function LearnOverviewPage() {
               {/* Action Footer */}
               <div className="pt-4 border-t border-[var(--border)] flex items-center justify-between">
                 <span className="text-[11px] font-mono text-[color:var(--muted)]">
-                  ⚡ Direct Protocol Tester
+                  Direct Protocol Tester
                 </span>
                 <Link
                   href="/learn/server"
@@ -457,9 +459,9 @@ export default function LearnOverviewPage() {
                 {/* Action Footer */}
                 <div className="pt-4 border-t border-[var(--border)] flex items-center justify-between gap-2">
                   <div className="text-[10px] font-mono text-[color:var(--muted)] flex items-center gap-2">
-                    <span>📖 {totalSections} steps</span>
+                    <span>{totalSections} steps</span>
                     <span>•</span>
-                    <span>⚡ {totalCheckpoints} checkpoints</span>
+                    <span>{totalCheckpoints} checkpoints</span>
                   </div>
 
                   <div className="flex items-center gap-2">

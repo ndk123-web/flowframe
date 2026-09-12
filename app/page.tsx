@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
+import ArchitectureBackground from "@/components/ArchitectureBackground";
 import { ComponentIcon } from "@/components/ComponentIcons";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -325,36 +326,41 @@ function HowItWorks() {
 
   return (
     <Reveal>
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-20">
-        <div className="text-center max-w-2xl mx-auto mb-14">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
-            The Core Experience
-          </p>
-          <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
-            From architecture to running system in four steps.
-          </h2>
-          <p className="mt-3 text-sm text-[color:var(--muted)]">
-            No static mockups. FlowFrame compiles your topology into an executable simulation graph.
-          </p>
-        </div>
+      <section className="relative mx-auto max-w-6xl px-4 sm:px-6 py-24 sm:py-28 overflow-hidden">
+        {/* Ambient Vertical Architecture Simulation directly behind the four steps */}
+        <ArchitectureBackground variant="section" />
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((s, i) => (
-            <Reveal key={s.step} delay={i * 0.06}>
-              <div className="relative flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--accent)]/40 hover:-translate-y-0.5 transition-all duration-200 h-full">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-[color:var(--accent)]">
-                    {s.icon}
+        <div className="relative z-10">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] mb-2">
+              The Core Experience
+            </p>
+            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
+              From architecture to running system in four steps.
+            </h2>
+            <p className="mt-3 text-sm text-[color:var(--muted)]">
+              No static mockups. FlowFrame compiles your topology into an executable simulation graph.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {steps.map((s, i) => (
+              <Reveal key={s.step} delay={i * 0.06}>
+                <div className="relative flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xs p-5 hover:border-[var(--accent)]/40 hover:-translate-y-0.5 transition-all duration-200 h-full shadow-xs">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-[color:var(--accent)]">
+                      {s.icon}
+                    </div>
+                    <span className="text-[10px] font-mono font-bold text-[color:var(--muted)] px-2 py-0.5 rounded bg-[var(--bg-elevated)] border border-[var(--border)]">
+                      Step {s.step}
+                    </span>
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-[color:var(--muted)] px-2 py-0.5 rounded bg-[var(--bg-elevated)] border border-[var(--border)]">
-                    Step {s.step}
-                  </span>
+                  <h3 className="text-base font-bold text-[color:var(--foreground)] mb-2">{s.title}</h3>
+                  <p className="text-sm text-[color:var(--muted)] leading-relaxed">{s.desc}</p>
                 </div>
-                <h3 className="text-base font-bold text-[color:var(--foreground)] mb-2">{s.title}</h3>
-                <p className="text-sm text-[color:var(--muted)] leading-relaxed">{s.desc}</p>
-              </div>
-            </Reveal>
-          ))}
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
     </Reveal>
@@ -828,15 +834,12 @@ export default function LandingPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] transition-colors duration-200 overflow-x-hidden">
+    <div className="relative min-h-screen bg-[var(--bg)] transition-colors duration-200 overflow-x-hidden">
       {/* Header */}
       <SiteHeader theme={theme} onToggleTheme={toggleTheme} showHomeLink={false} />
 
       {/* ── Hero Section (Centered & High Impact) ─────────────────────────── */}
       <section className="relative mx-auto max-w-6xl px-4 sm:px-6 pt-10 sm:pt-14 pb-16 text-center flex flex-col items-center">
-        {/* Subtle background glow */}
-        <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[300px] bg-blue-500/10 rounded-full blur-3xl -z-10" />
-
         {/* Status Badge */}
         <div className="fade-up inline-flex items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 py-1 text-xs font-mono text-[color:var(--muted)] mb-6 shadow-xs">
           <span className="font-semibold text-[color:var(--foreground)]">FlowFrame Engine</span>
@@ -1003,19 +1006,22 @@ export default function LandingPage() {
             href="/workspace"
             className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
           >
-            <span>📄 Blank Canvas</span>
+            <SandboxIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" />
+            <span>Blank Canvas</span>
           </Link>
           <Link
             href="/scenarios/simple-load-balancer"
             className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
           >
-            <span>⚖️ Load Balancer</span>
+            <ScaleIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" />
+            <span>Load Balancer</span>
           </Link>
           <Link
             href="/scenarios/simple-cache"
             className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-medium hover:border-[var(--accent)]/50 hover:text-[color:var(--foreground)] transition-all"
           >
-            <span>⚡ Cache-Aside</span>
+            <ZapIcon className="w-3.5 h-3.5 text-[color:var(--accent)]" />
+            <span>Cache-Aside</span>
           </Link>
           <Link
             href="/workspace"

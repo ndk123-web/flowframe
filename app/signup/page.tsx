@@ -10,13 +10,25 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useToastStore } from "@/store/useToastStore";
 import { useThemeStore } from "@/store/useThemeStore";
 import { syncFirebaseUserApi } from "@/services/authApi";
+import {
+  FiUser,
+  FiMail,
+  FiLock,
+  FiEye,
+  FiEyeOff,
+  FiArrowRight,
+  FiShield,
+  FiAlertCircle,
+} from "react-icons/fi";
 
 export default function SignUpPage() {
   const { theme, toggleTheme } = useThemeStore();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
@@ -47,19 +59,22 @@ export default function SignUpPage() {
       router.push("/dashboard");
     } catch (err: any) {
       console.error("Backend DB sync error:", err);
-      showToast("Backend server unreachable. Unable to sync profile.", "error");
+      const msg = "Backend server unreachable. Unable to sync profile.";
+      setFormError(msg);
+      showToast(msg, "error");
     }
   };
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     if (!email || !password) {
-      showToast("Please provide both email and password.", "error");
+      setFormError("Please provide both email and password.");
       return;
     }
 
     if (password.length < 6) {
-      showToast("Password must be at least 6 characters.", "error");
+      setFormError("Password must contain at least 6 characters.");
       return;
     }
 
@@ -71,48 +86,71 @@ export default function SignUpPage() {
       }
       await handleFirebaseUserSync(userCredential.user, "email");
     } catch (err: any) {
-      showToast(err.message || "Failed to create account.", "error");
+      const msg = err.message || "Failed to create account. Please check your details.";
+      setFormError(msg);
+      showToast(msg, "error");
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleSignUp = async () => {
+    setFormError(null);
     setLoading(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
       await handleFirebaseUserSync(result.user, "google");
     } catch (err: any) {
-      showToast(err.message || "Google sign up failed.", "error");
+      const msg = err.message || "Google sign up was cancelled or failed.";
+      setFormError(msg);
+      showToast(msg, "error");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[color:var(--foreground)] flex flex-col justify-between transition-colors duration-200">
+    <div className="min-h-screen bg-[var(--bg)] text-[color:var(--foreground)] flex flex-col justify-between transition-colors duration-200 relative overflow-hidden">
+      {/* Background technical subtle grid */}
+      <div className="pointer-events-none absolute inset-0 -z-10 technical-grid opacity-25" />
+
       <SiteHeader
         theme={theme}
         onToggleTheme={toggleTheme}
         showHomeLink={true}
-        badgeText="Registration"
+        badgeText="Developer Portal"
       />
 
-      <main className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md p-7 sm:p-8 rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-2xl space-y-6">
-          <div className="text-center space-y-1.5">
-            <h1 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)]">Create an Account</h1>
-            <p className="text-xs text-[color:var(--muted)]">
-              Get started with FlowFrame Architecture Simulator
+      <main className="flex-1 flex items-center justify-center px-4 py-12 z-10">
+        <div className="w-full max-w-md rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)]/95 backdrop-blur-md p-7 sm:p-8 shadow-2xl space-y-6">
+          {/* Header */}
+          <div className="space-y-2 text-center">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-[var(--surface-muted)] text-[color:var(--accent)] border border-[var(--border)]">
+              <FiShield className="w-3 h-3" />
+              <span>Registration</span>
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-[color:var(--foreground)]">
+              Create an Account
+            </h1>
+            <p className="text-xs text-[color:var(--muted)] leading-relaxed">
+              Join FlowFrame to design, analyze, and simulate complex distributed architectures.
             </p>
           </div>
+
+          {/* Form Error Banner */}
+          {formError && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 text-xs animate-in fade-in duration-150">
+              <FiAlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span className="flex-1 leading-tight">{formError}</span>
+            </div>
+          )}
 
           {/* Social Sign-Up */}
           <button
             type="button"
             onClick={handleGoogleSignUp}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-lg border border-[var(--border-strong)] bg-[var(--bg-elevated)] hover:bg-[var(--surface-muted)] text-xs font-semibold text-[color:var(--foreground)] transition duration-150 cursor-pointer disabled:opacity-50 shadow-xs"
+            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl border border-[var(--border-strong)] bg-[var(--bg-elevated)] hover:bg-[var(--surface-muted)] text-xs font-semibold text-[color:var(--foreground)] transition duration-150 cursor-pointer disabled:opacity-50 shadow-xs"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24">
               <path
@@ -138,7 +176,7 @@ export default function SignUpPage() {
           <div className="relative flex items-center justify-center">
             <span className="absolute inset-x-0 h-px bg-[var(--border)]" />
             <span className="relative bg-[var(--surface)] px-3 text-[10px] uppercase font-mono tracking-widest text-[color:var(--muted)]">
-              OR EMAIL
+              Or register with email
             </span>
           </div>
 
@@ -146,49 +184,69 @@ export default function SignUpPage() {
           <form onSubmit={handleEmailSignUp} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-[color:var(--foreground)] mb-1.5">
-                Full Name (Optional)
+                Full Name <span className="text-[color:var(--muted)] font-normal">(Optional)</span>
               </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Alex Developer"
-                className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)] transition"
-              />
+              <div className="relative">
+                <FiUser className="w-4 h-4 text-[color:var(--muted)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Alex Developer"
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)]/60 focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition"
+                />
+              </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[color:var(--foreground)] mb-1.5">
                 Email Address
               </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)] transition"
-              />
+              <div className="relative">
+                <FiMail className="w-4 h-4 text-[color:var(--muted)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="developer@company.com"
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)]/60 focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition"
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[color:var(--foreground)] mb-1.5">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters"
-                className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] focus:outline-none focus:border-[var(--accent)] transition"
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-[color:var(--foreground)]">
+                  Password
+                </label>
+                <span className="text-[10px] text-[color:var(--muted)]">Min 6 characters</span>
+              </div>
+              <div className="relative">
+                <FiLock className="w-4 h-4 text-[color:var(--muted)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Create a secure password"
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)]/60 focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((p) => !p)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--muted)] hover:text-[color:var(--foreground)] p-1 rounded transition cursor-pointer"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <FiEyeOff className="w-3.5 h-3.5" /> : <FiEye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full py-2.5 px-4 rounded-lg text-white font-semibold text-xs shadow-sm cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+              className="btn-primary w-full py-2.5 px-4 rounded-xl text-white font-semibold text-xs shadow-sm cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 transition"
             >
               {loading ? (
                 <>
@@ -199,7 +257,10 @@ export default function SignUpPage() {
                   <span>Creating Account...</span>
                 </>
               ) : (
-                "Create Account"
+                <>
+                  <span>Create Account</span>
+                  <FiArrowRight className="w-3.5 h-3.5" />
+                </>
               )}
             </button>
           </form>
@@ -214,7 +275,7 @@ export default function SignUpPage() {
       </main>
 
       <footer className="py-6 text-center text-xs text-[color:var(--muted)] border-t border-[var(--border)]">
-        FlowFrame Architecture Simulator &copy; {new Date().getFullYear()} · All rights reserved.
+        FlowFrame Architecture Simulator &copy; {new Date().getFullYear()} · Licensed under PolyForm Noncommercial 1.0.0
       </footer>
     </div>
   );

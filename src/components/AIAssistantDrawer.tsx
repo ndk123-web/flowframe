@@ -1,25 +1,19 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { compileDSL } from "@/DSL";
+import React, { useState, useRef, useEffect } from "react";
 import type { Node, Edge } from "@xyflow/react";
 import {
-  FiZap,
-  FiSliders,
-  FiShield,
-  FiInbox,
-  FiGlobe,
-  FiAlertTriangle,
-  FiCheckCircle,
   FiCpu,
-  FiTool,
-  FiInfo,
   FiX,
-  FiPlay,
+  FiSend,
+  FiPlus,
+  FiHelpCircle,
   FiCheck,
-  FiArrowRight,
+  FiPlay,
+  FiTrash2,
+  FiLayers,
+  FiCornerDownLeft,
 } from "react-icons/fi";
-
 
 interface AIAssistantDrawerProps {
   isOpen: boolean;
@@ -32,7 +26,14 @@ interface AIAssistantDrawerProps {
   theme?: "light" | "dark";
 }
 
-type AIMode = "create" | "modify" | "fix" | "explain";
+interface ChatMessage {
+  id: string;
+  sender: "user" | "assistant";
+  text: string;
+  dsl?: string;
+  architectureTitle?: string;
+  applied?: boolean;
+}
 
 export default function AIAssistantDrawer({
   isOpen,
@@ -43,20 +44,296 @@ export default function AIAssistantDrawer({
   onApplyDsl,
   onRunSimulation,
 }: AIAssistantDrawerProps) {
-  const [activeMode, setActiveMode] = useState<AIMode>("create");
-  const [customPrompt, setCustomPrompt] = useState("");
+  // Mode: "create" (Generate architecture on canvas) or "ask" (Technical Q&A / Canvas explanation)
+  const [mode, setMode] = useState<"create" | "ask">("create");
+  const [input, setInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [lastActionResult, setLastActionResult] = useState<string | null>(null);
-
-  // Pre-configured architecture templates in FlowFrame DSL
-  const ARCHITECTURE_PRESETS = [
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      id: "cache-aside",
-      title: "Cache-Aside Pattern",
-      badge: "High Throughput",
-      icon: "zap",
-      desc: "Client routes through API Server with Redis in-memory cache and Postgres DB fallback.",
-      dsl: `// Cache-Aside Architecture Template
+      id: "welcome-1",
+      sender: "assistant",
+      text: "Hello! I am your Architecture Assistant. Select **Create** to build system topologies on your canvas, or **Ask** to inquire about distributed system patterns or your current layout.",
+    },
+  ]);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-scroll messages to bottom
+  useEffect(() => {
+    if (isOpen) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isGenerating, isOpen]);
+
+  // Focus input on drawer open
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 150);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  // Clear chat
+  const handleClearChat = () => {
+    setMessages([
+      {
+        id: `welcome-${Date.now()}`,
+        sender: "assistant",
+        text: "Chat cleared. Select **Create** to generate a new architecture or **Ask** to ask a technical question.",
+      },
+    ]);
+  };
+
+  // Quick suggestion click
+  const handleQuickPrompt = (promptText: string, promptMode: "create" | "ask") => {
+    setMode(promptMode);
+    setInput(promptText);
+    setTimeout(() => {
+      submitPrompt(promptText, promptMode);
+    }, 50);
+  };
+
+  // Submit prompt logic
+  const submitPrompt = (userPromptText?: string, forcedMode?: "create" | "ask") => {
+    const textToSubmit = (userPromptText ?? input).trim();
+    if (!textToSubmit) return;
+
+    const currentMode = forcedMode ?? mode;
+    const userMsgId = `usr-${Date.now()}`;
+    const userMsg: ChatMessage = {
+      id: userMsgId,
+      sender: "user",
+      text: textToSubmit,
+    };
+
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setInput("");
+    setIsGenerating(true);
+
+    // Generate intelligent assistant response based on mode
+    setTimeout(() => {
+      const lower = textToSubmit.toLowerCase();
+
+      if (currentMode === "create") {
+        // Architecture Generation Engine
+        let generatedDsl = "";
+        let title = "";
+        let explanation = "";
+
+        if (lower.includes("load") || lower.includes("round robin") || lower.includes("balance") || lower.includes("cluster")) {
+          title = "Load-Balanced Cluster";
+          explanation = "Round-Robin Load Balancer distributing requests evenly across multiple backend application servers to eliminate single point of failure.";
+          generatedDsl = `// High Availability Load-Balanced Cluster
+define CLIENT client_node {
+  label: "Web Client",
+  requests: [
+    { endpoint: "/api/v1/orders", allowedMethods: ["GET", "POST"], key: "order:550" }
+  ]
+}
+
+define LOADBALANCER edge_lb {
+  label: "Round-Robin LB",
+  strategy: "ROUND_ROBIN"
+}
+
+define SERVER app_server_1 {
+  label: "App Server Alpha",
+  capacity: 80,
+  acceptedEndpoints: [
+    { endpoint: "/api/v1/orders", allowedMethod: ["GET", "POST"] }
+  ]
+}
+
+define SERVER app_server_2 {
+  label: "App Server Beta",
+  capacity: 80,
+  acceptedEndpoints: [
+    { endpoint: "/api/v1/orders", allowedMethod: ["GET", "POST"] }
+  ]
+}
+
+define POSTGRES shared_db {
+  label: "Primary Database",
+  data: [
+    { key: "order:550", value: "Order record #550" }
+  ]
+}
+
+connect client_node -> edge_lb
+connect edge_lb -> app_server_1
+connect edge_lb -> app_server_2
+connect app_server_1 -> shared_db
+connect app_server_2 -> shared_db
+`;
+        } else if (lower.includes("queue") || lower.includes("rabbit") || lower.includes("sqs") || lower.includes("worker") || lower.includes("kafka")) {
+          title = "Asynchronous Message Queue & Worker";
+          explanation = "Decoupled architecture using a Message Queue buffer to absorb traffic spikes and asynchronously deliver jobs to background workers.";
+          generatedDsl = `// Asynchronous Message Queue Processing
+define CLIENT client_node {
+  label: "Web Client",
+  requests: [
+    { endpoint: "/api/v1/tasks", allowedMethods: ["POST"], key: "task:88" }
+  ]
+}
+
+define SERVER api_gateway {
+  label: "Ingestion API",
+  capacity: 120,
+  acceptedEndpoints: [
+    { endpoint: "/api/v1/tasks", allowedMethod: ["POST"] }
+  ]
+}
+
+define MESSAGEQUEUE task_queue {
+  label: "Message Queue",
+  queueSize: 100,
+  processingType: "FIFO"
+}
+
+define SERVER background_worker {
+  label: "Worker Instance",
+  capacity: 60,
+  prefetchLimit: 1
+}
+
+define POSTGRES analytics_db {
+  label: "PostgreSQL Database",
+  data: [
+    { key: "task:88", value: "processed task data" }
+  ]
+}
+
+connect client_node -> api_gateway
+connect api_gateway -> task_queue
+connect task_queue -> background_worker
+connect background_worker -> analytics_db
+`;
+        } else if (lower.includes("pubsub") || lower.includes("fanout") || lower.includes("sns") || lower.includes("broadcast") || lower.includes("event")) {
+          title = "PubSub Event Fanout Architecture";
+          explanation = "One-to-many event broadcast pattern routing order events to both notification and analytics subscribers simultaneously.";
+          generatedDsl = `// PubSub Event Broadcast Fanout
+define CLIENT client_node {
+  label: "Web Client",
+  requests: [
+    { endpoint: "/events/orders", allowedMethods: ["POST"], key: "event:order" }
+  ]
+}
+
+define SERVER order_service {
+  label: "Order Service",
+  capacity: 100,
+  acceptedEndpoints: [
+    { endpoint: "/events/orders", allowedMethod: ["POST"] }
+  ]
+}
+
+define PUBSUB event_broker {
+  label: "PubSub Broker",
+  topic: "order.created"
+}
+
+define SERVER notification_worker {
+  label: "Notification Service",
+  capacity: 50
+}
+
+define SERVER analytics_worker {
+  label: "Analytics Service",
+  capacity: 50
+}
+
+connect client_node -> order_service
+connect order_service -> event_broker
+connect event_broker -> notification_worker
+connect event_broker -> analytics_worker
+`;
+        } else if (lower.includes("gateway") || lower.includes("microservice") || lower.includes("api gw")) {
+          title = "API Gateway Microservices Architecture";
+          explanation = "Central API Gateway providing endpoint routing to isolated User and Order microservices with shared database access.";
+          generatedDsl = `// API Gateway Microservices
+define CLIENT web_apps {
+  label: "Client App",
+  requests: [
+    { endpoint: "/api/users", allowedMethods: ["GET"], key: "user:1" },
+    { endpoint: "/api/orders", allowedMethods: ["POST"], key: "order:1" }
+  ]
+}
+
+define GATEWAY api_gw {
+  label: "API Gateway",
+  strategy: "ROUND_ROBIN"
+}
+
+define SERVER user_service {
+  label: "User Service",
+  capacity: 100,
+  acceptedEndpoints: [
+    { endpoint: "/api/users", allowedMethod: ["GET"] }
+  ]
+}
+
+define SERVER order_service {
+  label: "Order Service",
+  capacity: 100,
+  acceptedEndpoints: [
+    { endpoint: "/api/orders", allowedMethod: ["POST"] }
+  ]
+}
+
+define POSTGRES main_db {
+  label: "Shared Postgres DB",
+  data: [
+    { key: "user:1", value: "User profile #1" },
+    { key: "order:1", value: "Order summary #1" }
+  ]
+}
+
+connect web_apps -> api_gw
+connect api_gw -> user_service
+connect api_gw -> order_service
+connect user_service -> main_db
+connect order_service -> main_db
+`;
+        } else if (lower.includes("valet") || lower.includes("s3") || lower.includes("storage") || lower.includes("upload")) {
+          title = "Valet Key Direct Storage Upload";
+          explanation = "Direct client-to-cloud upload pattern reducing server bandwidth bottlenecks by issuing short-lived pre-signed URLs.";
+          generatedDsl = `// Valet Key Direct Upload Architecture
+define CLIENT browser_client {
+  label: "Browser Client",
+  valet: true,
+  requests: [
+    { endpoint: "/upload/sign", allowedMethods: ["GET"], key: "file:image.png" }
+  ]
+}
+
+define SERVER token_issuer {
+  label: "Token Issuer Server",
+  capacity: 80,
+  acceptedEndpoints: [
+    { endpoint: "/upload/sign", allowedMethod: ["GET"] }
+  ]
+}
+
+define SERVER storage_service {
+  label: "Cloud Storage Server",
+  capacity: 100,
+  acceptedEndpoints: [
+    { endpoint: "/upload/sign", allowedMethod: ["GET"] }
+  ]
+}
+
+connect browser_client -> token_issuer
+connect token_issuer -> storage_service
+connect browser_client -> storage_service
+`;
+        } else {
+          // Default to Cache-Aside Pattern (Most requested pattern)
+          title = "Cache-Aside Architecture";
+          explanation = "High-throughput cache-aside pattern: Redis in-memory cache intercepts read queries to minimize database read pressure.";
+          generatedDsl = `// Cache-Aside Architecture Template
 define CLIENT web_client {
   label: "Web Client",
   requests: [
@@ -65,7 +342,7 @@ define CLIENT web_client {
 }
 
 define SERVER api_server {
-  label: "API Gateway Server",
+  label: "API Server",
   capacity: 150,
   acceptedEndpoints: [
     { endpoint: "/api/v1/users", allowedMethod: ["GET", "POST"] }
@@ -82,721 +359,314 @@ define REDIS redis_cache {
 define POSTGRES postgres_db {
   label: "PostgreSQL Database",
   data: [
-    { key: "user:101", value: "db record: user 101" },
-    { key: "user:102", value: "db record: user 102" }
+    { key: "user:101", value: "db record: user 101" }
   ]
 }
 
 connect web_client -> api_server
 connect api_server -> redis_cache
 connect api_server -> postgres_db
-`,
-      explanation: "Generated Cache-Aside architecture: In-memory Redis cache intercepts requests, reducing database read latency by ~85%.",
-    },
-    {
-      id: "load-balanced",
-      title: "Load-Balanced Cluster",
-      badge: "High Availability",
-      icon: "sliders",
-      desc: "Client traffic distributed across multiple server instances via Round-Robin Load Balancer.",
-      dsl: `// High Availability Load-Balanced Cluster
-define CLIENT mobile_client {
-  label: "Mobile & Web Traffic",
-  requests: [
-    { endpoint: "/api/v1/orders", allowedMethods: ["GET", "POST"], key: "order:550" }
-  ]
-}
+`;
+        }
 
-define LOADBALANCER edge_lb {
-  label: "Round-Robin LB",
-  algorithm: "round-robin",
-  healthCheck: true
-}
+        const assistantMsg: ChatMessage = {
+          id: `ast-${Date.now()}`,
+          sender: "assistant",
+          text: `I designed a **${title}** architecture for your prompt:\n\n${explanation}`,
+          dsl: generatedDsl,
+          architectureTitle: title,
+        };
+        setMessages((prev) => [...prev, assistantMsg]);
+      } else {
+        // Technical Q&A / Canvas Analysis Engine
+        let responseText = "";
 
-define SERVER app_server_1 {
-  label: "App Node Alpha",
-  capacity: 80,
-  acceptedEndpoints: [
-    { endpoint: "/api/v1/orders", allowedMethod: ["GET", "POST"] }
-  ]
-}
+        if (lower.includes("canvas") || lower.includes("current") || lower.includes("diagram") || lower.includes("my architecture")) {
+          const clientCount = nodes.filter((n) => n.data.type === "client").length;
+          const serverCount = nodes.filter((n) => n.data.type === "server").length;
+          const dbCount = nodes.filter((n) => n.data.type === "postgres").length;
+          const cacheCount = nodes.filter((n) => n.data.type === "redis").length;
+          const queueCount = nodes.filter((n) => n.data.type === "message-queue" || n.data.type === "messagequeue").length;
 
-define SERVER app_server_2 {
-  label: "App Node Beta",
-  capacity: 80,
-  acceptedEndpoints: [
-    { endpoint: "/api/v1/orders", allowedMethod: ["GET", "POST"] }
-  ]
-}
+          responseText = `**Current Canvas Breakdown:**\n\n- Total Nodes: **${nodes.length}** (${clientCount} Clients, ${serverCount} Servers, ${cacheCount} Caches, ${dbCount} Databases, ${queueCount} Queues)\n- Total Connections: **${edges.length}**\n\n${
+            nodes.length === 0
+              ? "Your canvas is currently empty. Switch to **Create** mode below and type a system requirement to generate a starter layout!"
+              : "Traffic flows from your client nodes through downstream services. Run the simulation from the top toolbar to observe latency and request packet routing in real-time."
+          }`;
+        } else if (lower.includes("redis") || lower.includes("cache")) {
+          responseText = "**Redis Cache in System Design:**\n\nRedis stores key-value pairs in memory (RAM), delivering sub-millisecond retrieval latencies. In a Cache-Aside pattern, the application checks Redis first. On a cache miss, it reads from the SQL database and writes the result back to Redis with a TTL (Time-To-Live).";
+        } else if (lower.includes("load balancer") || lower.includes("round robin") || lower.includes("alb")) {
+          responseText = "**Load Balancing Strategies:**\n\n- **Round-Robin**: Sequentially distributes each new request to the next server in line.\n- **Least Connections**: Routes traffic to the instance currently servicing the fewest active connections.\n- **IP Hash**: Ensures a specific client consistently routes to the same backend for session affinity.";
+        } else if (lower.includes("queue") || lower.includes("kafka") || lower.includes("sqs")) {
+          responseText = "**Message Queues vs Pub/Sub:**\n\n- **Message Queue (Point-to-Point)**: Each message in the queue is processed by exactly one worker. Great for asynchronous task execution and background job pipelines.\n- **Pub/Sub (Publish/Subscribe)**: Every subscriber listening to a topic receives a copy of the broadcast event. Ideal for notifications and real-time event feeds.";
+        } else {
+          responseText = `**Architecture Insight:**\n\nRegarding "${textToSubmit}": Distributed systems balance latency, consistency, and fault tolerance. In FlowFrame, you can model this pattern visually, configure server request concurrency, and simulate packet flow step-by-step.`;
+        }
 
-define POSTGRES shared_db {
-  label: "Primary Database",
-  data: [
-    { key: "order:550", value: "Order #550 Confirmed" }
-  ]
-}
-
-connect mobile_client -> edge_lb
-connect edge_lb -> app_server_1
-connect edge_lb -> app_server_2
-connect app_server_1 -> shared_db
-connect app_server_2 -> shared_db
-`,
-      explanation: "Generated Load-Balanced Cluster: Eliminates single point of failure (SPOF) and distributes load across App Node Alpha and Beta.",
-    },
-    {
-      id: "microservices-gateway",
-      title: "API Gateway Microservices",
-      badge: "Scalability",
-      icon: "shield",
-      desc: "Central API Gateway routing traffic to User and Payment microservices with independent databases.",
-      dsl: `// API Gateway Microservices Architecture
-define CLIENT client_apps {
-  label: "Client Applications",
-  requests: [
-    { endpoint: "/users", allowedMethods: ["GET"], key: "user:alice" },
-    { endpoint: "/orders", allowedMethods: ["POST"], key: "order:909" }
-  ]
-}
-
-define APIGATEWAY api_gw {
-  label: "Kong API Gateway",
-  rateLimit: 1000
-}
-
-define SERVER user_service {
-  label: "User Microservice",
-  capacity: 100,
-  acceptedEndpoints: [
-    { endpoint: "/users", allowedMethod: ["GET"] }
-  ]
-}
-
-define SERVER order_service {
-  label: "Order Microservice",
-  capacity: 100,
-  acceptedEndpoints: [
-    { endpoint: "/orders", allowedMethod: ["POST"] }
-  ]
-}
-
-define POSTGRES user_db {
-  label: "User Database",
-  data: [
-    { key: "user:alice", value: "Profile: Alice" }
-  ]
-}
-
-define POSTGRES order_db {
-  label: "Order Database",
-  data: [
-    { key: "order:909", value: "Invoice $120.00" }
-  ]
-}
-
-connect client_apps -> api_gw
-connect api_gw -> user_service
-connect api_gw -> order_service
-connect user_service -> user_db
-connect order_service -> order_db
-`,
-      explanation: "Generated API Gateway Microservices: Centralized routing and rate-limiting across independent decoupled services.",
-    },
-    {
-      id: "event-driven-queue",
-      title: "Event-Driven Async Queue",
-      badge: "Decoupled",
-      icon: "inbox",
-      desc: "Asynchronous background ingestion using Message Queue and worker processing.",
-      dsl: `// Event-Driven Async Architecture
-define CLIENT ingest_client {
-  label: "IoT / Web Ingest",
-  requests: [
-    { endpoint: "/events", allowedMethods: ["POST"], key: "evt:telemetry" }
-  ]
-}
-
-define SERVER ingest_api {
-  label: "Ingestion API",
-  capacity: 200,
-  acceptedEndpoints: [
-    { endpoint: "/events", allowedMethod: ["POST"] }
-  ]
-}
-
-define QUEUE message_queue {
-  label: "Kafka Message Queue",
-  bufferCapacity: 1000
-}
-
-define SERVER worker_node {
-  label: "Async Worker",
-  capacity: 50,
-  acceptedEndpoints: [
-    { endpoint: "/events", allowedMethod: ["POST"] }
-  ]
-}
-
-define STORAGE cold_storage {
-  label: "S3 Data Lake",
-  data: [
-    { key: "evt:telemetry", value: "Telemetry Stream Binary" }
-  ]
-}
-
-connect ingest_client -> ingest_api
-connect ingest_api -> message_queue
-connect message_queue -> worker_node
-connect worker_node -> cold_storage
-`,
-      explanation: "Generated Event-Driven Queue: Buffer sudden traffic spikes smoothly in Kafka without overwhelming downstream workers.",
-    },
-    {
-      id: "cdn-edge",
-      title: "Global CDN Edge Architecture",
-      badge: "Low Latency",
-      icon: "globe",
-      desc: "Cloudflare CDN Edge caching static assets with Origin fallback.",
-      dsl: `// Global CDN Edge Architecture
-define CLIENT global_visitor {
-  label: "Global Visitor",
-  requests: [
-    { endpoint: "/assets/style.css", allowedMethods: ["GET"], key: "css:bundle" }
-  ]
-}
-
-define CDN edge_cdn {
-  label: "Edge CDN PoP",
-  ttl: 3600
-}
-
-define SERVER origin_server {
-  label: "Origin Server",
-  capacity: 70,
-  acceptedEndpoints: [
-    { endpoint: "/assets/style.css", allowedMethod: ["GET"] }
-  ]
-}
-
-define STORAGE storage_bucket {
-  label: "GCS Assets Bucket",
-  data: [
-    { key: "css:bundle", value: "Minified CSS Bundle v2" }
-  ]
-}
-
-connect global_visitor -> edge_cdn
-connect edge_cdn -> origin_server
-connect origin_server -> storage_bucket
-`,
-      explanation: "Generated Global CDN Edge: Delivers cached responses close to users at <20ms edge latency.",
-    },
-  ];
-
-  // Architectural audit & recommendations (Rule-based engine)
-  const auditResults = useMemo(() => {
-    const findings: Array<{
-      id: string;
-      severity: "critical" | "warning" | "optimization" | "good";
-      title: string;
-      desc: string;
-      actionLabel?: string;
-      fixDsl?: string;
-    }> = [];
-
-    if (nodes.length === 0) {
-      findings.push({
-        id: "empty-canvas",
-        severity: "optimization",
-        title: "Blank Canvas",
-        desc: "No architectural components placed. Generate a template or start designing.",
-        actionLabel: "Load Cache-Aside Template",
-        fixDsl: ARCHITECTURE_PRESETS[0].dsl,
-      });
-      return findings;
-    }
-
-    const clientNodes = nodes.filter((n) => n.data?.type === "client");
-    const serverNodes = nodes.filter((n) => n.data?.type === "server");
-    const lbNodes = nodes.filter((n) => n.data?.type === "load-balancer");
-    const redisNodes = nodes.filter((n) => n.data?.type === "redis");
-    const dbNodes = nodes.filter((n) => n.data?.type === "postgres");
-
-    // 1. Direct client to DB connection
-    const directDbConnections = edges.filter((e) => {
-      const source = nodes.find((n) => n.id === e.source);
-      const target = nodes.find((n) => n.id === e.target);
-      return source?.data?.type === "client" && target?.data?.type === "postgres";
-    });
-
-    if (directDbConnections.length > 0) {
-      findings.push({
-        id: "direct-db",
-        severity: "critical",
-        title: "Direct Client Database Exposure",
-        desc: "Clients are connecting directly to PostgreSQL without an API layer, risking credential leakage and pool exhaustion.",
-      });
-    }
-
-    // 2. Single Point of Failure (SPOF)
-    if (serverNodes.length === 1 && lbNodes.length === 0) {
-      findings.push({
-        id: "spof-server",
-        severity: "warning",
-        title: "Single Point of Failure (SPOF)",
-        desc: "Architecture relies on a single API Server. If this instance fails or becomes overloaded, the entire system halts.",
-        actionLabel: "Upgrade to Load Balanced Cluster",
-        fixDsl: ARCHITECTURE_PRESETS[1].dsl,
-      });
-    }
-
-    // 3. Database without Caching Layer
-    if (dbNodes.length > 0 && redisNodes.length === 0) {
-      findings.push({
-        id: "missing-cache",
-        severity: "warning",
-        title: "Uncached Database Queries",
-        desc: "All queries hit the disk-backed relational database directly. Adding Redis reduces P99 latency significantly.",
-        actionLabel: "Apply Cache-Aside Pattern",
-        fixDsl: ARCHITECTURE_PRESETS[0].dsl,
-      });
-    }
-
-    // 4. Isolated / Disconnected Nodes
-    const disconnectedNodes = nodes.filter((n) => {
-      const hasConnection = edges.some(
-        (e) => e.source === n.id || e.target === n.id
-      );
-      return !hasConnection;
-    });
-
-    if (disconnectedNodes.length > 0) {
-      findings.push({
-        id: "disconnected-nodes",
-        severity: "optimization",
-        title: `${disconnectedNodes.length} Disconnected Component${disconnectedNodes.length > 1 ? "s" : ""}`,
-        desc: `Node "${disconnectedNodes[0].data?.label || disconnectedNodes[0].id}" is not connected to the traffic pipeline.`,
-      });
-    }
-
-    // If all healthy
-    if (findings.length === 0) {
-      findings.push({
-        id: "healthy-arch",
-        severity: "good",
-        title: "Optimal Architecture Verified",
-        desc: "No critical bottlenecks or single points of failure detected in current topology.",
-      });
-    }
-
-    return findings;
-  }, [nodes, edges]);
-
-  // Handle preset application
-  const handleApplyPreset = (preset: typeof ARCHITECTURE_PRESETS[0]) => {
-    setIsGenerating(true);
-    setTimeout(() => {
-      onApplyDsl(preset.dsl, preset.explanation);
-      setLastActionResult(preset.explanation);
-      setIsGenerating(false);
-      if (onRunSimulation) {
-        setTimeout(onRunSimulation, 250);
+        const assistantMsg: ChatMessage = {
+          id: `ast-${Date.now()}`,
+          sender: "assistant",
+          text: responseText,
+        };
+        setMessages((prev) => [...prev, assistantMsg]);
       }
-    }, 150);
+      setIsGenerating(false);
+    }, 450);
   };
 
-  // Handle custom prompt execution
-  const handleCustomPromptSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customPrompt.trim()) return;
-
-    setIsGenerating(true);
-    const query = customPrompt.toLowerCase();
-
-    // Grounded keyword mapping to valid DSL architectures
-    let selectedPreset = ARCHITECTURE_PRESETS[0]; // Default cache-aside
-    if (query.includes("load") || query.includes("balance") || query.includes("cluster") || query.includes("replica")) {
-      selectedPreset = ARCHITECTURE_PRESETS[1];
-    } else if (query.includes("gateway") || query.includes("microservice") || query.includes("auth") || query.includes("order")) {
-      selectedPreset = ARCHITECTURE_PRESETS[2];
-    } else if (query.includes("queue") || query.includes("kafka") || query.includes("event") || query.includes("worker")) {
-      selectedPreset = ARCHITECTURE_PRESETS[3];
-    } else if (query.includes("cdn") || query.includes("edge") || query.includes("cloudflare") || query.includes("asset")) {
-      selectedPreset = ARCHITECTURE_PRESETS[4];
-    }
-
-    setTimeout(() => {
-      onApplyDsl(selectedPreset.dsl, `Generated architecture for: "${customPrompt}"`);
-      setLastActionResult(`Generated: ${selectedPreset.title} based on your query.`);
-      setIsGenerating(false);
-      setCustomPrompt("");
-      if (onRunSimulation) {
-        setTimeout(onRunSimulation, 250);
-      }
-    }, 300);
+  const handleApplyArchitecture = (msgId: string, dsl: string, explanation: string) => {
+    onApplyDsl(dsl, explanation);
+    setMessages((prev) =>
+      prev.map((m) => (m.id === msgId ? { ...m, applied: true } : m))
+    );
   };
-
-  if (!isOpen) return null;
 
   return (
     <aside
-      className="absolute top-0 right-0 bottom-0 z-30 w-full sm:w-96 md:w-[420px] bg-[var(--surface)]/95 backdrop-blur-2xl border-l border-[var(--border)] shadow-2xl flex flex-col overflow-hidden animate-fade-in text-[color:var(--foreground)]"
-      role="dialog"
-      aria-label="AI Architecture Assistant"
+      className="fixed right-0 top-0 bottom-0 w-full sm:w-96 md:w-[420px] bg-[var(--surface)] border-l border-[var(--border)] shadow-2xl z-50 flex flex-col transition-all duration-200"
+      data-testid="ai-assistant-drawer"
     >
-      {/* Header */}
-      <div className="p-4 border-b border-[var(--border)] bg-[var(--surface)] flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-sm">
+      {/* ── Minimal Header ── */}
+      <div className="h-13 px-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/15 border border-[var(--accent)]/30 flex items-center justify-center text-[color:var(--accent)] shrink-0">
             <FiCpu className="w-4 h-4" />
           </div>
-          <div>
-            <h2 className="text-sm font-bold tracking-tight">Architecture Assistant</h2>
-            <p className="text-[10px] text-[color:var(--foreground)]/50">
-              Grounded system design & live simulation engine
-            </p>
+          <div className="min-w-0">
+            <h3 className="text-xs font-bold text-[color:var(--foreground)] truncate">
+              Architecture Assistant
+            </h3>
+            <div className="flex items-center gap-1.5 text-[10px] text-[color:var(--muted)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>Ready</span>
+            </div>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="h-7 w-7 rounded-full hover:bg-[var(--surface-muted)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] flex items-center justify-center text-sm font-bold transition cursor-pointer"
-          aria-label="Close AI Assistant"
-        >
-          ×
-        </button>
-      </div>
-
-      {/* Mode Navigation Tabs */}
-      <div className="px-3 py-2 border-b border-[var(--border)] bg-[var(--surface-muted)]/50 shrink-0">
-        <div className="grid grid-cols-4 gap-1 p-0.5 bg-[var(--surface-muted)] rounded-xl border border-[var(--border)]">
-          {(
-            [
-              { id: "create", label: "Create", iconType: "create" },
-              { id: "modify", label: "Modify", iconType: "modify" },
-              { id: "fix", label: "Audit", iconType: "fix" },
-              { id: "explain", label: "Explain", iconType: "explain" },
-            ] as const
-          ).map((mode) => (
-            <button
-              key={mode.id}
-              type="button"
-              onClick={() => setActiveMode(mode.id)}
-              className={`py-1.5 px-1 rounded-lg text-[10.5px] font-semibold transition cursor-pointer flex items-center justify-center gap-1 ${
-                activeMode === mode.id
-                  ? "bg-[var(--surface)] text-blue-400 font-bold shadow-sm border border-[var(--border)]"
-                  : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
-              }`}
-            >
-              {mode.iconType === "create" && <FiCpu className="w-3.5 h-3.5 text-blue-400" />}
-              {mode.iconType === "modify" && <FiTool className="w-3.5 h-3.5 text-cyan-400" />}
-              {mode.iconType === "fix" && <FiAlertTriangle className="w-3.5 h-3.5 text-amber-400" />}
-              {mode.iconType === "explain" && <FiInfo className="w-3.5 h-3.5 text-purple-400" />}
-              <span>{mode.label}</span>
-            </button>
-          ))}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleClearChat}
+            className="p-1.5 rounded-lg text-[color:var(--muted)] hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+            title="Clear Chat History"
+          >
+            <FiTrash2 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition cursor-pointer"
+            title="Close Assistant"
+          >
+            <FiX className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 scrollbar-thin">
-        {/* Toast / Result Message */}
-        {lastActionResult && (
-          <div className="p-3 rounded-xl border border-blue-500/40 bg-blue-500/10 text-xs text-blue-300 flex items-center justify-between animate-fade-in">
-            <span className="leading-snug">{lastActionResult}</span>
-            <button
-              type="button"
-              onClick={() => setLastActionResult(null)}
-              className="text-blue-400 hover:text-blue-200 ml-2 font-bold"
-            >
-              ×
-            </button>
-          </div>
-        )}
-
-        {/* ── MODE 1: CREATE ARCHITECTURE ── */}
-        {activeMode === "create" && (
-          <div className="space-y-4">
-            {/* Natural language query prompt */}
-            <form onSubmit={handleCustomPromptSubmit} className="space-y-2">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70 flex items-center gap-1.5">
-                <span>Architecture Assistant Input</span>
-                <span className="text-[9px] font-mono text-blue-400 font-normal">DSL-Grounded</span>
-              </label>
-              <div className="relative">
-                <textarea
-                  value={customPrompt}
-                  onChange={(e) => setCustomPrompt(e.target.value)}
-                  placeholder="e.g. Design a high-availability microservices architecture with Redis and Load Balancer..."
-                  rows={3}
-                  className="w-full text-xs rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/60 p-3 text-[color:var(--foreground)] placeholder:text-[color:var(--foreground)]/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 resize-none font-sans"
-                />
+      {/* ── Chat Messages Stream ── */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3.5 scrollbar-thin">
+        {messages.map((m) => (
+          <div
+            key={m.id}
+            className={`flex flex-col ${
+              m.sender === "user" ? "items-end" : "items-start"
+            }`}
+          >
+            {m.sender === "user" ? (
+              <div className="bg-[var(--accent)] text-white text-xs px-3.5 py-2.5 rounded-2xl rounded-tr-xs shadow-xs max-w-[85%] leading-relaxed">
+                {m.text}
               </div>
+            ) : (
+              <div className="bg-[var(--surface-muted)] text-[color:var(--foreground)] border border-[var(--border)] text-xs px-3.5 py-2.5 rounded-2xl rounded-tl-xs shadow-xs max-w-[95%] leading-relaxed space-y-2.5">
+                <div className="whitespace-pre-wrap">{m.text}</div>
 
-              <button
-                type="submit"
-                disabled={isGenerating || !customPrompt.trim()}
-                className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white shadow-md shadow-blue-500/20 transition cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span>{isGenerating ? "Compiling..." : "Generate Architecture"}</span>
-              </button>
-            </form>
-
-            <div className="h-px bg-[var(--border)] w-full" />
-
-            {/* Architecture Presets */}
-            <div className="space-y-2">
-              <p className="text-[10.5px] uppercase font-bold tracking-wider text-[color:var(--foreground)]/50">
-                Production Architecture Blueprints
-              </p>
-
-              <div className="space-y-2.5">
-                {ARCHITECTURE_PRESETS.map((preset) => (
-                  <div
-                    key={preset.id}
-                    className="p-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/30 hover:border-blue-500/50 hover:bg-[var(--surface-muted)] transition cursor-pointer group flex flex-col gap-2"
-                    onClick={() => handleApplyPreset(preset)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="p-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                          {preset.icon === "zap" && <FiZap className="w-3.5 h-3.5" />}
-                          {preset.icon === "sliders" && <FiSliders className="w-3.5 h-3.5" />}
-                          {preset.icon === "shield" && <FiShield className="w-3.5 h-3.5" />}
-                          {preset.icon === "inbox" && <FiInbox className="w-3.5 h-3.5" />}
-                          {preset.icon === "globe" && <FiGlobe className="w-3.5 h-3.5" />}
-                        </span>
-                        <h3 className="text-xs font-bold text-[color:var(--foreground)] group-hover:text-blue-400 transition">
-                          {preset.title}
-                        </h3>
-                      </div>
-                      <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                        {preset.badge}
-                      </span>
+                {/* If architecture was generated, show 1-click action buttons */}
+                {m.dsl && (
+                  <div className="pt-2 border-t border-[var(--border)] space-y-2">
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-[color:var(--accent)]">
+                      <FiLayers className="w-3.5 h-3.5" />
+                      <span>{m.architectureTitle} Ready</span>
                     </div>
 
-                    <p className="text-[11px] text-[color:var(--foreground)]/60 leading-relaxed">
-                      {preset.desc}
-                    </p>
-
-                    <div className="flex items-center justify-between pt-1 text-[10px] text-blue-400 font-semibold group-hover:translate-x-0.5 transition-transform">
-                      <span>Click to compile & run simulation</span>
-                      <FiArrowRight className="w-3 h-3 text-blue-400" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── MODE 2: MODIFY ARCHITECTURE ── */}
-        {activeMode === "modify" && (
-          <div className="space-y-3">
-            <p className="text-[11px] text-[color:var(--foreground)]/70 leading-relaxed">
-              Transform the active canvas topology with 1-click architectural mutations:
-            </p>
-
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => {
-                  handleApplyPreset(ARCHITECTURE_PRESETS[0]);
-                }}
-                className="w-full text-left p-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/40 hover:border-blue-500/50 hover:bg-[var(--surface-muted)] transition flex flex-col gap-1 cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold flex items-center gap-1.5">
-                    <FiZap className="w-3 h-3 text-amber-400" /> Insert Redis Caching Layer
-                  </span>
-                  <span className="text-[9px] font-mono text-emerald-400">Low Latency</span>
-                </div>
-                <p className="text-[10px] text-[color:var(--foreground)]/50">
-                  Adds an in-memory Redis cache between servers and storage to eliminate repetitive DB queries.
-                </p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  handleApplyPreset(ARCHITECTURE_PRESETS[1]);
-                }}
-                className="w-full text-left p-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/40 hover:border-blue-500/50 hover:bg-[var(--surface-muted)] transition flex flex-col gap-1 cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold flex items-center gap-1.5">
-                    <FiSliders className="w-3 h-3 text-blue-400" /> Scale Horizontally with Load Balancer
-                  </span>
-                  <span className="text-[9px] font-mono text-blue-400">High Availability</span>
-                </div>
-                <p className="text-[10px] text-[color:var(--foreground)]/50">
-                  Inserts a Round-Robin Load Balancer and clones API server into parallel nodes.
-                </p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  handleApplyPreset(ARCHITECTURE_PRESETS[4]);
-                }}
-                className="w-full text-left p-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/40 hover:border-blue-500/50 hover:bg-[var(--surface-muted)] transition flex flex-col gap-1 cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold flex items-center gap-1.5">
-                    <FiGlobe className="w-3 h-3 text-cyan-400" /> Deploy Cloudflare CDN Edge
-                  </span>
-                  <span className="text-[9px] font-mono text-cyan-400">Edge Caching</span>
-                </div>
-                <p className="text-[10px] text-[color:var(--foreground)]/50">
-                  Places a global CDN reverse proxy in front of server origin to serve static assets under 20ms.
-                </p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  handleApplyPreset(ARCHITECTURE_PRESETS[3]);
-                }}
-                className="w-full text-left p-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/40 hover:border-blue-500/50 hover:bg-[var(--surface-muted)] transition flex flex-col gap-1 cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold flex items-center gap-1.5">
-                    <FiInbox className="w-3 h-3 text-emerald-400" /> Add Async Worker Message Queue
-                  </span>
-                  <span className="text-[9px] font-mono text-pink-400">Decoupled</span>
-                </div>
-                <p className="text-[10px] text-[color:var(--foreground)]/50">
-                  Buffers incoming request surges into a distributed queue for background processing.
-                </p>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── MODE 3: AUDIT & OPTIMIZATION ── */}
-        {activeMode === "fix" && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] uppercase font-bold tracking-wider text-[color:var(--foreground)]/60">
-                Live Topology Audit
-              </span>
-              <span className="text-[10px] font-mono text-blue-400 font-semibold">
-                {nodes.length} Nodes · {edges.length} Edges
-              </span>
-            </div>
-
-            <div className="space-y-2.5">
-              {auditResults.map((audit) => {
-                const badgeColor =
-                  audit.severity === "critical"
-                    ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
-                    : audit.severity === "warning"
-                    ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
-                    : audit.severity === "good"
-                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                    : "bg-blue-500/15 text-blue-400 border-blue-500/30";
-
-                return (
-                  <div
-                    key={audit.id}
-                    className="p-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/40 space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold text-[color:var(--foreground)]">
-                        {audit.title}
-                      </h4>
-                      <span
-                        className={`text-[9px] uppercase font-mono font-bold px-2 py-0.5 rounded-full border ${badgeColor}`}
-                      >
-                        {audit.severity}
-                      </span>
-                    </div>
-
-                    <p className="text-[11px] text-[color:var(--foreground)]/60 leading-relaxed">
-                      {audit.desc}
-                    </p>
-
-                    {audit.fixDsl && (
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => {
-                          onApplyDsl(audit.fixDsl!, `Resolved: ${audit.title}`);
-                          setLastActionResult(`Resolved: ${audit.title}`);
-                        }}
-                        className="w-full py-1.5 px-2.5 rounded-xl text-[11px] font-bold bg-blue-600 hover:bg-blue-500 text-white shadow transition cursor-pointer flex items-center justify-center gap-1.5"
+                        onClick={() =>
+                          handleApplyArchitecture(
+                            m.id,
+                            m.dsl!,
+                            `${m.architectureTitle} applied to canvas`
+                          )
+                        }
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${
+                          m.applied
+                            ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                            : "bg-[var(--accent)] hover:brightness-110 text-white shadow-xs"
+                        }`}
                       >
-                        <FiZap className="w-3 h-3 text-amber-400" />
-                        <span>{audit.actionLabel || "Apply Recommended Fix"}</span>
+                        <FiCheck className="w-3.5 h-3.5" />
+                        <span>{m.applied ? "Applied ✓" : "Apply to Canvas"}</span>
                       </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
-        {/* ── MODE 4: EXPLAIN SIMULATION ── */}
-        {activeMode === "explain" && (
-          <div className="space-y-3">
-            <div className="p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/40 space-y-2">
-              <h4 className="text-xs font-bold text-[color:var(--foreground)] flex items-center gap-1.5">
-                <FiInfo className="w-3 h-3 text-blue-400" /> Architecture Structure Overview
-              </h4>
-              <div className="grid grid-cols-2 gap-2 text-center pt-1">
-                <div className="bg-[var(--surface)] p-2 rounded-xl border border-[var(--border)]">
-                  <p className="text-[9px] uppercase font-mono text-[color:var(--foreground)]/40">Total Components</p>
-                  <p className="text-sm font-bold text-blue-400 mt-0.5">{nodes.length}</p>
-                </div>
-                <div className="bg-[var(--surface)] p-2 rounded-xl border border-[var(--border)]">
-                  <p className="text-[9px] uppercase font-mono text-[color:var(--foreground)]/40">Data Connections</p>
-                  <p className="text-sm font-bold text-emerald-400 mt-0.5">{edges.length}</p>
-                </div>
+                      {onRunSimulation && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!m.applied) {
+                              handleApplyArchitecture(
+                                m.id,
+                                m.dsl!,
+                                `${m.architectureTitle} applied to canvas`
+                              );
+                            }
+                            setTimeout(() => onRunSimulation(), 250);
+                          }}
+                          className="flex items-center gap-1 py-1.5 px-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-xs font-semibold text-[color:var(--foreground)] transition cursor-pointer"
+                          title="Run Simulation"
+                        >
+                          <FiPlay className="w-3 h-3 fill-current text-[color:var(--accent)]" />
+                          <span>Simulate</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* High-Tech Assistant Loader Bubble */}
+        {isGenerating && (
+          <div className="flex flex-col items-start animate-in fade-in duration-200">
+            <div className="bg-[var(--surface-muted)] text-[color:var(--foreground)] border border-[var(--border)] text-xs px-3.5 py-3 rounded-2xl rounded-tl-xs shadow-xs max-w-[95%] space-y-2.5">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--accent)]" />
+                </span>
+                <span className="font-mono text-[11px] font-bold text-[color:var(--accent)]">
+                  {mode === "create"
+                    ? "Synthesizing Topology..."
+                    : "Analyzing System Patterns..."}
+                </span>
+              </div>
+              <p className="text-[10px] text-[color:var(--muted)] font-mono leading-normal">
+                {mode === "create"
+                  ? "Resolving components, socket bindings & packet flows"
+                  : "Evaluating distributed consensus & latency patterns"}
+              </p>
+              <div className="w-full h-1 rounded-full bg-[var(--border)] overflow-hidden">
+                <div className="h-full bg-[var(--accent)] w-1/2 animate-[shimmerTrack_1s_linear_infinite]" />
               </div>
             </div>
-
-            <div className="p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/40 space-y-2">
-              <h4 className="text-xs font-bold text-[color:var(--foreground)] flex items-center gap-1.5">
-                <FiZap className="w-3 h-3 text-amber-400" /> Request Flow Dynamics
-              </h4>
-              <p className="text-[11px] text-[color:var(--foreground)]/70 leading-relaxed">
-                When a client initiates a request, FlowFrame executes chronological packet hops:
-              </p>
-              <ul className="text-[11px] text-[color:var(--foreground)]/60 space-y-1.5 pl-3 list-disc">
-                <li>
-                  <strong className="text-blue-300">Routing & Ingestion:</strong> Requests arrive at perimeter gateway or load balancer.
-                </li>
-                <li>
-                  <strong className="text-blue-300">Cache Evaluation:</strong> Caching layers intercept identical query keys before disk.
-                </li>
-                <li>
-                  <strong className="text-blue-300">Data Persistence:</strong> Database pool locks connections, executes transaction, and returns 200 OK.
-                </li>
-              </ul>
-            </div>
-
-            <div className="p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/40 space-y-2">
-              <h4 className="text-xs font-bold text-[color:var(--foreground)] flex items-center gap-1.5">
-                <FiInfo className="w-3 h-3 text-emerald-400" /> Latency & Scaling Advice
-              </h4>
-              <p className="text-[11px] text-[color:var(--foreground)]/70 leading-relaxed">
-                To minimize round-trip packet latency:
-              </p>
-              <ul className="text-[11px] text-[color:var(--foreground)]/60 space-y-1 pl-3 list-disc">
-                <li>Deploy Redis in-memory cache for high-read endpoints.</li>
-                <li>Add Round-Robin Load Balancer to avoid server capacity bottlenecks.</li>
-                <li>Keep response packets lightweight to avoid connection queue head-of-line blocking.</li>
-              </ul>
-            </div>
           </div>
         )}
+
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Footer */}
-      <div className="p-3 border-t border-[var(--border)] bg-[var(--surface)] text-[10px] text-[color:var(--foreground)]/45 text-center flex items-center justify-between shrink-0">
-        <span className="font-mono">FlowFrame Architecture DSL v2.0</span>
-        <span className="text-emerald-400 font-semibold">● Ready</span>
+      {/* ── Quick Starter Pills ── */}
+      <div className="px-4 py-2 border-t border-[var(--border)] bg-[var(--surface)]/50 shrink-0">
+        <p className="text-[10px] font-mono uppercase font-bold text-[color:var(--muted)] mb-1.5">
+          Quick suggestions:
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            disabled={isGenerating}
+            onClick={() => handleQuickPrompt("Build a Cache-Aside pattern with Redis and PostgreSQL", "create")}
+            className="text-[10px] px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] hover:border-[var(--accent)]/40 transition cursor-pointer disabled:opacity-50"
+          >
+            + Cache-Aside Architecture
+          </button>
+          <button
+            type="button"
+            disabled={isGenerating}
+            onClick={() => handleQuickPrompt("Create a Load-Balanced Server Cluster", "create")}
+            className="text-[10px] px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] hover:border-[var(--accent)]/40 transition cursor-pointer disabled:opacity-50"
+          >
+            + Load Balancer Cluster
+          </button>
+          <button
+            type="button"
+            disabled={isGenerating}
+            onClick={() => handleQuickPrompt("Explain my current canvas architecture", "ask")}
+            className="text-[10px] px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] hover:border-[var(--accent)]/40 transition cursor-pointer disabled:opacity-50"
+          >
+            ? Explain Canvas
+          </button>
+        </div>
+      </div>
+
+      {/* ── Simple Bottom Box: Create / Ask Toggle + Input ── */}
+      <div className="p-3 border-t border-[var(--border)] bg-[var(--surface)] shrink-0 space-y-2">
+        {/* Toggle: Create or Ask */}
+        <div className="flex items-center gap-1 bg-[var(--surface-muted)] p-1 rounded-xl border border-[var(--border)]">
+          <button
+            type="button"
+            disabled={isGenerating}
+            onClick={() => setMode("create")}
+            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+              mode === "create"
+                ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-xs border border-[var(--border)] font-bold"
+                : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+            }`}
+          >
+            <FiPlus className="w-3.5 h-3.5" />
+            <span>Create</span>
+          </button>
+          <button
+            type="button"
+            disabled={isGenerating}
+            onClick={() => setMode("ask")}
+            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+              mode === "ask"
+                ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-xs border border-[var(--border)] font-bold"
+                : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+            }`}
+          >
+            <FiHelpCircle className="w-3.5 h-3.5" />
+            <span>Ask</span>
+          </button>
+        </div>
+
+        {/* Input box */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!isGenerating) submitPrompt();
+          }}
+          className="relative flex items-center"
+        >
+          <input
+            ref={inputRef}
+            type="text"
+            disabled={isGenerating}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={
+              isGenerating
+                ? "Generating response..."
+                : mode === "create"
+                ? "Describe architecture (e.g. 'Add Redis cache with DB')..."
+                : "Ask about distributed systems or this canvas..."
+            }
+            className="w-full pl-3 pr-10 py-2.5 rounded-xl border border-[var(--border-strong)] bg-[var(--bg)] text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)]/60 focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition disabled:opacity-60 disabled:cursor-not-allowed"
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || isGenerating}
+            className="absolute right-1.5 p-1.5 rounded-lg bg-[var(--accent)] text-white hover:brightness-110 disabled:opacity-35 transition cursor-pointer disabled:cursor-not-allowed"
+            title={isGenerating ? "Generating..." : "Send Message"}
+          >
+            {isGenerating ? (
+              <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+            ) : (
+              <FiSend className="w-3.5 h-3.5" />
+            )}
+          </button>
+        </form>
       </div>
     </aside>
   );

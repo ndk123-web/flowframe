@@ -47,18 +47,30 @@ function createSimplePubSubSimulationBundle(options: ScenarioRunOptions): SimBun
   const subscriber2Config = nodeConfigs?.[subscriber2Id];
 
   // Configure Server capacity and endpoints
+  // Configure Server capacity and endpoints
   if (serverConfig) {
     if (typeof serverConfig.capacity === "number") server.capacity = serverConfig.capacity;
     if (serverConfig.endpoints) server.endpoints = { ...serverConfig.endpoints };
   } else {
     server.endpoints = {
-      "api/v1/getData": ["POST"]
+      "/api/v1/getData": ["POST", "GET"],
+      "api/v1/getData": ["POST", "GET"],
     };
   }
 
+  // Ensure subscribers accept deliveries
+  subscriber1.endpoints = {
+    "/api/v1/getData": ["POST", "GET"],
+    "api/v1/getData": ["POST", "GET"],
+  };
+  subscriber2.endpoints = {
+    "/api/v1/getData": ["POST", "GET"],
+    "api/v1/getData": ["POST", "GET"],
+  };
+
   // Configure subscribers connection and topics
   const sub1Topics = subscriber1Config?.subscriptionTopics || ["order.created"];
-  const sub2Topics = subscriber2Config?.subscriptionTopics || ["order.created"];
+  const sub2Topics = subscriber2Config?.subscriptionTopics || ["order.created", "user.signup"];
 
   sub1Topics.forEach((t: string) => broker.subscribe(t, subscriber1Id));
   sub2Topics.forEach((t: string) => broker.subscribe(t, subscriber2Id));
@@ -85,7 +97,8 @@ function createSimplePubSubSimulationBundle(options: ScenarioRunOptions): SimBun
 
   // Client requests config
   const clientRequests = clientConfig?.requests || [
-    { endpoint: "/api/v1/getData", method: "POST", body: '{\n  "topic": "order.created",\n  "amount": 250\n}' }
+    { endpoint: "/api/v1/getData", method: "POST", body: '{\n  "topic": "order.created",\n  "amount": 250\n}' },
+    { endpoint: "/api/v1/getData", method: "POST", body: '{\n  "topic": "user.signup",\n  "userId": "usr_42"\n}' }
   ];
 
   const allFrames: Frame[] = [];
@@ -102,7 +115,7 @@ function createSimplePubSubSimulationBundle(options: ScenarioRunOptions): SimBun
     const sourceIp = ipv4Instance.getRandomIpv4() as string;
     const lookupKey = "order.created";
 
-    let parsedBody = {};
+    let parsedBody: Record<string, any> = {};
     if (req.body) {
       try {
         parsedBody = JSON.parse(req.body);
@@ -113,10 +126,17 @@ function createSimplePubSubSimulationBundle(options: ScenarioRunOptions): SimBun
       parsedBody = { topic: "order.created" };
     }
 
+    const payloadForSim = {
+      ...parsedBody,
+      endpoint: req.endpoint || "/api/v1/getData",
+      method: req.method || "POST",
+      topic: parsedBody.topic || "order.created",
+    };
+
     const simulation = new SimulationManager(
       graph,
       registry,
-      parsedBody,
+      payloadForSim,
       sourceIp
     );
 

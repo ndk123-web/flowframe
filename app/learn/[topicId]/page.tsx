@@ -22,6 +22,15 @@ import SiteHeader from "@/components/SiteHeader";
 import { ComponentIcon } from "@/components/ComponentIcons";
 import { useThemeStore } from "@/store/useThemeStore";
 import {
+  FiAlertTriangle,
+  FiAlertCircle,
+  FiClock,
+  FiCheckCircle,
+  FiActivity,
+  FiRotateCcw,
+  FiTool,
+} from "react-icons/fi";
+import {
   LEARN_TOPICS,
   LearnTopic,
   Checkpoint,
@@ -350,8 +359,8 @@ function CustomNode({ id, data, selected }: any) {
             {data.label}
           </p>
           {data.status === "error" && (
-            <p className="text-[9px] font-bold text-rose-400 mt-0.5 animate-pulse flex items-center gap-0.5">
-              <span>⚠️</span>{" "}
+            <p className="text-[9px] font-bold text-rose-400 mt-0.5 animate-pulse flex items-center gap-1">
+              <FiAlertCircle className="w-2.5 h-2.5 shrink-0" />
               <span
                 className="truncate max-w-[95px]"
                 title={data.statusMessage}
@@ -361,8 +370,8 @@ function CustomNode({ id, data, selected }: any) {
             </p>
           )}
           {data.status === "warning" && (
-            <p className="text-[9px] font-bold text-amber-400 mt-0.5 flex items-center gap-0.5">
-              <span>⚠️</span>{" "}
+            <p className="text-[9px] font-bold text-amber-400 mt-0.5 flex items-center gap-1">
+              <FiAlertTriangle className="w-2.5 h-2.5 shrink-0" />
               <span
                 className="truncate max-w-[95px]"
                 title={data.statusMessage}
@@ -548,11 +557,11 @@ function GraphCanvas({
                 </p>
               </div>
             </div>
-
             {systemMetrics.queuedRequests.length > 0 && (
               <div className="flex flex-col gap-1 rounded-xl bg-rose-500/5 border border-rose-500/15 p-2">
-                <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
-                  <span>⏳</span> Bottleneck: Database Wait
+                <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1.5">
+                  <FiClock className="w-3 h-3 text-rose-400 shrink-0" />
+                  <span>Bottleneck: Database Wait</span>
                 </p>
                 <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
                   {systemMetrics.queuedRequests.map(
@@ -571,8 +580,9 @@ function GraphCanvas({
 
             {systemMetrics.errorRequests.length > 0 && (
               <div className="flex flex-col gap-1 rounded-xl bg-rose-500/10 border border-rose-500/20 p-2">
-                <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
-                  <span>❌</span> Failures Detected
+                <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1.5">
+                  <FiAlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                  <span>Failures Detected</span>
                 </p>
                 <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
                   {systemMetrics.errorRequests.map((err: string, idx: number) => (
@@ -591,7 +601,7 @@ function GraphCanvas({
               systemMetrics.queuedRequests.length === 0 &&
               systemMetrics.errorRequests.length === 0 && (
                 <div className="flex items-center gap-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/15 p-1.5 text-emerald-400">
-                  <span className="text-xs">⚡</span>
+                  <FiCheckCircle className="w-3 h-3 text-emerald-400 shrink-0" />
                   <span className="text-[8px] font-bold uppercase tracking-wider">
                     Processing requests smoothly
                   </span>
@@ -602,7 +612,7 @@ function GraphCanvas({
           <button
             type="button"
             onClick={() => setShowMetrics(true)}
-            className="absolute top-16 left-4 z-10 rounded-full border border-[var(--border)] bg-[var(--surface)]/90 hover:bg-[var(--surface-muted)] hover:border-[var(--border)]/80 text-[10px] font-bold text-[color:var(--foreground)]/80 transition px-3 py-1.5 flex items-center gap-1.5 shadow-md cursor-pointer pointer-events-auto"
+            className="absolute top-4 left-4 z-10 rounded-full border border-[var(--border)] bg-[var(--surface)]/90 hover:bg-[var(--surface-muted)] hover:border-[var(--border)]/80 text-[10px] font-bold text-[color:var(--foreground)]/80 transition px-3 py-1.5 flex items-center gap-1.5 shadow-md cursor-pointer pointer-events-auto"
             title="Expand Health Overlay"
           >
             <span className="relative flex h-2 w-2">
@@ -623,7 +633,8 @@ function GraphCanvas({
                 }`}
               ></span>
             </span>
-            <span>⚡ Health & Load</span>
+            <FiActivity className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <span>Health & Load</span>
           </button>
         )
       )}
@@ -679,10 +690,11 @@ function Controls({
           <button
             type="button"
             onClick={onReframe}
-            className={`${buttonClass} bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border-blue-500/30 font-semibold`}
+            className={`${buttonClass} bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border-blue-500/30 font-semibold flex items-center gap-1.5`}
             title="Restart simulation from the beginning"
           >
-            🔄 Reframe
+            <FiRotateCcw className="w-3.5 h-3.5" />
+            <span>Reframe</span>
           </button>
         </div>
 
@@ -1119,8 +1131,9 @@ function NodeInspectorPanel({
                                       JSON.parse(activeReq.body);
                                     } catch (err: any) {
                                       return (
-                                        <span className="text-[9px] text-rose-500 mt-1 block leading-normal font-mono">
-                                          ⚠ {err.message}
+                                        <span className="text-[9px] text-rose-500 mt-1 flex items-center gap-1 leading-normal font-mono">
+                                          <FiAlertCircle className="w-2.5 h-2.5 shrink-0" />
+                                          <span>{err.message}</span>
                                         </span>
                                       );
                                     }
@@ -2127,7 +2140,7 @@ function NodeInspectorPanel({
                               className={`text-[10px] font-mono font-bold ${info.exhausted ? "text-rose-400" : "text-cyan-400"}`}
                             >
                               {info.activeConnections}/{info.poolSize}
-                              {info.exhausted ? " 🔴 WAIT" : ""}
+                              {info.exhausted ? " [WAIT]" : ""}
                             </span>
                           </div>
                           <div
@@ -2352,7 +2365,7 @@ function getFormattedLogText(frame: Frame) {
   if (normAction.includes("POSTGRES_POOL_WAIT")) {
     const payloadStr = frame.payloadSummary ? ` — ${frame.payloadSummary}` : "";
     return {
-      text: `${flow} | ⏳ POSTGRES POOL WAIT${payloadStr}`,
+      text: `${flow} | [WAIT] POSTGRES POOL WAIT${payloadStr}`,
       type: "error",
     };
   }
@@ -2360,7 +2373,7 @@ function getFormattedLogText(frame: Frame) {
   if (normAction.includes("POSTGRES_CONNECTION_ERROR")) {
     const payloadStr = frame.payloadSummary ? ` — ${frame.payloadSummary}` : "";
     return {
-      text: `${flow} | ❌ POSTGRES CONNECTION ERROR${payloadStr}`,
+      text: `${flow} | [ERROR] POSTGRES CONNECTION ERROR${payloadStr}`,
       type: "error",
     };
   }
@@ -3524,7 +3537,9 @@ export default function LearnTopicPage({ params }: LearnTopicPropsPage) {
                 {/* Sandbox CTA — always at the bottom of every guide */}
                 <div className="mt-8 pt-6 border-t border-[var(--border)]/60">
                   <div className="rounded-2xl border border-blue-500/25 bg-blue-500/5 p-5 text-center space-y-3">
-                    <div className="text-2xl">🛠️</div>
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto text-blue-400">
+                      <FiTool className="w-5 h-5" />
+                    </div>
                     <div>
                       <p className="text-sm font-bold text-[color:var(--foreground)]">
                         Now Try It Yourself!

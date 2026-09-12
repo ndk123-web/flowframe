@@ -37,6 +37,37 @@ import "@xyflow/react/dist/style.css";
 import { motion } from "framer-motion";
 import ShortUniqueId from "short-unique-id";
 import { toPng } from "html-to-image";
+import {
+  FiRotateCcw,
+  FiPlay,
+  FiPause,
+  FiMenu,
+  FiSave,
+  FiCopy,
+  FiTrash2,
+  FiZap,
+  FiGrid,
+  FiCode,
+  FiCheckCircle,
+  FiAlertTriangle,
+  FiAlertCircle,
+  FiClock,
+  FiChevronRight,
+  FiChevronLeft,
+  FiActivity,
+  FiSliders,
+  FiFolder,
+  FiTerminal,
+  FiMaximize2,
+  FiZoomIn,
+  FiZoomOut,
+  FiDownload,
+  FiUpload,
+  FiSkipBack,
+  FiSkipForward,
+  FiCpu,
+} from "react-icons/fi";
+import AIAssistantDrawer from "@/components/AIAssistantDrawer";
 
 // DSL Interpreter & Graph Engine
 import { compileDSL } from "@/DSL";
@@ -62,10 +93,10 @@ import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useThemeStore } from "@/store/useThemeStore";
 import { getDiagramById, updateDiagram, getSharedDiagram } from "@/services/diagramApi";
+import FlowLoader from "@/components/FlowLoader";
 
 // Header
 import SiteHeader from "@/components/SiteHeader";
-import AIAssistantDrawer from "@/components/AIAssistantDrawer";
 import {
   ComponentIcon,
   BrandLogo,
@@ -73,38 +104,6 @@ import {
   NODE_FLAVORS,
   getDefaultFlavor,
 } from "@/components/ComponentIcons";
-import {
-  FiPlay,
-  FiPause,
-  FiRotateCcw,
-  FiChevronLeft,
-  FiChevronRight,
-  FiSave,
-  FiSliders,
-  FiCpu,
-  FiTerminal,
-  FiActivity,
-  FiTrash2,
-  FiGlobe,
-  FiFolder,
-  FiFileText,
-  FiCheck,
-  FiX,
-  FiAlertTriangle,
-  FiSidebar,
-  FiRefreshCw,
-  FiXCircle,
-  FiSettings,
-  FiZoomIn,
-  FiZoomOut,
-  FiMaximize2,
-  FiGrid,
-  FiSend,
-  FiArrowRight,
-  FiArrowLeft,
-  FiPlus,
-  FiZap,
-} from "react-icons/fi";
 
 type Theme = "light" | "dark";
 
@@ -137,14 +136,14 @@ const COMPONENTS_LIBRARY: ComponentMetadata[] = [
     icon: "client",
     description:
       "Generates requests (GET/POST/uploads) to route through the network.",
-    colorClass: "border-l-sky-500 shadow-sky-500/10 text-sky-400",
+    colorClass: "border-l-violet-500 shadow-violet-500/10 text-violet-400",
   },
   {
     type: "api-gateway",
     label: "API Gateway",
     icon: "api-gateway",
     description: "Routes requests to specific services based on path prefixes.",
-    colorClass: "border-l-indigo-500 shadow-indigo-500/10 text-indigo-400",
+    colorClass: "border-l-fuchsia-500 shadow-fuchsia-500/10 text-fuchsia-400",
   },
   {
     type: "load-balancer",
@@ -724,14 +723,14 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
 // ── Node shape geometry helpers ────────────────────────────────────────────
 // Shapes that need a wrapper SVG overlay (non-rectangular geometry)
 const NODE_SHAPES = [
-  { id: "rectangle", label: "Rectangle", icon: "▢" },
-  { id: "rounded", label: "Rounded", icon: "⬚" },
-  { id: "stadium", label: "Stadium", icon: "⎔" },
-  { id: "circle", label: "Circle", icon: "○" },
-  { id: "diamond", label: "Diamond", icon: "◇" },
-  { id: "hexagon", label: "Hexagon", icon: "⬡" },
-  { id: "cylinder", label: "Cylinder", icon: "⌸" },
-  { id: "parallelogram", label: "Slant", icon: "▱" },
+  { id: "rectangle", label: "Rectangle" },
+  { id: "rounded", label: "Rounded" },
+  { id: "stadium", label: "Stadium" },
+  { id: "circle", label: "Circle" },
+  { id: "diamond", label: "Diamond" },
+  { id: "hexagon", label: "Hexagon" },
+  { id: "cylinder", label: "Cylinder" },
+  { id: "parallelogram", label: "Slant" },
 ];
 
 function getShapeStyle(shape: string): React.CSSProperties {
@@ -887,7 +886,7 @@ function CustomNode({ id, data, selected }: any) {
 
   return (
     <div
-      className="relative flex items-center justify-center transition-all duration-150"
+      className="relative flex items-center justify-center transition-all duration-200"
       style={{
         width: "100%",
         height: "100%",
@@ -899,13 +898,13 @@ function CustomNode({ id, data, selected }: any) {
         isVisible={selected}
         minWidth={isDiamond || isCircle ? 90 : 150}
         minHeight={isDiamond || isCircle ? 90 : 44}
-        lineStyle={{ borderColor: "#3b82f6", borderWidth: 1 }}
+        lineStyle={{ borderColor: colors.accent, borderWidth: 1 }}
         handleStyle={{
-          width: 7,
-          height: 7,
+          width: 8,
+          height: 8,
           borderRadius: "50%",
-          backgroundColor: "#3b82f6",
-          border: "1.5px solid rgba(255,255,255,0.8)",
+          backgroundColor: colors.accent,
+          border: "2px solid rgba(255,255,255,0.3)",
         }}
       />
 
@@ -916,14 +915,14 @@ function CustomNode({ id, data, selected }: any) {
             type="target"
             position={Position.Left}
             id="left"
-            className="w-2.5 h-2.5 rounded-full border border-white dark:border-[#0f172a] shadow-sm cursor-crosshair hover:scale-125 transition-all duration-150 z-50"
+            className="w-3.5 h-3.5 rounded-full border-[2.5px] border-white dark:border-[#0f172a] shadow-md cursor-crosshair hover:scale-[1.4] transition-all duration-150 z-50"
             style={{ background: colors.dot }}
           />
           <Handle
             type="target"
             position={Position.Top}
             id="top"
-            className="w-2.5 h-2.5 rounded-full border border-white dark:border-[#0f172a] shadow-sm cursor-crosshair hover:scale-125 transition-all duration-150 z-50"
+            className="w-3.5 h-3.5 rounded-full border-[2.5px] border-white dark:border-[#0f172a] shadow-md cursor-crosshair hover:scale-[1.4] transition-all duration-150 z-50"
             style={{ background: colors.dot }}
           />
         </>
@@ -935,22 +934,24 @@ function CustomNode({ id, data, selected }: any) {
         style={{
           background: "var(--surface)",
           border: selected
-            ? "1.5px solid #3b82f6"
-            : data.isActive
-            ? `1.5px solid ${colors.dot}`
-            : "1px solid var(--border)",
+            ? `1.5px solid ${colors.accent}`
+            : `1px solid color-mix(in srgb, var(--border) 80%, ${colors.accent} 20%)`,
           boxShadow: selected
-            ? "0 0 0 2px rgba(59, 130, 246, 0.25)"
-            : data.isActive
-            ? `0 0 0 2px ${colors.glow}`
-            : "0 1px 3px rgba(0,0,0,0.12)",
+            ? `0 0 0 2px ${colors.ring}, 0 2px 6px rgba(0, 0, 0, 0.08)`
+            : "0 1px 3px rgba(0, 0, 0, 0.05)",
           ...shapeStyle,
-          borderRadius: isCircle ? "50%" : isDiamond ? "8px" : shapeStyle.borderRadius || "8px",
+          ...(isCylinder
+            ? {
+                boxShadow: selected
+                  ? `0 0 0 2px ${colors.ring}, 0 2px 6px rgba(0, 0, 0, 0.08)`
+                  : "0 1px 3px rgba(0, 0, 0, 0.05)",
+              }
+            : {}),
         }}
       >
         {/* Content wrapper — counter-rotate if diamond */}
         <div
-          className="flex items-center gap-2.5 px-3 py-2 w-full h-full"
+          className="flex items-center gap-2.5 px-3 py-2.5 w-full h-full"
           style={{
             transform: isDiamond ? "rotate(-45deg)" : undefined,
             flexDirection: isCircle ? "column" : "row",
@@ -959,14 +960,14 @@ function CustomNode({ id, data, selected }: any) {
             paddingLeft: isParallelogram ? "20px" : undefined,
           }}
         >
-          {/* Icon Box */}
+          {/* Icon */}
           <div
-            className="shrink-0 flex items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-muted)]"
+            className="shrink-0 flex items-center justify-center rounded-lg"
             style={{
               width: isCircle ? 28 : 26,
               height: isCircle ? 28 : 26,
-              padding: "4px",
-              color: colors.dot,
+              background: `color-mix(in srgb, transparent 88%, ${colors.accent})`,
+              padding: "5px",
             }}
           >
             <ComponentIcon type={data.type} className="w-full h-full" />
@@ -974,37 +975,41 @@ function CustomNode({ id, data, selected }: any) {
 
           {/* Label + sublabel */}
           {!isCircle && (
-            <div className="min-w-0 flex-1 leading-tight space-y-0.5">
-              <div className="flex items-center justify-between gap-1">
-                <p
-                  className="font-semibold text-xs text-[color:var(--foreground)] truncate"
-                  style={{ fontSize: typeof data.fontSize === "number" ? `${data.fontSize}px` : (isDiamond ? "10px" : "12px") }}
-                >
-                  {data.label}
-                </p>
-                <span
-                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                    data.isActive ? "bg-emerald-400" : "bg-slate-500/40"
-                  }`}
-                  title={data.isActive ? "Active in simulation" : "Idle"}
-                />
-              </div>
-              <p className="text-[9.5px] font-mono text-[color:var(--muted)] truncate">
-                {activeFlavor ? activeFlavor.shortLabel : String(data.type || "").replace(/-/g, " ").toUpperCase()}
+            <div className="min-w-0 flex-1 leading-tight">
+              <p
+                className="font-semibold text-[color:var(--foreground)] truncate"
+                style={{ fontSize: typeof data.fontSize === "number" ? `${data.fontSize}px` : (isDiamond ? "10px" : "12.5px") }}
+              >
+                {data.label}
               </p>
+              {activeFlavor && !isDiamond && (
+                <p className="text-[10px] text-[color:var(--foreground)]/45 truncate font-medium">
+                  {activeFlavor.shortLabel}
+                </p>
+              )}
+              {data.type === "client" && !isDiamond && (
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-violet-400 font-mono tracking-tight mt-0.5 bg-violet-500/10 px-1 py-0.2 rounded border border-violet-500/20">
+                  <svg className="w-2 h-2 fill-current" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  <span>Click to Run</span>
+                </span>
+              )}
             </div>
           )}
 
           {/* Brand logo badge */}
           {activeFlavor && !isDiamond && !isCircle && (
             <div
-              className="shrink-0 flex items-center justify-center rounded border border-[var(--border)] bg-[var(--surface-muted)]"
+              className="shrink-0 flex items-center justify-center rounded-md"
               style={{
-                width: 20,
-                height: 20,
+                width: 22,
+                height: 22,
+                background: `color-mix(in srgb, var(--surface) 80%, ${colors.accent})`,
+                border: `1px solid color-mix(in srgb, var(--border) 70%, ${colors.accent})`,
               }}
             >
-              <BrandLogo id={activeFlavor.id} className="w-3.5 h-3.5" />
+              <BrandLogo id={activeFlavor.id} className="w-4 h-4" />
             </div>
           )}
 
@@ -1017,7 +1022,19 @@ function CustomNode({ id, data, selected }: any) {
         </div>
       </div>
 
-{/* Active indicator represented via 1.5px border highlight */}
+      {/* Active pulse dot */}
+      {data.isActive && (
+        <span className="absolute -top-1 -right-1 flex h-3 w-3 pointer-events-none">
+          <span
+            className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+            style={{ background: colors.dot }}
+          />
+          <span
+            className="relative inline-flex rounded-full h-3 w-3"
+            style={{ background: colors.dot }}
+          />
+        </span>
+      )}
 
       {/* Source handles (Right & Bottom) */}
       {hasSource && (
@@ -1026,14 +1043,14 @@ function CustomNode({ id, data, selected }: any) {
             type="source"
             position={Position.Right}
             id="right"
-            className="w-2.5 h-2.5 rounded-full border border-white dark:border-[#0f172a] shadow-sm cursor-crosshair hover:scale-125 transition-all duration-150 z-50"
+            className="w-3.5 h-3.5 rounded-full border-[2.5px] border-white dark:border-[#0f172a] shadow-md cursor-crosshair hover:scale-[1.4] transition-all duration-150 z-50"
             style={{ background: colors.dot }}
           />
           <Handle
             type="source"
             position={Position.Bottom}
             id="bottom"
-            className="w-2.5 h-2.5 rounded-full border border-white dark:border-[#0f172a] shadow-sm cursor-crosshair hover:scale-125 transition-all duration-150 z-50"
+            className="w-3.5 h-3.5 rounded-full border-[2.5px] border-white dark:border-[#0f172a] shadow-md cursor-crosshair hover:scale-[1.4] transition-all duration-150 z-50"
             style={{ background: colors.dot }}
           />
         </>
@@ -1067,14 +1084,34 @@ function PacketEdge(props: EdgeProps) {
     targetY,
     sourcePosition,
     targetPosition,
-    borderRadius: 8,
+    borderRadius: 10,
   });
 
   const isActive = Boolean(data?.active);
-  const duration = Math.max(0.6, Number(data?.packetDuration ?? 1.2));
+  const duration = Number(data?.packetDuration ?? 1.8);
   const isReverseMotion = Boolean(data?.reverseMotion);
+  const count = Math.max(1, Math.min(Number(data?.packetCount ?? 1), 4));
   const frameIndex = Number(data?.frameIndex ?? 0);
-  const color = packetColor(isReverseMotion);
+
+  const animateRefs = useRef<Array<any>>([]);
+
+  useEffect(() => {
+    if (isActive) {
+      animateRefs.current.forEach((ref, index) => {
+        if (ref) {
+          try {
+            if (typeof ref.beginElementAt === "function") {
+              ref.beginElementAt(index * 0.12);
+            } else if (typeof ref.beginElement === "function") {
+              ref.beginElement();
+            }
+          } catch (e) {
+            console.error("Error starting SMIL animation:", e);
+          }
+        }
+      });
+    }
+  }, [isActive, frameIndex]);
 
   return (
     <>
@@ -1083,88 +1120,40 @@ function PacketEdge(props: EdgeProps) {
         markerEnd={markerEnd}
         style={{
           ...style,
-          stroke: isActive ? color : style?.stroke,
-          strokeWidth: isActive ? 2.5 : 1.8,
-          strokeOpacity: isActive ? 1 : 0.45,
-          transition: "stroke 150ms ease, stroke-width 150ms ease",
+          strokeOpacity: isActive ? 0.95 : 0.4,
+          transition: "stroke-opacity 150ms ease",
         }}
       />
-      {isActive && (
-        <g key={`packet-${props.id}-${frameIndex}-${isReverseMotion}`}>
-          {/* Subtle outer glow halo */}
+      {isActive &&
+        Array.from({ length: count }).map((_, index) => (
           <circle
-            r={7}
-            fill={color}
-            opacity={0.35}
+            key={`${props.id}-${index}-${edgePath}-${frameIndex}`}
+            r={4.5 - index * 0.5}
+            fill={packetColor(isReverseMotion)}
+            cx="0"
+            cy="0"
             style={{
-              filter: `drop-shadow(0 0 6px ${color})`,
+              filter: isReverseMotion
+                ? "drop-shadow(0 0 5px rgba(245,158,11,0.85))"
+                : "drop-shadow(0 0 5px rgba(139,92,246,0.85))",
+              opacity: Math.max(0.45, 0.9 - index * 0.15),
             }}
           >
-            {isReverseMotion ? (
-              <animateMotion
-                dur={`${duration}s`}
-                repeatCount="indefinite"
-                path={edgePath}
-                keyPoints="1;0"
-                keyTimes="0;1"
-                calcMode="linear"
-              />
-            ) : (
-              <animateMotion
-                dur={`${duration}s`}
-                repeatCount="indefinite"
-                path={edgePath}
-              />
-            )}
+            <animateMotion
+              ref={(el) => {
+                animateRefs.current[index] = el;
+              }}
+              dur={`${duration}s`}
+              repeatCount={data?.isPlaying ? "1" : "indefinite"}
+              fill="freeze"
+              begin={`${index * 0.12}s`}
+              path={edgePath}
+              keyPoints={isReverseMotion ? "1;0" : "0;1"}
+              keyTimes="0;1"
+              calcMode="linear"
+            />
           </circle>
-
-          {/* Solid traveling packet body */}
-          <circle
-            r={4.5}
-            fill={color}
-            style={{
-              filter: `drop-shadow(0 0 3px ${color})`,
-            }}
-          >
-            {isReverseMotion ? (
-              <animateMotion
-                dur={`${duration}s`}
-                repeatCount="indefinite"
-                path={edgePath}
-                keyPoints="1;0"
-                keyTimes="0;1"
-                calcMode="linear"
-              />
-            ) : (
-              <animateMotion
-                dur={`${duration}s`}
-                repeatCount="indefinite"
-                path={edgePath}
-              />
-            )}
-          </circle>
-
-          {/* High-contrast crisp center dot */}
-          <circle r={2} fill="#ffffff">
-            {isReverseMotion ? (
-              <animateMotion
-                dur={`${duration}s`}
-                repeatCount="indefinite"
-                path={edgePath}
-                keyPoints="1;0"
-                keyTimes="0;1"
-                calcMode="linear"
-              />
-            ) : (
-              <animateMotion
-                dur={`${duration}s`}
-                repeatCount="indefinite"
-                path={edgePath}
-              />
-            )}
-          </circle>
-        </g>
-      )}
+        ))}
     </>
   );
 }
@@ -1186,6 +1175,7 @@ function shouldKeepFrame(hideResponse: boolean, frame: any) {
 
 function Controls({
   isPlaying,
+  isCompiling,
   onPlayToggle,
   onPrev,
   onNext,
@@ -1198,6 +1188,7 @@ function Controls({
   theme,
 }: {
   isPlaying: boolean;
+  isCompiling?: boolean;
   onPlayToggle: () => void;
   onPrev: () => void;
   onNext: () => void;
@@ -1221,8 +1212,22 @@ function Controls({
     <div className="flex flex-col gap-2 sm:gap-3 w-full overflow-x-hidden">
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-          <button type="button" onClick={onPlayToggle} className={buttonClass}>
-            {isPlaying ? "Pause" : "Play"}
+          <button
+            type="button"
+            disabled={isCompiling}
+            onClick={onPlayToggle}
+            className={`${buttonClass} flex items-center gap-1.5`}
+          >
+            {isCompiling ? (
+              <>
+                <div className="w-3 h-3 rounded-full border border-current border-t-transparent animate-spin" />
+                <span>Compiling...</span>
+              </>
+            ) : isPlaying ? (
+              "Pause"
+            ) : (
+              "Play"
+            )}
           </button>
           <button type="button" onClick={onPrev} className={buttonClass}>
             ← Prev
@@ -1236,10 +1241,11 @@ function Controls({
           <button
             type="button"
             onClick={onReframe}
-            className={`${buttonClass} bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] border-[var(--accent)]/30`}
+            className={`${buttonClass} bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] border-[var(--accent)]/30 flex items-center gap-1.5`}
             title="Re-run simulation with current changes"
           >
-            Reframe
+            <FiRotateCcw className="w-3.5 h-3.5" />
+            <span>Reframe</span>
           </button>
         </div>
 
@@ -1441,7 +1447,7 @@ function getFormattedLogText(frame: any) {
   if (normAction.includes("POSTGRES_POOL_WAIT")) {
     const payloadStr = frame.payloadSummary ? ` — ${frame.payloadSummary}` : "";
     return {
-      text: `${flow} | [WAIT] POSTGRES POOL EXHAUSTED${payloadStr}`,
+      text: `${flow} | [WAIT] POSTGRES POOL WAIT${payloadStr}`,
       type: "error",
     };
   }
@@ -1449,7 +1455,7 @@ function getFormattedLogText(frame: any) {
   if (normAction.includes("POSTGRES_CONNECTION_ERROR")) {
     const payloadStr = frame.payloadSummary ? ` — ${frame.payloadSummary}` : "";
     return {
-      text: `${flow} | [FAIL] POSTGRES CONNECTION ERROR${payloadStr}`,
+      text: `${flow} | [ERROR] POSTGRES CONNECTION ERROR${payloadStr}`,
       type: "error",
     };
   }
@@ -1508,9 +1514,9 @@ function DebugPanel({
   if (currentFrames.length === 0) {
     return (
       <div className="font-mono text-xs p-2 text-center sm:text-left flex items-center gap-2">
-        <span className="inline-block w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse shrink-0" />
+        <span className="inline-block w-2 h-2 rounded-full bg-violet-400/60 animate-ping shrink-0" />
         <span className={textColor}>
-          Simulation logs ready — click <strong className="text-[color:var(--accent)]">Run</strong> or <strong className="text-[color:var(--accent)]">Reframe</strong> to stream live execution logs.
+          Simulation logs ready — click <strong className="text-violet-400">Play</strong> or <strong className="text-violet-400">Reframe</strong> to stream live execution logs.
         </span>
       </div>
     );
@@ -1525,7 +1531,7 @@ function DebugPanel({
         const formatted = getFormattedLogText(frame);
         const colors: Record<string, string> = {
           success: "text-emerald-400",
-          info: "text-[color:var(--accent)]",
+          info: "text-blue-400",
           warn: "text-amber-400",
           default: "text-[color:var(--foreground)]/80",
         };
@@ -1538,7 +1544,7 @@ function DebugPanel({
             <span className="text-[color:var(--foreground)]/35 select-none">
               [t={frame.timestamp}]
             </span>
-            <span className="text-[color:var(--accent)] font-bold select-none">&gt;</span>
+            <span className="text-violet-400 font-bold select-none">&gt;</span>
             <span className={colors[formatted.type] || colors.default}>
               {formatted.text}
             </span>
@@ -1564,7 +1570,7 @@ const SHAPES_LIBRARY = [
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
-        className="w-4 h-4 text-[color:var(--accent)]"
+        className="w-4 h-4 text-violet-400"
       >
         <rect x="3" y="3" width="18" height="18" rx="1.5" />
       </svg>
@@ -1907,30 +1913,15 @@ function WorkspaceInner({
   shareId?: string;
   isSharedView?: boolean;
 }) {
-  const { screenToFlowPosition, fitView, zoomIn, zoomOut } = useReactFlow();
-  const [snapToGrid, setSnapToGrid] = useState<boolean>(true);
+  const { screenToFlowPosition, fitView } = useReactFlow();
   const { token } = useAuthStore();
   const { theme, toggleTheme, setTheme } = useThemeStore();
   const [diagramTitle, setDiagramTitle] = useState<string>("");
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isLoadingDiagram, setIsLoadingDiagram] = useState<boolean>(Boolean((workspaceId && diagramId) || shareId));
-  const loadedKeyRef = useRef<string | null>(null);
-  const fitViewRef = useRef(fitView);
-  fitViewRef.current = fitView;
 
-  // Load diagram from backend if workspaceId and diagramId are provided, or if shareId is provided (guarded against loops)
+  // Load diagram from backend if workspaceId and diagramId are provided, or if shareId is provided
   useEffect(() => {
-    const currentKey = shareId
-      ? `share:${shareId}`
-      : workspaceId && diagramId && token
-      ? `backend:${workspaceId}:${diagramId}`
-      : null;
-
-    if (!currentKey || loadedKeyRef.current === currentKey) {
-      return;
-    }
-    loadedKeyRef.current = currentKey;
-
     if (shareId) {
       setIsLoadingDiagram(true);
       getSharedDiagram(shareId)
@@ -1946,7 +1937,7 @@ function WorkspaceInner({
             setNodeConfigs(dto.configs);
           }
           setTimeout(() => {
-            fitViewRef.current?.({ duration: 600 });
+            fitView({ duration: 600 });
           }, 150);
         })
         .catch((err) => {
@@ -1971,7 +1962,7 @@ function WorkspaceInner({
             setNodeConfigs(dto.configs);
           }
           setTimeout(() => {
-            fitViewRef.current?.({ duration: 600 });
+            fitView({ duration: 600 });
           }, 150);
         })
         .catch((err) => {
@@ -1981,7 +1972,7 @@ function WorkspaceInner({
           setIsLoadingDiagram(false);
         });
     }
-  }, [workspaceId, diagramId, shareId, token]);
+  }, [workspaceId, diagramId, shareId, token, fitView]);
 
   // React Flow States
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -2013,21 +2004,12 @@ function WorkspaceInner({
     }
   };
 
-  // Keyboard shortcuts: Ctrl+S to save, Esc to dismiss panels, Space to play/pause
+  // Keyboard shortcut Ctrl+S / Cmd+S for quick save
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
         handleSaveDiagramToBackend();
-      }
-      if (e.key === "Escape") {
-        setSelectedNodeId(null);
-        setIsAIAssistantOpen(false);
-        setShowLogsDrawer(false);
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
-        e.preventDefault();
-        setIsSidebarCollapsed((prev) => !prev);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -2036,12 +2018,9 @@ function WorkspaceInner({
 
   // Playback Simulation States
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isCompilingSimulation, setIsCompilingSimulation] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [frameIndex, setFrameIndex] = useState(0);
-
-  // Collapsible Logs Drawer & AI Assistant States
-  const [showLogsDrawer, setShowLogsDrawer] = useState(false);
-  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
 
   // Dynamic top-bar configs
   const [hideResponse, setHideResponse] = useState(false);
@@ -2080,36 +2059,19 @@ function WorkspaceInner({
   const [isDraggingTerminal, setIsDraggingTerminal] = useState(false);
 
   // Floating Panel Visibility States
-  const [showCanvasTip, setShowCanvasTip] = useState(false);
+  const [showCanvasTip, setShowCanvasTip] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(!Boolean(workspaceId && diagramId));
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  const [activeMethod, setActiveMethod] = useState<string>("GET");
-  const [activeEndpoint, setActiveEndpoint] = useState<string>("/api/v1/posts");
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
 
-  // Show Welcome Modal only on first visit to sandbox
+  // Auto-open AI Architecture Assistant if ?ai=true is in URL query parameters
   useEffect(() => {
-    if (!workspaceId && !diagramId && !shareId) {
-      try {
-        const seen = typeof window !== "undefined" ? localStorage.getItem("flowframe_sandbox_welcome_seen") : "true";
-        if (!seen) {
-          setShowWelcomeModal(true);
-        }
-      } catch (e) {
-        // ignore localStorage access errors
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("ai") === "true") {
+        setIsAIAssistantOpen(true);
       }
-    }
-  }, [workspaceId, diagramId, shareId]);
-
-  const closeWelcomeModal = useCallback(() => {
-    setShowWelcomeModal(false);
-    try {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("flowframe_sandbox_welcome_seen", "true");
-      }
-    } catch (e) {
-      // ignore
     }
   }, []);
 
@@ -2329,6 +2291,7 @@ connect s1 -> r1
 
       const clientId = clientToRun.id;
       setValidationWarning(null);
+      setIsCompilingSimulation(true);
 
       // 2. Initialize simulation components
       const graph = new GraphManager("dynamic-graph");
@@ -2731,153 +2694,86 @@ connect s1 -> r1
         },
       ];
 
-      try {
-        // Clear active states on Postgres and Server models
-        activeNodes.forEach((n) => {
-          if (n.data.type === "postgres") {
-            const pg = registry.getInstance(n.id) as PostgresModel;
-            if (pg) {
-              pg.activeConnections.clear();
-              pg.connectionIntervals = [];
+      setTimeout(() => {
+        try {
+          // Clear active states on Postgres and Server models
+          activeNodes.forEach((n) => {
+            if (n.data.type === "postgres") {
+              const pg = registry.getInstance(n.id) as PostgresModel;
+              if (pg) {
+                pg.activeConnections.clear();
+                pg.connectionIntervals = [];
+              }
             }
-          }
-          if (n.data.type === "server") {
-            const server = registry.getInstance(n.id) as ServerModel;
-            if (server) {
-              server.activeQueueMessages = 0;
-              server.queueProcessingIntervals = [];
+            if (n.data.type === "server") {
+              const server = registry.getInstance(n.id) as ServerModel;
+              if (server) {
+                server.activeQueueMessages = 0;
+                server.queueProcessingIntervals = [];
+              }
             }
-          }
-        });
-
-        for (let i = 0; i < clientRequests.length; i++) {
-          const sourceIp = ipv4Instance.getRandomIpv4();
-          const reqItem = clientRequests[i];
-
-          let parsedBody = {};
-          if (
-            typeof reqItem.body === "string" &&
-            reqItem.body.trim().length > 0
-          ) {
-            try {
-              parsedBody = JSON.parse(reqItem.body);
-            } catch (err) {
-              console.error("Failed to parse request body JSON:", err);
-            }
-          }
-
-          const payload: any = {
-            valetKeyFlow: clientConfig.valetKeyFlow,
-            lookupKey: reqItem.lookupKey,
-            fileName: reqItem.fileName,
-            isThereFileToUpload: reqItem.isThereFileToUpload,
-            endpoint: reqItem.endpoint,
-            method: reqItem.method || "GET",
-            targetBucket: reqItem.targetBucket,
-            parallelResponse,
-            ...parsedBody,
-          };
-
-          const simulation = new SimulationManager(
-            graph,
-            registry,
-            payload,
-            sourceIp,
-          );
-          simulation.runSimulation(clientId);
-
-          const runFrames = (simulation.getFrames() as any[]).map((frame) => ({
-            ...frame,
-            sourceIp,
-            payloadSummary:
-              frame.payloadSummary || `lookupKey=${reqItem.lookupKey}`,
-          }));
-
-          allFrames.push({
-            runIndex: i,
-            frames: runFrames,
           });
-        }
 
-        setRawSimulationFrames(allFrames);
-        setFrameIndex(0);
-        setIsPlaying(true);
-      } catch (err: any) {
-        setValidationWarning(`Simulation Error: ${err.message || err}`);
-      }
+          for (let i = 0; i < clientRequests.length; i++) {
+            const sourceIp = ipv4Instance.getRandomIpv4();
+            const reqItem = clientRequests[i];
+
+            let parsedBody = {};
+            if (
+              typeof reqItem.body === "string" &&
+              reqItem.body.trim().length > 0
+            ) {
+              try {
+                parsedBody = JSON.parse(reqItem.body);
+              } catch (err) {
+                console.error("Failed to parse request body JSON:", err);
+              }
+            }
+
+            const payload: any = {
+              valetKeyFlow: clientConfig.valetKeyFlow,
+              lookupKey: reqItem.lookupKey,
+              fileName: reqItem.fileName,
+              isThereFileToUpload: reqItem.isThereFileToUpload,
+              endpoint: reqItem.endpoint,
+              method: reqItem.method || "GET",
+              targetBucket: reqItem.targetBucket,
+              parallelResponse,
+              ...parsedBody,
+            };
+
+            const simulation = new SimulationManager(
+              graph,
+              registry,
+              payload,
+              sourceIp,
+            );
+            simulation.runSimulation(clientId);
+
+            const runFrames = (simulation.getFrames() as any[]).map((frame) => ({
+              ...frame,
+              sourceIp,
+              payloadSummary:
+                frame.payloadSummary || `lookupKey=${reqItem.lookupKey}`,
+            }));
+
+            allFrames.push({
+              runIndex: i,
+              frames: runFrames,
+            });
+          }
+
+          setRawSimulationFrames(allFrames);
+          setFrameIndex(0);
+          setIsPlaying(true);
+          setIsCompilingSimulation(false);
+        } catch (err: any) {
+          setValidationWarning(`Simulation Error: ${err.message || err}`);
+          setIsCompilingSimulation(false);
+        }
+      }, 350);
     },
     [nodes, nodeConfigs, edges],
-  );
-
-  // Direct Request Execution from Canvas Toolbar or Inspector
-  const handleExecuteRequest = useCallback(
-    (method: string, endpoint: string) => {
-      const clientNodes = nodes.filter((n) => n.data.type === "client");
-      if (clientNodes.length === 0) {
-        setValidationWarning("Please add a Client node to the canvas to execute requests.");
-        return;
-      }
-      const targetClient = clientNodes.find((n) => n.id === selectedNodeId) || clientNodes[0];
-      const currentClientConfig = nodeConfigs[targetClient.id] || createDefaultConfig("client", targetClient.id, (targetClient.data.label as string) || "Client");
-      const updatedConfigs = {
-        ...nodeConfigs,
-        [targetClient.id]: {
-          ...currentClientConfig,
-          method,
-          endpoint,
-          requests: [
-            {
-              method,
-              endpoint,
-              lookupKey: currentClientConfig.lookupKey || "rohan",
-              fileName: currentClientConfig.fileName || "file.png",
-              isThereFileToUpload: false,
-              body: currentClientConfig.body || "",
-            },
-          ],
-        },
-      };
-      setNodeConfigs(updatedConfigs);
-      handleStartSimulation(targetClient.id, nodes, edges, updatedConfigs);
-      setFrameIndex(0);
-      setIsPlaying(true);
-    },
-    [nodes, edges, nodeConfigs, selectedNodeId, handleStartSimulation],
-  );
-
-  // Apply AI Generated FlowFrame DSL Architecture
-  const handleApplyAIDsl = useCallback(
-    (code: string, explanation: string) => {
-      try {
-        if (!code || code.trim().length === 0) {
-          setValidationWarning("AI generated empty DSL code.");
-          return;
-        }
-        const output = compileDSL(code);
-        if (!output.nodes || output.nodes.length === 0) {
-          setValidationWarning("No components generated from AI architecture.");
-          return;
-        }
-
-        setNodes(output.nodes);
-        setEdges(output.edges);
-        setNodeConfigs(output.nodeConfigs);
-        setDslCode(code);
-        setValidationWarning(null);
-        setSuccessToast(explanation || "Architecture generated successfully.");
-
-        const firstClient = output.nodes.find((n: any) => n.data?.type === "client");
-        if (firstClient) {
-          handleStartSimulation(firstClient.id, output.nodes, output.edges, output.nodeConfigs);
-        }
-        setTimeout(() => {
-          fitView({ duration: 600 });
-        }, 150);
-      } catch (err: any) {
-        setValidationWarning(`AI DSL Error: ${err.message || err}`);
-      }
-    },
-    [setNodes, setEdges, setNodeConfigs, setDslCode, handleStartSimulation, fitView],
   );
 
   // Compile & Execute DSL script from Monaco Editor
@@ -2897,7 +2793,7 @@ connect s1 -> r1
       setEdges(output.edges);
       setNodeConfigs(output.nodeConfigs);
       setValidationWarning(null);
-      setSuccessToast("DSL compiled & architecture generated.");
+      setSuccessToast("DSL compiled & architecture generated!");
 
       const firstClient = output.nodes.find((n: any) => n.data?.type === "client");
       if (firstClient) {
@@ -3400,7 +3296,7 @@ connect s1 -> r1
     if (!workspaceId && !diagramId && !shareId) {
       setShowWelcomeModal(true);
     } else {
-      closeWelcomeModal();
+      setShowWelcomeModal(false);
     }
   }, [workspaceId, diagramId, shareId]);
 
@@ -3842,15 +3738,13 @@ connect s1 -> r1
     setFrameIndex(0);
   }, [hideResponse, parallelResponse]);
 
-  // Node highlight style mapping with active quieting and dynamic state
+  // Node highlight style mapping
   const styledNodes = useMemo(() => {
-    const hasAnyActive = isPlaying && currentFrames.length > 0;
     return nodes.map((node) => {
       const isSelected = node.id === selectedNodeId;
-      const activeFrame = currentFrames.find(
+      const isActive = currentFrames.some(
         (f) => f.from === node.id || f.to === node.id,
       );
-      const isActive = Boolean(activeFrame);
       const isShape = node.type === "shapeNode";
 
       return {
@@ -3861,13 +3755,10 @@ connect s1 -> r1
         data: {
           ...node.data,
           isActive,
-          hasAnyActive,
-          activeAction: activeFrame?.action,
-          activeRole: activeFrame ? (activeFrame.to === node.id ? "target" : "source") : null,
         },
       };
     });
-  }, [nodes, selectedNodeId, currentFrames, isPlaying]);
+  }, [nodes, selectedNodeId, currentFrames]);
 
   // Edge animation speed and high visibility theme-based styling
   const animatedEdges = useMemo(() => {
@@ -3876,12 +3767,11 @@ connect s1 -> r1
     if (currentFrames.length === 0) {
       return edges.map((edge) => ({
         ...edge,
-        type: "packet",
         style: {
           stroke: inactiveStroke,
           strokeWidth: 1.8,
         },
-        data: { active: false, frameIndex },
+        data: { active: false },
       }));
     }
 
@@ -3891,8 +3781,6 @@ connect s1 -> r1
     >();
 
     for (const frame of currentFrames) {
-      if (!frame) continue;
-
       // Find all edges that match this transmission step
       const directEdge = edges.find(
         (e) => e.source === frame.from && e.target === frame.to,
@@ -3902,15 +3790,33 @@ connect s1 -> r1
       );
 
       if (directEdge) {
-        edgeState.set(directEdge.id, {
-          reverseMotion: false,
-          packetCount: 1,
-        });
+        const resolvedEdgeId = directEdge.id;
+        const previous = edgeState.get(resolvedEdgeId);
+        if (!previous) {
+          edgeState.set(resolvedEdgeId, {
+            reverseMotion: false,
+            packetCount: 1,
+          });
+        } else {
+          edgeState.set(resolvedEdgeId, {
+            reverseMotion: previous.reverseMotion,
+            packetCount: previous.packetCount + 1,
+          });
+        }
       } else if (reverseEdge) {
-        edgeState.set(reverseEdge.id, {
-          reverseMotion: true,
-          packetCount: 1,
-        });
+        const resolvedEdgeId = reverseEdge.id;
+        const previous = edgeState.get(resolvedEdgeId);
+        if (!previous) {
+          edgeState.set(resolvedEdgeId, {
+            reverseMotion: true,
+            packetCount: 1,
+          });
+        } else {
+          edgeState.set(resolvedEdgeId, {
+            reverseMotion: previous.reverseMotion || true,
+            packetCount: previous.packetCount + 1,
+          });
+        }
       }
     }
 
@@ -3921,7 +3827,6 @@ connect s1 -> r1
 
       return {
         ...edge,
-        type: "packet",
         data: {
           active,
           reverseMotion,
@@ -3938,12 +3843,15 @@ connect s1 -> r1
     });
   }, [currentFrames, edges, theme, speed, isPlaying, frameIndex]);
 
-  // Click handler to select node and open inspector
+  // Click handler to run client node directly
   const onNodeClick = useCallback(
     (_: any, node: Node) => {
       setSelectedNodeId(node.id);
+      if (node.data.type === "client") {
+        handleStartSimulation(node.id);
+      }
     },
-    [],
+    [handleStartSimulation],
   );
 
   // Pane click handler to clear selections
@@ -4135,7 +4043,7 @@ connect s1 -> r1
         a.setAttribute("download", `flow-frame-architecture-${new Date().toISOString().split("T")[0]}.png`);
         a.setAttribute("href", dataUrl);
         a.click();
-        setSuccessToast("Architecture image downloaded successfully.");
+        setSuccessToast("Architecture image downloaded successfully!");
       })
       .catch((error) => {
         console.error("Failed to download canvas image:", error);
@@ -4171,62 +4079,132 @@ connect s1 -> r1
             isSidebarOpenMobile
               ? "max-md:translate-x-0"
               : "max-md:-translate-x-full"
-          } ${isSidebarCollapsed && !isSidebarFloating ? "w-0 !border-r-0 opacity-0 pointer-events-none" : ""}`}
+          }`}
           style={{
-            width: isSidebarFloating ? 288 : isSidebarCollapsed ? 0 : sidebarWidth,
+            width: isSidebarFloating ? 288 : (isSidebarCollapsed ? 56 : sidebarWidth),
             left: isSidebarFloating ? sidebarPosition.x : undefined,
             top: isSidebarFloating ? sidebarPosition.y : undefined,
             height: isSidebarFloating ? "calc(100vh - 160px)" : "100%",
           }}
         >
-          {/* Resize Handle (only active in docked mode on desktop) */}
-          {!isSidebarFloating && (
+          {/* Resize Handle (only active in docked mode on desktop when expanded) */}
+          {!isSidebarFloating && !isSidebarCollapsed && (
             <div
               onMouseDown={handleResizeMouseDown}
               className="absolute right-0 top-0 bottom-0 w-1 hover:w-2 bg-transparent hover:bg-[var(--accent)]/25 cursor-col-resize transition-all z-20 max-md:hidden"
             />
           )}
 
-          {/* Mode Switcher Header: Library vs Monaco Code Editor */}
-          <div className="p-2 border-b border-[var(--border)] bg-[var(--surface)] shrink-0 flex flex-col gap-2">
-            <div className="flex items-center gap-1 bg-[var(--surface-muted)] p-1 rounded-xl border border-[var(--border)]">
+          {isSidebarCollapsed ? (
+            /* Collapsed Vertical Tool Rail (56px / w-14) */
+            <div className="flex-1 flex flex-col items-center justify-between py-3 px-1 w-full bg-[var(--surface)] select-none">
+              <div className="flex flex-col items-center gap-2.5 w-full">
+                {/* Expand Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  className="p-2 rounded-xl text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition cursor-pointer"
+                  title="Expand Shapes Sidebar"
+                >
+                  <FiChevronRight className="w-4 h-4" />
+                </button>
+
+                <div className="w-8 h-px bg-[var(--border)]" />
+
+                {/* Library tab button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSidebarTab("library");
+                    setIsSidebarCollapsed(false);
+                  }}
+                  className={`p-2.5 rounded-xl transition cursor-pointer ${
+                    sidebarTab === "library"
+                      ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
+                      : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                  }`}
+                  title="Component & Shape Library"
+                >
+                  <FiGrid className="w-4 h-4" />
+                </button>
+
+                {/* Code Editor tab button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSidebarTab("editor");
+                    setIsSidebarCollapsed(false);
+                  }}
+                  className={`p-2.5 rounded-xl transition cursor-pointer ${
+                    sidebarTab === "editor"
+                      ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
+                      : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                  }`}
+                  title="Monaco Architecture DSL Editor"
+                >
+                  <FiCode className="w-4 h-4" />
+                </button>
+
+                {/* Architecture Templates button */}
+                <button
+                  type="button"
+                  onClick={() => setShowWelcomeModal(true)}
+                  className="p-2.5 rounded-xl text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition cursor-pointer"
+                  title="Architecture Templates"
+                >
+                  <FiFolder className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Bottom Clear Canvas */}
               <button
                 type="button"
-                onClick={() => setSidebarTab("library")}
-                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                  sidebarTab === "library"
-                    ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-sm border border-[var(--border)] font-bold"
-                    : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
-                }`}
+                onClick={handleClearCanvas}
+                className="p-2.5 rounded-xl text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                title="Clear Canvas"
               >
-                <FiFolder className="w-3.5 h-3.5" />
-                <span>Library</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSidebarTab("editor")}
-                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                  sidebarTab === "editor"
-                    ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-sm border border-[var(--border)] font-bold"
-                    : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
-                }`}
-              >
-                <FiFileText className="w-3.5 h-3.5" />
-                <span>Code Editor</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsSidebarCollapsed(true)}
-                className="p-1.5 rounded-lg hover:bg-[var(--surface)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] transition cursor-pointer shrink-0"
-                title="Collapse Sidebar (Ctrl+B)"
-                aria-label="Collapse Sidebar"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
+                <FiTrash2 className="w-4 h-4" />
               </button>
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Mode Switcher Header: Library vs Monaco Code Editor */}
+              <div className="p-2 border-b border-[var(--border)] bg-[var(--surface)] shrink-0 flex items-center gap-1.5">
+                <div className="flex-1 flex items-center gap-1 bg-[var(--surface-muted)] p-1 rounded-xl border border-[var(--border)]">
+                  <button
+                    type="button"
+                    onClick={() => setSidebarTab("library")}
+                    className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                      sidebarTab === "library"
+                        ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-sm border border-[var(--border)] font-bold"
+                        : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+                    }`}
+                  >
+                    <FiGrid className="w-3.5 h-3.5" />
+                    <span>Library</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSidebarTab("editor")}
+                    className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                      sidebarTab === "editor"
+                        ? "bg-[var(--surface)] text-[color:var(--accent)] shadow-sm border border-[var(--border)] font-bold"
+                        : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
+                    }`}
+                  >
+                    <FiCode className="w-3.5 h-3.5" />
+                    <span>Code Editor</span>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarCollapsed(true)}
+                  className="p-1.5 rounded-lg text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition cursor-pointer hidden md:flex"
+                  title="Collapse Sidebar"
+                >
+                  <FiChevronLeft className="w-4 h-4" />
+                </button>
+              </div>
 
           {sidebarTab === "editor" ? (
             /* Monaco Code Editor Panel in Left Sidebar */
@@ -4236,7 +4214,7 @@ connect s1 -> r1
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
                     Monaco Editor
                   </span>
-                  <span className="text-[9px] bg-[var(--accent)]/10 text-[color:var(--accent)] border border-[var(--accent)]/20 px-1.5 py-0.5 rounded font-mono font-bold">
+                  <span className="text-[9px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-1.5 py-0.5 rounded font-mono font-bold">
                     DSL / TS
                   </span>
                 </div>
@@ -4244,17 +4222,17 @@ connect s1 -> r1
                   <button
                     type="button"
                     onClick={handleRunDSL}
-                    className="rounded bg-[var(--accent)] hover:bg-[var(--accent-muted)] text-white text-[10px] px-2.5 py-1 font-bold shadow-md transition cursor-pointer flex items-center gap-1"
+                    className="rounded bg-violet-600 hover:bg-violet-500 text-white text-[10px] px-2.5 py-1 font-bold shadow-md transition cursor-pointer flex items-center gap-1"
                     title="Compile DSL script and render architecture on canvas"
                   >
-                    <span>▶</span>
+                    <FiPlay className="w-3 h-3 fill-current" />
                     <span>Run Flow</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       navigator.clipboard.writeText(dslCode);
-                      setSuccessToast("Code copied to clipboard.");
+                      setSuccessToast("Code copied to clipboard!");
                     }}
                     className="rounded hover:bg-[var(--surface-muted)] text-[10px] px-2 py-1 border border-[var(--border)] font-semibold text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] transition cursor-pointer"
                     title="Copy Code"
@@ -4327,7 +4305,7 @@ connect s1 -> r1
                       title="How to Use Guide"
                     >
                       <svg
-                        className="w-3.5 h-3.5 text-[color:var(--accent)]"
+                        className="w-3.5 h-3.5 text-violet-400"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -4393,7 +4371,7 @@ connect s1 -> r1
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Type to search shapes..."
-                    className="w-full pl-8 pr-7 py-1.5 bg-[var(--surface-muted)]/70 hover:bg-[var(--surface-muted)] focus:bg-[var(--surface)] text-xs text-[color:var(--foreground)] placeholder-[color:var(--foreground)]/40 border border-[var(--border)] rounded-lg outline-none focus:border-blue-500/80 transition-all duration-150"
+                    className="w-full pl-8 pr-7 py-1.5 bg-[var(--surface-muted)]/70 hover:bg-[var(--surface-muted)] focus:bg-[var(--surface)] text-xs text-[color:var(--foreground)] placeholder-[color:var(--foreground)]/40 border border-[var(--border)] rounded-lg outline-none focus:border-violet-500/80 transition-all duration-150"
                   />
                   {searchQuery && (
                     <button
@@ -4417,11 +4395,9 @@ connect s1 -> r1
                 className="w-full flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)] transition duration-150 text-left font-semibold cursor-pointer"
               >
                 <div className="flex items-center gap-2">
-                  <span
-                    className={`text-[8px] text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isTemplatesExpanded ? "rotate-90" : "rotate-0"}`}
-                  >
-                    ▶
-                  </span>
+                  <FiChevronRight
+                    className={`w-3 h-3 text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isTemplatesExpanded ? "rotate-90" : "rotate-0"}`}
+                  />
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
                     Templates
                   </span>
@@ -4438,7 +4414,7 @@ connect s1 -> r1
                       label: "Cache Aside",
                       icon: (
                         <svg
-                          className="w-5 h-5 text-blue-400 group-hover:scale-110 transition duration-150"
+                          className="w-5 h-5 text-violet-400 group-hover:scale-110 transition duration-150"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -4458,7 +4434,7 @@ connect s1 -> r1
                       ),
                       description:
                         "Write/read path caching strategy prioritizing low latency using Redis Cache and Postgres DB.",
-                      color: "hover:border-blue-500/40 text-blue-400",
+                      color: "hover:border-violet-500/40 text-violet-400",
                     },
                     loadBalancing: {
                       label: "Load Balancer",
@@ -4508,7 +4484,7 @@ connect s1 -> r1
                       label: "API Gateway",
                       icon: (
                         <svg
-                          className="w-5 h-5 text-indigo-400 group-hover:scale-110 transition duration-150"
+                          className="w-5 h-5 text-fuchsia-400 group-hover:scale-110 transition duration-150"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -4519,7 +4495,7 @@ connect s1 -> r1
                       ),
                       description:
                         "Central entry point routes requests dynamically to Post or User services based on path prefixes.",
-                      color: "hover:border-indigo-500/40 text-indigo-400",
+                      color: "hover:border-fuchsia-500/40 text-fuchsia-400",
                     },
                   }).map(([key, value]) => (
                     <button
@@ -4561,11 +4537,9 @@ connect s1 -> r1
                 className="w-full flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--surface-muted)] transition duration-150 text-left font-semibold cursor-pointer"
               >
                 <div className="flex items-center gap-2">
-                  <span
-                    className={`text-[8px] text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isComponentsExpanded ? "rotate-90" : "rotate-0"}`}
-                  >
-                    ▶
-                  </span>
+                  <FiChevronRight
+                    className={`w-3 h-3 text-[color:var(--foreground)]/60 transform transition-transform duration-200 ${isComponentsExpanded ? "rotate-90" : "rotate-0"}`}
+                  />
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--foreground)]/70">
                     Components & Shapes
                   </span>
@@ -4600,16 +4574,16 @@ connect s1 -> r1
                             setHoverTooltipY(rect.top + rect.height / 2);
                           }}
                           onMouseLeave={() => setHoveredComponent(null)}
-                          className={`aspect-square rounded-xl border bg-[var(--surface)]/30 hover:bg-[var(--surface)] hover:border-blue-500/50 flex flex-col items-center justify-center transition duration-150 cursor-grab active:cursor-grabbing group relative shadow-sm ${
+                          className={`aspect-square rounded-xl border bg-[var(--surface)]/30 hover:bg-[var(--surface)] hover:border-violet-500/50 flex flex-col items-center justify-center transition duration-150 cursor-grab active:cursor-grabbing group relative shadow-sm ${
                             draggingType === item.type
-                              ? "border-blue-500/60 bg-blue-500/10 scale-95"
+                              ? "border-violet-500/60 bg-violet-500/10 scale-95"
                               : "border-[var(--border)]"
                           }`}
                           title={`${item.label} — click to add or drag onto canvas`}
                         >
                           <ComponentIcon
                             type={item.type}
-                            className="w-6 h-6 group-hover:scale-110 transition duration-150 text-[color:var(--foreground)]/65 group-hover:text-blue-400"
+                            className="w-6 h-6 group-hover:scale-110 transition duration-150 text-[color:var(--foreground)]/65 group-hover:text-violet-400"
                           />
                           <span className="text-[8px] font-bold text-[color:var(--foreground)]/50 mt-1 truncate max-w-full px-1">
                             {item.label}
@@ -4638,13 +4612,13 @@ connect s1 -> r1
                           onDragStart={(e) => handleShapeDragStart(e, shape.id)}
                           onClick={() => addShape(shape.id)}
                           title={`${shape.label} — click to add or drag onto canvas`}
-                          className="aspect-square rounded-xl border border-[var(--border)] bg-[var(--surface)]/40 flex flex-col items-center justify-center gap-0.5 transition duration-150 cursor-grab active:cursor-grabbing group hover:scale-105 hover:border-blue-500/40 hover:bg-[var(--surface)]"
+                          className="aspect-square rounded-xl border border-[var(--border)] bg-[var(--surface)]/40 flex flex-col items-center justify-center gap-0.5 transition duration-150 cursor-grab active:cursor-grabbing group hover:scale-105 hover:border-violet-500/40 hover:bg-[var(--surface)]"
                         >
                           {/* Legitimate vector SVG shape icon */}
                           <div className="w-5 h-5 flex items-center justify-center group-hover:scale-110 transition duration-150">
                             {shape.icon}
                           </div>
-                          <span className="text-[7.5px] font-semibold text-[color:var(--foreground)]/45 leading-none truncate max-w-full px-0.5 group-hover:text-blue-400 transition">
+                          <span className="text-[7.5px] font-semibold text-[color:var(--foreground)]/45 leading-none truncate max-w-full px-0.5 group-hover:text-violet-400 transition">
                             {shape.label}
                           </span>
                         </button>
@@ -4734,7 +4708,7 @@ connect s1 -> r1
               <button
                 type="button"
                 onClick={handleShareFlow}
-                className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg border border-blue-500/25 bg-blue-500/5 hover:bg-blue-500/15 hover:border-blue-500/45 text-blue-500 dark:text-blue-400 text-[11px] font-semibold transition cursor-pointer shadow-sm hover:shadow active:scale-95 duration-200"
+                className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg border border-violet-500/25 bg-violet-500/5 hover:bg-violet-500/15 hover:border-violet-500/45 text-violet-500 dark:text-violet-400 text-[11px] font-semibold transition cursor-pointer shadow-sm hover:shadow active:scale-95 duration-200"
                 title="Share this flow on LinkedIn, Twitter, or copy URL"
               >
                 <svg
@@ -4778,41 +4752,283 @@ connect s1 -> r1
           </div>
             </>
           )}
+            </>
+          )}
         </aside>
 
-        {/* Right Workspace Main Row: Canvas on Left, Anchored Inspector on Right */}
-        <div className="flex-1 h-full min-w-0 flex flex-row relative z-0 overflow-hidden">
-          {/* Canvas Viewport Column */}
-          <div className="flex-1 h-full min-w-0 flex flex-col relative z-0">
-          {/* Mobile Sidebar Hamburger Toggle */}
-          <button
-            type="button"
-            onClick={() => setIsSidebarOpenMobile(true)}
-            className="md:hidden absolute top-4 left-4 z-20 bg-[var(--surface)] border border-[var(--border)] p-2.5 rounded-xl shadow-lg hover:bg-[var(--surface-muted)] cursor-pointer flex items-center justify-center text-sm font-bold"
-            title="Open Shapes Library"
-          >
-            <FiSidebar className="w-4 h-4 text-blue-400" />
-          </button>
+        {/* Right Canvas Area: Center Canvas Column + Docked Right Inspector */}
+        <div className="flex-1 h-full min-w-0 flex flex-col md:flex-row relative z-0 overflow-hidden">
+          {/* Center Column: Top Technical Bar + ReactFlow Canvas + Bottom Logs Drawer */}
+          <div className="flex-1 h-full min-w-0 flex flex-col relative overflow-hidden">
+            {/* Top Technical Canvas Bar (Section 14 & 17) */}
+            <header className="h-12 border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md flex items-center justify-between px-3 md:px-4 z-20 shrink-0 select-none">
+              {/* Left: Diagram Info & Stats */}
+              <div className="flex items-center gap-2.5 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarOpenMobile(true)}
+                  className="md:hidden p-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] cursor-pointer"
+                  title="Open Shapes Library"
+                >
+                  <FiMenu className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs font-bold text-[color:var(--foreground)] truncate max-w-[130px] sm:max-w-[200px]">
+                    {workspaceId ? "Distributed Architecture" : "Architecture Sandbox"}
+                  </span>
+                  <div className="hidden sm:flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 border border-[var(--border)]">
+                      {nodes.length} Nodes
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 border border-[var(--border)]">
+                      {edges.length} Edges
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-          {/* Floating Open Sidebar Button (Visible when desktop sidebar is collapsed) */}
-          {isSidebarCollapsed && (
-            <button
-              type="button"
-              onClick={() => setIsSidebarCollapsed(false)}
-              className="hidden md:flex absolute top-4 left-4 z-20 items-center gap-2 px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl shadow-xl hover:bg-[var(--surface-muted)] text-xs font-semibold text-[color:var(--foreground)] transition cursor-pointer animate-fade-in pointer-events-auto group"
-              title="Open Shapes & Code Sidebar (Ctrl+B)"
-            >
-              <svg className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h7" />
-              </svg>
-              <span>Sidebar</span>
-              <span className="text-[10px] text-blue-400 font-bold">▶</span>
-            </button>
-          )}
+              {/* Center: Playback Controls (Compact & Technical) */}
+              <div className="flex items-center gap-1 bg-[var(--surface-muted)]/80 border border-[var(--border)] px-1.5 py-1 rounded-xl shadow-xs">
+                <button
+                  type="button"
+                  disabled={isCompilingSimulation}
+                  onClick={() => {
+                    if (isCompilingSimulation) return;
+                    if (simulationFrames.length === 0) {
+                      handleStartSimulation();
+                    } else {
+                      setIsPlaying((prev) => !prev);
+                    }
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                    isCompilingSimulation
+                      ? "bg-[var(--accent)]/70 text-white cursor-wait"
+                      : isPlaying
+                      ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                      : "bg-[var(--accent)] text-white shadow-xs hover:brightness-110"
+                  }`}
+                  title={isCompilingSimulation ? "Compiling simulation..." : isPlaying ? "Pause simulation (Space)" : "Run simulation (Space)"}
+                >
+                  {isCompilingSimulation ? (
+                    <>
+                      <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      <span className="hidden sm:inline">Compiling...</span>
+                    </>
+                  ) : isPlaying ? (
+                    <>
+                      <FiPause className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Pause</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiPlay className="w-3.5 h-3.5 fill-current" />
+                      <span className="hidden sm:inline">{simulationFrames.length === 0 ? "Simulate" : "Resume"}</span>
+                    </>
+                  )}
+                </button>
+
+                <div className="h-4 w-px bg-[var(--border)] mx-0.5" />
+
+                <button
+                  type="button"
+                  onClick={goToPreviousFrame}
+                  className="p-1.5 rounded-lg text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface)] transition cursor-pointer"
+                  title="Previous Frame (Left Arrow)"
+                >
+                  <FiSkipBack className="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={goToNextFrame}
+                  className="p-1.5 rounded-lg text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface)] transition cursor-pointer"
+                  title="Next Frame (Right Arrow)"
+                >
+                  <FiSkipForward className="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={resetPlayback}
+                  className="p-1.5 rounded-lg text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface)] transition cursor-pointer"
+                  title="Reset playback"
+                >
+                  <FiRotateCcw className="w-3.5 h-3.5" />
+                </button>
+
+                <div className="h-4 w-px bg-[var(--border)] mx-0.5 hidden sm:block" />
+
+                {/* Frame indicator */}
+                <div className="hidden sm:flex items-center px-2 py-0.5 text-[10px] font-mono text-[color:var(--foreground)]/70">
+                  Frame {simulationFrames.length > 0 ? frameIndex + 1 : 0}/{simulationFrames.length}
+                </div>
+
+                <div className="h-4 w-px bg-[var(--border)] mx-0.5 hidden sm:block" />
+
+                {/* Speed Dropdown */}
+                <div className="hidden sm:flex items-center gap-0.5">
+                  {[0.5, 1, 2].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSpeed(s)}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition cursor-pointer ${
+                        speed === s
+                          ? "bg-[var(--surface)] text-[color:var(--accent)] border border-[var(--border)] shadow-xs"
+                          : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]"
+                      }`}
+                    >
+                      {s}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right: Canvas Settings, Trace Logs, Copilot, Save */}
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                {/* Canvas Settings Popover */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowBgControls((prev) => !prev)}
+                    className={`p-2 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                      showBgControls
+                        ? "bg-[var(--surface-muted)] text-[color:var(--accent)] border-[var(--accent)]/40"
+                        : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                    }`}
+                    title="Canvas Grid & Display Settings"
+                  >
+                    <FiSliders className="w-3.5 h-3.5" />
+                    <span className="hidden lg:inline text-[11px]">Grid</span>
+                  </button>
+
+                  {showBgControls && (
+                    <div className="absolute right-0 top-12 w-64 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-2xl z-50 flex flex-col gap-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-[var(--border)]">
+                        <span className="text-xs font-bold text-[color:var(--foreground)]">Canvas Settings</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowBgControls(false)}
+                          className="text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] text-xs font-bold cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </div>
+
+                      {/* Grid Pattern */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] uppercase font-bold text-[color:var(--foreground)]/60">
+                          Grid Pattern
+                        </label>
+                        <div className="grid grid-cols-4 gap-1">
+                          {(["dots", "lines", "cross", "none"] as const).map((pat) => (
+                            <button
+                              key={pat}
+                              type="button"
+                              onClick={() => setBgPattern(pat)}
+                              className={`py-1 rounded-lg text-[10px] font-mono uppercase font-bold transition cursor-pointer ${
+                                bgPattern === pat
+                                  ? "bg-[var(--accent)] text-white shadow-xs"
+                                  : "bg-[var(--surface-muted)] text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] border border-[var(--border)]"
+                              }`}
+                            >
+                              {pat}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Grid Opacity */}
+                      {bgPattern !== "none" && (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[10px] font-bold text-[color:var(--foreground)]/60">
+                            <span className="uppercase">Grid Opacity</span>
+                            <span className="font-mono text-[color:var(--accent)]">{Math.round(bgOpacity * 100)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0.05"
+                            max="0.70"
+                            step="0.05"
+                            value={bgOpacity}
+                            onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
+                            className="w-full h-1.5 rounded-lg bg-[var(--surface-muted)] appearance-none cursor-pointer accent-[var(--accent)]"
+                          />
+                        </div>
+                      )}
+
+                      {/* Quick Actions */}
+                      <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={handleExportFlow}
+                          className="flex items-center gap-1 text-[11px] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] font-semibold transition cursor-pointer"
+                        >
+                          <FiDownload className="w-3.5 h-3.5" />
+                          <span>Export</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleImportClick}
+                          className="flex items-center gap-1 text-[11px] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] font-semibold transition cursor-pointer"
+                        >
+                          <FiUpload className="w-3.5 h-3.5" />
+                          <span>Import</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Trace Logs Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setDebugEnabled((prev) => !prev)}
+                  className={`p-2 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                    debugEnabled
+                      ? "bg-[var(--accent)]/15 text-[color:var(--accent)] border-[var(--accent)]/40"
+                      : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                  }`}
+                  title="Toggle Logs / Execution Drawer"
+                >
+                  <FiActivity className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline text-[11px]">Logs</span>
+                </button>
+
+                {/* AI Architecture Assistant */}
+                <button
+                  type="button"
+                  onClick={() => setIsAIAssistantOpen((prev) => !prev)}
+                  className={`p-2 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                    isAIAssistantOpen
+                      ? "bg-violet-500/15 text-violet-400 border-violet-500/40"
+                      : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                  }`}
+                  title="Open AI Architecture Assistant"
+                >
+                  <FiCpu className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline text-[11px]">Assistant</span>
+                </button>
+
+                {/* Save Diagram Button */}
+                {workspaceId && diagramId && (
+                  <button
+                    type="button"
+                    onClick={handleSaveDiagramToBackend}
+                    disabled={isSaving}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-600/20 transition cursor-pointer disabled:opacity-50"
+                    title="Save diagram to cloud (Ctrl+S)"
+                  >
+                    <FiSave className="w-3.5 h-3.5" />
+                    <span>{isSaving ? "Saving..." : "Save"}</span>
+                  </button>
+                )}
+              </div>
+            </header>
           {/* Full-Screen React Flow Canvas */}
           <div
             className={`flex-1 min-h-0 relative z-0 w-full transition-all duration-150 ${
-              isDragOverCanvas ? "ring-2 ring-inset ring-blue-500/50" : ""
+              isDragOverCanvas ? "ring-2 ring-inset ring-violet-500/50" : ""
             }`}
             onDrop={handleCanvasDrop}
             onDragOver={handleCanvasDragOver}
@@ -4821,135 +5037,42 @@ connect s1 -> r1
             {/* Drop overlay hint */}
             {isDragOverCanvas && (
               <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-                <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-blue-400/60 bg-blue-500/10 px-8 py-5  shadow-xl">
+                <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-violet-400/60 bg-violet-500/10 px-8 py-5 backdrop-blur-sm shadow-xl">
                   <span className="text-3xl">+</span>
-                  <p className="text-sm font-bold text-blue-300">
+                  <p className="text-sm font-bold text-violet-300">
                     Drop to place node
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Canvas Loading Overlay */}
+            {/* Canvas Loading Overlay with Engineering FlowLoader */}
             {isLoadingDiagram && (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[var(--background)]/80  transition-all">
-                <div className="flex flex-col items-center gap-3 p-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 shadow-2xl">
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full border-4 border-blue-500/20 border-t-blue-500 animate-spin" />
-                    <div className="absolute inset-0 flex items-center justify-center text-xs">
-                      <FiCpu className="w-5 h-5 text-blue-400" />
-                    </div>
-                  </div>
-                  <div className="text-center space-y-1">
-                    <p className="text-sm font-bold text-[color:var(--foreground)] tracking-tight">Loading Architecture Diagram...</p>
-                    <p className="text-xs text-[color:var(--foreground)]/50 font-mono">Fetching nodes & configurations from database</p>
-                  </div>
-                </div>
+              <div className="absolute inset-0 z-30 flex items-center justify-center bg-[var(--background)]/85 backdrop-blur-md transition-all">
+                <FlowLoader
+                  label="Loading Architecture Diagram..."
+                  sublabel="Fetching nodes, connections & configurations from database"
+                />
               </div>
             )}
 
-            {/* Empty Canvas Onboarding State */}
-            {nodes.length === 0 && !isLoadingDiagram && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none p-4">
-                <div className="pointer-events-auto max-w-md w-full bg-[var(--surface)]/95 backdrop-blur-2xl border border-[var(--border)] rounded-3xl p-8 shadow-2xl text-center flex flex-col items-center gap-5 animate-fade-in">
-                  <div className="relative">
-                    <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-inner">
-                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                      </svg>
-                    </div>
-                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500" />
-                    </span>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <h2 className="text-lg font-bold tracking-tight text-[color:var(--foreground)]">
-                      Build your first architecture
-                    </h2>
-                    <p className="text-xs text-[color:var(--foreground)]/60 leading-relaxed max-w-sm">
-                      Model distributed systems, trace request flows hop-by-hop, and simulate real-time caching, load balancing, and failure scenarios.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full">
-                    <button
-                      type="button"
-                      onClick={() => loadTemplate("cacheAside")}
-                      className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25 transition cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <FiFolder className="w-3.5 h-3.5" />
-                      <span>Load Template</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setIsAIAssistantOpen(true)}
-                      className="w-full py-2.5 px-4 rounded-xl text-xs font-bold border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 transition cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <FiCpu className="w-3.5 h-3.5" />
-                      <span>Architecture Assistant</span>
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const cId = `client_${uid.rnd()}`;
-                      const sId = `server_${uid.rnd()}`;
-                      const starterNodes: Node[] = [
-                        {
-                          id: cId,
-                          type: "customNode",
-                          position: { x: 140, y: 240 },
-                          data: {
-                            label: "Client 1",
-                            type: "client",
-                            ip: "192.168.1.10",
-                            port: 3000,
-                            flavor: "fetch",
-                          },
-                        },
-                        {
-                          id: sId,
-                          type: "customNode",
-                          position: { x: 440, y: 240 },
-                          data: {
-                            label: "API Server",
-                            type: "server",
-                            ip: "10.0.0.1",
-                            port: 8080,
-                            flavor: "node",
-                          },
-                        },
-                      ];
-                      const starterEdges: Edge[] = [
-                        {
-                          id: `e_${cId}_${sId}`,
-                          source: cId,
-                          target: sId,
-                          type: "animatedFlowEdge",
-                        },
-                      ];
-                      setNodes(starterNodes);
-                      setEdges(starterEdges);
-                      setSuccessToast("Blank canvas initialized with Client & Server!");
-                    }}
-                    className="text-[11px] font-mono text-[color:var(--foreground)]/45 hover:text-blue-400 transition cursor-pointer"
-                  >
-                    + Start with Blank Starter
-                  </button>
-                </div>
+            {/* Simulation Compiling HUD Indicator */}
+            {isCompilingSimulation && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+                <FlowLoader
+                  size="hud"
+                  label="Compiling Simulation Engine"
+                  sublabel="Tracing network paths & allocating buffer queues"
+                />
               </div>
             )}
 
             {/* Interactive Canvas Tip / First-Time Hint Banner */}
             {showCanvasTip && !isLoadingDiagram && (
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full border border-blue-500/30 bg-[var(--surface)]/90  px-3.5 py-1.5 shadow-lg text-xs animate-fade-in pointer-events-auto max-w-[90vw]">
-                <span className="flex h-2 w-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full border border-violet-500/30 bg-[var(--surface)]/90 backdrop-blur-md px-3.5 py-1.5 shadow-lg text-xs animate-fade-in pointer-events-auto max-w-[90vw]">
+                <span className="flex h-2 w-2 rounded-full bg-violet-400 animate-pulse shrink-0" />
                 <span className="text-[color:var(--foreground)]/85 text-[11px] truncate">
-                  <strong className="text-blue-400 font-semibold">Tip:</strong> Click any <strong>Client node</strong> directly on the canvas to trigger request simulations!
+                  <strong className="text-violet-400 font-semibold">Tip:</strong> Click any <strong>Client node</strong> directly on the canvas to trigger request simulations!
                 </span>
                 <button
                   type="button"
@@ -4974,7 +5097,7 @@ connect s1 -> r1
               onPaneClick={onPaneClick}
               fitView
               fitViewOptions={{ padding: 0.2 }}
-              snapToGrid={snapToGrid}
+              snapToGrid
               snapGrid={[20, 20]}
               minZoom={0.2}
               maxZoom={2.5}
@@ -5025,7 +5148,7 @@ connect s1 -> r1
             {/* System Health & Load Monitor Overlay */}
             {systemMetrics &&
               (showMetrics ? (
-                <div className="absolute top-16 left-4 z-10 w-72 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80  shadow-lg p-3 flex flex-col gap-2.5 font-sans select-none pointer-events-auto">
+                <div className="absolute top-16 left-4 z-10 w-72 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md shadow-lg p-3 flex flex-col gap-2.5 font-sans select-none pointer-events-auto">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-1.5">
                       <span className="relative flex h-2 w-2">
@@ -5062,7 +5185,7 @@ connect s1 -> r1
                         className="text-xs text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)]/70 transition p-1 hover:bg-[var(--surface-muted)] rounded cursor-pointer leading-none flex items-center justify-center w-5 h-5 border border-transparent"
                         title="Collapse Overlay"
                       >
-                        ×
+                        ✕
                       </button>
                     </div>
                   </div>
@@ -5101,8 +5224,9 @@ connect s1 -> r1
 
                   {systemMetrics.queuedRequests.length > 0 && (
                     <div className="flex flex-col gap-1 rounded-xl bg-rose-500/5 border border-rose-500/15 p-2">
-                      <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
-                        <FiAlertTriangle className="w-3 h-3 text-amber-400 shrink-0" /> Bottleneck: Database Wait
+                      <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1.5">
+                        <FiClock className="w-3 h-3 text-rose-400 shrink-0" />
+                        <span>Bottleneck: Database Wait</span>
                       </p>
                       <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
                         {systemMetrics.queuedRequests.map(
@@ -5122,7 +5246,7 @@ connect s1 -> r1
                   {systemMetrics.errorRequests.length > 0 && (
                     <div className="flex flex-col gap-1 rounded-xl bg-rose-500/10 border border-rose-500/20 p-2">
                       <p className="text-[8px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1.5">
-                        <FiXCircle className="w-3 h-3 text-rose-400" />
+                        <FiAlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
                         <span>Failures Detected</span>
                       </p>
                       <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
@@ -5144,7 +5268,7 @@ connect s1 -> r1
                     systemMetrics.warningRequests.length > 0 && (
                       <div className="flex flex-col gap-1 rounded-xl bg-amber-500/10 border border-amber-500/20 p-2">
                         <p className="text-[8px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1.5">
-                          <FiAlertTriangle className="w-3 h-3 text-amber-400" />
+                          <FiAlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
                           <span>Warnings Detected</span>
                         </p>
                         <div className="max-h-16 overflow-y-auto space-y-0.5 mt-0.5 scrollbar-thin">
@@ -5168,7 +5292,7 @@ connect s1 -> r1
                     (!systemMetrics.warningRequests ||
                       systemMetrics.warningRequests.length === 0) && (
                       <div className="flex items-center gap-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/15 p-1.5 text-emerald-400">
-                        <FiActivity className="w-3 h-3 text-emerald-400" />
+                        <FiCheckCircle className="w-3 h-3 text-emerald-400 shrink-0" />
                         <span className="text-[8px] font-bold uppercase tracking-wider">
                           Processing requests smoothly
                         </span>
@@ -5202,293 +5326,24 @@ connect s1 -> r1
                       }`}
                     ></span>
                   </span>
-                  <FiActivity className="w-3 h-3 text-blue-400" />
+                  <FiActivity className="w-3.5 h-3.5 text-violet-400 shrink-0" />
                   <span>Health & Load</span>
                 </button>
               ))}
 
-            {/* Minimal Technical Canvas Toolbar */}
-            <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none gap-2">
-              {/* Left Group: Primary Simulation Controls & Request Dispatcher */}
-              <div className="flex items-center gap-2 pointer-events-auto flex-wrap">
-                {/* Simulation Controls */}
-                <div className="flex items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md p-1 shadow-md">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (simulationFrames.length === 0) {
-                        handleStartSimulation();
-                      } else {
-                        setIsPlaying((prev) => !prev);
-                      }
-                    }}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition cursor-pointer"
-                    title={isPlaying ? "Pause Simulation (Space)" : "Run / Resume Simulation (Space)"}
-                  >
-                    {isPlaying ? <FiPause className="w-3.5 h-3.5 fill-current" /> : <FiPlay className="w-3.5 h-3.5 fill-current" />}
-                    <span>{isPlaying ? "Pause" : simulationFrames.length === 0 ? "Run" : "Resume"}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={goToPreviousFrame}
-                    disabled={frameIndex <= 0 || simulationFrames.length === 0}
-                    className="p-1.5 rounded-lg text-xs border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
-                    title="Previous Step"
-                  >
-                    <FiChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={goToNextFrame}
-                    disabled={frameIndex >= frameGroups.length - 1 || simulationFrames.length === 0}
-                    className="p-1.5 rounded-lg text-xs border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
-                    title="Next Step"
-                  >
-                    <FiChevronRight className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={resetPlayback}
-                    className="p-1.5 rounded-lg text-xs border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)] transition cursor-pointer"
-                    title="Reset Simulation"
-                  >
-                    <FiRotateCcw className="w-3.5 h-3.5" />
-                  </button>
-
-                  <div className="h-4 w-px bg-[var(--border)]" />
-
-                  {/* Speed Selector */}
-                  <div className="flex items-center gap-0.5 bg-[var(--surface-muted)] p-0.5 rounded-lg">
-                    {[1, 2, 4].map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setSpeed(s)}
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition cursor-pointer ${
-                          speed === s
-                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                            : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]"
-                        }`}
-                        title={`Speed ${s}x`}
-                      >
-                        {s}x
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Request Dispatcher */}
-                <div className="hidden lg:flex items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md p-1 shadow-md">
-                  <select
-                    value={activeMethod}
-                    onChange={(e) => setActiveMethod(e.target.value)}
-                    className="rounded-lg bg-[var(--surface-muted)] px-2 py-1 text-[11px] font-mono font-semibold text-blue-400 border border-[var(--border)] outline-none cursor-pointer"
-                  >
-                    <option value="GET">GET</option>
-                    <option value="POST">POST</option>
-                    <option value="PUT">PUT</option>
-                    <option value="DELETE">DELETE</option>
-                  </select>
-
-                  <input
-                    type="text"
-                    value={activeEndpoint}
-                    onChange={(e) => setActiveEndpoint(e.target.value)}
-                    placeholder="/api/v1/posts"
-                    className="w-32 rounded-lg bg-[var(--surface-muted)] px-2 py-1 text-[11px] font-mono text-[color:var(--foreground)] border border-[var(--border)] outline-none"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => handleExecuteRequest(activeMethod, activeEndpoint)}
-                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 transition cursor-pointer"
-                    title="Execute Request"
-                  >
-                    <FiPlay className="w-3 h-3 text-blue-400" />
-                    <span>Execute</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Right Group: Settings Popover, Assistant, Logs, Save */}
-              <div className="flex items-center gap-2 pointer-events-auto">
-                {/* Canvas Settings Menu Popover */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowSettingsMenu((prev) => !prev)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition cursor-pointer shadow-md text-xs font-semibold ${
-                      showSettingsMenu
-                        ? "border-blue-500/50 bg-blue-500/15 text-blue-400"
-                        : "border-[var(--border)] bg-[var(--surface)]/95 text-[color:var(--foreground)]/75 hover:bg-[var(--surface-muted)]"
-                    }`}
-                    title="Canvas & Grid Settings"
-                  >
-                    <FiSliders className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Settings</span>
-                  </button>
-
-                  {/* Settings Popover */}
-                  {showSettingsMenu && (
-                    <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3.5 shadow-2xl z-30 flex flex-col gap-3 animate-fade-in font-sans">
-                      <div className="flex items-center justify-between border-b border-[var(--border)] pb-2">
-                        <span className="text-xs font-bold text-[color:var(--foreground)]">Canvas Settings</span>
-                        <button
-                          type="button"
-                          onClick={() => setShowSettingsMenu(false)}
-                          className="text-xs text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)]"
-                        >
-                          ×
-                        </button>
-                      </div>
-
-                      {/* Grid Pattern */}
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] uppercase font-bold tracking-wider text-[color:var(--foreground)]/50 block">
-                          Grid Pattern
-                        </label>
-                        <div className="grid grid-cols-4 gap-1">
-                          {(["dots", "lines", "cross", "none"] as const).map((pattern) => (
-                            <button
-                              key={pattern}
-                              type="button"
-                              onClick={() => setBgPattern(pattern)}
-                              className={`py-1 rounded text-[10px] font-mono font-bold uppercase transition cursor-pointer ${
-                                bgPattern === pattern
-                                  ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-sm"
-                                  : "text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] bg-[var(--surface-muted)] border border-[var(--border)]"
-                              }`}
-                            >
-                              {pattern}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Grid Opacity */}
-                      {bgPattern !== "none" && (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between text-[10px] text-[color:var(--foreground)]/60">
-                            <span>Grid Opacity</span>
-                            <span className="font-mono text-blue-400 font-semibold">{Math.round(bgOpacity * 100)}%</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="0.05"
-                            max="0.70"
-                            step="0.05"
-                            value={bgOpacity}
-                            onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
-                            className="w-full h-1 rounded-lg bg-[var(--surface-muted)] appearance-none cursor-pointer accent-blue-500"
-                          />
-                        </div>
-                      )}
-
-                      {/* Snap to Grid */}
-                      <div className="flex items-center justify-between pt-1 border-t border-[var(--border)]">
-                        <span className="text-xs text-[color:var(--foreground)]/70">Snap to Grid</span>
-                        <input
-                          type="checkbox"
-                          checked={snapToGrid}
-                          onChange={(e) => setSnapToGrid(e.target.checked)}
-                          className="rounded accent-blue-500 cursor-pointer"
-                        />
-                      </div>
-
-                      {/* Zoom Controls */}
-                      <div className="flex items-center gap-1.5 pt-1 border-t border-[var(--border)]">
-                        <button
-                          type="button"
-                          onClick={() => zoomIn?.({ duration: 300 })}
-                          className="flex-1 py-1 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] text-[10px] font-semibold flex items-center justify-center gap-1"
-                          title="Zoom In"
-                        >
-                          <FiZoomIn className="w-3 h-3" />
-                          <span>Zoom In</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => zoomOut?.({ duration: 300 })}
-                          className="flex-1 py-1 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] text-[10px] font-semibold flex items-center justify-center gap-1"
-                          title="Zoom Out"
-                        >
-                          <FiZoomOut className="w-3 h-3" />
-                          <span>Zoom Out</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => fitView?.({ duration: 400 })}
-                          className="py-1 px-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] hover:bg-[var(--surface)] text-[10px] font-semibold flex items-center justify-center"
-                          title="Fit View"
-                        >
-                          <FiMaximize2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Architecture Assistant */}
-                <button
-                  type="button"
-                  onClick={() => setIsAIAssistantOpen((prev) => !prev)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold shadow-md transition cursor-pointer ${
-                    isAIAssistantOpen
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400"
-                  }`}
-                  title="Architecture Assistant"
-                >
-                  <FiCpu className="w-3.5 h-3.5 text-blue-400" />
-                  <span className="hidden sm:inline">Architecture Assistant</span>
-                </button>
-
-                {/* Logs Drawer Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setShowLogsDrawer((prev) => !prev)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition cursor-pointer shadow-md text-xs font-semibold ${
-                    showLogsDrawer
-                      ? "border-blue-500/50 bg-blue-500/20 text-blue-400"
-                      : "border-[var(--border)] bg-[var(--surface)]/95 text-[color:var(--foreground)]/75 hover:bg-[var(--surface-muted)]"
-                  }`}
-                  title="Toggle Execution Logs"
-                >
-                  <FiTerminal className="w-3.5 h-3.5" />
-                  <span>Logs ({accumulatedFrames.length})</span>
-                </button>
-
-                {/* Save diagram */}
-                {workspaceId && diagramId && (
-                  <button
-                    type="button"
-                    onClick={handleSaveDiagramToBackend}
-                    disabled={isSaving}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition cursor-pointer disabled:opacity-50"
-                    title="Save diagram to MongoDB (Ctrl+S)"
-                  >
-                    <FiSave className="w-3.5 h-3.5" />
-                    <span>{isSaving ? "Saving..." : "Save"}</span>
-                  </button>
-                )}
-              </div>
-            </div>
           </div>
 
           {/* Floating Warning Message */}
           {validationWarning && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4 animate-fade-in">
-              <div className="rounded-xl border border-amber-500/40 bg-[var(--surface)] px-4 py-3 text-xs text-amber-300 flex items-center justify-between shadow-lg">
-                <div className="flex items-center gap-2">
+              <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 backdrop-blur-xl px-4 py-3 text-xs text-amber-300 flex items-center justify-between shadow-lg">
+                <span className="flex items-center gap-1.5">
                   <FiAlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>{validationWarning}</span>
-                </div>
+                  {validationWarning}
+                </span>
                 <button
                   onClick={() => setValidationWarning(null)}
-                  className="text-amber-400 font-bold ml-2 text-base hover:text-amber-300"
+                  className="text-amber-400 font-bold ml-2 text-base hover:text-amber-300 cursor-pointer"
                 >
                   ×
                 </button>
@@ -5499,7 +5354,7 @@ connect s1 -> r1
           {/* Floating Success Message */}
           {successToast && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4 animate-fade-in">
-              <div className="rounded-xl border border-emerald-500/50 bg-emerald-500/10  px-4 py-3 text-xs text-emerald-300 flex items-center justify-between shadow-lg">
+              <div className="rounded-xl border border-emerald-500/50 bg-emerald-500/10 backdrop-blur-xl px-4 py-3 text-xs text-emerald-300 flex items-center justify-between shadow-lg">
                 <span className="flex items-center gap-1.5 font-medium">
                   <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -5508,7 +5363,7 @@ connect s1 -> r1
                 </span>
                 <button
                   onClick={() => setSuccessToast(null)}
-                  className="text-emerald-400 font-bold ml-2 text-base hover:text-emerald-300"
+                  className="text-emerald-400 font-bold ml-2 text-base hover:text-emerald-300 cursor-pointer"
                 >
                   ×
                 </button>
@@ -5516,128 +5371,152 @@ connect s1 -> r1
             </div>
           )}
 
-          {/* Floating Simulation Control Dock */}
-          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-auto max-w-[96vw]">
-            {/* Timeline Path Breadcrumb (shown when simulation has frames) */}
-            {simulationFrames.length > 0 && currentFrames.length > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-blue-500/30 bg-[var(--surface)]/90 backdrop-blur-md shadow-lg text-[10px] font-mono text-blue-300 animate-fade-in">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                <span className="font-semibold text-white/90">Path:</span>
-                <div className="flex items-center gap-1">
-                  {currentFrames.slice(0, 2).map((f: any, i: number) => (
-                    <span key={i} className="flex items-center gap-1">
-                      <span className="text-slate-300">{nodes.find((n) => n.id === f.from)?.data?.label || f.from}</span>
-                      <span className="text-blue-400">──▶</span>
-                      <span className="text-emerald-300 font-bold">{nodes.find((n) => n.id === f.to)?.data?.label || f.to}</span>
-                      {f.action && <span className="text-amber-300/90 text-[9px]">({f.action})</span>}
-                    </span>
-                  ))}
-                </div>
-              </div>
+          {/* Bottom Docked Playback / Timeline Terminal Panel */}
+          <div
+            style={{ height: debugEnabled ? `${panelHeight}px` : "auto" }}
+            className={`flex flex-col border-t border-[var(--border)] bg-[var(--surface)]/45 backdrop-blur-xl overflow-hidden shrink-0 z-10 w-full transition-all duration-150 ${selectedNode ? "max-md:hidden" : ""}`}
+          >
+            {/* Drag Handle */}
+            {debugEnabled && (
+              <div
+                onMouseDown={() => setIsDraggingTerminal(true)}
+                className="h-1 w-full cursor-row-resize bg-[var(--border)] hover:bg-violet-500/50 transition-colors shrink-0 mb-1"
+                title="Drag to resize terminal panel"
+              />
             )}
 
+            <div className="p-3 flex-1 flex flex-col gap-3 min-h-0 overflow-y-auto scrollbar-thin">
+              <div className="mx-auto flex w-full max-w-7xl flex-col gap-3">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div className="flex-1 overflow-x-auto min-w-0 scrollbar-thin">
+                    <Controls
+                      isPlaying={isPlaying}
+                      isCompiling={isCompilingSimulation}
+                      onPlayToggle={() => {
+                        if (isCompilingSimulation) return;
+                        if (simulationFrames.length === 0) {
+                          handleStartSimulation();
+                        } else {
+                          setIsPlaying((prev) => !prev);
+                        }
+                      }}
+                      onPrev={goToPreviousFrame}
+                      onNext={goToNextFrame}
+                      onReset={resetPlayback}
+                      onReframe={() => {
+                        handleStartSimulation();
+                        setFrameIndex(0);
+                        setIsPlaying(true);
+                      }}
+                      debugEnabled={debugEnabled}
+                      onDebugToggle={() => setDebugEnabled((prev) => !prev)}
+                      speed={speed}
+                      onSpeedChange={setSpeed}
+                      theme={theme}
+                    />
+                  </div>
 
-          </div>
+                  <div className="flex items-center gap-1.5 sm:gap-2 self-end md:self-auto shrink-0">
+                    <label
+                      title="Hide response/return packets flowing back"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-violet-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={hideResponse}
+                        onChange={() => setHideResponse((prev) => !prev)}
+                        className="accent-violet-500 cursor-pointer"
+                      />
+                      <span className="group-hover:text-violet-300">
+                        Hide Response
+                      </span>
+                    </label>
 
-          {/* Slide-Up Logs & Events Drawer */}
-          {showLogsDrawer && (
-            <motion.div
-              initial={{ y: 150, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 150, opacity: 0 }}
-              className="absolute bottom-0 left-0 right-0 z-30 max-h-[42vh] flex flex-col rounded-t-xl border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl p-3.5 gap-2.5 overflow-hidden"
-            >
-              <div className="flex items-center justify-between border-b border-[var(--border)] pb-2.5 shrink-0">
-                <div className="flex items-center gap-2">
-                  <FiTerminal className="w-3.5 h-3.5 text-blue-400" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider font-mono text-[color:var(--foreground)]">
-                    Execution Trace Log
-                  </h3>
-                  <span className="text-[10px] font-mono text-[color:var(--muted)]">
-                    [Step {simulationFrames.length > 0 ? frameIndex + 1 : 0} of {simulationFrames.length}]
-                  </span>
+                    <label
+                      title="Show parallel requests simultaneously"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[color:var(--foreground)] transition hover:border-blue-500/50 hover:bg-[var(--surface)]/80 whitespace-nowrap group"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={parallelResponse}
+                        onChange={() => setParallelResponse((prev) => !prev)}
+                        className="accent-violet-500 cursor-pointer"
+                      />
+                      <span className="group-hover:text-blue-300">
+                        Parallel
+                      </span>
+                    </label>
+
+                    <label
+                      title="Toggle live simulation logs & console"
+                      className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition whitespace-nowrap font-medium ${
+                        debugEnabled
+                          ? "border-violet-500/50 bg-violet-500/15 text-violet-300 shadow-sm"
+                          : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/70 hover:border-violet-500/30"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={debugEnabled}
+                        onChange={() => setDebugEnabled((prev) => !prev)}
+                        className="accent-violet-500 cursor-pointer"
+                      />
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>Logs</span>
+                    </label>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-1.5 text-[11px] text-[color:var(--foreground)]/70 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={hideResponse}
-                      onChange={() => setHideResponse((prev) => !prev)}
-                      className="accent-blue-500"
-                    />
-                    <span>Hide Return Packets</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 text-[11px] text-[color:var(--foreground)]/70 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={parallelResponse}
-                      onChange={() => setParallelResponse((prev) => !prev)}
-                      className="accent-blue-500"
-                    />
-                    <span>Parallel</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowLogsDrawer(false)}
-                    className="h-6 w-6 rounded-md hover:bg-[var(--surface-muted)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] flex items-center justify-center transition cursor-pointer"
-                    aria-label="Close logs drawer"
-                  >
-                    <FiX className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Timeline scrubber */}
-              <Timeline
-                frameIndex={frameIndex}
-                frameGroups={frameGroups}
-                onSeek={(idx) => {
-                  setIsPlaying(false);
-                  setFrameIndex(idx);
-                }}
-                theme={theme}
-              />
-
-              {/* Log entries container */}
-              <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin rounded-lg border border-[var(--border)] bg-[#070c18] p-2.5">
-                <DebugPanel
-                  currentFrames={accumulatedFrames}
+                <Timeline
                   frameIndex={frameIndex}
+                  frameGroups={frameGroups}
+                  onSeek={(idx) => {
+                    setIsPlaying(false);
+                    setFrameIndex(idx);
+                  }}
                   theme={theme}
                 />
+
+                {debugEnabled && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="min-h-0 flex-1"
+                  >
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 p-3 mt-1 shadow-inner">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-violet-400">
+                          Simulation Execution Logs
+                        </p>
+                        <span className="text-[10px] font-mono text-[color:var(--foreground)]/40">
+                          Frame {simulationFrames.length > 0 ? frameIndex + 1 : 0} / {simulationFrames.length}
+                        </span>
+                      </div>
+                      <DebugPanel
+                        currentFrames={accumulatedFrames}
+                        frameIndex={frameIndex}
+                        theme={theme}
+                      />
+                    </div>
+                  </motion.div>
+                )}
               </div>
-            </motion.div>
-          )}
-
-          {/* AI Architecture Assistant Slide-Over Drawer */}
-          <AIAssistantDrawer
-            isOpen={isAIAssistantOpen}
-            onClose={() => setIsAIAssistantOpen(false)}
-            nodes={nodes}
-            edges={edges}
-            nodeConfigs={nodeConfigs}
-            onApplyDsl={handleApplyAIDsl}
-            onRunSimulation={() => {
-              handleStartSimulation();
-              setFrameIndex(0);
-              setIsPlaying(true);
-            }}
-            theme={theme}
-          />
+            </div>
           </div>
+        </div>
 
-          {/* ── Anchored Right-Side Node Inspector ────────────────────────── */}
-          {/* Floating Inspector Panel — bottom sheet on mobile, right side on desktop */}
-          {selectedNode && (
-            <aside
-              className="
-              fixed inset-x-0 bottom-0 max-h-[55vh] z-40 border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl
-              md:static md:w-80 md:h-full md:max-h-none md:border-t-0 md:border-l md:border-[var(--border)] md:shadow-none
-              flex flex-col shrink-0 overflow-y-auto scrollbar-thin transition-all duration-200
-            "
-            >
-              <div className="p-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]/50">
+        {/* Docked Right Inspector Panel — bottom sheet on mobile, right-docked on desktop (Section 15) */}
+        {selectedNode && (
+          <aside
+            className="
+            fixed inset-x-0 bottom-0 max-h-[60vh] rounded-t-2xl border-t border-[var(--border)] z-50
+            md:static md:w-80 md:h-full md:max-h-full md:rounded-none md:border-t-0 md:border-l md:border-[var(--border)] md:z-20
+            bg-[var(--surface)] shadow-2xl md:shadow-none flex flex-col overflow-y-auto scrollbar-thin shrink-0 transition-all duration-200
+          "
+          >
+            <div className="p-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]/50">
                 <div>
                   <h2 className="text-sm font-bold tracking-tight text-[color:var(--foreground)]">
                     Node Inspector
@@ -5661,35 +5540,19 @@ connect s1 -> r1
               </div>
 
               <div className="p-4 flex-1 space-y-4">
-                {selectedNode.data.type === "client" ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleStartSimulation(selectedNode.id);
-                      setFrameIndex(0);
-                      setIsPlaying(true);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition cursor-pointer"
-                    title="Send HTTP request from this client"
-                  >
-                    <FiPlay className="w-3.5 h-3.5 fill-current" />
-                    <span>Send Request</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleStartSimulation();
-                      setFrameIndex(0);
-                      setIsPlaying(true);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] text-[11px] font-bold transition cursor-pointer"
-                    title="Re-run simulation with current changes"
-                  >
-                    <FiRefreshCw className="w-3 h-3" />
-                    <span>Re-run Simulation</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleStartSimulation();
+                    setFrameIndex(0);
+                    setIsPlaying(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[color:var(--accent)] text-[11px] font-bold transition cursor-pointer"
+                  title="Re-run simulation with current changes"
+                >
+                  <FiRotateCcw className="w-3.5 h-3.5" />
+                  <span>Re-run Simulation</span>
+                </button>
 
                 {/* Rename Node section */}
                 <div>
@@ -5710,7 +5573,7 @@ connect s1 -> r1
                         ),
                       );
                     }}
-                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[color:var(--foreground)] outline-none focus:border-blue-500 transition"
+                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[color:var(--foreground)] outline-none focus:border-violet-500 transition"
                   />
                 </div>
 
@@ -5836,7 +5699,7 @@ connect s1 -> r1
                                 ? "Left"
                                 : align === "right"
                                   ? "Right"
-                                  : "↕️ Center"}
+                                  : "Center"}
                             </button>
                           );
                         })}
@@ -5849,7 +5712,7 @@ connect s1 -> r1
                         <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55">
                           Font Size
                         </label>
-                        <span className="text-[11px] font-mono text-blue-400 font-bold bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                        <span className="text-[11px] font-mono text-violet-400 font-bold bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20">
                           {((selectedNode.data.fontSize as number) || (selectedNode.data.shapeId === "text" ? 15 : selectedNode.data.shapeId === "sticky" ? 12 : 11))}px
                         </span>
                       </div>
@@ -5870,7 +5733,7 @@ connect s1 -> r1
                               ),
                             );
                           }}
-                          className="flex-1 accent-blue-500 cursor-pointer h-1.5 bg-[var(--surface-muted)] rounded-lg"
+                          className="flex-1 accent-violet-500 cursor-pointer h-1.5 bg-[var(--surface-muted)] rounded-lg"
                         />
                         <div className="flex items-center gap-1">
                           <button
@@ -5930,7 +5793,7 @@ connect s1 -> r1
                               }}
                               className={`px-2 py-0.5 rounded-md text-[10px] font-mono transition cursor-pointer border ${
                                 isCur
-                                  ? "border-blue-500/70 bg-blue-500/20 text-blue-400 font-bold shadow-sm"
+                                  ? "border-violet-500/70 bg-violet-500/20 text-violet-400 font-bold shadow-sm"
                                   : "border-[var(--border)] bg-[var(--surface)] text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
                               }`}
                             >
@@ -5975,7 +5838,7 @@ connect s1 -> r1
 
                     <div className="h-px bg-[var(--border)]/70" />
 
-                    <p className="text-xs font-semibold text-blue-400 font-mono">
+                    <p className="text-xs font-semibold text-violet-400 font-mono">
                       Client Settings
                     </p>
 
@@ -5990,7 +5853,7 @@ connect s1 -> r1
                             valetKeyFlow: e.target.checked,
                           })
                         }
-                        className="accent-blue-500 cursor-pointer"
+                        className="accent-violet-500 cursor-pointer"
                       />
                       <span>Valet Key Flow</span>
                     </label>
@@ -6038,7 +5901,7 @@ connect s1 -> r1
                                   onClick={() => setActiveReqIdx(idx)}
                                   className={`text-[10px] px-2.5 py-1 rounded-t-md font-medium transition cursor-pointer border-t border-x ${
                                     idx === activeIdx
-                                      ? "bg-[var(--surface-muted)] border-[var(--border)] text-blue-400 font-bold -mb-[5px] pb-[5px]"
+                                      ? "bg-[var(--surface-muted)] border-[var(--border)] text-violet-400 font-bold -mb-[5px] pb-[5px]"
                                       : "border-transparent text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]/50"
                                   }`}
                                 >
@@ -6064,7 +5927,7 @@ connect s1 -> r1
                                   });
                                   setActiveReqIdx(nextReqs.length - 1);
                                 }}
-                                className="text-[9px] bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded transition cursor-pointer ml-auto"
+                                className="text-[9px] bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold px-2 py-0.5 rounded transition cursor-pointer ml-auto"
                               >
                                 + Add
                               </button>
@@ -6092,7 +5955,7 @@ connect s1 -> r1
                                   </button>
                                 )}
 
-                                <p className="text-[9px] font-bold text-blue-400">
+                                <p className="text-[9px] font-bold text-violet-400">
                                   Editing Request #{activeIdx + 1}
                                 </p>
 
@@ -6117,7 +5980,7 @@ connect s1 -> r1
                                               requests: currentRequests,
                                             });
                                           }}
-                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5 text-xs font-mono outline-none focus:border-blue-500 cursor-pointer text-[color:var(--foreground)]"
+                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5 text-xs font-mono outline-none focus:border-violet-500 cursor-pointer text-[color:var(--foreground)]"
                                         >
                                           <option value="GET">GET</option>
                                           <option value="POST">POST</option>
@@ -6145,7 +6008,7 @@ connect s1 -> r1
                                               requests: currentRequests,
                                             });
                                           }}
-                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-blue-500 text-[color:var(--foreground)]"
+                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
                                         />
                                       </div>
                                     </div>
@@ -6166,7 +6029,7 @@ connect s1 -> r1
                                             requests: currentRequests,
                                           });
                                         }}
-                                        className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-blue-500 text-[color:var(--foreground)]"
+                                        className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
                                       />
                                     </div>
                                     <div>
@@ -6220,7 +6083,7 @@ connect s1 -> r1
                                         }}
                                         rows={4}
                                         placeholder='{\n  "topic": "order.created",\n  "amount": 250\n}'
-                                        className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-blue-500 text-[color:var(--foreground)] resize-none"
+                                        className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)] resize-none"
                                       />
                                       {(() => {
                                         if (
@@ -6231,8 +6094,9 @@ connect s1 -> r1
                                             JSON.parse(activeReq.body);
                                           } catch (err: any) {
                                             return (
-                                              <span className="text-[9px] text-rose-500 mt-1 block leading-normal font-mono">
-                                                {err.message}
+                                              <span className="text-[9px] text-rose-500 mt-1 flex items-center gap-1 leading-normal font-mono">
+                                                <FiAlertCircle className="w-2.5 h-2.5 shrink-0" />
+                                                <span>{err.message}</span>
                                               </span>
                                             );
                                           }
@@ -6263,7 +6127,7 @@ connect s1 -> r1
                                               requests: currentRequests,
                                             });
                                           }}
-                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-blue-500 text-[color:var(--foreground)]"
+                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
                                         />
                                       </div>
                                       <div>
@@ -6288,7 +6152,7 @@ connect s1 -> r1
                                               requests: currentRequests,
                                             });
                                           }}
-                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-blue-500 text-[color:var(--foreground)]"
+                                          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-mono outline-none focus:border-violet-500 text-[color:var(--foreground)]"
                                           placeholder="media-uploads"
                                         />
                                       </div>
@@ -6308,7 +6172,7 @@ connect s1 -> r1
                                             requests: currentRequests,
                                           });
                                         }}
-                                        className="accent-blue-500"
+                                        className="accent-violet-500"
                                       />
                                       <span>Attach File Payload</span>
                                     </label>
@@ -6378,7 +6242,7 @@ connect s1 -> r1
                             strategy: e.target.value,
                           })
                         }
-                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-blue-500 cursor-pointer text-[color:var(--foreground)]"
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500 cursor-pointer text-[color:var(--foreground)]"
                       >
                         <option value="ROUND_ROBIN">Round Robin</option>
                         <option value="RANDOM">Random Dispatch</option>
@@ -6394,7 +6258,7 @@ connect s1 -> r1
                 {/* API Gateway Configuration */}
                 {selectedNode.data.type === "api-gateway" && (
                   <div className="space-y-4">
-                    <p className="text-xs font-semibold text-indigo-400 font-mono">
+                    <p className="text-xs font-semibold text-fuchsia-400 font-mono">
                       Gateway Settings
                     </p>
 
@@ -6441,7 +6305,7 @@ connect s1 -> r1
                             strategy: e.target.value,
                           })
                         }
-                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-blue-500 cursor-pointer"
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500 cursor-pointer"
                       >
                         <option value="ROUND_ROBIN">Round Robin</option>
                         <option value="RANDOM">Random Dispatch</option>
@@ -6630,13 +6494,15 @@ connect s1 -> r1
                                       {targetLabel}
                                     </span>
                                     {!isConnected && (
-                                      <span className="text-[8px] text-amber-500 font-semibold bg-amber-500/10 px-1 rounded">
-                                        [UNLINKED]
+                                      <span className="text-[8px] text-amber-500 font-semibold bg-amber-500/10 px-1 rounded flex items-center gap-0.5">
+                                        <FiAlertTriangle className="w-2.5 h-2.5" />
+                                        <span>Unlinked</span>
                                       </span>
                                     )}
                                     {isConnectedBackwards && (
-                                      <span className="text-[8px] text-rose-500 font-semibold bg-rose-500/10 px-1 rounded animate-pulse">
-                                        [REVERSE]
+                                      <span className="text-[8px] text-rose-500 font-semibold bg-rose-500/10 px-1 rounded animate-pulse flex items-center gap-0.5">
+                                        <FiAlertCircle className="w-2.5 h-2.5" />
+                                        <span>Reverse</span>
                                       </span>
                                     )}
                                     {isConnectedCorrectly && (
@@ -6657,7 +6523,7 @@ connect s1 -> r1
                                         serviceMapping: nextMapping,
                                       });
                                     }}
-                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1 text-xs outline-none focus:border-blue-500 cursor-pointer"
+                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1 text-xs outline-none focus:border-violet-500 cursor-pointer"
                                   >
                                     {dropdownChoices.map((opt: any) => (
                                       <option key={opt} value={opt}>
@@ -6843,7 +6709,7 @@ connect s1 -> r1
                             table: e.target.value,
                           })
                         }
-                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-mono outline-none focus:border-blue-500"
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-mono outline-none focus:border-violet-500"
                       />
                     </div>
 
@@ -6991,7 +6857,7 @@ connect s1 -> r1
                                         className={`text-[10px] font-mono font-bold ${info.exhausted ? "text-rose-400" : "text-cyan-400"}`}
                                       >
                                         {info.activeConnections}/{info.poolSize}
-                                        {info.exhausted ? " [WAIT]" : ""}
+                                        {info.exhausted ? " 🔴 WAIT" : ""}
                                       </span>
                                     </div>
                                     <div
@@ -7100,7 +6966,7 @@ connect s1 -> r1
                           </button>
 
                           <p className="text-[10px] font-bold text-indigo-400 font-mono">
-                            {domain}
+                            🌐 {domain}
                           </p>
 
                           <div className="space-y-2 pl-1.5 border-l border-[var(--border)]">
@@ -7476,7 +7342,7 @@ connect s1 -> r1
                             capacity: Number(e.target.value),
                           })
                         }
-                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-blue-500"
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-violet-500"
                       />
                     </div>
 
@@ -7694,7 +7560,7 @@ connect s1 -> r1
                                       endpoints: nextEndpoints,
                                     });
                                   }}
-                                  className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-blue-500"
+                                  className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500"
                                 />
                               </div>
 
@@ -8074,9 +7940,8 @@ connect s1 -> r1
                                   className="border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50 space-y-1.5"
                                 >
                                   <div className="flex items-center justify-between border-b border-[var(--border)]/45 pb-1">
-                                    <span className="text-[10px] font-bold text-yellow-500 font-mono flex items-center gap-1.5">
-                                      <FiFolder className="w-3 h-3 text-yellow-500" />
-                                      <span>{bucketName}</span>
+                                    <span className="text-[10px] font-bold text-yellow-500 font-mono">
+                                      📁 {bucketName}
                                     </span>
                                     <span className="text-[9px] text-[color:var(--foreground)]/55 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-semibold">
                                       {filesInBucket.length} file
@@ -8107,10 +7972,7 @@ connect s1 -> r1
                                               className="text-[11px] bg-[var(--surface)] p-1.5 rounded border border-[var(--border)]/35 font-mono flex flex-col gap-0.5"
                                             >
                                               <div className="flex justify-between items-center text-xs font-semibold text-[color:var(--foreground)]/80">
-                                                <span className="flex items-center gap-1.5">
-                                                  <FiFileText className="w-3 h-3 text-slate-400" />
-                                                  <span>{fileName}</span>
-                                                </span>
+                                                <span>📄 {fileName}</span>
                                               </div>
                                               {info && (
                                                 <div className="text-[9px] text-[color:var(--foreground)]/50 mt-0.5 flex flex-col gap-0.5 border-t border-[var(--border)]/20 pt-1">
@@ -8144,75 +8006,6 @@ connect s1 -> r1
 
                 <div className="h-px bg-[var(--border)]/70 pt-2" />
 
-                {/* ── Connections Section ───────────────────────────────────── */}
-                <div className="pt-2 border-t border-[var(--border)]/70">
-                  <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                    Active Connections ({edges.filter((e) => e.source === selectedNodeId || e.target === selectedNodeId).length})
-                  </label>
-                  
-                  <div className="space-y-2.5">
-                    {/* Inbound Connections */}
-                    <div>
-                      <span className="text-[8.5px] font-mono text-[color:var(--foreground)]/45 uppercase tracking-wider block mb-1">Inbound (Source → This Node)</span>
-                      {(() => {
-                        const inEdges = edges.filter((e) => e.target === selectedNodeId);
-                        if (inEdges.length === 0) {
-                          return <p className="text-[10px] text-[color:var(--foreground)]/40 italic">No incoming connections</p>;
-                        }
-                        return (
-                          <div className="space-y-1">
-                            {inEdges.map((e) => {
-                              const srcNode = nodes.find((n) => n.id === e.source);
-                              const srcLabel = String((srcNode?.data as any)?.label || e.source);
-                              const srcType = String((srcNode?.data as any)?.type || "node");
-                              return (
-                                <div key={e.id} className="flex items-center justify-between p-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] text-[11px]">
-                                  <div className="flex items-center gap-1.5 truncate">
-                                    <FiArrowLeft className="w-3 h-3 text-blue-400 shrink-0" />
-                                    <span className="font-semibold text-[color:var(--foreground)] truncate">{srcLabel}</span>
-                                    <span className="text-[9px] font-mono text-[color:var(--foreground)]/45 shrink-0">({srcType})</span>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
-                    </div>
-
-                    {/* Outbound Connections */}
-                    <div>
-                      <span className="text-[8.5px] font-mono text-[color:var(--foreground)]/45 uppercase tracking-wider block mb-1">Outbound (This Node → Target)</span>
-                      {(() => {
-                        const outEdges = edges.filter((e) => e.source === selectedNodeId);
-                        if (outEdges.length === 0) {
-                          return <p className="text-[10px] text-[color:var(--foreground)]/40 italic">No outgoing connections</p>;
-                        }
-                        return (
-                          <div className="space-y-1">
-                            {outEdges.map((e) => {
-                              const tgtNode = nodes.find((n) => n.id === e.target);
-                              const tgtLabel = String((tgtNode?.data as any)?.label || e.target);
-                              const tgtType = String((tgtNode?.data as any)?.type || "node");
-                              return (
-                                <div key={e.id} className="flex items-center justify-between p-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] text-[11px]">
-                                  <div className="flex items-center gap-1.5 truncate">
-                                    <FiArrowRight className="w-3 h-3 text-emerald-400 shrink-0" />
-                                    <span className="font-semibold text-[color:var(--foreground)] truncate">{tgtLabel}</span>
-                                    <span className="text-[9px] font-mono text-[color:var(--foreground)]/45 shrink-0">({tgtType})</span>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="h-px bg-[var(--border)]/70 pt-1" />
-
                 {/* Delete component helper */}
                 <button
                   onClick={() => {
@@ -8235,17 +8028,16 @@ connect s1 -> r1
                 </button>
               </div>
             </aside>
-
           )}
         </div>
 
         {/* Welcome Modal & Template Picker Dialog */}
         {showWelcomeModal && (
-          <div className="absolute inset-0 bg-slate-950/60  z-40 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-md z-40 flex items-center justify-center p-4">
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto scrollbar-thin z-50 relative flex flex-col gap-5">
               <button
                 type="button"
-                onClick={() => closeWelcomeModal()}
+                onClick={() => setShowWelcomeModal(false)}
                 className="absolute top-4 right-4 text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] h-8 w-8 rounded-full flex items-center justify-center font-bold transition cursor-pointer"
                 title="Close"
               >
@@ -8255,7 +8047,7 @@ connect s1 -> r1
               <div className="text-center">
                 <ComponentIcon
                   type="client"
-                  className="w-10 h-10 mx-auto text-blue-400"
+                  className="w-10 h-10 mx-auto text-violet-400"
                 />
                 <h1 className="text-xl font-bold tracking-tight text-[color:var(--foreground)] mt-2">
                   Welcome to FlowFrame Sandbox
@@ -8278,13 +8070,13 @@ connect s1 -> r1
                     type="button"
                     onClick={() => {
                       loadTemplate("cacheAside");
-                      closeWelcomeModal();
+                      setShowWelcomeModal(false);
                     }}
-                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-blue-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
+                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-violet-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
                     <div className="flex items-center gap-2">
                       <svg
-                        className="w-5 h-5 text-blue-400 group-hover:scale-110 transition duration-150"
+                        className="w-5 h-5 text-violet-400 group-hover:scale-110 transition duration-150"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -8301,7 +8093,7 @@ connect s1 -> r1
                         <line x1="2" y1="10" x2="22" y2="10" />
                         <line x1="12" y1="10" x2="12" y2="21" />
                       </svg>
-                      <span className="font-bold text-xs group-hover:text-blue-400 transition">
+                      <span className="font-bold text-xs group-hover:text-violet-400 transition">
                         Cache Aside
                       </span>
                     </div>
@@ -8315,7 +8107,7 @@ connect s1 -> r1
                     type="button"
                     onClick={() => {
                       loadTemplate("loadBalancing");
-                      closeWelcomeModal();
+                      setShowWelcomeModal(false);
                     }}
                     className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-blue-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
@@ -8345,7 +8137,7 @@ connect s1 -> r1
                     type="button"
                     onClick={() => {
                       loadTemplate("valetKey");
-                      closeWelcomeModal();
+                      setShowWelcomeModal(false);
                     }}
                     className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-yellow-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
@@ -8381,13 +8173,13 @@ connect s1 -> r1
                     type="button"
                     onClick={() => {
                       loadTemplate("apiGateway");
-                      closeWelcomeModal();
+                      setShowWelcomeModal(false);
                     }}
-                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-indigo-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
+                    className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-fuchsia-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
                     <div className="flex items-center gap-2">
                       <svg
-                        className="w-5 h-5 text-indigo-400 group-hover:scale-110 transition duration-150"
+                        className="w-5 h-5 text-fuchsia-400 group-hover:scale-110 transition duration-150"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -8395,7 +8187,7 @@ connect s1 -> r1
                       >
                         <path d="M9 3H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM21 3h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" />
                       </svg>
-                      <span className="font-bold text-xs group-hover:text-indigo-400 transition">
+                      <span className="font-bold text-xs group-hover:text-fuchsia-400 transition">
                         API Gateway
                       </span>
                     </div>
@@ -8409,7 +8201,7 @@ connect s1 -> r1
                     type="button"
                     onClick={() => {
                       loadTemplate("messageQueue");
-                      closeWelcomeModal();
+                      setShowWelcomeModal(false);
                     }}
                     className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-emerald-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
@@ -8431,7 +8223,7 @@ connect s1 -> r1
                     type="button"
                     onClick={() => {
                       loadTemplate("pubSub");
-                      closeWelcomeModal();
+                      setShowWelcomeModal(false);
                     }}
                     className="flex flex-col text-left p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-pink-500/60 transition cursor-pointer hover:bg-[var(--surface)] group"
                   >
@@ -8461,7 +8253,7 @@ connect s1 -> r1
                 </p>
                 <button
                   type="button"
-                  onClick={() => closeWelcomeModal()}
+                  onClick={() => setShowWelcomeModal(false)}
                   className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 hover:bg-[var(--surface-muted)] text-xs font-semibold px-4 py-2 transition cursor-pointer"
                 >
                   Start with Blank Canvas →
@@ -8473,12 +8265,12 @@ connect s1 -> r1
 
         {/* ── Help / How to Use Modal ────────────────────────────────────── */}
         {showHelpModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50  transition-all">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md transition-all">
             <div className="w-[500px] max-w-[95vw] rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
                 <div className="flex items-center gap-2">
                   <svg
-                    className="w-5 h-5 text-blue-400"
+                    className="w-5 h-5 text-violet-400"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -8513,7 +8305,7 @@ connect s1 -> r1
                 <div className="flex gap-3">
                   <div className="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex items-center justify-center shrink-0">
                     <svg
-                      className="w-4 h-4 text-blue-400"
+                      className="w-4 h-4 text-violet-400"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -8624,7 +8416,7 @@ connect s1 -> r1
                 <button
                   type="button"
                   onClick={() => setShowHelpModal(false)}
-                  className="rounded-xl border border-blue-500/30 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 text-xs font-semibold px-4 py-2 transition cursor-pointer"
+                  className="rounded-xl border border-violet-500/30 bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 text-xs font-semibold px-4 py-2 transition cursor-pointer"
                 >
                   Got it, close guide
                 </button>
@@ -8635,7 +8427,7 @@ connect s1 -> r1
 
         {/* ── Share Modal ────────────────────────────────────────────────── */}
         {showShareModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60  transition-all animate-fade-in p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md transition-all animate-fade-in p-4">
             <div className="w-[500px] max-w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl space-y-5 relative">
               <button
                 type="button"
@@ -8647,7 +8439,7 @@ connect s1 -> r1
               </button>
 
               <div className="text-center">
-                <div className="w-10 h-10 mx-auto rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
+                <div className="w-10 h-10 mx-auto rounded-full bg-violet-500/10 flex items-center justify-center text-violet-400">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
@@ -8667,7 +8459,7 @@ connect s1 -> r1
               {(diagramId || shareId) && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-blue-400 font-mono">
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-violet-400 font-mono">
                       Public Share Link
                     </p>
                     <span className="text-[10px] text-emerald-400 font-mono font-semibold">
@@ -8679,7 +8471,7 @@ connect s1 -> r1
                       type="text"
                       readOnly
                       value={`${typeof window !== "undefined" ? window.location.origin : ""}/share/${diagramId || shareId}`}
-                      className="flex-1 rounded-xl border border-blue-500/30 bg-[var(--surface-muted)] px-3 py-2 text-xs font-mono text-blue-400 select-all outline-none"
+                      className="flex-1 rounded-xl border border-violet-500/30 bg-[var(--surface-muted)] px-3 py-2 text-xs font-mono text-violet-400 select-all outline-none"
                     />
                     <button
                       type="button"
@@ -8688,7 +8480,7 @@ connect s1 -> r1
                         navigator.clipboard.writeText(url);
                         setSuccessToast("Public share link copied to clipboard!");
                       }}
-                      className="btn-primary px-4 py-2 rounded-xl text-white text-xs font-bold transition shadow-sm cursor-pointer whitespace-nowrap"
+                      className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition shadow-sm cursor-pointer whitespace-nowrap"
                     >
                       Copy Link
                     </button>
@@ -8707,7 +8499,7 @@ connect s1 -> r1
                 <button
                   type="button"
                   onClick={downloadCanvasImage}
-                  className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/15 text-blue-500 dark:text-blue-400 text-xs font-semibold transition active:scale-95 text-center cursor-pointer shadow-sm hover:shadow"
+                  className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/15 text-violet-500 dark:text-violet-400 text-xs font-semibold transition active:scale-95 text-center cursor-pointer shadow-sm hover:shadow"
                 >
                   <svg
                     className="w-4 h-4 shrink-0"
@@ -8779,9 +8571,9 @@ connect s1 -> r1
                       setCopiedTemplate(true);
                       setTimeout(() => setCopiedTemplate(false), 2000);
                     }}
-                    className="text-[10px] text-blue-400 hover:text-blue-300 font-bold tracking-tight bg-transparent border-0 cursor-pointer"
+                    className="text-[10px] text-violet-400 hover:text-violet-300 font-bold tracking-tight bg-transparent border-0 cursor-pointer"
                   >
-                    {copiedTemplate ? "Copied" : "Copy Template"}
+                    {copiedTemplate ? "Copied ✓" : "Copy Template"}
                   </button>
                 </div>
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-[10px] text-[color:var(--foreground)]/60 leading-relaxed font-sans max-h-24 overflow-y-auto scrollbar-thin select-all">
@@ -8797,7 +8589,7 @@ connect s1 -> r1
       {/* Mobile Sidebar Backdrop Overlay */}
       {isSidebarOpenMobile && (
         <div
-          className="md:hidden fixed inset-0 bg-slate-950/40  z-20"
+          className="md:hidden fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-20"
           onClick={() => setIsSidebarOpenMobile(false)}
         />
       )}
@@ -8805,24 +8597,57 @@ connect s1 -> r1
       {/* Modern Hover Tooltip Popover (Floats at page level, non-clipping) */}
       {hoveredComponent && (
         <div
-          className="fixed z-50 w-56 p-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)]/95  shadow-2xl pointer-events-none text-left"
+          className="fixed z-50 w-56 p-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md shadow-2xl pointer-events-none text-left"
           style={{
             left: `${hoverTooltipX}px`,
             top: `${hoverTooltipY}px`,
             transform: "translateY(-50%)",
           }}
         >
-          <p className="text-xs font-bold text-blue-400">
+          <p className="text-xs font-bold text-violet-400">
             {hoveredComponent.label}
           </p>
           <p className="text-[10px] text-[color:var(--foreground)]/75 mt-1 leading-normal">
             {hoveredComponent.description}
           </p>
-          <p className="text-[9px] text-blue-300/60 mt-1.5 font-bold uppercase tracking-wider">
+          <p className="text-[9px] text-violet-300/60 mt-1.5 font-bold uppercase tracking-wider">
             Click to add · Drag to place
           </p>
         </div>
       )}
+
+      {/* AI Architecture Assistant Drawer */}
+      <AIAssistantDrawer
+        isOpen={isAIAssistantOpen}
+        onClose={() => setIsAIAssistantOpen(false)}
+        nodes={nodes}
+        edges={edges}
+        nodeConfigs={nodeConfigs}
+        theme={theme}
+        onApplyDsl={(code: string, explanation: string) => {
+          try {
+            const output = compileDSL(code);
+            if (!output.nodes || output.nodes.length === 0) {
+              setValidationWarning("No nodes generated from AI architecture DSL.");
+              return;
+            }
+            setDslCode(code);
+            setNodes(output.nodes);
+            setEdges(output.edges);
+            setNodeConfigs(output.nodeConfigs || {});
+            setValidationWarning(null);
+            setSuccessToast(explanation || "AI Architecture applied to canvas!");
+            setTimeout(() => {
+              fitView({ duration: 600 });
+            }, 150);
+          } catch (err: any) {
+            setValidationWarning(`Failed to apply architecture: ${err.message || err}`);
+          }
+        }}
+        onRunSimulation={() => {
+          handleStartSimulation();
+        }}
+      />
     </main>
   );
 }
