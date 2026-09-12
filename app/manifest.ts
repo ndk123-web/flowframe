@@ -13,25 +13,25 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     icons: [
       {
-        src: "/logo/flow-frame-dark.png",
+        src: "/logo/flow-frame-light.png",
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/logo/flow-frame-dark.png",
+        src: "/logo/flow-frame-light.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/logo/flow-frame-dark.png",
+        src: "/logo/flow-frame-light.png",
         sizes: "192x192",
         type: "image/png",
         purpose: "maskable",
       },
       {
-        src: "/logo/flow-frame-dark.png",
+        src: "/logo/flow-frame-light.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",

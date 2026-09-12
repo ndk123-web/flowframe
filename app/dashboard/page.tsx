@@ -13,6 +13,8 @@ import {
   FiActivity,
   FiBookOpen,
   FiBookmark,
+  FiCode,
+  FiChevronDown,
   FiFileText,
   FiChevronLeft,
   FiChevronRight,
@@ -54,7 +56,6 @@ import {
   CreditCardIcon,
   DocsIcon,
 } from "@/components/DashboardIcons";
-import ArchitectureBackground from "@/components/ArchitectureBackground";
 
 import {
   getUserWorkspaces,
@@ -63,7 +64,7 @@ import {
   deleteWorkspace,
   WorkspaceDTO,
 } from "@/services/workspaceApi";
-import { getRecentDiagrams, RecentDiagramDTO } from "@/services/diagramApi";
+import { getRecentDiagrams, getWorkspaceDiagrams, RecentDiagramDTO } from "@/services/diagramApi";
 import { formatDate } from "@/utils/formatDate";
 
 type ViewMode = "grid" | "list";
@@ -245,7 +246,35 @@ export default function DashboardPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeNav, setActiveNav] = useState<"workspaces" | "recent">("workspaces");
+  const [selectedWsId, setSelectedWsId] = useState<string | null>(null);
+  const [expandedWorkspaces, setExpandedWorkspaces] = useState<Record<string, boolean>>({});
+  const [workspaceDiagramsMap, setWorkspaceDiagramsMap] = useState<Record<string, RecentDiagramDTO[]>>({});
   const [aiPrompt, setAiPrompt] = useState("");
+
+  const toggleWorkspaceExpand = async (wsId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpandedWorkspaces((prev) => ({ ...prev, [wsId]: !prev[wsId] }));
+    if (!workspaceDiagramsMap[wsId] && token) {
+      try {
+        const diags = await getWorkspaceDiagrams(wsId, token);
+        setWorkspaceDiagramsMap((prev) => ({
+          ...prev,
+          [wsId]: diags.map((d) => ({
+            id: d.id,
+            workspace_id: d.workspace_id,
+            workspace_name: "",
+            title: d.title,
+            env: "",
+            nodes_count: d.nodes_count || 0,
+            updated_at: d.updated_at,
+          })),
+        }));
+      } catch (err) {
+        console.error("Failed to fetch diagrams for workspace:", err);
+      }
+    }
+  };
 
   // Create Workspace modal states
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -327,6 +356,7 @@ export default function DashboardPage() {
 
   const filteredWorkspaces = useMemo(() => {
     return workspaces.filter((w) => {
+      if (selectedWsId && w.id !== selectedWsId) return false;
       const matchesSearch =
         w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         w.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -336,7 +366,7 @@ export default function DashboardPage() {
       if (activeTab === "production") return matchesSearch && w.env === "PROD";
       return matchesSearch;
     });
-  }, [workspaces, searchQuery, activeTab]);
+  }, [workspaces, searchQuery, activeTab, selectedWsId]);
 
   const toggleStar = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -551,109 +581,301 @@ export default function DashboardPage() {
           </div>
 
           {/* Sidebar Nav Items */}
-          <div className="p-2 space-y-1">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveNav("workspaces");
-                setMobileMenuOpen(false);
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                activeNav === "workspaces"
-                  ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
-                  : "text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)]"
-              } ${sidebarCollapsed && !mobileMenuOpen ? "justify-center px-0" : ""}`}
-              title="Workspaces"
-            >
-              <FiGrid className="w-4 h-4 shrink-0" />
-              {(!sidebarCollapsed || mobileMenuOpen) && (
-                <div className="flex items-center justify-between flex-1">
-                  <span>Workspaces</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[color:var(--muted)]">
-                    {workspaces.length}
-                  </span>
-                </div>
-              )}
-            </button>
+          <div className="p-2 space-y-3">
+            {sidebarCollapsed && !mobileMenuOpen ? (
+              /* Collapsed Icons Only */
+              <div className="space-y-2 flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveNav("workspaces");
+                    setSelectedWsId(null);
+                  }}
+                  className={`p-2.5 rounded-lg transition cursor-pointer ${
+                    activeNav === "workspaces"
+                      ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
+                      : "text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)]"
+                  }`}
+                  title="Workspaces"
+                >
+                  <FiFolder className="w-4 h-4" />
+                </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setActiveNav("recent");
-                setMobileMenuOpen(false);
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                activeNav === "recent"
-                  ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
-                  : "text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)]"
-              } ${sidebarCollapsed && !mobileMenuOpen ? "justify-center px-0" : ""}`}
-              title="Recent Diagrams"
-            >
-              <FiClock className="w-4 h-4 shrink-0" />
-              {(!sidebarCollapsed || mobileMenuOpen) && (
-                <div className="flex items-center justify-between flex-1">
-                  <span>Recent Diagrams</span>
-                  {recentDiagrams.length > 0 && (
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[color:var(--muted)]">
-                      {recentDiagrams.length}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveNav("recent");
+                    setSelectedWsId(null);
+                  }}
+                  className={`p-2.5 rounded-lg transition cursor-pointer ${
+                    activeNav === "recent"
+                      ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
+                      : "text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)]"
+                  }`}
+                  title="Recent Diagrams"
+                >
+                  <FiClock className="w-4 h-4" />
+                </button>
+
+                <div className="w-6 h-px bg-[var(--border)] my-1" />
+
+                <Link
+                  href="/scenarios"
+                  className="p-2.5 rounded-lg text-[color:var(--muted)] hover:text-emerald-400 hover:bg-[var(--bg-elevated)] transition"
+                  title="Scenarios"
+                >
+                  <FiSliders className="w-4 h-4" />
+                </Link>
+
+                <Link
+                  href="/learn"
+                  className="p-2.5 rounded-lg text-[color:var(--muted)] hover:text-indigo-400 hover:bg-[var(--bg-elevated)] transition"
+                  title="Learn Academy"
+                >
+                  <FiBookOpen className="w-4 h-4" />
+                </Link>
+
+                <Link
+                  href="/learn/glossary"
+                  className="p-2.5 rounded-lg text-[color:var(--muted)] hover:text-amber-400 hover:bg-[var(--bg-elevated)] transition"
+                  title="Systems Glossary"
+                >
+                  <FiBookmark className="w-4 h-4" />
+                </Link>
+
+                <Link
+                  href="/docs"
+                  className="p-2.5 rounded-lg text-[color:var(--muted)] hover:text-cyan-400 hover:bg-[var(--bg-elevated)] transition"
+                  title="Documentation"
+                >
+                  <FiFileText className="w-4 h-4" />
+                </Link>
+              </div>
+            ) : (
+              /* Expanded Hierarchical Sidebar */
+              <>
+                {/* 1. WORKSPACES HIERARCHY */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between px-2.5 py-1">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
+                      Workspaces
                     </span>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => setCreateModalOpen(true)}
+                      className="p-1 rounded text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:bg-[var(--bg-elevated)] transition cursor-pointer"
+                      title="Create New Workspace"
+                    >
+                      <FiPlus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-0.5">
+                    {/* All Workspaces Root Filter */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveNav("workspaces");
+                        setSelectedWsId(null);
+                        setMobileMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                        activeNav === "workspaces" && selectedWsId === null
+                          ? "bg-[var(--accent)]/15 text-[color:var(--accent)]"
+                          : "text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FiGrid className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">All Systems</span>
+                      </div>
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[var(--bg-elevated)] text-[color:var(--muted)]">
+                        {workspaces.length}
+                      </span>
+                    </button>
+
+                    {/* Workspaces Tree with Expandable Child Diagrams */}
+                    {workspaces.map((ws) => {
+                      const isExpanded = !!expandedWorkspaces[ws.id];
+                      const childDiagrams =
+                        workspaceDiagramsMap[ws.id] ||
+                        recentDiagrams.filter((d) => d.workspace_id === ws.id);
+                      const isSelected = activeNav === "workspaces" && selectedWsId === ws.id;
+
+                      return (
+                        <div key={ws.id} className="space-y-0.5">
+                          <div
+                            className={`group flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition cursor-pointer ${
+                              isSelected
+                                ? "bg-[var(--accent)]/15 text-[color:var(--accent)] font-semibold"
+                                : "text-[color:var(--foreground)]/80 hover:bg-[var(--bg-elevated)] hover:text-[color:var(--foreground)]"
+                            }`}
+                            onClick={() => {
+                              setSelectedWsId(ws.id);
+                              setActiveNav("workspaces");
+                            }}
+                          >
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                              <button
+                                type="button"
+                                onClick={(e) => toggleWorkspaceExpand(ws.id, e)}
+                                className="p-0.5 rounded text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition cursor-pointer"
+                                title={isExpanded ? "Collapse" : "Expand"}
+                              >
+                                {isExpanded ? (
+                                  <FiChevronDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <FiChevronRight className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                              <FiFolder className="w-3.5 h-3.5 text-[color:var(--accent)] shrink-0" />
+                              <span className="truncate text-xs">{ws.name}</span>
+                            </div>
+                            <span
+                              className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border shrink-0 ${
+                                ws.env === "PROD"
+                                  ? "bg-[var(--red-muted)] border-[var(--red)]/25 text-[color:var(--red)]"
+                                  : ws.env === "STAGING"
+                                  ? "bg-[var(--amber-muted)] border-[var(--amber)]/25 text-[color:var(--amber)]"
+                                  : "bg-[var(--accent)]/10 border-[var(--accent)]/20 text-[color:var(--accent)]"
+                              }`}
+                            >
+                              {ws.env}
+                            </span>
+                          </div>
+
+                          {/* Expanded Child Architecture Diagrams */}
+                          {isExpanded && (
+                            <div className="pl-6 pr-1 py-0.5 space-y-0.5 border-l border-[var(--border)] ml-4">
+                              {childDiagrams.length > 0 ? (
+                                childDiagrams.map((diag) => (
+                                  <Link
+                                    key={diag.id}
+                                    href={`/dashboard/workspace/${ws.id}/${diag.id}`}
+                                    className="flex items-center gap-2 px-2 py-1 rounded text-[11px] text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:bg-[var(--bg-elevated)] transition truncate"
+                                    title={diag.title}
+                                  >
+                                    <FiLayers className="w-3 h-3 shrink-0 text-[color:var(--muted)]" />
+                                    <span className="truncate">{diag.title}</span>
+                                  </Link>
+                                ))
+                              ) : (
+                                <div className="px-2 py-1 text-[10px] text-[color:var(--muted)] italic flex items-center justify-between">
+                                  <span>No diagrams yet</span>
+                                  <Link
+                                    href={`/dashboard/workspace/${ws.id}`}
+                                    className="text-[color:var(--accent)] hover:underline not-italic font-medium"
+                                  >
+                                    + Add
+                                  </Link>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
-            </button>
 
-            <div className="pt-3 pb-1">
-              {(!sidebarCollapsed || mobileMenuOpen) && (
-                <p className="px-3 text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
-                  Explore & Learn
-                </p>
-              )}
-              <div className="h-px bg-[var(--border)] my-1.5" />
-            </div>
+                {/* 2. RECENT ACTIVITY / DIAGRAMS */}
+                <div className="pt-2 space-y-1">
+                  <div className="flex items-center justify-between px-2.5 py-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveNav("recent");
+                        setSelectedWsId(null);
+                        setMobileMenuOpen(false);
+                      }}
+                      className="text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)] hover:text-[color:var(--foreground)] flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <FiClock className="w-3 h-3 text-[color:var(--accent)]" />
+                      <span>Recent Activity</span>
+                    </button>
+                    {recentDiagrams.length > 0 && (
+                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[var(--bg-elevated)] text-[color:var(--muted)]">
+                        {recentDiagrams.length}
+                      </span>
+                    )}
+                  </div>
 
-            <Link
-              href="/scenarios"
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition ${
-                sidebarCollapsed && !mobileMenuOpen ? "justify-center px-0" : ""
-              }`}
-              title="Scenarios"
-            >
-              <FiSliders className="w-4 h-4 shrink-0 text-emerald-400" />
-              {(!sidebarCollapsed || mobileMenuOpen) && <span>Scenarios</span>}
-            </Link>
+                  <div className="space-y-0.5">
+                    {recentDiagrams.slice(0, 5).map((diag) => (
+                      <Link
+                        key={diag.id}
+                        href={`/dashboard/workspace/${diag.workspace_id}/${diag.id}`}
+                        className="flex flex-col px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-elevated)] transition group"
+                        title={`Open ${diag.title}`}
+                      >
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="text-xs font-medium text-[color:var(--foreground)] truncate group-hover:text-[color:var(--accent)] transition-colors">
+                            {diag.title}
+                          </span>
+                          <span className="text-[9px] font-mono text-[color:var(--muted)] shrink-0">
+                            {formatDate(diag.updated_at)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-[color:var(--muted)] truncate mt-0.5">
+                          <span className="truncate">{diag.workspace_name}</span>
+                          <span>·</span>
+                          <span className="font-mono">{diag.nodes_count || 0} nodes</span>
+                        </div>
+                      </Link>
+                    ))}
+                    {recentDiagrams.length === 0 && (
+                      <p className="px-2.5 py-1 text-[11px] text-[color:var(--muted)] italic">
+                        No recent diagrams opened
+                      </p>
+                    )}
+                  </div>
+                </div>
 
-            <Link
-              href="/learn"
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition ${
-                sidebarCollapsed && !mobileMenuOpen ? "justify-center px-0" : ""
-              }`}
-              title="Learn Academy"
-            >
-              <FiBookOpen className="w-4 h-4 shrink-0 text-indigo-400" />
-              {(!sidebarCollapsed || mobileMenuOpen) && <span>Learn Academy</span>}
-            </Link>
+                {/* 3. EXPLORE & LEARN */}
+                <div className="pt-2 space-y-1">
+                  <p className="px-2.5 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-[color:var(--muted)]">
+                    Explore & Learn
+                  </p>
+                  <div className="h-px bg-[var(--border)] my-1" />
 
-            <Link
-              href="/learn/glossary"
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition ${
-                sidebarCollapsed && !mobileMenuOpen ? "justify-center px-0" : ""
-              }`}
-              title="Systems Glossary"
-            >
-              <FiBookmark className="w-4 h-4 shrink-0 text-amber-400" />
-              {(!sidebarCollapsed || mobileMenuOpen) && <span>Systems Glossary</span>}
-            </Link>
+                  <Link
+                    href="/scenarios"
+                    className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition"
+                    title="Scenarios"
+                  >
+                    <FiSliders className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                    <span>Scenarios</span>
+                  </Link>
 
-            <Link
-              href="/docs"
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition ${
-                sidebarCollapsed && !mobileMenuOpen ? "justify-center px-0" : ""
-              }`}
-              title="Documentation"
-            >
-              <FiFileText className="w-4 h-4 shrink-0 text-cyan-400" />
-              {(!sidebarCollapsed || mobileMenuOpen) && <span>Documentation</span>}
-            </Link>
+                  <Link
+                    href="/learn"
+                    className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition"
+                    title="Learn Academy"
+                  >
+                    <FiBookOpen className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
+                    <span>Learn Academy</span>
+                  </Link>
+
+                  <Link
+                    href="/learn/glossary"
+                    className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition"
+                    title="Systems Glossary"
+                  >
+                    <FiBookmark className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                    <span>Systems Glossary</span>
+                  </Link>
+
+                  <Link
+                    href="/docs"
+                    className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition"
+                    title="Documentation"
+                  >
+                    <FiFileText className="w-3.5 h-3.5 shrink-0 text-cyan-400" />
+                    <span>Documentation</span>
+                  </Link>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -708,7 +930,6 @@ export default function DashboardPage() {
 
       {/* ── Main Content Area ────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto relative">
-        <ArchitectureBackground variant="dashboard" />
         {/* Minimal Header */}
         <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-md px-4 sm:px-8 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
@@ -721,16 +942,27 @@ export default function DashboardPage() {
             </button>
             <div className="min-w-0">
               <h1 className="text-sm font-bold text-[color:var(--foreground)] flex items-center gap-2">
-                <span>Workspace Hub</span>
+                <span>FlowFrame Lab</span>
                 <span className="text-[color:var(--border-strong)]">/</span>
                 <span className="text-xs font-normal text-[color:var(--muted)] truncate">
-                  {activeNav === "recent" ? "Recent Diagrams" : "Distributed Architectures"}
+                  {selectedWsId
+                    ? workspaces.find((w) => w.id === selectedWsId)?.name || "Workspace"
+                    : activeNav === "recent"
+                    ? "Recent Activity"
+                    : "Architecture Workspaces"}
                 </span>
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
+            <Link
+              href="/workspace"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--bg-elevated)] text-[color:var(--foreground)] transition cursor-pointer"
+            >
+              <FiBox className="w-3.5 h-3.5 text-[color:var(--accent)]" />
+              <span className="hidden sm:inline">Open Simulator</span>
+            </Link>
             <button
               type="button"
               onClick={() => setCreateModalOpen(true)}
@@ -745,24 +977,98 @@ export default function DashboardPage() {
 
         {/* Main Body */}
         <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-8 space-y-10">
-          {/* ── 1. AI Architecture Prompt Hero ────────────────────────── */}
-          <section className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-7 shadow-xs">
-            <div className="relative z-10 space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-1 text-xs font-mono font-semibold text-[color:var(--accent)]">
-                <FiZap className="w-3.5 h-3.5" />
-                <span>AI Architecture Copilot</span>
+          {/* ── 1. Developer Tool Architecture Lab Hero ────────────────── */}
+          <section className="relative rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-7 shadow-xs space-y-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--bg-elevated)] px-2.5 py-1 text-[11px] font-mono font-medium text-[color:var(--muted)]">
+                <FiZap className="w-3.5 h-3.5 text-[color:var(--accent)]" />
+                <span>Distributed Systems Architecture Lab</span>
               </div>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[color:var(--foreground)]">
+                Design, simulate, and inspect distributed architectures.
+              </h2>
+              <p className="text-xs sm:text-sm text-[color:var(--muted)] max-w-2xl leading-relaxed">
+                Build topologies visually or via code, run deterministic simulated requests frame-by-frame, and observe packet routing across services, caches, brokers, and databases.
+              </p>
+            </div>
 
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[color:var(--foreground)]">
-                  What system topology do you want to design?
-                </h2>
-                <p className="text-xs sm:text-sm text-[color:var(--muted)] mt-1 max-w-2xl leading-relaxed">
-                  Describe components, ingress routes, or caching patterns to generate interactive architectures.
-                </p>
-              </div>
+            {/* 3 Developer Entry Pathways */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
+              {/* Pathway 1: Blank Canvas */}
+              <Link
+                href="/workspace"
+                className="group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]/60 hover:border-[var(--accent)] hover:bg-[var(--bg-elevated)] transition flex flex-col justify-between"
+              >
+                <div className="space-y-2">
+                  <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 text-[color:var(--accent)] flex items-center justify-center">
+                    <FiBox className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-[color:var(--foreground)] group-hover:text-[color:var(--accent)] transition-colors">
+                      New Blank Architecture
+                    </h3>
+                    <p className="text-[11px] text-[color:var(--muted)] leading-relaxed mt-1">
+                      Start with a clean canvas, place microservices, and connect edges visually.
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-3 border-t border-[var(--border)] mt-3 flex items-center justify-between text-[11px] font-semibold text-[color:var(--accent)]">
+                  <span>Open Simulator</span>
+                  <FiArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
 
-              {/* Prompt Input Form */}
+              {/* Pathway 2: Monaco DSL Editor */}
+              <Link
+                href="/workspace"
+                className="group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]/60 hover:border-[var(--accent)] hover:bg-[var(--bg-elevated)] transition flex flex-col justify-between"
+              >
+                <div className="space-y-2">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                    <FiCode className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-[color:var(--foreground)] group-hover:text-indigo-400 transition-colors">
+                      Code-First DSL Editor
+                    </h3>
+                    <p className="text-[11px] text-[color:var(--muted)] leading-relaxed mt-1">
+                      Define nodes, request endpoints, and routes declaratively with FlowFrame DSL.
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-3 border-t border-[var(--border)] mt-3 flex items-center justify-between text-[11px] font-semibold text-indigo-400">
+                  <span>Open Code Editor</span>
+                  <FiArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+
+              {/* Pathway 3: Interactive Scenarios */}
+              <Link
+                href="/scenarios"
+                className="group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]/60 hover:border-[var(--accent)] hover:bg-[var(--bg-elevated)] transition flex flex-col justify-between"
+              >
+                <div className="space-y-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                    <FiSliders className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-[color:var(--foreground)] group-hover:text-emerald-400 transition-colors">
+                      Production Scenarios
+                    </h3>
+                    <p className="text-[11px] text-[color:var(--muted)] leading-relaxed mt-1">
+                      Explore pre-built system patterns: load balancing, caching, and pub/sub queues.
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-3 border-t border-[var(--border)] mt-3 flex items-center justify-between text-[11px] font-semibold text-emerald-400">
+                  <span>Explore Scenarios</span>
+                  <FiArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+            </div>
+
+            {/* Natural Topology Generation Input */}
+            <div className="pt-2 border-t border-[var(--border)]">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -771,70 +1077,26 @@ export default function DashboardPage() {
                     `/workspace?ai=true${prompt ? `&prompt=${encodeURIComponent(prompt)}` : ""}`
                   );
                 }}
-                className="flex flex-col sm:flex-row gap-2 max-w-3xl"
+                className="flex flex-col sm:flex-row gap-2"
               >
                 <div className="relative flex-1">
-                  <FiZap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[color:var(--accent)]" />
                   <input
                     type="text"
                     value={aiPrompt}
                     onChange={(e) => setAiPrompt(e.target.value)}
-                    placeholder="e.g., E-commerce checkout with Redis cache, Postgres, and RabbitMQ broker..."
-                    className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] pl-10 pr-4 py-2.5 text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)] focus:outline-none focus:border-[var(--accent)] transition"
+                    placeholder="Describe a system topology (e.g., API Gateway routing to User and Order microservices with Redis cache)..."
+                    className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-2.5 text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)] focus:outline-none focus:border-[var(--accent)] transition"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold text-white shadow-sm cursor-pointer shrink-0"
+                  className="btn-primary inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-semibold text-white shadow-xs cursor-pointer shrink-0"
                 >
-                  <span>Generate Architecture</span>
+                  <span>Generate</span>
                   <FiArrowRight className="w-3.5 h-3.5" />
                 </button>
               </form>
-
-              {/* Quick Template Chips */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span className="text-[11px] font-mono text-[color:var(--muted)]">Quick Start:</span>
-                <Link
-                  href="/workspace"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[var(--border)] bg-[var(--bg-elevated)] text-[color:var(--foreground)] hover:border-[var(--accent)] hover:text-[color:var(--accent)] transition"
-                >
-                  <FiBox className="w-3 h-3 text-cyan-400" />
-                  Blank Canvas
-                </Link>
-                <Link
-                  href="/scenarios/load-balancer"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[var(--border)] bg-[var(--bg-elevated)] text-[color:var(--foreground)] hover:border-[var(--accent)] hover:text-[color:var(--accent)] transition"
-                >
-                  <FiSliders className="w-3 h-3 text-emerald-400" />
-                  Load Balancer
-                </Link>
-                <Link
-                  href="/scenarios/cache-aside"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[var(--border)] bg-[var(--bg-elevated)] text-[color:var(--foreground)] hover:border-[var(--accent)] hover:text-[color:var(--accent)] transition"
-                >
-                  <FiZap className="w-3 h-3 text-amber-400" />
-                  Cache-Aside
-                </Link>
-                <Link
-                  href="/scenarios/event-driven"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[var(--border)] bg-[var(--bg-elevated)] text-[color:var(--foreground)] hover:border-[var(--accent)] hover:text-[color:var(--accent)] transition"
-                >
-                  <FiActivity className="w-3 h-3 text-indigo-400" />
-                  Event-Driven
-                </Link>
-                <Link
-                  href="/scenarios/simple-message-queue"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[var(--border)] bg-[var(--bg-elevated)] text-[color:var(--foreground)] hover:border-[var(--accent)] hover:text-[color:var(--accent)] transition"
-                >
-                  <FiLayers className="w-3 h-3 text-purple-400" />
-                  Message Queue
-                </Link>
-              </div>
             </div>
-
-            {/* Subtle Ambient Glow */}
-            <div className="pointer-events-none absolute -right-20 -bottom-20 w-72 h-72 rounded-full bg-[var(--accent)]/10 blur-3xl" />
           </section>
 
           {/* ── 2. Recent Diagrams Section ───────────────────────────── */}
