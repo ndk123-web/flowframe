@@ -62,11 +62,13 @@ import {
   FiSkipForward,
   FiCpu,
   FiBox,
+  FiSquare,
 } from "react-icons/fi";
 import AIAssistantDrawer from "@/components/AIAssistantDrawer";
 import CanvasToolbar from "@/components/CanvasToolbar";
 import CanvasSettingsSheet from "@/components/CanvasSettingsSheet";
 import CanvasControlsBar from "@/components/CanvasControlsBar";
+import { recordSimulationVideo } from "@/utils/recordSimulationVideo";
 
 // DSL Interpreter & Graph Engine
 import { compileDSL } from "@/DSL";
@@ -2307,6 +2309,18 @@ function WorkspaceInner({
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [gridSize, setGridSize] = useState(20);
 
+  // Simulation Video Recording (WebM / MP4)
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [videoFormat, setVideoFormat] = useState<"webm" | "mp4">("webm");
+  const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(null);
+  const [recordedVideoBlob, setRecordedVideoBlob] = useState<Blob | null>(null);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+
   // Raw generated simulation frames list
   const [rawSimulationFrames, setRawSimulationFrames] = useState<any[]>([]);
   const [validationWarning, setValidationWarning] = useState<string | null>(
@@ -2317,6 +2331,325 @@ function WorkspaceInner({
 
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedTemplate, setCopiedTemplate] = useState(false);
+
+  // Export Video Configuration Options
+  const [exportTheme, setExportTheme] = useState<"dark" | "light">(
+    theme === "dark" ? "dark" : "light",
+  );
+  const [exportExecutionMode, setExportExecutionMode] = useState<
+    "sequential" | "parallel"
+  >(parallelResponse ? "parallel" : "sequential");
+  const [exportPacketFilter, setExportPacketFilter] = useState<
+    "all" | "forwardOnly"
+  >(hideResponse ? "forwardOnly" : "all");
+  const [exportSpeed, setExportSpeed] = useState<number>(speed || 1);
+  const [isExportingVideo, setIsExportingVideo] = useState(false);
+
+  // Format MM:SS helper for recording duration
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const cancelRecordingRef = useRef<(() => void) | null>(null);
+
+  // ── Dedicated Simulation Video Export (WebM / MP4) with user-configured options ──
+  const handleExportSimulationVideo = async () => {
+    try {
+      if (nodes.length === 0) {
+        setValidationWarning(
+          "Canvas is empty. Add nodes and connections before exporting video.",
+        );
+        return;
+      }
+
+      setIsExportingVideo(true);
+      setSuccessToast(
+        `Rendering architecture simulation video (${videoFormat.toUpperCase()})...`,
+      );
+
+      // Determine active frame groups to record based on export options
+      let activeGroups = frameGroups;
+
+      if (rawSimulationFrames.length > 0) {
+        const isParallel = exportExecutionMode === "parallel";
+        const hideResp = exportPacketFilter === "forwardOnly";
+        let globalTimestampOffset = 0;
+        const flatFrames: any[] = [];
+
+        rawSimulationFrames.forEach((run) => {
+          const runFrames = run.frames.map((frame: any) => ({
+            ...frame,
+            timestamp: isParallel
+              ? frame.timestamp
+              : frame.timestamp + globalTimestampOffset,
+          }));
+
+          flatFrames.push(...runFrames);
+
+          if (!isParallel) {
+            const maxTime =
+              run.frames.length > 0
+                ? Math.max(...run.frames.map((f: any) => f.timestamp))
+                : -1;
+            globalTimestampOffset += maxTime + 1;
+          }
+        });
+
+        const framesToRender = isParallel
+          ? (() => {
+              const pq = new PriorityQueue();
+              pq.pushMultipleIntoQueue(flatFrames);
+              const merged: any[] = [];
+              while (!pq.isEmpty()) {
+                const item = pq.popMinTimeStampItem();
+                if (item) merged.push(item);
+              }
+              return merged;
+            })()
+          : flatFrames.sort((a, b) => a.timestamp - b.timestamp);
+
+        const filtered = framesToRender.filter((frame) =>
+          shouldKeepFrame(hideResp, frame),
+        );
+
+        const grouped = new Map<number, any[]>();
+        for (const frame of filtered) {
+          const list = grouped.get(frame.timestamp) ?? [];
+          list.push(frame);
+          grouped.set(frame.timestamp, list);
+        }
+
+        activeGroups = Array.from(grouped.entries())
+          .sort((a, b) => a[0] - b[0])
+          .map(([timestamp, frames]) => ({ timestamp, frames }));
+      } else if (activeGroups.length === 0) {
+        if (edges.length > 0) {
+          activeGroups = edges.map((e, idx) => ({
+            timestamp: idx,
+            frames: [
+              {
+                from: e.source,
+                to: e.target,
+                action: "PACKET_DISPATCH",
+              },
+            ],
+          }));
+        } else {
+          setValidationWarning(
+            "Please connect at least two nodes to simulate packet hops.",
+          );
+          setIsExportingVideo(false);
+          return;
+        }
+      } else if (exportPacketFilter === "forwardOnly") {
+        activeGroups = activeGroups
+          .map((g) => ({
+            timestamp: g.timestamp,
+            frames: g.frames.filter((f) => shouldKeepFrame(true, f)),
+          }))
+          .filter((g) => g.frames.length > 0);
+      }
+
+      const cancel = await recordSimulationVideo({
+        nodes,
+        edges,
+        frameGroups: activeGroups,
+        theme: exportTheme,
+        videoFormat,
+        speed: exportSpeed,
+        connectionStyle: (connectionStyle as any) || "default",
+        onProgress: (_percent, _status) => {
+          // Progress updates
+        },
+        onComplete: (blob, url, ext) => {
+          setIsExportingVideo(false);
+          if (recordedVideoUrl) {
+            URL.revokeObjectURL(recordedVideoUrl);
+          }
+          setRecordedVideoBlob(blob);
+          setRecordedVideoUrl(url);
+          setSuccessToast(`1080p Simulation video saved as .${ext}!`);
+        },
+        onError: (err) => {
+          setIsExportingVideo(false);
+          setValidationWarning(`Export error: ${err.message || err}`);
+        },
+      });
+
+      cancelRecordingRef.current = cancel;
+    } catch (err: any) {
+      setIsExportingVideo(false);
+      setValidationWarning(`Failed to export video: ${err.message || err}`);
+    }
+  };
+
+  // ── Live Session Freeform Screen Recorder ──
+  const handleStartRecording = async () => {
+    try {
+      setIsSettingsOpen(false);
+
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.mediaDevices?.getDisplayMedia
+      ) {
+        setValidationWarning(
+          "Screen recording is not supported in this browser environment.",
+        );
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          displaySurface: "browser",
+          frameRate: { ideal: 60, max: 60 },
+        } as any,
+        audio: false,
+      });
+
+      mediaStreamRef.current = stream;
+      recordedChunksRef.current = [];
+
+      let mimeType =
+        videoFormat === "mp4" ? "video/mp4" : "video/webm;codecs=vp9";
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8")) {
+          mimeType = "video/webm;codecs=vp8";
+        } else if (MediaRecorder.isTypeSupported("video/webm")) {
+          mimeType = "video/webm";
+        } else if (MediaRecorder.isTypeSupported("video/mp4")) {
+          mimeType = "video/mp4";
+        } else {
+          mimeType = "";
+        }
+      }
+
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6000000 })
+        : new MediaRecorder(stream);
+
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        if (mediaStreamRef.current) {
+          mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+          mediaStreamRef.current = null;
+        }
+        if (recordingTimerRef.current) {
+          clearInterval(recordingTimerRef.current);
+          recordingTimerRef.current = null;
+        }
+        setIsRecording(false);
+
+        const actualMime =
+          recorder.mimeType ||
+          (videoFormat === "mp4" ? "video/mp4" : "video/webm");
+        const blob = new Blob(recordedChunksRef.current, { type: actualMime });
+        setRecordedVideoBlob(blob);
+
+        if (recordedVideoUrl) {
+          URL.revokeObjectURL(recordedVideoUrl);
+        }
+        const url = URL.createObjectURL(blob);
+        setRecordedVideoUrl(url);
+
+        const ext =
+          videoFormat === "mp4" && actualMime.includes("mp4") ? "mp4" : "webm";
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `flowframe-session-${Date.now()}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        setSuccessToast(`Live session recorded & saved as .${ext}!`);
+      };
+
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.onended = () => {
+          if (
+            mediaRecorderRef.current &&
+            mediaRecorderRef.current.state !== "inactive"
+          ) {
+            mediaRecorderRef.current.stop();
+          }
+        };
+      }
+
+      recorder.start(250);
+      setIsRecording(true);
+      setRecordingDuration(0);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration((prev) => prev + 1);
+      }, 1000);
+
+      setSuccessToast("Live recording started! Use the canvas freely.");
+    } catch (err: any) {
+      if (err.name !== "NotAllowedError") {
+        setValidationWarning(`Failed to start recording: ${err.message || err}`);
+      }
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (cancelRecordingRef.current) {
+      cancelRecordingRef.current();
+      cancelRecordingRef.current = null;
+    }
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    setIsExportingVideo(false);
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+  };
+
+  const handleDownloadRecordedVideo = () => {
+    if (!recordedVideoUrl) return;
+    const a = document.createElement("a");
+    a.href = recordedVideoUrl;
+    a.download = `flowframe-simulation-${Date.now()}.${videoFormat}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleClearRecordedVideo = () => {
+    if (recordedVideoUrl) {
+      URL.revokeObjectURL(recordedVideoUrl);
+    }
+    setRecordedVideoUrl(null);
+    setRecordedVideoBlob(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+      if (recordedVideoUrl) {
+        URL.revokeObjectURL(recordedVideoUrl);
+      }
+    };
+  }, [recordedVideoUrl]);
 
   // Auto-dismiss success toast
   useEffect(() => {
@@ -5071,7 +5404,30 @@ connect s1 -> r1
                   onToggleGrid={() =>
                     setBgPattern((prev) => (prev === "none" ? "dots" : "none"))
                   }
+                  onOpenSettings={() => setIsSettingsOpen(true)}
                 />
+
+                {/* Floating Active Recording HUD Pill */}
+                {isRecording && (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-3.5 py-1.5 rounded-full border border-red-500/40 bg-background/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-xl text-xs font-mono">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                    </span>
+                    <span className="font-bold text-foreground">
+                      REC <span className="text-red-500 font-mono">{formatDuration(recordingDuration)}</span>
+                      <span className="ml-1 text-[10px] text-muted-foreground uppercase">({videoFormat})</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleStopRecording}
+                      className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-600 hover:bg-red-500 text-white text-[11px] font-semibold transition cursor-pointer shadow-xs"
+                    >
+                      <FiSquare className="w-3 h-3 fill-current" />
+                      <span>Stop & Save</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Professional Clean Empty State */}
                 {nodes.length === 0 && !isLoadingDiagram && (
@@ -8122,6 +8478,25 @@ connect s1 -> r1
               onDownloadImage={downloadCanvasImage}
               onClearCanvas={handleClearCanvas}
               theme={theme}
+              isRecording={isRecording}
+              recordingDuration={recordingDuration}
+              videoFormat={videoFormat}
+              setVideoFormat={setVideoFormat}
+              onStartRecording={handleStartRecording}
+              onStopRecording={handleStopRecording}
+              recordedVideoUrl={recordedVideoUrl}
+              onDownloadRecordedVideo={handleDownloadRecordedVideo}
+              onClearRecordedVideo={handleClearRecordedVideo}
+              exportTheme={exportTheme}
+              setExportTheme={setExportTheme}
+              exportExecutionMode={exportExecutionMode}
+              setExportExecutionMode={setExportExecutionMode}
+              exportPacketFilter={exportPacketFilter}
+              setExportPacketFilter={setExportPacketFilter}
+              exportSpeed={exportSpeed}
+              setExportSpeed={setExportSpeed}
+              isExportingVideo={isExportingVideo}
+              onExportSimulationVideo={handleExportSimulationVideo}
             />
             <input
               type="file"

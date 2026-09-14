@@ -89,15 +89,15 @@ export default function CanvasToolbar({
   isSaving = false,
 }: CanvasToolbarProps) {
   return (
-    <header className="h-12 border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md flex items-center justify-between px-3 md:px-4 z-20 shrink-0 select-none gap-2">
+    <header className="h-12 border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md flex items-center justify-between px-2 sm:px-4 z-20 shrink-0 select-none gap-1 sm:gap-2 overflow-x-auto scrollbar-none">
       {/* ─── Left: Mode Switcher (Canvas vs Flow Code) ────────────── */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
         {onToggleSidebar && (
           <Button
             variant="ghost"
             size="icon-sm"
             onClick={onToggleSidebar}
-            className="md:hidden"
+            className="md:hidden size-8"
             title="Open Components Library"
           >
             <Menu className="size-4" />
@@ -110,7 +110,7 @@ export default function CanvasToolbar({
             <button
               type="button"
               onClick={() => onViewModeChange("canvas")}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer ${
                 viewMode === "canvas"
                   ? "bg-[var(--surface)] text-[color:var(--foreground)] shadow-xs border border-[var(--border)]/60"
                   : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
@@ -118,12 +118,12 @@ export default function CanvasToolbar({
               title="Switch to visual canvas"
             >
               <Box className="size-3.5 text-primary" />
-              <span>Canvas</span>
+              <span className="hidden sm:inline">Canvas</span>
             </button>
             <button
               type="button"
               onClick={() => onViewModeChange("editor")}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer ${
                 viewMode === "editor"
                   ? "bg-[var(--surface)] text-[color:var(--foreground)] shadow-xs border border-[var(--border)]/60"
                   : "text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)]"
@@ -131,7 +131,7 @@ export default function CanvasToolbar({
               title="Switch to Flow Code editor"
             >
               <Code className="size-3.5 text-blue-400" />
-              <span>Flow Code</span>
+              <span className="hidden sm:inline">Flow Code</span>
             </button>
           </div>
         )}
@@ -192,7 +192,7 @@ export default function CanvasToolbar({
               size="icon-sm"
               onClick={onPrevFrame}
               disabled={totalFrames === 0}
-              className="size-7 text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
+              className="hidden sm:inline-flex size-7 text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
             >
               <SkipBack className="size-3.5" />
             </Button>
@@ -208,7 +208,7 @@ export default function CanvasToolbar({
               size="icon-sm"
               onClick={onNextFrame}
               disabled={totalFrames === 0}
-              className="size-7 text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
+              className="hidden sm:inline-flex size-7 text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
             >
               <SkipForward className="size-3.5" />
             </Button>
@@ -296,7 +296,7 @@ export default function CanvasToolbar({
               variant={debugEnabled ? "secondary" : "ghost"}
               size="sm"
               onClick={onToggleLogs}
-              className={`h-8 px-2 gap-1.5 text-xs font-semibold ${
+              className={`h-8 px-2 gap-1.5 text-xs font-semibold hidden md:inline-flex ${
                 debugEnabled
                   ? "text-[color:var(--accent)] border border-[var(--accent)]/30"
                   : "text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
@@ -316,7 +316,7 @@ export default function CanvasToolbar({
               variant={isAssistantOpen ? "secondary" : "ghost"}
               size="sm"
               onClick={onToggleAssistant}
-              className={`h-8 px-2 gap-1.5 text-xs font-semibold ${
+              className={`h-8 px-2 gap-1.5 text-xs font-semibold hidden lg:inline-flex ${
                 isAssistantOpen
                   ? "text-violet-400 border border-violet-500/30"
                   : "text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
@@ -329,16 +329,16 @@ export default function CanvasToolbar({
           <TooltipContent side="bottom">AI Architecture Assistant</TooltipContent>
         </Tooltip>
 
-        {/* Dedicated Canvas Settings */}
+        {/* Dedicated Canvas Settings - Prominent & always visible */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="outline"
               size="sm"
               onClick={onOpenSettings}
-              className="h-8 px-2.5 gap-1.5 text-xs font-semibold"
+              className="h-8 px-2 sm:px-2.5 gap-1.5 text-xs font-semibold border-border/80 hover:border-primary/50 bg-card/60 hover:bg-muted/60 text-foreground shrink-0 cursor-pointer shadow-2xs"
             >
-              <SlidersHorizontal className="size-3.5 text-[color:var(--accent)]" />
+              <SlidersHorizontal className="size-3.5 text-primary" />
               <span className="hidden sm:inline text-[11px]">Settings</span>
             </Button>
           </TooltipTrigger>
