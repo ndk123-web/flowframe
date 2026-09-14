@@ -1,4 +1,11 @@
-import { getSmoothStepPath, Position, type Node, type Edge } from "@xyflow/react";
+import {
+  getSmoothStepPath,
+  getBezierPath,
+  getStraightPath,
+  Position,
+  type Node,
+  type Edge,
+} from "@xyflow/react";
 import { NODE_FLAVORS } from "@/components/ComponentIcons";
 
 export interface RecordSimulationOptions {
@@ -364,6 +371,7 @@ export async function recordSimulationVideo({
   theme = "dark",
   videoFormat = "webm",
   speed = 1,
+  connectionStyle = "default",
   onProgress,
   onComplete,
   onError,
@@ -547,12 +555,15 @@ export async function recordSimulationVideo({
 
     recorder.start(250);
 
-    // Pre-calculate authentic edge paths using @xyflow/react's getSmoothStepPath and SVG DOM
+    // Pre-calculate authentic edge paths using @xyflow/react matching workspace connectionStyle
     interface EdgePathData {
       svgPath: string;
       path2d: Path2D;
       pathElement: SVGPathElement;
       totalLength: number;
+      reverseSvgPath: string;
+      reversePathElement: SVGPathElement;
+      reverseTotalLength: number;
     }
 
     const edgePathMap = new Map<string, EdgePathData>();
@@ -565,27 +576,79 @@ export async function recordSimulationVideo({
       const p0 = src.rightHandle;
       const p3 = tgt.leftHandle;
 
-      const [svgPath] = getSmoothStepPath({
-        sourceX: p0.x,
-        sourceY: p0.y,
-        sourcePosition: Position.Right,
-        targetX: p3.x,
-        targetY: p3.y,
-        targetPosition: Position.Left,
-        borderRadius: 12 * scale,
-        offset: 20 * scale,
-      });
+      const [svgPath] =
+        connectionStyle === "straight"
+          ? getStraightPath({
+              sourceX: p0.x,
+              sourceY: p0.y,
+              targetX: p3.x,
+              targetY: p3.y,
+            })
+          : connectionStyle === "smooth"
+            ? getSmoothStepPath({
+                sourceX: p0.x,
+                sourceY: p0.y,
+                sourcePosition: Position.Right,
+                targetX: p3.x,
+                targetY: p3.y,
+                targetPosition: Position.Left,
+                borderRadius: 12 * scale,
+                offset: 20 * scale,
+              })
+            : getBezierPath({
+                sourceX: p0.x,
+                sourceY: p0.y,
+                sourcePosition: Position.Right,
+                targetX: p3.x,
+                targetY: p3.y,
+                targetPosition: Position.Left,
+              });
+
+      const [reverseSvgPath] =
+        connectionStyle === "straight"
+          ? getStraightPath({
+              sourceX: p3.x,
+              sourceY: p3.y,
+              targetX: p0.x,
+              targetY: p0.y,
+            })
+          : connectionStyle === "smooth"
+            ? getSmoothStepPath({
+                sourceX: p3.x,
+                sourceY: p3.y,
+                sourcePosition: Position.Left,
+                targetX: p0.x,
+                targetY: p0.y,
+                targetPosition: Position.Right,
+                borderRadius: 12 * scale,
+                offset: 20 * scale,
+              })
+            : getBezierPath({
+                sourceX: p3.x,
+                sourceY: p3.y,
+                sourcePosition: Position.Left,
+                targetX: p0.x,
+                targetY: p0.y,
+                targetPosition: Position.Right,
+              });
 
       const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
       pathEl.setAttribute("d", svgPath);
       const totalLength = pathEl.getTotalLength ? pathEl.getTotalLength() : 100;
       const path2d = new Path2D(svgPath);
 
+      const reversePathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      reversePathEl.setAttribute("d", reverseSvgPath);
+      const reverseTotalLength = reversePathEl.getTotalLength ? reversePathEl.getTotalLength() : 100;
+
       edgePathMap.set(edge.id, {
         svgPath,
         path2d,
         pathElement: pathEl,
         totalLength,
+        reverseSvgPath,
+        reversePathElement: reversePathEl,
+        reverseTotalLength,
       });
     });
 
@@ -889,19 +952,22 @@ export async function recordSimulationVideo({
         drawCanvas(activeNodeIds, activeEdgeMap, pingPhase);
 
         // Render traveling Packet Train along exact ReactFlow SVG edge paths
-        frames.forEach((frame) => {
-          const directEdge = edges.find((e) => e.source === frame.from && e.target === frame.to);
-          const reverseEdge = edges.find((e) => e.source === frame.to && e.target === frame.from);
-          const resolvedEdge = directEdge || reverseEdge;
-          if (!resolvedEdge) return;
+        activeEdgeMap.forEach((info, edgeId) => {
+          const edgeData = edgePathMap.get(edgeId);
+          if (!edgeData) return;
 
-          const edgeData = edgePathMap.get(resolvedEdge.id);
-          if (!edgeData || edgeData.totalLength <= 0) return;
+          const isReverseMotion = info.reverseMotion;
+          const pathEl = isReverseMotion
+            ? edgeData.reversePathElement
+            : edgeData.pathElement;
+          const pathLen = isReverseMotion
+            ? edgeData.reverseTotalLength
+            : edgeData.totalLength;
+          if (!pathEl || pathLen <= 0) return;
 
-          const isReverseMotion = Boolean(reverseEdge && !directEdge);
           const packetTrainCount = Math.max(
             1,
-            Math.min(activeEdgeMap.get(resolvedEdge.id)?.packetCount ?? 1, 3),
+            Math.min(info.packetCount, 3),
           );
 
           for (let pIdx = 0; pIdx < packetTrainCount; pIdx++) {
@@ -909,11 +975,8 @@ export async function recordSimulationVideo({
             const effectiveT = (t * baseDuration - staggerDelay) / baseDuration;
 
             if (effectiveT >= 0 && effectiveT <= 1) {
-              // Direct: from 0 to totalLength (source -> target)
-              // Reverse: from totalLength to 0 (target -> source BACKWARD)
-              const motionFraction = isReverseMotion ? 1 - effectiveT : effectiveT;
-              const currentDistance = motionFraction * edgeData.totalLength;
-              const pt = edgeData.pathElement.getPointAtLength(currentDistance);
+              const currentDistance = effectiveT * pathLen;
+              const pt = pathEl.getPointAtLength(currentDistance);
 
               const packetRadius = Math.max(2.5, (4.5 - pIdx * 0.5) * scale);
               const packetAlpha = Math.max(0.45, 0.95 - pIdx * 0.16);

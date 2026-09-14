@@ -69,6 +69,10 @@ import CanvasToolbar from "@/components/CanvasToolbar";
 import CanvasSettingsSheet from "@/components/CanvasSettingsSheet";
 import CanvasControlsBar from "@/components/CanvasControlsBar";
 import { recordSimulationVideo } from "@/utils/recordSimulationVideo";
+import {
+  compileSimulationPipeline,
+  shouldKeepSimulationFrame,
+} from "@/utils/simulationCompiler";
 
 // DSL Interpreter & Graph Engine
 import { compileDSL } from "@/DSL";
@@ -1357,25 +1361,36 @@ function PacketEdge(props: EdgeProps) {
   const count = Math.max(1, Math.min(Number(data?.packetCount ?? 1), 4));
   const frameIndex = Number(data?.frameIndex ?? 0);
 
-  const animateRefs = useRef<Array<any>>([]);
-
-  useEffect(() => {
-    if (isActive) {
-      animateRefs.current.forEach((ref, index) => {
-        if (ref) {
-          try {
-            if (typeof ref.beginElementAt === "function") {
-              ref.beginElementAt(index * 0.12);
-            } else if (typeof ref.beginElement === "function") {
-              ref.beginElement();
-            }
-          } catch (e) {
-            console.error("Error starting SMIL animation:", e);
-          }
-        }
-      });
-    }
-  }, [isActive, frameIndex]);
+  // When reverseMotion is active (e.g. Server responding back to LB/Client),
+  // construct animationPath from target back to source so the SVG path direction
+  // naturally flows backwards from server into load balancer/client.
+  const [animationPath] =
+    connectionStyle === "straight"
+      ? getStraightPath({
+          sourceX: isReverseMotion ? targetX : sourceX,
+          sourceY: isReverseMotion ? targetY : sourceY,
+          targetX: isReverseMotion ? sourceX : targetX,
+          targetY: isReverseMotion ? sourceY : targetY,
+        })
+      : connectionStyle === "smooth"
+        ? getSmoothStepPath({
+            sourceX: isReverseMotion ? targetX : sourceX,
+            sourceY: isReverseMotion ? targetY : sourceY,
+            sourcePosition: isReverseMotion ? targetPosition : sourcePosition,
+            targetX: isReverseMotion ? sourceX : targetX,
+            targetY: isReverseMotion ? sourceY : targetY,
+            targetPosition: isReverseMotion ? sourcePosition : targetPosition,
+            borderRadius: 12,
+            offset: 20,
+          })
+        : getBezierPath({
+            sourceX: isReverseMotion ? targetX : sourceX,
+            sourceY: isReverseMotion ? targetY : sourceY,
+            sourcePosition: isReverseMotion ? targetPosition : sourcePosition,
+            targetX: isReverseMotion ? sourceX : targetX,
+            targetY: isReverseMotion ? sourceY : targetY,
+            targetPosition: isReverseMotion ? sourcePosition : targetPosition,
+          });
 
   return (
     <>
@@ -1391,7 +1406,7 @@ function PacketEdge(props: EdgeProps) {
       {isActive &&
         Array.from({ length: count }).map((_, index) => (
           <circle
-            key={`${props.id}-${index}-${edgePath}-${frameIndex}`}
+            key={`${props.id}-${index}-${animationPath}-${isReverseMotion}-${frameIndex}`}
             r={4.5 - index * 0.5}
             fill={packetColor(isReverseMotion)}
             cx="0"
@@ -1404,15 +1419,12 @@ function PacketEdge(props: EdgeProps) {
             }}
           >
             <animateMotion
-              ref={(el) => {
-                animateRefs.current[index] = el;
-              }}
               dur={`${duration}s`}
               repeatCount={data?.isPlaying ? "1" : "indefinite"}
               fill="freeze"
               begin={`${index * 0.12}s`}
-              path={edgePath}
-              keyPoints={isReverseMotion ? "1;0" : "0;1"}
+              path={animationPath}
+              keyPoints="0;1"
               keyTimes="0;1"
               calcMode="linear"
             />
@@ -2369,87 +2381,26 @@ function WorkspaceInner({
         `Rendering architecture simulation video (${videoFormat.toUpperCase()})...`,
       );
 
-      // Determine active frame groups to record based on export options
-      let activeGroups = frameGroups;
+      // Compile authentic simulation frames based on user export settings
+      const isParallel = exportExecutionMode === "parallel";
+      const hideResp = exportPacketFilter === "forwardOnly";
 
-      if (rawSimulationFrames.length > 0) {
-        const isParallel = exportExecutionMode === "parallel";
-        const hideResp = exportPacketFilter === "forwardOnly";
-        let globalTimestampOffset = 0;
-        const flatFrames: any[] = [];
+      const simResult = compileSimulationPipeline({
+        activeNodes: nodes,
+        activeEdges: edges,
+        activeConfigs: nodeConfigs,
+        isParallel,
+        hideResponse: hideResp,
+      });
 
-        rawSimulationFrames.forEach((run) => {
-          const runFrames = run.frames.map((frame: any) => ({
-            ...frame,
-            timestamp: isParallel
-              ? frame.timestamp
-              : frame.timestamp + globalTimestampOffset,
-          }));
+      const activeGroups = simResult.frameGroups;
 
-          flatFrames.push(...runFrames);
-
-          if (!isParallel) {
-            const maxTime =
-              run.frames.length > 0
-                ? Math.max(...run.frames.map((f: any) => f.timestamp))
-                : -1;
-            globalTimestampOffset += maxTime + 1;
-          }
-        });
-
-        const framesToRender = isParallel
-          ? (() => {
-              const pq = new PriorityQueue();
-              pq.pushMultipleIntoQueue(flatFrames);
-              const merged: any[] = [];
-              while (!pq.isEmpty()) {
-                const item = pq.popMinTimeStampItem();
-                if (item) merged.push(item);
-              }
-              return merged;
-            })()
-          : flatFrames.sort((a, b) => a.timestamp - b.timestamp);
-
-        const filtered = framesToRender.filter((frame) =>
-          shouldKeepFrame(hideResp, frame),
+      if (activeGroups.length === 0) {
+        setValidationWarning(
+          "No packet hops generated. Please connect a Client node to downstream components.",
         );
-
-        const grouped = new Map<number, any[]>();
-        for (const frame of filtered) {
-          const list = grouped.get(frame.timestamp) ?? [];
-          list.push(frame);
-          grouped.set(frame.timestamp, list);
-        }
-
-        activeGroups = Array.from(grouped.entries())
-          .sort((a, b) => a[0] - b[0])
-          .map(([timestamp, frames]) => ({ timestamp, frames }));
-      } else if (activeGroups.length === 0) {
-        if (edges.length > 0) {
-          activeGroups = edges.map((e, idx) => ({
-            timestamp: idx,
-            frames: [
-              {
-                from: e.source,
-                to: e.target,
-                action: "PACKET_DISPATCH",
-              },
-            ],
-          }));
-        } else {
-          setValidationWarning(
-            "Please connect at least two nodes to simulate packet hops.",
-          );
-          setIsExportingVideo(false);
-          return;
-        }
-      } else if (exportPacketFilter === "forwardOnly") {
-        activeGroups = activeGroups
-          .map((g) => ({
-            timestamp: g.timestamp,
-            frames: g.frames.filter((f) => shouldKeepFrame(true, f)),
-          }))
-          .filter((g) => g.frames.length > 0);
+        setIsExportingVideo(false);
+        return;
       }
 
       const cancel = await recordSimulationVideo({
@@ -2922,501 +2873,21 @@ connect s1 -> r1
       const activeEdges = overrideEdges || edges;
       const activeConfigs = overrideConfigs || nodeConfigs;
 
-      // 1. Detect Clients
-      const clientNodes = activeNodes.filter((n) => n.data.type === "client");
-      if (clientNodes.length === 0) {
-        setValidationWarning(
-          "Please add at least one Client node to the canvas.",
-        );
-        return;
-      }
-
-      const clientToRun = targetClientId
-        ? clientNodes.find((n) => n.id === targetClientId)
-        : clientNodes[0];
-
-      if (!clientToRun) {
-        setValidationWarning("Valid Client not found.");
-        return;
-      }
-
-      const clientId = clientToRun.id;
       setValidationWarning(null);
       setIsCompilingSimulation(true);
 
-      // 2. Initialize simulation components
-      const graph = new GraphManager("dynamic-graph");
-      const registry = new NodeRegistry("dynamic-registry");
-      const ipv4Instance = new Ipv4Generator();
-      const rrStrategy = new RoundRobinStrategy();
-
-      // 3. Register nodes
-      activeNodes.forEach((n) => {
-        const type = n.data.type as ComponentType;
-        const labelStr = (n.data.label as string) || "";
-        const config =
-          activeConfigs[n.id] || createDefaultConfig(type, n.id, labelStr);
-
-        let modelInstance: any;
-
-        switch (type) {
-          case "client":
-            modelInstance = new ClientModel(n.id, labelStr);
-            break;
-          case "load-balancer":
-            modelInstance = new LoadBalancerModel(n.id, labelStr, rrStrategy);
-            break;
-          case "server":
-            modelInstance = new ServerModel(n.id, labelStr);
-            if (typeof config.capacity === "number") {
-              modelInstance.capacity = config.capacity;
-            }
-            if (typeof config.prefetchLimit === "number") {
-              modelInstance.prefetchLimit = config.prefetchLimit;
-            }
-            if (config.endpoints) {
-              modelInstance.endpoints = { ...config.endpoints };
-            }
-            break;
-          case "redis":
-            modelInstance = new RedisModel(n.id, labelStr);
-            if (Array.isArray(config.data)) {
-              config.data.forEach((item: any) => {
-                const itemVal =
-                  item.value !== undefined
-                    ? item.value
-                    : item.val !== undefined
-                      ? item.val
-                      : "cached data";
-                if (item.key) modelInstance.addData(item.key, itemVal);
-              });
-            }
-            break;
-          case "postgres":
-            modelInstance = new PostgresModel(n.id, labelStr);
-            if (Array.isArray(config.data)) {
-              config.data.forEach((item: any) => {
-                const itemVal =
-                  item.value !== undefined
-                    ? item.value
-                    : item.val !== undefined
-                      ? item.val
-                      : "record data";
-                if (item.key) {
-                  modelInstance.addRecord(
-                    config.table || "users",
-                    item.key,
-                    itemVal,
-                  );
-                }
-              });
-            }
-            break;
-          case "api-gateway":
-            modelInstance = new ApiGatewayModel(n.id, labelStr);
-            modelInstance.strategy = config.strategy || "ROUND_ROBIN";
-            if (config.routes) {
-              modelInstance.setRoutes(config.routes);
-            }
-
-            // Dynamic routing node target registration (supports Server and Load Balancer targets)
-            const connectedTargets = activeEdges
-              .filter((e) => {
-                const isSourceGateway = e.source === n.id;
-                const isTargetGateway = e.target === n.id;
-                if (isSourceGateway) {
-                  const targetNode = activeNodes.find(
-                    (node) => node.id === e.target,
-                  );
-                  return (
-                    targetNode?.data.type === "server" ||
-                    targetNode?.data.type === "load-balancer"
-                  );
-                }
-                if (isTargetGateway) {
-                  const sourceNode = activeNodes.find(
-                    (node) => node.id === e.source,
-                  );
-                  return (
-                    sourceNode?.data.type === "server" ||
-                    sourceNode?.data.type === "load-balancer"
-                  );
-                }
-                return false;
-              })
-              .map((e) => (e.source === n.id ? e.target : e.source));
-
-            const serviceMapping = config.serviceMapping || {};
-            const serviceGroups: Record<string, string[]> = {};
-            const routesList = config.routes || {};
-            const serviceOptions = Array.from(
-              new Set(Object.values(routesList)),
-            );
-
-            connectedTargets.forEach((targetId) => {
-              const targetNode = activeNodes.find(
-                (node) => node.id === targetId,
-              );
-              const targetLabel = String(targetNode?.data.label || targetId);
-              let serviceName = serviceMapping[targetId];
-
-              if (!serviceName) {
-                // If routes list explicitly targets this targetId directly (e.g. target: lb1 or target: s1)
-                const routeTargets = Object.values(routesList).map(String);
-                if (routeTargets.includes(targetId)) {
-                  serviceName = targetId;
-                } else {
-                  const labelLower = targetLabel.toLowerCase();
-                  if (labelLower.includes("user")) {
-                    serviceName = "USER_SERVICE";
-                  } else if (labelLower.includes("post")) {
-                    serviceName = "POST_SERVICE";
-                  } else {
-                    serviceName =
-                      serviceOptions[0] !== undefined
-                        ? String(serviceOptions[0])
-                        : targetId;
-                  }
-                }
-              }
-
-              if (serviceName !== "UNASSIGNED") {
-                if (!serviceGroups[serviceName]) {
-                  serviceGroups[serviceName] = [];
-                }
-                if (!serviceGroups[serviceName].includes(targetId)) {
-                  serviceGroups[serviceName].push(targetId);
-                }
-              }
-            });
-
-            // Fallback: Ensure all target keys/names specified in routes exist in serviceGroups
-            Object.values(routesList).forEach((targetName: any) => {
-              const targetStr = String(targetName);
-              if (!serviceGroups[targetStr]) {
-                const isTargetNode = activeNodes.some(
-                  (node) =>
-                    node.id === targetStr &&
-                    (node.data.type === "server" ||
-                      node.data.type === "load-balancer"),
-                );
-                if (isTargetNode) {
-                  serviceGroups[targetStr] = [targetStr];
-                }
-              }
-            });
-
-            // Register service groups with gateway
-            for (const serviceName in serviceGroups) {
-              modelInstance.setServiceNodes(
-                serviceName,
-                serviceGroups[serviceName],
-              );
-            }
-            break;
-          case "storage":
-            modelInstance = new StorageModel(n.id, labelStr);
-            if (Array.isArray(config.buckets)) {
-              config.buckets.forEach((b: string) => modelInstance.addBucket(b));
-            }
-            break;
-          case "dns":
-            modelInstance = new DnsModel(n.id, labelStr);
-            if (config.domains) {
-              Object.entries(config.domains).forEach(
-                ([domain, subdomains]: [string, any]) => {
-                  modelInstance.addDomain(domain);
-                  if (subdomains && typeof subdomains === "object") {
-                    Object.entries(subdomains).forEach(
-                      ([sub, subData]: [string, any]) => {
-                        if (subData && typeof subData === "object") {
-                          modelInstance.addSubDomain(
-                            domain,
-                            sub,
-                            subData.to || "",
-                            subData.ip || "",
-                            subData.typeOfRecord || "A",
-                          );
-                        }
-                      },
-                    );
-                  }
-                },
-              );
-            }
-            break;
-          case "cdn":
-            modelInstance = new CdnModel(n.id, labelStr);
-            if (config.originId) {
-              modelInstance.setOriginId(config.originId);
-            }
-            if (Array.isArray(config.cache)) {
-              config.cache.forEach((item: string) =>
-                modelInstance.cacheData(item),
-              );
-            }
-            break;
-          case "message-queue":
-            modelInstance = new MessageQueueModel(
-              n.id,
-              labelStr,
-              config.processingType || "FIFO",
-              typeof config.queueSize === "number" ? config.queueSize : 10,
-              config.overflowBehavior || "REJECT",
-            );
-            break;
-          case "pubsub":
-            modelInstance = new PubSubModel(n.id, labelStr);
-            break;
-        }
-
-        if (modelInstance) {
-          graph.addNode(n.id, labelStr);
-          registry.register(n.id, modelInstance);
-        }
-      });
-
-      // Wire up Server TCP Connection Pools to Postgres
-      activeNodes.forEach((n) => {
-        if (n.data.type === "server") {
-          const serverInstance = registry.getInstance(n.id) as ServerModel;
-          const config =
-            activeConfigs[n.id] ||
-            createDefaultConfig("server", n.id, (n.data.label as string) || "");
-          const tcpConns =
-            typeof config.tcpConnections === "number"
-              ? config.tcpConnections
-              : 10;
-
-          // Find if there is an edge between this server and any postgres node
-          const connectedPostgresEdges = activeEdges.filter((e) => {
-            if (e.source === n.id) {
-              const targetNode = activeNodes.find(
-                (node) => node.id === e.target,
-              );
-              return targetNode?.data.type === "postgres";
-            }
-            if (e.target === n.id) {
-              const sourceNode = activeNodes.find(
-                (node) => node.id === e.source,
-              );
-              return sourceNode?.data.type === "postgres";
-            }
-            return false;
-          });
-
-          connectedPostgresEdges.forEach((edge) => {
-            const targetId = edge.source === n.id ? edge.target : edge.source;
-            const postgresInstance = registry.getInstance(
-              targetId,
-            ) as PostgresModel;
-            if (postgresInstance && serverInstance) {
-              serverInstance.addPostgresConnectionPool(
-                tcpConns,
-                postgresInstance,
-              );
-            }
-          });
-
-          // Find if there is an edge between this server and any message-queue node
-          const connectedQueueEdges = activeEdges.filter((e) => {
-            if (e.source === n.id) {
-              const targetNode = activeNodes.find(
-                (node) => node.id === e.target,
-              );
-              return targetNode?.data.type === "message-queue";
-            }
-            if (e.target === n.id) {
-              const sourceNode = activeNodes.find(
-                (node) => node.id === e.source,
-              );
-              return sourceNode?.data.type === "message-queue";
-            }
-            return false;
-          });
-
-          connectedQueueEdges.forEach((edge) => {
-            const isProducer = edge.source === n.id;
-            const queueId = isProducer ? edge.target : edge.source;
-            const queueNode = activeNodes.find((node) => node.id === queueId);
-            const queueLabel = String(queueNode?.data.label || queueId);
-
-            if (isProducer) {
-              serverInstance.addQueueProducer(queueId, queueLabel);
-            } else {
-              serverInstance.addQueueConsumer(queueId, queueLabel);
-            }
-          });
-
-          // Find if there is an edge between this server and any pubsub node
-          const connectedPubSubEdges = activeEdges.filter((e) => {
-            if (e.source === n.id) {
-              const targetNode = activeNodes.find(
-                (node) => node.id === e.target,
-              );
-              return targetNode?.data.type === "pubsub";
-            }
-            if (e.target === n.id) {
-              const sourceNode = activeNodes.find(
-                (node) => node.id === e.source,
-              );
-              return sourceNode?.data.type === "pubsub";
-            }
-            return false;
-          });
-
-          connectedPubSubEdges.forEach((edge) => {
-            const isProducer = edge.source === n.id;
-            const pubSubId = isProducer ? edge.target : edge.source;
-            if (!isProducer) {
-              // It's a subscriber/consumer server. Register subscription topic.
-              const pubSubInstance = registry.getInstance(
-                pubSubId,
-              ) as PubSubModel;
-              if (pubSubInstance) {
-                const subTopicsArray =
-                  config.registeredTopics || config.subscriptionTopics;
-                if (Array.isArray(subTopicsArray)) {
-                  subTopicsArray.forEach((topic: string) => {
-                    if (topic && topic.trim().length > 0) {
-                      pubSubInstance.subscribe(topic.trim(), n.id);
-                    }
-                  });
-                } else {
-                  const subTopicsStr =
-                    (config.registeredTopics as string) ||
-                    (config.subscriptionTopic as string) ||
-                    "order.created";
-                  const subTopics = subTopicsStr
-                    .split(",")
-                    .map((t: string) => t.trim())
-                    .filter((t: string) => t.length > 0);
-
-                  subTopics.forEach((topic: string) => {
-                    pubSubInstance.subscribe(topic, n.id);
-                  });
-                }
-              }
-            }
-          });
-        }
-      });
-
-      // 4. Register edges
-      activeEdges.forEach((edge) => {
-        const sourceNode = activeNodes.find((n) => n.id === edge.source);
-        const targetNode = activeNodes.find((n) => n.id === edge.target);
-        if (sourceNode && targetNode) {
-          graph.addEdge(edge.source, edge.target);
-
-          // Bidirectional routing fallback for gateway -> server in graph
-          if (
-            sourceNode.data.type === "server" &&
-            targetNode.data.type === "api-gateway"
-          ) {
-            graph.addEdge(edge.target, edge.source);
-          }
-        }
-      });
-
-      // 5. Check cycles or validations
-      const hasCycle = graph.detectCycle(registry);
-      if (hasCycle) {
-        setValidationWarning(
-          "Warning: Cycle detected in graph! Simulation may behave unexpectedly or hang.",
-        );
-      }
-
-      // 6. Run sequential request queries
-      const clientLabelStr = (clientToRun.data.label as string) || "";
-      const clientConfig =
-        activeConfigs[clientId] ||
-        createDefaultConfig("client", clientId, clientLabelStr);
-
-      const allFrames: any[] = [];
-
-      const clientRequests = clientConfig.requests || [
-        {
-          endpoint: clientConfig.endpoint || "/api/v1/posts",
-          method: clientConfig.method || "GET",
-          lookupKey: clientConfig.lookupKey || "rohan",
-          fileName: clientConfig.fileName || "file.png",
-          isThereFileToUpload: clientConfig.isThereFileToUpload !== false,
-        },
-      ];
-
       setTimeout(() => {
         try {
-          // Clear active states on Postgres and Server models
-          activeNodes.forEach((n) => {
-            if (n.data.type === "postgres") {
-              const pg = registry.getInstance(n.id) as PostgresModel;
-              if (pg) {
-                pg.activeConnections.clear();
-                pg.connectionIntervals = [];
-              }
-            }
-            if (n.data.type === "server") {
-              const server = registry.getInstance(n.id) as ServerModel;
-              if (server) {
-                server.activeQueueMessages = 0;
-                server.queueProcessingIntervals = [];
-              }
-            }
+          const simResult = compileSimulationPipeline({
+            activeNodes,
+            activeEdges,
+            activeConfigs,
+            targetClientId,
+            isParallel: parallelResponse,
+            hideResponse,
           });
 
-          for (let i = 0; i < clientRequests.length; i++) {
-            const sourceIp = ipv4Instance.getRandomIpv4();
-            const reqItem = clientRequests[i];
-
-            let parsedBody = {};
-            if (
-              typeof reqItem.body === "string" &&
-              reqItem.body.trim().length > 0
-            ) {
-              try {
-                parsedBody = JSON.parse(reqItem.body);
-              } catch (err) {
-                console.error("Failed to parse request body JSON:", err);
-              }
-            }
-
-            const payload: any = {
-              valetKeyFlow: clientConfig.valetKeyFlow,
-              lookupKey: reqItem.lookupKey,
-              fileName: reqItem.fileName,
-              isThereFileToUpload: reqItem.isThereFileToUpload,
-              endpoint: reqItem.endpoint,
-              method: reqItem.method || "GET",
-              targetBucket: reqItem.targetBucket,
-              parallelResponse,
-              ...parsedBody,
-            };
-
-            const simulation = new SimulationManager(
-              graph,
-              registry,
-              payload,
-              sourceIp,
-            );
-            simulation.runSimulation(clientId);
-
-            const runFrames = (simulation.getFrames() as any[]).map(
-              (frame) => ({
-                ...frame,
-                sourceIp,
-                payloadSummary:
-                  frame.payloadSummary || `lookupKey=${reqItem.lookupKey}`,
-              }),
-            );
-
-            allFrames.push({
-              runIndex: i,
-              frames: runFrames,
-            });
-          }
-
-          setRawSimulationFrames(allFrames);
+          setRawSimulationFrames(simResult.rawSimulationFrames);
           setFrameIndex(0);
           setIsPlaying(true);
           setIsCompilingSimulation(false);
@@ -3424,9 +2895,9 @@ connect s1 -> r1
           setValidationWarning(`Simulation Error: ${err.message || err}`);
           setIsCompilingSimulation(false);
         }
-      }, 350);
+      }, 250);
     },
-    [nodes, nodeConfigs, edges],
+    [nodes, nodeConfigs, edges, parallelResponse, hideResponse],
   );
 
   // Compile & Execute DSL script from Monaco Editor
