@@ -36,6 +36,10 @@ import {
   Share2,
   Minus,
   Waves,
+  Video,
+  Film,
+  Square,
+  Zap,
 } from "lucide-react";
 
 interface CanvasSettingsSheetProps {
@@ -76,6 +80,27 @@ interface CanvasSettingsSheetProps {
   onDownloadImage: () => void;
   onClearCanvas: () => void;
   theme?: "light" | "dark";
+  // Video Recording (MP4 / WebM)
+  isRecording?: boolean;
+  recordingDuration?: number;
+  videoFormat?: "webm" | "mp4";
+  setVideoFormat?: (format: "webm" | "mp4") => void;
+  onStartRecording?: () => void;
+  onStopRecording?: () => void;
+  recordedVideoUrl?: string | null;
+  onDownloadRecordedVideo?: () => void;
+  onClearRecordedVideo?: () => void;
+  // Configurable Simulation Video Export Options
+  exportTheme?: "light" | "dark";
+  setExportTheme?: (theme: "light" | "dark") => void;
+  exportExecutionMode?: "sequential" | "parallel";
+  setExportExecutionMode?: (mode: "sequential" | "parallel") => void;
+  exportPacketFilter?: "all" | "forwardOnly";
+  setExportPacketFilter?: (filter: "all" | "forwardOnly") => void;
+  exportSpeed?: number;
+  setExportSpeed?: (speed: number) => void;
+  isExportingVideo?: boolean;
+  onExportSimulationVideo?: () => void;
 }
 
 type SettingsTab = "canvas" | "simulation" | "specs" | "export" | "appearance";
@@ -114,11 +139,36 @@ export default function CanvasSettingsSheet({
   onDownloadImage,
   onClearCanvas,
   theme: propTheme,
+  isRecording = false,
+  recordingDuration = 0,
+  videoFormat = "webm",
+  setVideoFormat,
+  onStartRecording,
+  onStopRecording,
+  recordedVideoUrl,
+  onDownloadRecordedVideo,
+  onClearRecordedVideo,
+  exportTheme = "dark",
+  setExportTheme,
+  exportExecutionMode = "sequential",
+  setExportExecutionMode,
+  exportPacketFilter = "all",
+  setExportPacketFilter,
+  exportSpeed = 1,
+  setExportSpeed,
+  isExportingVideo = false,
+  onExportSimulationVideo,
 }: CanvasSettingsSheetProps) {
   const { theme: storeTheme, setTheme } = useThemeStore();
   const currentTheme = propTheme || storeTheme || "dark";
   const [activeTab, setActiveTab] = useState<SettingsTab>("canvas");
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
 
   // Compute component breakdown from real current architecture
   const clientCount = nodes.filter(
@@ -706,6 +756,294 @@ export default function CanvasSettingsSheet({
                     <Download className="size-3.5" />
                     <span>Download PNG</span>
                   </Button>
+                </div>
+
+                {/* 1. Export Architecture Simulation Video (WebM / MP4) */}
+                <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <Film className="size-4 text-primary" />
+                        <span className="text-xs font-bold text-foreground">
+                          Export Architecture Simulation Video
+                        </span>
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold font-mono tracking-wider uppercase rounded bg-primary/15 text-primary border border-primary/25">
+                          1080p
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Render simulation video with custom theme, concurrency, and speed.
+                      </p>
+                    </div>
+
+                    {/* Format selector pills */}
+                    <div className="flex items-center p-0.5 rounded-lg border border-border bg-muted/40 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setVideoFormat?.("webm")}
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-medium transition cursor-pointer ${
+                          videoFormat === "webm"
+                            ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        WEBM
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVideoFormat?.("mp4")}
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-medium transition cursor-pointer ${
+                          videoFormat === "mp4"
+                            ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        MP4
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Interactive Export Options Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    {/* Option 1: Theme (Dark / Light) */}
+                    <div className="p-2.5 rounded-lg border border-border/70 bg-card/60 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <Palette className="size-3 text-primary" />
+                          <span>Appearance</span>
+                        </span>
+                        <span className="text-[10px] font-mono uppercase text-muted-foreground">
+                          {exportTheme}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setExportTheme?.("dark")}
+                          className={`flex items-center justify-center gap-1 px-2 py-1 rounded text-xs transition cursor-pointer ${
+                            exportTheme === "dark"
+                              ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                              : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <Moon className="size-3" />
+                          <span>Dark</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExportTheme?.("light")}
+                          className={`flex items-center justify-center gap-1 px-2 py-1 rounded text-xs transition cursor-pointer ${
+                            exportTheme === "light"
+                              ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                              : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <Sun className="size-3" />
+                          <span>Light</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Option 2: Simulation Mode (Sequential / Parallel) */}
+                    <div className="p-2.5 rounded-lg border border-border/70 bg-card/60 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <Zap className="size-3 text-amber-500" />
+                          <span>Execution Mode</span>
+                        </span>
+                        <span className="text-[10px] font-mono uppercase text-muted-foreground">
+                          {exportExecutionMode}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setExportExecutionMode?.("sequential")}
+                          className={`px-2 py-1 rounded text-xs transition cursor-pointer ${
+                            exportExecutionMode === "sequential"
+                              ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                              : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          Sequential
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExportExecutionMode?.("parallel")}
+                          className={`px-2 py-1 rounded text-xs transition cursor-pointer ${
+                            exportExecutionMode === "parallel"
+                              ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                              : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          Parallel
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Option 3: Packet Filter (All / Forward Only) */}
+                    <div className="p-2.5 rounded-lg border border-border/70 bg-card/60 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
+                        <span>Packet Flows</span>
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          {exportPacketFilter === "all" ? "Req + Resp" : "Req Only"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setExportPacketFilter?.("all")}
+                          className={`px-2 py-1 rounded text-xs transition cursor-pointer ${
+                            exportPacketFilter === "all"
+                              ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                              : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          All Packets
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExportPacketFilter?.("forwardOnly")}
+                          className={`px-2 py-1 rounded text-xs transition cursor-pointer ${
+                            exportPacketFilter === "forwardOnly"
+                              ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                              : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          Forward Only
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Option 4: Simulation Speed (0.75x / 1x / 1.5x / 2x) */}
+                    <div className="p-2.5 rounded-lg border border-border/70 bg-card/60 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <FastForward className="size-3 text-emerald-500" />
+                          <span>Video Speed</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          {exportSpeed}x
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1">
+                        {[0.75, 1, 1.5, 2].map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setExportSpeed?.(s)}
+                            className={`py-1 rounded text-xs font-mono transition cursor-pointer ${
+                              exportSpeed === s
+                                ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                                : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {s}x
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Primary Export Action */}
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={isExportingVideo}
+                    onClick={onExportSimulationVideo}
+                    className="w-full gap-2 h-9 text-xs font-bold cursor-pointer bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white shadow-sm border border-blue-500/30"
+                  >
+                    {isExportingVideo ? (
+                      <>
+                        <div className="size-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                        <span>Rendering Simulation Video ({videoFormat.toUpperCase()})...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Film className="size-3.5" />
+                        <span>Export Simulation Video ({videoFormat.toUpperCase()})</span>
+                      </>
+                    )}
+                  </Button>
+
+                  {/* Recorded Video Preview Player if available */}
+                  {recordedVideoUrl && (
+                    <div className="pt-2 border-t border-border/60 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-foreground flex items-center gap-1.5">
+                          <Film className="size-3 text-primary" />
+                          <span>Exported Video Ready</span>
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={onClearRecordedVideo}
+                            className="text-[10px] text-muted-foreground hover:text-destructive underline cursor-pointer"
+                          >
+                            Clear
+                          </button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={onDownloadRecordedVideo}
+                            className="gap-1 h-7 px-2.5 text-[11px] font-semibold cursor-pointer"
+                          >
+                            <Download className="size-3" />
+                            <span>Save .{videoFormat}</span>
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="rounded-lg overflow-hidden border border-border bg-black/40 aspect-video flex items-center justify-center">
+                        <video
+                          src={recordedVideoUrl}
+                          controls
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Live Session Screen Recorder (Freeform) */}
+                <div className="rounded-xl border border-border bg-muted/10 p-4 flex items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Video className="size-4 text-foreground" />
+                      <span className="text-xs font-semibold text-foreground">
+                        Live Session Screen Recorder
+                      </span>
+                      <span className="px-1.5 py-0.5 text-[9px] font-mono tracking-wider uppercase rounded bg-muted text-muted-foreground border border-border">
+                        Freeform
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Manually record your screen interactions, node dragging, and canvas panning.
+                    </p>
+                  </div>
+
+                  {isRecording ? (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={onStopRecording}
+                      className="gap-1.5 h-8 text-xs font-semibold cursor-pointer shrink-0"
+                    >
+                      <Square className="size-3.5 fill-current" />
+                      <span>Stop ({formatDuration(recordingDuration)})</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={onStartRecording}
+                      className="gap-1.5 h-8 text-xs font-semibold cursor-pointer shrink-0"
+                    >
+                      <Video className="size-3.5 text-primary" />
+                      <span>Start Live REC</span>
+                    </Button>
+                  )}
                 </div>
 
                 {/* Export / Import JSON Flow */}

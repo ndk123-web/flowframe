@@ -7,7 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ZoomIn, ZoomOut, Maximize2, Map, Grid3X3 } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize2, Map, Grid3X3, SlidersHorizontal } from "lucide-react";
 
 interface CanvasControlsBarProps {
   onZoomIn: () => void;
@@ -17,6 +17,7 @@ interface CanvasControlsBarProps {
   onToggleMinimap: () => void;
   bgPattern: "dots" | "lines" | "cross" | "none";
   onToggleGrid: () => void;
+  onOpenSettings?: () => void;
 }
 
 export default function CanvasControlsBar({
@@ -27,6 +28,7 @@ export default function CanvasControlsBar({
   onToggleMinimap,
   bgPattern,
   onToggleGrid,
+  onOpenSettings,
 }: CanvasControlsBarProps) {
   return (
     <div className="absolute bottom-5 left-5 z-20 flex items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 p-1 shadow-lg backdrop-blur-md select-none">
@@ -110,6 +112,26 @@ export default function CanvasControlsBar({
           {bgPattern !== "none" ? "Disable Grid" : "Enable Grid"}
         </TooltipContent>
       </Tooltip>
+
+      {onOpenSettings && (
+        <>
+          <div className="h-3.5 w-px bg-[var(--border)] mx-0.5" />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={onOpenSettings}
+                aria-label="Canvas Settings"
+                className="text-[color:var(--foreground)]/70 hover:text-primary transition-colors cursor-pointer"
+              >
+                <SlidersHorizontal className="size-3.5 text-primary" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Canvas Settings</TooltipContent>
+          </Tooltip>
+        </>
+      )}
     </div>
   );
 }
