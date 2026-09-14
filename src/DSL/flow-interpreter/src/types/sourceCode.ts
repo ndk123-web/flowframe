@@ -1,3 +1,13 @@
+type NodePositionCoordinates = {
+  x?: number;
+  y?: number;
+  xAxis?: number;
+  yAxis?: number;
+  x_axis?: number;
+  y_axis?: number;
+  position?: { x: number; y: number };
+};
+
 type ClientRequestStructure = {
   endpoint: string;
   allowedMethods: string[];
@@ -10,12 +20,15 @@ type ClientRequestStructure = {
   targetBucket?: string;
 };
 
-type ClientNodeStructure = {
+type ClientNodeStructure = NodePositionCoordinates & {
   requests: ClientRequestStructure[];
   label: string;
   type: string;
   valet: boolean;
   technologyOfClient?: string;
+  flavor?: string;
+  providerStyle?: string;
+  provider?: string;
 };
 
 type ServerEndpointStructure = {
@@ -28,7 +41,7 @@ type ServerRegisterTopicsForPubSub = {
   topic: string;
 };
 
-type ServerNodeStructure = {
+type ServerNodeStructure = NodePositionCoordinates & {
   acceptedEndpoints: ServerEndpointStructure[];
   tcpConnectionsToPostgres: number;
   capacity: number;
@@ -36,12 +49,18 @@ type ServerNodeStructure = {
   technologyOfServer: string;
   prefetchLimit: number;
   registeredTopics?: ServerRegisterTopicsForPubSub[];
+  flavor?: string;
+  providerStyle?: string;
+  provider?: string;
 };
 
-type LoadBalancerStructure = {
+type LoadBalancerStructure = NodePositionCoordinates & {
   label: string;
   technologyOfLoadBalancer: string;
   strategy: string;
+  flavor?: string;
+  providerStyle?: string;
+  provider?: string;
 };
 
 type GatewayRouteRules = {
@@ -54,12 +73,15 @@ type ServiceMapping = {
   nameOfService: string;
 };
 
-type ApiGatewayStructure = {
+type ApiGatewayStructure = NodePositionCoordinates & {
   label: string;
   typeOfApiGateway: string;
   strategy: string;
   routeRules: GatewayRouteRules[];
   serviceMapping: ServiceMapping[];
+  flavor?: string;
+  providerStyle?: string;
+  provider?: string;
 };
 
 type RedisKeyValue = {
@@ -68,10 +90,13 @@ type RedisKeyValue = {
   val?: string;
 };
 
-type RedisStructure = {
+type RedisStructure = NodePositionCoordinates & {
   label: string;
   technologyOfRedis: string;
   data: RedisKeyValue[];
+  flavor?: string;
+  providerStyle?: string;
+  provider?: string;
 };
 
 type PostgresRow = {
@@ -81,31 +106,40 @@ type PostgresRow = {
   val?: string;
 };
 
-type PostgresStructure = {
+type PostgresStructure = NodePositionCoordinates & {
   label: string;
   technologyOfPostgres: string;
   table: string;
   data: PostgresRow[];
+  flavor?: string;
+  providerStyle?: string;
+  provider?: string;
 };
 
 type CloudBucket = {
   bucketName: string;
 };
 
-type CloudStorage = {
+type CloudStorage = NodePositionCoordinates & {
   label: string;
   technologyOfCloudStorage: string;
   bucketName: CloudBucket[];
+  flavor?: string;
+  providerStyle?: string;
+  provider?: string;
 };
 
 type overflowTypes = 'REJECT' | 'BLOCK' | 'UNLIMITED' | 'DROP_OLDEST';
 type processingTypes = 'FIFO' | 'LIFO' | 'PRIORITY';
 
-type MessageQueueStructure = {
+type MessageQueueStructure = NodePositionCoordinates & {
   label: string;
   processingType: processingTypes;
   queueSize: number;
   overflowBehavior: overflowTypes;
+  flavor?: string;
+  providerStyle?: string;
+  provider?: string;
 };
 
 type PubSubSubscribers = {
@@ -113,13 +147,17 @@ type PubSubSubscribers = {
   topic: string;
 };
 
-type PubSubStructure = {
+type PubSubStructure = NodePositionCoordinates & {
   label: string;
   technologyOfPubSub: string;
   activeSubscribers: PubSubSubscribers[];
+  flavor?: string;
+  providerStyle?: string;
+  provider?: string;
 };
 
 export type {
+  NodePositionCoordinates,
   ClientRequestStructure,
   ClientNodeStructure,
   ServerEndpointStructure,

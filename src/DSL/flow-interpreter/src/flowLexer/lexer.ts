@@ -25,7 +25,7 @@ function lexerFlow(sourceCode: string): LexerTokens[] {
       } else if (word === 'true' || word === 'false') {
         tokenType = 'BOOL';
         tokenVal = word === 'true';
-      } else if (/^\d+(\.\d+)?$/.test(word)) {
+      } else if (/^-?\d+(\.\d+)?$/.test(word)) {
         tokenType = 'NUMBER';
         tokenVal = Number(word);
       } else {
@@ -60,6 +60,14 @@ function lexerFlow(sourceCode: string): LexerTokens[] {
       let token: LexerTokens = { token_type: KEYWORDS['->'], value: '->' };
       tokens.push(token);
       position++; // consume '-'
+    } else if (
+      character === '-' &&
+      position + 1 < size &&
+      sourceCode[position + 1] >= '0' &&
+      sourceCode[position + 1] <= '9'
+    ) {
+      flush();
+      word = '-';
     } else if (character === ',') {
       flush(); // Flush preceding word (e.g. 'c1') before adding comma token
       let token: LexerTokens = {

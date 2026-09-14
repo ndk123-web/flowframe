@@ -117,6 +117,50 @@ function semanticAnalyzer(ast: Ast[]): Ast[] {
       }
     }
 
+    // Canvas Position Coordinates validation (x, y, xAxis, yAxis, x_axis, y_axis, position)
+    if (config.x !== undefined && (typeof config.x !== 'number' || isNaN(config.x))) {
+      throw new Error(
+        `Semantic Error: Node '${id}' property 'x' must be a valid number representing canvas X coordinate.`
+      );
+    }
+    if (config.y !== undefined && (typeof config.y !== 'number' || isNaN(config.y))) {
+      throw new Error(
+        `Semantic Error: Node '${id}' property 'y' must be a valid number representing canvas Y coordinate.`
+      );
+    }
+    if (config.xAxis !== undefined && (typeof config.xAxis !== 'number' || isNaN(config.xAxis))) {
+      throw new Error(
+        `Semantic Error: Node '${id}' property 'xAxis' must be a valid number representing canvas X coordinate.`
+      );
+    }
+    if (config.yAxis !== undefined && (typeof config.yAxis !== 'number' || isNaN(config.yAxis))) {
+      throw new Error(
+        `Semantic Error: Node '${id}' property 'yAxis' must be a valid number representing canvas Y coordinate.`
+      );
+    }
+    if (config.x_axis !== undefined && (typeof config.x_axis !== 'number' || isNaN(config.x_axis))) {
+      throw new Error(
+        `Semantic Error: Node '${id}' property 'x_axis' must be a valid number representing canvas X coordinate.`
+      );
+    }
+    if (config.y_axis !== undefined && (typeof config.y_axis !== 'number' || isNaN(config.y_axis))) {
+      throw new Error(
+        `Semantic Error: Node '${id}' property 'y_axis' must be a valid number representing canvas Y coordinate.`
+      );
+    }
+    if (config.position !== undefined) {
+      if (
+        typeof config.position !== 'object' ||
+        config.position === null ||
+        (config.position.x !== undefined && (typeof config.position.x !== 'number' || isNaN(config.position.x))) ||
+        (config.position.y !== undefined && (typeof config.position.y !== 'number' || isNaN(config.position.y)))
+      ) {
+        throw new Error(
+          `Semantic Error: Node '${id}' property 'position' must be an object with numeric { x, y } coordinates.`
+        );
+      }
+    }
+
     // Specific Client validation
     if (nodeType === "CLIENT_NODE" || nodeType === "client") {
       if (config.requests !== undefined) {
