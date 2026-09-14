@@ -21,13 +21,18 @@ const flowLanguage = StreamLanguage.define({
     if (stream.match(/^"([^"\\]|\\.)*"/)) return "string";
     if (stream.match(/^'([^'\\]|\\.)*'/)) return "string";
 
-    // Numbers
-    if (stream.match(/^\d+(\.\d+)?/)) return "number";
+    // Numbers (positive and negative coordinates)
+    if (stream.match(/^-?\d+(\.\d+)?/)) return "number";
 
     // Operators & Arrows
     if (stream.match("->")) return "operator";
     if (stream.match(/^[:=,;]/)) return "punctuation";
     if (stream.match(/^[{}()[\]]/)) return "bracket";
+
+    // Properties followed by colon (e.g. x:, y:, label:)
+    if (stream.match(/^[a-zA-Z_]\w*(?=\s*:)/)) {
+      return "propertyName";
+    }
 
     // Keywords and DSL constructs
     const keywords = [
@@ -229,11 +234,60 @@ function flowCompletionSource(context: CompletionContext): CompletionResult | nu
         boost: 18,
       }
     ),
+    snippetCompletion(
+      'x: ${1:120},\ny: ${2:240},',
+      {
+        label: "x, y coordinates",
+        detail: "Snippet: Canvas X & Y Position",
+        type: "snippet",
+        info: "Set explicit horizontal (x) and vertical (y) coordinates on the canvas",
+        boost: 22,
+      }
+    ),
+    snippetCompletion(
+      'x: ${1:120},',
+      {
+        label: "x: coordinate",
+        detail: "Snippet: X Axis (Canvas)",
+        type: "snippet",
+        info: "Set horizontal X axis coordinate on the canvas",
+        boost: 21,
+      }
+    ),
+    snippetCompletion(
+      'y: ${1:240},',
+      {
+        label: "y: coordinate",
+        detail: "Snippet: Y Axis (Canvas)",
+        type: "snippet",
+        info: "Set vertical Y axis coordinate on the canvas",
+        boost: 21,
+      }
+    ),
+    snippetCompletion(
+      'position: {\n  x: ${1:120},\n  y: ${2:240}\n},',
+      {
+        label: "position: { x, y }",
+        detail: "Snippet: Canvas Position Object",
+        type: "snippet",
+        info: "Set canvas position as a structured object with x and y coordinates",
+        boost: 20,
+      }
+    ),
   ];
   snippets.forEach((s) => options.push(s));
 
   // DSL Property keywords
   const properties: Completion[] = [
+    { label: "x:", type: "property", detail: "Number (X Axis)", info: "Horizontal X coordinate position on the canvas (e.g. x: 120)", boost: 25 },
+    { label: "x", type: "property", detail: "X Axis (Canvas)", info: "Insert horizontal X coordinate (e.g. x: 120)", apply: "x: 120,", boost: 25 },
+    { label: "y:", type: "property", detail: "Number (Y Axis)", info: "Vertical Y coordinate position on the canvas (e.g. y: 240)", boost: 25 },
+    { label: "y", type: "property", detail: "Y Axis (Canvas)", info: "Insert vertical Y coordinate (e.g. y: 240)", apply: "y: 240,", boost: 25 },
+    { label: "position:", type: "property", detail: "{ x, y } Object", info: "Canvas 2D coordinate object (e.g. position: { x: 120, y: 240 })", boost: 22 },
+    { label: "xAxis:", type: "property", detail: "Number (Alias)", info: "Alternative alias for X axis canvas coordinate", boost: 16 },
+    { label: "yAxis:", type: "property", detail: "Number (Alias)", info: "Alternative alias for Y axis canvas coordinate", boost: 16 },
+    { label: "x_axis:", type: "property", detail: "Number (Alias)", info: "Alternative alias for X axis canvas coordinate", boost: 16 },
+    { label: "y_axis:", type: "property", detail: "Number (Alias)", info: "Alternative alias for Y axis canvas coordinate", boost: 16 },
     { label: "label:", type: "property", detail: "Display string", info: 'Component display name (e.g. label: "Auth Server")', boost: 15 },
     { label: "capacity:", type: "property", detail: "Number", info: "Maximum requests processed concurrently before queueing", boost: 15 },
     { label: "requests:", type: "property", detail: "Array", info: "Client requests to fire during simulation", boost: 15 },
