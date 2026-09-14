@@ -40,6 +40,7 @@ import {
   Film,
   Square,
   Zap,
+  Loader2,
 } from "lucide-react";
 
 interface CanvasSettingsSheetProps {
@@ -759,71 +760,64 @@ export default function CanvasSettingsSheet({
                 </div>
 
                 {/* 1. Export Architecture Simulation Video (WebM / MP4) */}
-                <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3.5">
+                <div className="rounded-xl border border-border bg-card/60 p-4 space-y-4">
+                  {/* Header */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
                         <Film className="size-4 text-primary" />
-                        <span className="text-xs font-bold text-foreground">
-                          Export Architecture Simulation Video
+                        <span className="text-xs font-semibold text-foreground">
+                          Simulation Video Export
                         </span>
-                        <span className="px-1.5 py-0.5 text-[9px] font-bold font-mono tracking-wider uppercase rounded bg-primary/15 text-primary border border-primary/25">
-                          1080p
-                        </span>
+                        <Badge variant="outline" className="px-1.5 py-0 text-[10px] font-mono text-muted-foreground border-border font-normal">
+                          1080p 60fps
+                        </Badge>
                       </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        Render simulation video with custom theme, concurrency, and speed.
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        Export animated packet traversal and response flows directly as a video.
                       </p>
                     </div>
 
-                    {/* Format selector pills */}
+                    {/* Format Selector Pills */}
                     <div className="flex items-center p-0.5 rounded-lg border border-border bg-muted/40 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setVideoFormat?.("webm")}
-                        className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-medium transition cursor-pointer ${
-                          videoFormat === "webm"
-                            ? "bg-primary text-primary-foreground shadow-xs font-bold"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        WEBM
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setVideoFormat?.("mp4")}
-                        className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-medium transition cursor-pointer ${
-                          videoFormat === "mp4"
-                            ? "bg-primary text-primary-foreground shadow-xs font-bold"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        MP4
-                      </button>
+                      {(["webm", "mp4"] as const).map((fmt) => (
+                        <button
+                          key={fmt}
+                          type="button"
+                          onClick={() => setVideoFormat?.(fmt)}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-medium transition cursor-pointer ${
+                            videoFormat === fmt
+                              ? "bg-background text-foreground shadow-xs font-semibold"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {fmt.toUpperCase()}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Interactive Export Options Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                    {/* Option 1: Theme (Dark / Light) */}
-                    <div className="p-2.5 rounded-lg border border-border/70 bg-card/60 space-y-1.5">
+                  {/* Settings Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
+                    {/* Appearance / Theme */}
+                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5">
                       <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
-                        <span className="flex items-center gap-1.5">
-                          <Palette className="size-3 text-primary" />
-                          <span>Appearance</span>
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <Palette className="size-3" />
+                          <span>Theme</span>
                         </span>
-                        <span className="text-[10px] font-mono uppercase text-muted-foreground">
+                        <span className="text-[10px] font-mono capitalize text-muted-foreground">
                           {exportTheme}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-1.5">
+                      <div className="grid grid-cols-2 gap-1 p-0.5 rounded-md bg-muted/40 border border-border/50">
                         <button
                           type="button"
                           onClick={() => setExportTheme?.("dark")}
-                          className={`flex items-center justify-center gap-1 px-2 py-1 rounded text-xs transition cursor-pointer ${
+                          className={`flex items-center justify-center gap-1.5 py-1 rounded text-xs transition cursor-pointer ${
                             exportTheme === "dark"
-                              ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                              : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                              ? "bg-background text-foreground shadow-xs font-medium"
+                              : "text-muted-foreground hover:text-foreground"
                           }`}
                         >
                           <Moon className="size-3" />
@@ -832,10 +826,10 @@ export default function CanvasSettingsSheet({
                         <button
                           type="button"
                           onClick={() => setExportTheme?.("light")}
-                          className={`flex items-center justify-center gap-1 px-2 py-1 rounded text-xs transition cursor-pointer ${
+                          className={`flex items-center justify-center gap-1.5 py-1 rounded text-xs transition cursor-pointer ${
                             exportTheme === "light"
-                              ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                              : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                              ? "bg-background text-foreground shadow-xs font-medium"
+                              : "text-muted-foreground hover:text-foreground"
                           }`}
                         >
                           <Sun className="size-3" />
@@ -844,25 +838,25 @@ export default function CanvasSettingsSheet({
                       </div>
                     </div>
 
-                    {/* Option 2: Simulation Mode (Sequential / Parallel) */}
-                    <div className="p-2.5 rounded-lg border border-border/70 bg-card/60 space-y-1.5">
+                    {/* Mode (Sequential / Parallel) */}
+                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5">
                       <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
-                        <span className="flex items-center gap-1.5">
-                          <Zap className="size-3 text-amber-500" />
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <Zap className="size-3" />
                           <span>Execution Mode</span>
                         </span>
-                        <span className="text-[10px] font-mono uppercase text-muted-foreground">
+                        <span className="text-[10px] font-mono capitalize text-muted-foreground">
                           {exportExecutionMode}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-1.5">
+                      <div className="grid grid-cols-2 gap-1 p-0.5 rounded-md bg-muted/40 border border-border/50">
                         <button
                           type="button"
                           onClick={() => setExportExecutionMode?.("sequential")}
-                          className={`px-2 py-1 rounded text-xs transition cursor-pointer ${
+                          className={`py-1 rounded text-xs transition cursor-pointer ${
                             exportExecutionMode === "sequential"
-                              ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                              : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                              ? "bg-background text-foreground shadow-xs font-medium"
+                              : "text-muted-foreground hover:text-foreground"
                           }`}
                         >
                           Sequential
@@ -870,10 +864,10 @@ export default function CanvasSettingsSheet({
                         <button
                           type="button"
                           onClick={() => setExportExecutionMode?.("parallel")}
-                          className={`px-2 py-1 rounded text-xs transition cursor-pointer ${
+                          className={`py-1 rounded text-xs transition cursor-pointer ${
                             exportExecutionMode === "parallel"
-                              ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                              : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                              ? "bg-background text-foreground shadow-xs font-medium"
+                              : "text-muted-foreground hover:text-foreground"
                           }`}
                         >
                           Parallel
@@ -881,22 +875,25 @@ export default function CanvasSettingsSheet({
                       </div>
                     </div>
 
-                    {/* Option 3: Packet Filter (All / Forward Only) */}
-                    <div className="p-2.5 rounded-lg border border-border/70 bg-card/60 space-y-1.5">
+                    {/* Packet Flows */}
+                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5">
                       <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
-                        <span>Packet Flows</span>
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <Activity className="size-3" />
+                          <span>Packet Flows</span>
+                        </span>
                         <span className="text-[10px] font-mono text-muted-foreground">
                           {exportPacketFilter === "all" ? "Req + Resp" : "Req Only"}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-1.5">
+                      <div className="grid grid-cols-2 gap-1 p-0.5 rounded-md bg-muted/40 border border-border/50">
                         <button
                           type="button"
                           onClick={() => setExportPacketFilter?.("all")}
-                          className={`px-2 py-1 rounded text-xs transition cursor-pointer ${
+                          className={`py-1 rounded text-xs transition cursor-pointer ${
                             exportPacketFilter === "all"
-                              ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                              : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                              ? "bg-background text-foreground shadow-xs font-medium"
+                              : "text-muted-foreground hover:text-foreground"
                           }`}
                         >
                           All Packets
@@ -904,10 +901,10 @@ export default function CanvasSettingsSheet({
                         <button
                           type="button"
                           onClick={() => setExportPacketFilter?.("forwardOnly")}
-                          className={`px-2 py-1 rounded text-xs transition cursor-pointer ${
+                          className={`py-1 rounded text-xs transition cursor-pointer ${
                             exportPacketFilter === "forwardOnly"
-                              ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                              : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                              ? "bg-background text-foreground shadow-xs font-medium"
+                              : "text-muted-foreground hover:text-foreground"
                           }`}
                         >
                           Forward Only
@@ -915,18 +912,18 @@ export default function CanvasSettingsSheet({
                       </div>
                     </div>
 
-                    {/* Option 4: Simulation Speed (0.75x / 1x / 1.5x / 2x) */}
-                    <div className="p-2.5 rounded-lg border border-border/70 bg-card/60 space-y-1.5">
+                    {/* Simulation Speed */}
+                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5">
                       <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
-                        <span className="flex items-center gap-1.5">
-                          <FastForward className="size-3 text-emerald-500" />
-                          <span>Video Speed</span>
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <FastForward className="size-3" />
+                          <span>Playback Speed</span>
                         </span>
                         <span className="text-[10px] font-mono text-muted-foreground">
                           {exportSpeed}x
                         </span>
                       </div>
-                      <div className="grid grid-cols-4 gap-1">
+                      <div className="grid grid-cols-4 gap-1 p-0.5 rounded-md bg-muted/40 border border-border/50">
                         {[0.75, 1, 1.5, 2].map((s) => (
                           <button
                             key={s}
@@ -934,8 +931,8 @@ export default function CanvasSettingsSheet({
                             onClick={() => setExportSpeed?.(s)}
                             className={`py-1 rounded text-xs font-mono transition cursor-pointer ${
                               exportSpeed === s
-                                ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                                : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                                ? "bg-background text-foreground shadow-xs font-semibold"
+                                : "text-muted-foreground hover:text-foreground"
                             }`}
                           >
                             {s}x
@@ -951,17 +948,20 @@ export default function CanvasSettingsSheet({
                     size="sm"
                     disabled={isExportingVideo}
                     onClick={onExportSimulationVideo}
-                    className="w-full gap-2 h-9 text-xs font-bold cursor-pointer bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white shadow-sm border border-blue-500/30"
+                    className="w-full gap-2 h-9 text-xs font-semibold cursor-pointer transition-all active:scale-[0.99]"
                   >
                     {isExportingVideo ? (
                       <>
-                        <div className="size-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                        <Loader2 className="size-3.5 animate-spin" />
                         <span>Rendering Simulation Video ({videoFormat.toUpperCase()})...</span>
                       </>
                     ) : (
                       <>
                         <Film className="size-3.5" />
-                        <span>Export Simulation Video ({videoFormat.toUpperCase()})</span>
+                        <span>Export Simulation Video</span>
+                        <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-primary-foreground/15 text-primary-foreground font-bold uppercase">
+                          {videoFormat}
+                        </span>
                       </>
                     )}
                   </Button>

@@ -22,8 +22,10 @@ class ServerModel implements NodeInstance {
 
   // key is the endpoint, value is the array of valid HTTP methods for that endpoint
   endpoints: { [key: string]: HTTP_VALID_METHODS[] } = {
-    // for default endpoint, all methods are valid
+    // for default endpoints, all methods are valid
     "api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    "api/v1/posts": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    "api/v1/users": ["GET", "POST", "PUT", "DELETE", "PATCH"],
   };
 
   queueConsumer: { queueId: string; queueName: string } = {
