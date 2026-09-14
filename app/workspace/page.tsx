@@ -68,7 +68,7 @@ import AIAssistantDrawer from "@/components/AIAssistantDrawer";
 import CanvasToolbar from "@/components/CanvasToolbar";
 import CanvasSettingsSheet from "@/components/CanvasSettingsSheet";
 import CanvasControlsBar from "@/components/CanvasControlsBar";
-import { recordSimulationVideo } from "@/utils/recordSimulationVideo";
+import { exportWorkspaceSimulationVideo } from "@/utils/domCanvasVideoRecorder";
 import {
   compileSimulationPipeline,
   shouldKeepSimulationFrame,
@@ -2356,6 +2356,10 @@ function WorkspaceInner({
   >(hideResponse ? "forwardOnly" : "all");
   const [exportSpeed, setExportSpeed] = useState<number>(speed || 1);
   const [isExportingVideo, setIsExportingVideo] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{
+    percent: number;
+    status: string;
+  }>({ percent: 0, status: "" });
 
   // Format MM:SS helper for recording duration
   const formatDuration = (seconds: number) => {
@@ -2366,7 +2370,7 @@ function WorkspaceInner({
 
   const cancelRecordingRef = useRef<(() => void) | null>(null);
 
-  // ── Dedicated Simulation Video Export (WebM / MP4) with user-configured options ──
+  // ── Dedicated Simulation Video Export (WebM / MP4) capturing real ReactFlow Canvas ──
   const handleExportSimulationVideo = async () => {
     try {
       if (nodes.length === 0) {
@@ -2376,10 +2380,14 @@ function WorkspaceInner({
         return;
       }
 
-      setIsExportingVideo(true);
-      setSuccessToast(
-        `Rendering architecture simulation video (${videoFormat.toUpperCase()})...`,
-      );
+      const reactFlowEl = document.querySelector(".react-flow") as HTMLElement;
+      if (!reactFlowEl) {
+        setValidationWarning("Could not find ReactFlow canvas element to record.");
+        return;
+      }
+
+      // Close settings sheet so it doesn't obstruct canvas view
+      setIsSettingsOpen(false);
 
       // Compile authentic simulation frames based on user export settings
       const isParallel = exportExecutionMode === "parallel";
@@ -2399,32 +2407,45 @@ function WorkspaceInner({
         setValidationWarning(
           "No packet hops generated. Please connect a Client node to downstream components.",
         );
-        setIsExportingVideo(false);
         return;
       }
 
-      const cancel = await recordSimulationVideo({
-        nodes,
-        edges,
-        frameGroups: activeGroups,
-        theme: exportTheme,
+      setIsExportingVideo(true);
+      setExportProgress({
+        percent: 5,
+        status: "Please select current tab in browser dialog...",
+      });
+
+      // Simulation playback speed and frame duration
+      const stepDurationMs = 1000 / exportSpeed;
+      const durationMs = activeGroups.length * stepDurationMs + 1200;
+
+      const cancel = await exportWorkspaceSimulationVideo({
+        reactFlowElement: reactFlowEl,
         videoFormat,
-        speed: exportSpeed,
-        connectionStyle: (connectionStyle as any) || "default",
-        onProgress: (_percent, _status) => {
-          // Progress updates
+        durationMs,
+        onStart: () => {
+          // Play authentic simulation directly on the active workspace ReactFlow canvas!
+          setRawSimulationFrames(simResult.rawSimulationFrames);
+          setFrameIndex(0);
+          setIsPlaying(true);
+        },
+        onProgress: (percent, status) => {
+          setExportProgress({ percent, status });
         },
         onComplete: (blob, url, ext) => {
           setIsExportingVideo(false);
+          setIsPlaying(false);
           if (recordedVideoUrl) {
             URL.revokeObjectURL(recordedVideoUrl);
           }
           setRecordedVideoBlob(blob);
           setRecordedVideoUrl(url);
-          setSuccessToast(`1080p Simulation video saved as .${ext}!`);
+          setSuccessToast(`Live ReactFlow canvas simulation exported as .${ext}!`);
         },
         onError: (err) => {
           setIsExportingVideo(false);
+          setIsPlaying(false);
           setValidationWarning(`Export error: ${err.message || err}`);
         },
       });
@@ -2432,7 +2453,10 @@ function WorkspaceInner({
       cancelRecordingRef.current = cancel;
     } catch (err: any) {
       setIsExportingVideo(false);
-      setValidationWarning(`Failed to export video: ${err.message || err}`);
+      setIsPlaying(false);
+      if (err.name !== "NotAllowedError") {
+        setValidationWarning(`Failed to export video: ${err.message || err}`);
+      }
     }
   };
 
@@ -4896,6 +4920,36 @@ connect s1 -> r1
                     >
                       <FiSquare className="w-3 h-3 fill-current" />
                       <span>Stop & Save</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Floating Active Simulation Video Export HUD Pill */}
+                {isExportingVideo && (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-4 py-2 rounded-full border border-indigo-500/40 bg-background/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-xl text-xs font-mono">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-500 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500" />
+                    </span>
+                    <span className="font-bold text-foreground flex items-center gap-1.5">
+                      <span>EXPORTING CANVAS</span>
+                      <span className="text-indigo-400 font-semibold">{exportProgress.percent}%</span>
+                      <span className="text-[10px] text-muted-foreground uppercase">({videoFormat})</span>
+                    </span>
+                    <span className="text-[11px] text-muted-foreground hidden sm:inline max-w-[200px] truncate">
+                      {exportProgress.status}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        cancelRecordingRef.current?.();
+                        setIsExportingVideo(false);
+                        setIsPlaying(false);
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[11px] font-semibold transition cursor-pointer shadow-xs border border-zinc-700"
+                    >
+                      <FiSquare className="w-2.5 h-2.5 fill-current" />
+                      <span>Cancel</span>
                     </button>
                   </div>
                 )}
