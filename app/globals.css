@@ -376,3 +376,14 @@ body {
     @apply font-sans;
   }
 }
+
+/* ─── Clean Canvas Capture Mode for Video Export ────────────────────────── */
+.rf-recording-clean .react-flow__controls,
+.rf-recording-clean .react-flow__minimap,
+.rf-recording-clean .react-flow__panel,
+.rf-recording-clean .react-flow__attribution {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
