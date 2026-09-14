@@ -357,45 +357,20 @@ export function compileSimulationPipeline(
     }
   });
 
-  // 6. Request Pool Distribution:
-  // When Client connects to a Load Balancer or API Gateway with multiple downstream servers,
-  // ensure we dispatch enough requests so all downstream servers receive traffic (RoundRobin distribution).
-  const outgoingFromClient = activeEdges.filter((e) => e.source === clientId);
-  let downstreamServerCount = 1;
+  const configuredRequests =
+    Array.isArray(clientConfig.requests) && clientConfig.requests.length > 0
+      ? clientConfig.requests
+      : [
+          {
+            endpoint: clientConfig.endpoint || "/api/v1/posts",
+            method: clientConfig.method || "GET",
+            lookupKey: clientConfig.lookupKey || "rohan",
+            fileName: clientConfig.fileName || "file.png",
+            isThereFileToUpload: clientConfig.isThereFileToUpload !== false,
+          },
+        ];
 
-  for (const edge of outgoingFromClient) {
-    const targetNode = activeNodes.find((n) => n.id === edge.target);
-    if (targetNode?.data?.type === "load-balancer" || targetNode?.data?.type === "api-gateway") {
-      const downstreamEdges = activeEdges.filter((e) => e.source === targetNode.id);
-      const serverTargets = downstreamEdges.filter((e) => {
-        const node = activeNodes.find((n) => n.id === e.target);
-        return node?.data?.type === "server" || node?.data?.type === "load-balancer";
-      });
-      downstreamServerCount = Math.max(downstreamServerCount, serverTargets.length);
-    }
-  }
-
-  const configuredRequests = Array.isArray(clientConfig.requests) && clientConfig.requests.length > 0
-    ? clientConfig.requests
-    : [
-        {
-          endpoint: clientConfig.endpoint || "/api/v1/posts",
-          method: clientConfig.method || "GET",
-          lookupKey: clientConfig.lookupKey || "rohan",
-          fileName: clientConfig.fileName || "file.png",
-          isThereFileToUpload: clientConfig.isThereFileToUpload !== false,
-        },
-      ];
-
-  // If user only left 1 request, but connected to an LB/Gateway with multiple servers, expand requests
-  let clientRequests = configuredRequests;
-  if (configuredRequests.length === 1 && downstreamServerCount > 1) {
-    const baseReq = configuredRequests[0];
-    clientRequests = Array.from({ length: downstreamServerCount }, (_, idx) => ({
-      ...baseReq,
-      lookupKey: baseReq.lookupKey || `req-${idx + 1}`,
-    }));
-  }
+  const clientRequests = configuredRequests;
 
   // Clear connection intervals/active states
   activeNodes.forEach((n) => {
