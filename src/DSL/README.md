@@ -22,6 +22,23 @@ define <NODE_TYPE> <identifier> {
 * Node identifiers must be unique alphanumeric strings without spaces (e.g., `c1`, `s1`, `gw1`).
 * Trailing commas inside configuration blocks are optional.
 
+### Canvas Position Coordinates (`x`, `y`)
+Every node can optionally declare its explicit 2D coordinates on the canvas using `x` and `y`:
+
+```javascript
+define CLIENT c1 {
+  x: 100,
+  y: 200,
+  label: "Mobile Client"
+}
+```
+
+* `x`: Numeric horizontal coordinate on the canvas (supports negative values, e.g. `x: -50`).
+* `y`: Numeric vertical coordinate on the canvas.
+* Aliases: Also supports `xAxis` / `x_axis`, `yAxis` / `y_axis`, or `position: { x: 100, y: 200 }`.
+* **Automatic Layout Fallback**: When `x` and `y` are omitted, the compiler calculates topological DAG layered coordinates automatically.
+
+
 ### Connections
 Connections define directed traffic flow between infrastructure components. They can be written using either the `connect` keyword or direct arrow notation:
 

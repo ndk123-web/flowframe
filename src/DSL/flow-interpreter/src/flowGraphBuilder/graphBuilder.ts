@@ -165,9 +165,35 @@ function graphBuilder(ast: Ast[]): FlowFrameGraphOutput {
     const group = layerGroups[layer] || [id];
     const indexInLayer = group.indexOf(id);
 
-    // Dynamic coordinates layout
-    const x = 80 + layer * 300;
-    const y = 180 + indexInLayer * 160;
+    // Dynamic coordinates layout fallback
+    const autoX = 80 + layer * 300;
+    const autoY = 180 + indexInLayer * 160;
+
+    // Check for explicit x and y coordinates in node config
+    const explicitX =
+      typeof rawConfig.x === 'number' && !isNaN(rawConfig.x)
+        ? rawConfig.x
+        : typeof rawConfig.xAxis === 'number' && !isNaN(rawConfig.xAxis)
+        ? rawConfig.xAxis
+        : typeof rawConfig.x_axis === 'number' && !isNaN(rawConfig.x_axis)
+        ? rawConfig.x_axis
+        : typeof rawConfig.position?.x === 'number' && !isNaN(rawConfig.position.x)
+        ? rawConfig.position.x
+        : undefined;
+
+    const explicitY =
+      typeof rawConfig.y === 'number' && !isNaN(rawConfig.y)
+        ? rawConfig.y
+        : typeof rawConfig.yAxis === 'number' && !isNaN(rawConfig.yAxis)
+        ? rawConfig.yAxis
+        : typeof rawConfig.y_axis === 'number' && !isNaN(rawConfig.y_axis)
+        ? rawConfig.y_axis
+        : typeof rawConfig.position?.y === 'number' && !isNaN(rawConfig.position.y)
+        ? rawConfig.position.y
+        : undefined;
+
+    const x = explicitX !== undefined ? explicitX : autoX;
+    const y = explicitY !== undefined ? explicitY : autoY;
 
     const label = rawConfig.label || id;
 
@@ -193,11 +219,16 @@ function graphBuilder(ast: Ast[]): FlowFrameGraphOutput {
         flavor: finalFlavor,
         providerStyle: finalFlavor,
         isActive: false,
+        x,
+        y,
       },
     });
 
     // Build model specific nodeConfigs
-    const processedConfig: Record<string, any> = {};
+    const processedConfig: Record<string, any> = {
+      x,
+      y,
+    };
 
     if (type === 'client') {
       const rawRequests = rawConfig.requests || [];

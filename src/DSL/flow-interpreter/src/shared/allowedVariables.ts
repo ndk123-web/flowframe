@@ -1,3 +1,13 @@
+const POSITION_VARIABLES = [
+  'x',
+  'y',
+  'xAxis',
+  'yAxis',
+  'x_axis',
+  'y_axis',
+  'position',
+];
+
 const ALLOWED_VARIABLES: Record<string, string[]> = {
   CLIENT_NODE: [
     'id',
@@ -10,6 +20,7 @@ const ALLOWED_VARIABLES: Record<string, string[]> = {
     'provider',
     'technologyOfClient',
     'technologyOfServer',
+    ...POSITION_VARIABLES,
   ],
   SERVER_NODE: [
     'id',
@@ -26,6 +37,7 @@ const ALLOWED_VARIABLES: Record<string, string[]> = {
     'providerStyle',
     'provider',
     'technologyOfServer',
+    ...POSITION_VARIABLES,
   ],
   LOADBALANCER_NODE: [
     'id',
@@ -37,6 +49,7 @@ const ALLOWED_VARIABLES: Record<string, string[]> = {
     'providerStyle',
     'provider',
     'technologyOfLoadBalancer',
+    ...POSITION_VARIABLES,
   ],
   GATEWAY_NODE: [
     'id',
@@ -50,6 +63,7 @@ const ALLOWED_VARIABLES: Record<string, string[]> = {
     'flavor',
     'providerStyle',
     'provider',
+    ...POSITION_VARIABLES,
   ],
   REDIS_NODE: [
     'id',
@@ -60,6 +74,7 @@ const ALLOWED_VARIABLES: Record<string, string[]> = {
     'flavor',
     'providerStyle',
     'provider',
+    ...POSITION_VARIABLES,
   ],
   POSTGRES_NODE: [
     'id',
@@ -72,6 +87,7 @@ const ALLOWED_VARIABLES: Record<string, string[]> = {
     'flavor',
     'providerStyle',
     'provider',
+    ...POSITION_VARIABLES,
   ],
   MESSAGE_QUEUE_NODE: [
     'id',
@@ -85,6 +101,7 @@ const ALLOWED_VARIABLES: Record<string, string[]> = {
     'flavor',
     'providerStyle',
     'provider',
+    ...POSITION_VARIABLES,
   ],
   PUBSUB_NODE: [
     'id',
@@ -98,6 +115,7 @@ const ALLOWED_VARIABLES: Record<string, string[]> = {
     'flavor',
     'providerStyle',
     'provider',
+    ...POSITION_VARIABLES,
   ],
 };
 
