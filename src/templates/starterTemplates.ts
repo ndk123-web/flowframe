@@ -224,6 +224,21 @@ export function createDefaultNodeConfig(
       };
 
     case "server":
+      if (templateId === "simple-api-gateway") {
+        const isUserService = id === "server-1-id";
+        return {
+          capacity: 100,
+          tcpConnections: 10,
+          prefetchLimit: 1,
+          endpoints: isUserService
+            ? {
+                "/api/v1/users/profile": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+              }
+            : {
+                "/api/v1/posts/list": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+              },
+        };
+      }
       return {
         capacity: 100,
         tcpConnections: 10,
