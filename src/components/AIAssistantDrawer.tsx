@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import type { Node, Edge } from "@xyflow/react";
 import {
   FiCpu,
@@ -13,6 +13,7 @@ import {
   FiArrowUp,
   FiCode,
 } from "react-icons/fi";
+import { Sparkles } from "lucide-react";
 
 export interface AIAssistantDrawerProps {
   isOpen: boolean;
@@ -100,12 +101,7 @@ export default function AIAssistantDrawer({
     }
   }, [isOpen]);
 
-  // Derive compact topology summary
-  const topologySummary = useMemo(() => {
-    if (nodes.length === 0) return "Empty canvas";
-    const types = Array.from(new Set(nodes.map((n) => (n.data?.type as string) || "node")));
-    return `${nodes.length} nodes · ${edges.length} connections (${types.slice(0, 3).join(", ")}${types.length > 3 ? "…" : ""})`;
-  }, [nodes, edges]);
+  const hasUserChat = messages.some((message) => message.sender === "user");
 
   if (!isOpen) return null;
 
@@ -643,7 +639,7 @@ connect api_server -> postgres_db
       {/* ── 1. Compact Professional Header ── */}
       <div className="h-10 px-3 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]">
         <div className="flex items-center gap-2 min-w-0">
-          <FiTerminal className="size-3.5 text-primary shrink-0" />
+          <Sparkles className="size-3.5 text-primary shrink-0" />
           <span className="text-xs font-semibold text-foreground tracking-tight truncate">
             Relay
           </span>
@@ -654,6 +650,24 @@ connect api_server -> postgres_db
             className="size-1.5 rounded-full bg-emerald-500 shrink-0"
             title="Relay active"
           />
+          {selectedNode && (
+            <div className="flex items-center gap-1 shrink-0 bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 text-[10px]">
+              <span className="size-1 rounded-full bg-primary shrink-0" />
+              <span className="truncate max-w-[100px]">
+                {(selectedNode.data?.label as string) || selectedNode.id}
+              </span>
+              {onSelectNode && (
+                <button
+                  type="button"
+                  onClick={() => onSelectNode(null)}
+                  className="hover:opacity-75 cursor-pointer ml-0.5 leading-none"
+                  title="Deselect node"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-1">
@@ -678,108 +692,83 @@ connect api_server -> postgres_db
         </div>
       </div>
 
-      {/* ── 2. Compact Architecture & Selection Context Bar ── */}
-      <div className="px-3 py-1.5 border-b border-[var(--border)] bg-[var(--bg-elevated)]/40 flex items-center justify-between gap-2 text-[11px] font-mono text-muted-foreground shrink-0 select-none">
-        <div className="flex items-center gap-1.5 min-w-0 truncate">
-          <span className="text-foreground/90 font-medium">Context:</span>
-          <span className="truncate">{topologySummary}</span>
-        </div>
-
-        {selectedNode && (
-          <div className="flex items-center gap-1 shrink-0 bg-primary/10 text-primary px-1.5 py-0.2 rounded border border-primary/20 text-[10px]">
-            <span className="size-1.5 rounded-full bg-primary shrink-0" />
-            <span className="truncate max-w-[110px]">
-              {(selectedNode.data?.label as string) || selectedNode.id}
-            </span>
-            {onSelectNode && (
+      {/* ── 2. Quick Action Chips (Shown only before the first user message) ── */}
+      {!hasUserChat && (
+        <div className="px-3 py-1.5 border-b border-[var(--border)] bg-[var(--surface)] flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+          {selectedNode ? (
+            <>
               <button
                 type="button"
-                onClick={() => onSelectNode(null)}
-                className="hover:opacity-75 cursor-pointer ml-0.5"
-                title="Deselect node"
+                disabled={isGenerating}
+                onClick={() =>
+                  handleQuickAction(
+                    `Explain role and failure dynamics of ${(selectedNode.data?.label as string) || selectedNode.id}`,
+                    "ask"
+                  )
+                }
+                className="text-[10px] font-mono px-2 py-0.5 rounded border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 transition whitespace-nowrap cursor-pointer shrink-0"
               >
-                ×
+                Explain {(selectedNode.data?.label as string) || selectedNode.id}
               </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ── 3. Quick Action Chips (Developer-Focused) ── */}
-      <div className="px-3 py-1.5 border-b border-[var(--border)] bg-[var(--surface)] flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
-        {selectedNode ? (
-          <>
-            <button
-              type="button"
-              disabled={isGenerating}
-              onClick={() =>
-                handleQuickAction(
-                  `Explain role and failure dynamics of ${(selectedNode.data?.label as string) || selectedNode.id}`,
-                  "ask"
-                )
-              }
-              className="text-[10px] font-mono px-2 py-0.5 rounded border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 transition whitespace-nowrap cursor-pointer shrink-0"
-            >
-              Explain {(selectedNode.data?.label as string) || selectedNode.id}
-            </button>
-            <button
-              type="button"
-              disabled={isGenerating}
-              onClick={() =>
-                handleQuickAction(
-                  `What happens if ${(selectedNode.data?.label as string) || selectedNode.id} fails or times out?`,
-                  "ask"
-                )
-              }
-              className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground transition whitespace-nowrap cursor-pointer shrink-0"
-            >
-              Failure test
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              disabled={isGenerating}
-              onClick={() => handleQuickAction("Explain current canvas architecture and data flow", "ask")}
-              className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
-            >
-              Explain architecture
-            </button>
-            <button
-              type="button"
-              disabled={isGenerating}
-              onClick={() => handleQuickAction("Validate architecture bottlenecks and unrouted nodes", "ask")}
-              className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
-            >
-              Validate topology
-            </button>
-            <button
-              type="button"
-              disabled={isGenerating}
-              onClick={() => handleQuickAction("Build a Cache-Aside pattern with Redis and PostgreSQL", "create")}
-              className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
-            >
-              Build Cache-Aside
-            </button>
-            <button
-              type="button"
-              disabled={isGenerating}
-              onClick={() => handleQuickAction("Create a Round-Robin Load-Balanced Cluster", "create")}
-              className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
-            >
-              Build Load Balancer
-            </button>
-          </>
-        )}
-      </div>
+              <button
+                type="button"
+                disabled={isGenerating}
+                onClick={() =>
+                  handleQuickAction(
+                    `What happens if ${(selectedNode.data?.label as string) || selectedNode.id} fails or times out?`,
+                    "ask"
+                  )
+                }
+                className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground transition whitespace-nowrap cursor-pointer shrink-0"
+              >
+                Failure test
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={isGenerating}
+                onClick={() => handleQuickAction("Explain current canvas architecture and data flow", "ask")}
+                className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
+              >
+                Explain architecture
+              </button>
+              <button
+                type="button"
+                disabled={isGenerating}
+                onClick={() => handleQuickAction("Validate architecture bottlenecks and unrouted nodes", "ask")}
+                className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
+              >
+                Validate topology
+              </button>
+              <button
+                type="button"
+                disabled={isGenerating}
+                onClick={() => handleQuickAction("Build a Cache-Aside pattern with Redis and PostgreSQL", "create")}
+                className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
+              >
+                Build Cache-Aside
+              </button>
+              <button
+                type="button"
+                disabled={isGenerating}
+                onClick={() => handleQuickAction("Create a Round-Robin Load-Balanced Cluster", "create")}
+                className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
+              >
+                Build Load Balancer
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* ── 4. Conversation Stream (Document / Editor Style) ── */}
       <div className="flex-1 min-h-0 overflow-y-auto px-3.5 py-3 space-y-4 scrollbar-thin">
-        {messages.length === 1 && (
+        {!hasUserChat && (
           <div className="py-4 text-center space-y-1.5 select-none">
             <div className="size-7 mx-auto rounded bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center text-primary">
-              <FiTerminal className="size-3.5" />
+              <Sparkles className="size-3.5" />
             </div>
             <p className="text-xs font-semibold text-foreground">
               Relay Architecture Assistant
@@ -808,7 +797,7 @@ connect api_server -> postgres_db
               <div className="space-y-2 pt-2 border-t border-[var(--border)]/50">
                 <div className="flex items-center justify-between text-[10px] font-mono font-bold uppercase tracking-wider text-primary select-none">
                   <div className="flex items-center gap-1.5">
-                    <FiTerminal className="size-3 text-primary" />
+                    <Sparkles className="size-3 text-primary" />
                     <span>Relay</span>
                   </div>
                   {m.thoughtTime && (
@@ -918,7 +907,7 @@ connect api_server -> postgres_db
         {isGenerating && (
           <div className="pt-2 border-t border-[var(--border)]/50 space-y-1.5 animate-in fade-in duration-150 select-none">
             <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-primary">
-              <FiTerminal className="size-3 animate-pulse text-primary" />
+              <Sparkles className="size-3 animate-pulse text-primary" />
               <span>Relay</span>
             </div>
             <div className="flex items-center gap-2 pl-2.5 text-xs text-muted-foreground font-mono">
@@ -935,17 +924,17 @@ connect api_server -> postgres_db
 
       {/* ── 5. Fixed Developer Composer (Sticky Bottom) ── */}
       <div className="p-2.5 border-t border-[var(--border)] bg-[var(--surface)] shrink-0 space-y-2">
-        {/* Mode & Think Toggle Bar */}
+        {/* Mode Selector Bar */}
         <div className="flex items-center justify-between gap-1.5 select-none">
-          <div className="flex items-center gap-1 bg-[var(--bg-elevated)] p-0.5 rounded-md border border-[var(--border)] text-[11px]">
+          <div className="flex items-center p-0.5 rounded-md border border-[var(--border)] bg-[var(--bg-elevated)] text-[11px]">
             <button
               type="button"
               disabled={isGenerating}
               onClick={() => setMode("create")}
-              className={`px-2 py-0.5 rounded text-[10.5px] font-medium transition cursor-pointer ${
+              className={`px-2.5 py-0.5 rounded text-[10.5px] font-medium transition cursor-pointer ${
                 mode === "create"
-                  ? "bg-[var(--surface)] text-foreground font-semibold shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-primary/10 text-primary border border-primary/30 font-semibold shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground border border-transparent"
               }`}
             >
               Create
@@ -954,35 +943,15 @@ connect api_server -> postgres_db
               type="button"
               disabled={isGenerating}
               onClick={() => setMode("ask")}
-              className={`px-2 py-0.5 rounded text-[10.5px] font-medium transition cursor-pointer ${
+              className={`px-2.5 py-0.5 rounded text-[10.5px] font-medium transition cursor-pointer ${
                 mode === "ask"
-                  ? "bg-[var(--surface)] text-foreground font-semibold shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-primary/10 text-primary border border-primary/30 font-semibold shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground border border-transparent"
               }`}
             >
               Ask & Analyze
             </button>
           </div>
-
-          {/* Think Toggle */}
-          <button
-            type="button"
-            onClick={() => setThinkEnabled(!thinkEnabled)}
-            className={`px-2 py-0.5 rounded-md border font-mono text-[10px] font-medium transition cursor-pointer flex items-center gap-1 select-none ${
-              thinkEnabled
-                ? "bg-primary/10 border-primary/30 text-primary font-semibold shadow-xs ring-1 ring-primary/20"
-                : "bg-[var(--surface)] border-[var(--border)] text-muted-foreground hover:text-foreground"
-            }`}
-            title={thinkEnabled ? "Extended Architecture Reasoning: ON" : "Extended Architecture Reasoning: OFF"}
-          >
-            <FiCpu className={`size-3 ${thinkEnabled ? "text-primary animate-pulse" : "text-muted-foreground"}`} />
-            <span>Think</span>
-            <span
-              className={`size-1 rounded-full ${
-                thinkEnabled ? "bg-primary" : "bg-muted-foreground/50"
-              }`}
-            />
-          </button>
         </div>
 
         {/* Input Textarea Form */}
@@ -1018,20 +987,43 @@ connect api_server -> postgres_db
           <div className="flex items-center justify-between gap-2 pt-1 border-t border-[var(--border)]/40 text-[10px] font-mono text-muted-foreground select-none">
             <span className="truncate">Enter to send · Shift+Enter newline</span>
 
-            <button
-              type="button"
-              disabled={!input.trim() || isGenerating}
-              onClick={() => submitPrompt()}
-              className="size-6 rounded bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center cursor-pointer shadow-xs disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
-              title="Send message"
-              aria-label="Send message"
-            >
-              {isGenerating ? (
-                <div className="size-3 rounded-full border border-primary-foreground/40 border-t-primary-foreground animate-spin" />
-              ) : (
-                <FiArrowUp className="size-3.5" />
-              )}
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Think Toggle immediately to the left of Send */}
+              <button
+                type="button"
+                onClick={() => setThinkEnabled(!thinkEnabled)}
+                className={`px-2 py-0.5 rounded border font-mono text-[10px] font-medium transition cursor-pointer flex items-center gap-1 select-none ${
+                  thinkEnabled
+                    ? "bg-primary/10 border-primary/30 text-primary font-semibold shadow-2xs ring-1 ring-primary/20"
+                    : "bg-transparent border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                }`}
+                title={thinkEnabled ? "Extended Architecture Reasoning: ON" : "Extended Architecture Reasoning: OFF"}
+              >
+                <FiCpu className={`size-3 ${thinkEnabled ? "text-primary animate-pulse" : "text-muted-foreground"}`} />
+                <span>Think</span>
+                <span
+                  className={`size-1 rounded-full ${
+                    thinkEnabled ? "bg-primary" : "bg-muted-foreground/50"
+                  }`}
+                />
+              </button>
+
+              {/* Send Button */}
+              <button
+                type="button"
+                disabled={!input.trim() || isGenerating}
+                onClick={() => submitPrompt()}
+                className="size-6 rounded bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center cursor-pointer shadow-xs disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
+                title="Send message"
+                aria-label="Send message"
+              >
+                {isGenerating ? (
+                  <div className="size-3 rounded-full border border-primary-foreground/40 border-t-primary-foreground animate-spin" />
+                ) : (
+                  <FiArrowUp className="size-3.5" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

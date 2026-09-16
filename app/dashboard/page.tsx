@@ -66,8 +66,20 @@ import {
   deleteWorkspace,
   WorkspaceDTO,
 } from "@/services/workspaceApi";
-import { getRecentDiagrams, getWorkspaceDiagrams, RecentDiagramDTO } from "@/services/diagramApi";
+import {
+  getRecentDiagrams,
+  getWorkspaceDiagrams,
+  createDiagram,
+  RecentDiagramDTO,
+} from "@/services/diagramApi";
 import { formatDate } from "@/utils/formatDate";
+import {
+  STARTER_TEMPLATES,
+  StarterTemplateDefinition,
+  getTemplateArchitecture,
+} from "@/templates/starterTemplates";
+import UseTemplateDialog from "@/components/UseTemplateDialog";
+import TemplateBrowserDialog from "@/components/TemplateBrowserDialog";
 
 type ViewMode = "grid" | "list";
 type FilterTab = "all" | "development" | "production" | "starred";
@@ -83,70 +95,6 @@ interface WorkspaceItem {
   color: string;
   iconType: "cart" | "chat" | "card" | "zap";
 }
-
-// Pre-built FlowFrame starter templates matching existing scenarios & patterns
-const STARTER_TEMPLATES = [
-  {
-    id: "simple-load-balancer",
-    title: "Simple Load Balancer",
-    category: "Traffic Routing",
-    desc: "Round-robin L7 traffic distribution across 3 backend application servers.",
-    icon: FiSliders,
-    iconColor: "text-muted-foreground bg-muted/40 border-border/80 group-hover:text-primary group-hover:border-primary/30 group-hover:bg-primary/5",
-    href: "/scenarios/simple-load-balancer",
-    prompt: "Client sending requests to a Round-Robin Load Balancer distributing across 3 backend application servers",
-  },
-  {
-    id: "simple-cache",
-    title: "Cache-Aside Pattern",
-    category: "Data Caching",
-    desc: "Redis in-memory caching with PostgreSQL fallback and automatic backfilling.",
-    icon: FiDatabase,
-    iconColor: "text-muted-foreground bg-muted/40 border-border/80 group-hover:text-primary group-hover:border-primary/30 group-hover:bg-primary/5",
-    href: "/scenarios/simple-cache",
-    prompt: "API Gateway routing to a User Service with Redis read-through caching and PostgreSQL fallback",
-  },
-  {
-    id: "simple-api-gateway",
-    title: "API Gateway Routing",
-    category: "Microservices",
-    desc: "Unified entry point routing /posts and /users to isolated microservices.",
-    icon: FiLayers,
-    iconColor: "text-muted-foreground bg-muted/40 border-border/80 group-hover:text-primary group-hover:border-primary/30 group-hover:bg-primary/5",
-    href: "/scenarios/simple-api-gateway",
-    prompt: "API Gateway routing /posts and /users to separate microservices with isolated buffers",
-  },
-  {
-    id: "simple-message-queue",
-    title: "Message Queue Pipeline",
-    category: "Asynchronous",
-    desc: "FIFO queue buffer leveling traffic spikes across competing worker pools.",
-    icon: FiCpu,
-    iconColor: "text-muted-foreground bg-muted/40 border-border/80 group-hover:text-primary group-hover:border-primary/30 group-hover:bg-primary/5",
-    href: "/scenarios/simple-message-queue",
-    prompt: "Order Producer publishing events into a FIFO Message Queue processed by worker consumer",
-  },
-  {
-    id: "simple-valet-key",
-    title: "Valet Key Direct Upload",
-    category: "Storage Offload",
-    desc: "Pre-signed token negotiation for direct client-to-storage binary streaming.",
-    icon: FiBox,
-    iconColor: "text-muted-foreground bg-muted/40 border-border/80 group-hover:text-primary group-hover:border-primary/30 group-hover:bg-primary/5",
-    href: "/scenarios/simple-valet-key",
-    prompt: "Client requesting pre-signed valet key from server then uploading directly to S3 Cloud Storage",
-  },
-  {
-    id: "event-driven",
-    title: "Event-Driven Pub/Sub",
-    category: "Pub/Sub Fan-Out",
-    desc: "Topic-based pub/sub broker broadcasting parallel message dispatches.",
-    icon: FiZap,
-    iconColor: "text-muted-foreground bg-muted/40 border-border/80 group-hover:text-primary group-hover:border-primary/30 group-hover:bg-primary/5",
-    href: "/scenarios/event-driven",
-    prompt: "Publisher dispatching events into PubSub broker fanning out to Email and Analytics services",
-  },
-];
 
 const QUICK_PROMPTS = [
   {
@@ -240,6 +188,76 @@ export default function DashboardPage() {
 
   // Settings Dialog state
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+
+  // Template & Diagram Creation states
+  const [selectedTemplateForUse, setSelectedTemplateForUse] = useState<StarterTemplateDefinition | null>(null);
+  const [useTemplateModalOpen, setUseTemplateModalOpen] = useState(false);
+  const [browseTemplatesOpen, setBrowseTemplatesOpen] = useState(false);
+
+  const handleOpenUseTemplate = (template: StarterTemplateDefinition) => {
+    setSelectedTemplateForUse(template);
+    setUseTemplateModalOpen(true);
+  };
+
+  const handleCreateWorkspaceForTemplate = async (
+    name: string,
+    env: "DEV" | "PROD" | "STAGING"
+  ): Promise<WorkspaceItem | null> => {
+    if (!token) return null;
+    const created = await createWorkspace(
+      {
+        name,
+        env,
+      },
+      token
+    );
+
+    const newWsItem: WorkspaceItem = {
+      id: created.id,
+      name: created.name,
+      description: created.description || "",
+      env: (created.env as any) || env,
+      diagrams_count: 0,
+      updated_at: created.updated_at,
+      starred: false,
+      color: "accent",
+      iconType: "zap",
+    };
+
+    setWorkspaces((prev) => [newWsItem, ...prev]);
+    showToast(`Workspace "${created.name}" created!`, "success");
+    return newWsItem;
+  };
+
+  const handleConfirmUseTemplate = async (
+    workspaceId: string,
+    diagramTitle: string,
+    template: StarterTemplateDefinition
+  ) => {
+    if (!token) {
+      showToast("Authentication required to create a diagram", "error");
+      return;
+    }
+
+    const { nodes, edges, configs } = getTemplateArchitecture(template.id);
+
+    const created = await createDiagram(
+      workspaceId,
+      {
+        title: diagramTitle,
+        description: template.desc,
+        nodes,
+        edges,
+        configs,
+      },
+      token
+    );
+
+    showToast(`Diagram "${created.title || diagramTitle}" created!`, "success");
+
+    // Immediately route to the new diagram's canvas
+    router.push(`/dashboard/workspace/${workspaceId}/${created.id}`);
+  };
 
   // Auth Guard with Zustand Hydration check
   useEffect(() => {
@@ -944,8 +962,8 @@ export default function DashboardPage() {
               </div>
 
               {/* ── Group 3: Learning Hub ── */}
-              <div className="pt-2 border-t border-border/60 space-y-1">
-                <div className="px-2 pb-0.5">
+              <div className="pt-3.5 pb-2.5 border-t border-border/60 space-y-1">
+                <div className="px-2 pb-1">
                   <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                     <FiCompass className="size-3 text-indigo-400" />
                     <span>Learning Hub</span>
@@ -984,8 +1002,8 @@ export default function DashboardPage() {
               </div>
 
               {/* ── Group 4: Developer Tools ── */}
-              <div className="pt-2 border-t border-border/60 space-y-1">
-                <div className="px-2 pb-0.5">
+              <div className="pt-3.5 pb-4 border-t border-border/60 space-y-1">
+                <div className="px-2 pb-1">
                   <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                     <FiTerminal className="size-3 text-blue-400" />
                     <span>Developer Tools</span>
@@ -1101,19 +1119,6 @@ export default function DashboardPage() {
             >
               <FiMenu className="size-4" />
             </button>
-
-            {sidebarCollapsed && (
-              <button
-                type="button"
-                onClick={() => setSidebarCollapsed(false)}
-                className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border bg-card hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-xs font-medium focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
-                title="Expand sidebar"
-                aria-label="Expand sidebar"
-              >
-                <FiMenu className="size-3.5 text-primary" />
-                <span className="text-[11px] font-mono">Sidebar</span>
-              </button>
-            )}
 
             <div className="min-w-0 flex items-center gap-1.5 text-xs">
               <span className="font-semibold text-foreground">FlowFrame</span>
@@ -1291,13 +1296,14 @@ export default function DashboardPage() {
                   Launch standard distributed architectures with pre-configured packet flows.
                 </p>
               </div>
-              <Link
-                href="/scenarios"
-                className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
+              <button
+                type="button"
+                onClick={() => setBrowseTemplatesOpen(true)}
+                className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer"
               >
-                <span>View All</span>
+                <span>Browse Templates</span>
                 <FiArrowRight className="size-3" />
-              </Link>
+              </button>
             </div>
 
             {/* Templates Grid */}
@@ -1307,11 +1313,20 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={tmpl.id}
-                    className="group relative rounded-xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-xs transition-all duration-200 flex flex-col justify-between"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleOpenUseTemplate(tmpl)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleOpenUseTemplate(tmpl);
+                      }
+                    }}
+                    className="group relative rounded-xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-xs transition-all duration-200 flex flex-col justify-between cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 min-h-[140px]"
                   >
                     <div className="space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <div className={`size-8 rounded-lg flex items-center justify-center border ${tmpl.iconColor}`}>
+                        <div className="size-8 rounded-lg flex items-center justify-center border text-muted-foreground bg-muted/40 border-border/80 group-hover:text-primary group-hover:border-primary/30 group-hover:bg-primary/5 transition-colors">
                           <IconComp className="size-4" />
                         </div>
                         <Badge variant="outline" className="text-[9px] font-mono px-1.5 py-0 bg-muted/30 border-border/70 text-muted-foreground">
@@ -1320,30 +1335,28 @@ export default function DashboardPage() {
                       </div>
 
                       <div>
-                        <h3 className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
-                          {tmpl.title}
-                        </h3>
-                        <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 mt-0.5">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <h3 className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                            {tmpl.title}
+                          </h3>
+                          <span className="text-[10px] font-mono text-muted-foreground bg-muted/30 px-1.5 py-0.5 rounded border border-border/60 shrink-0">
+                            {tmpl.nodeCount} nodes
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 mt-1">
                           {tmpl.desc}
                         </p>
                       </div>
                     </div>
 
                     <div className="pt-3 mt-3 border-t border-border/70 flex items-center justify-between text-xs">
-                      <Link
-                        href={tmpl.href}
-                        className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        Inspect Flow
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => handlePromptSubmit(tmpl.prompt)}
-                        className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer"
-                      >
-                        <span>Open Canvas</span>
-                        <FiArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" />
-                      </button>
+                      <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[140px]">
+                        {tmpl.components.slice(0, 2).join(", ")}…
+                      </span>
+                      <span className="text-[11px] font-semibold text-primary flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                        <span>Use Template</span>
+                        <FiArrowRight className="size-3" />
+                      </span>
                     </div>
                   </div>
                 );
@@ -2027,6 +2040,35 @@ export default function DashboardPage() {
 
       {/* ── Engineering Account Preferences & Settings Dialog ───────────── */}
       <DashboardSettingsDialog open={settingsModalOpen} onOpenChange={setSettingsModalOpen} />
+
+      {/* ── Use Template Dialog ─────────────────────────────────────────── */}
+      <UseTemplateDialog
+        isOpen={useTemplateModalOpen}
+        onClose={() => {
+          setUseTemplateModalOpen(false);
+          setSelectedTemplateForUse(null);
+        }}
+        template={selectedTemplateForUse}
+        workspaces={workspaces}
+        defaultWorkspaceId={selectedWsId}
+        existingDiagramNames={
+          selectedWsId && workspaceDiagramsMap[selectedWsId]
+            ? workspaceDiagramsMap[selectedWsId].map((d) => d.title)
+            : []
+        }
+        onCreateWorkspace={handleCreateWorkspaceForTemplate}
+        onConfirmUseTemplate={handleConfirmUseTemplate}
+      />
+
+      {/* ── Browse Templates Dialog ──────────────────────────────────────── */}
+      <TemplateBrowserDialog
+        isOpen={browseTemplatesOpen}
+        onClose={() => setBrowseTemplatesOpen(false)}
+        onUseTemplate={(tmpl) => {
+          setBrowseTemplatesOpen(false);
+          handleOpenUseTemplate(tmpl);
+        }}
+      />
     </div>
   );
 }

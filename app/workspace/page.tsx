@@ -69,7 +69,9 @@ import CanvasToolbar from "@/components/CanvasToolbar";
 import CanvasSettingsSheet from "@/components/CanvasSettingsSheet";
 import CanvasControlsBar from "@/components/CanvasControlsBar";
 import TemplateBrowserDialog, { WORKSPACE_TEMPLATES } from "@/components/TemplateBrowserDialog";
+import { getTemplateArchitecture } from "@/templates/starterTemplates";
 import { recordSimulationVideo } from "@/utils/recordSimulationVideo";
+import { Sparkles } from "lucide-react";
 
 // DSL Interpreter & Graph Engine
 import { compileDSL } from "@/DSL";
@@ -1004,6 +1006,54 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
     default:
       return {};
   }
+}
+
+function inferWorkspaceNodeType(node: any): ComponentType {
+  if (node?.data?.type && node.data.type !== "default") {
+    return node.data.type as ComponentType;
+  }
+  const id = (node?.id || "").toLowerCase();
+  const label = (node?.data?.label || "").toLowerCase();
+
+  if (id.includes("client") || label.includes("client") || label.includes("browser") || label.includes("user")) {
+    return "client";
+  }
+  if (id.includes("api") || id.includes("gateway") || label.includes("gateway")) {
+    return "api-gateway";
+  }
+  if (id.includes("lb") || label.includes("load balancer")) {
+    return "load-balancer";
+  }
+  if (id.includes("redis") || id.includes("cache") || label.includes("redis") || label.includes("cache")) {
+    return "redis";
+  }
+  if (
+    id.includes("postgres") ||
+    id.includes("sql") ||
+    id.includes("db") ||
+    id.includes("database") ||
+    label.includes("postgres") ||
+    label.includes("db") ||
+    label.includes("database")
+  ) {
+    return "postgres";
+  }
+  if (id.includes("storage") || id.includes("s3") || id.includes("blob") || label.includes("storage")) {
+    return "storage";
+  }
+  if (id.includes("pubsub") || id.includes("broker") || label.includes("pub/sub") || label.includes("broker")) {
+    return "pubsub";
+  }
+  if (id.includes("queue") || label.includes("queue")) {
+    return "message-queue";
+  }
+  if (id.includes("dns") || label.includes("dns")) {
+    return "dns";
+  }
+  if (id.includes("cdn") || label.includes("cdn")) {
+    return "cdn";
+  }
+  return "server";
 }
 
 // ── Node shape geometry helpers ────────────────────────────────────────────
@@ -2205,6 +2255,7 @@ function ShapeNode({ data, selected }: any) {
 
 const nodeTypes = {
   customNode: CustomNode,
+  default: CustomNode,
   shapeNode: ShapeNode,
 };
 
@@ -2241,13 +2292,42 @@ function WorkspaceInner({
         .then((dto) => {
           setDiagramTitle(dto.title);
           if (Array.isArray(dto.nodes) && dto.nodes.length > 0) {
-            setNodes(dto.nodes);
+            const sanitizedNodes = dto.nodes.map((n: any) => {
+              const inferred = inferWorkspaceNodeType(n);
+              const isShape = n.type === "shapeNode";
+              return {
+                ...n,
+                type: isShape ? "shapeNode" : "customNode",
+                style: isShape ? n.style : undefined,
+                data: {
+                  ...(n.data || {}),
+                  label: n.data?.label || (inferred.charAt(0).toUpperCase() + inferred.slice(1)),
+                  type: n.data?.type || inferred,
+                },
+              };
+            });
+            setNodes(sanitizedNodes);
+
+            const baseConfigs =
+              dto.configs && typeof dto.configs === "object"
+                ? { ...dto.configs }
+                : {};
+            for (const n of sanitizedNodes) {
+              if (!baseConfigs[n.id]) {
+                const nodeType = (n.data?.type || inferWorkspaceNodeType(n)) as ComponentType;
+                baseConfigs[n.id] = createDefaultConfig(
+                  nodeType,
+                  n.id,
+                  n.data?.label || n.id,
+                );
+              }
+            }
+            setNodeConfigs(baseConfigs);
+          } else if (dto.configs && typeof dto.configs === "object") {
+            setNodeConfigs(dto.configs);
           }
           if (Array.isArray(dto.edges)) {
             setEdges(dto.edges);
-          }
-          if (dto.configs && typeof dto.configs === "object") {
-            setNodeConfigs(dto.configs);
           }
           setTimeout(() => {
             fitView({ duration: 600 });
@@ -2266,13 +2346,42 @@ function WorkspaceInner({
         .then((dto) => {
           setDiagramTitle(dto.title);
           if (Array.isArray(dto.nodes) && dto.nodes.length > 0) {
-            setNodes(dto.nodes);
+            const sanitizedNodes = dto.nodes.map((n: any) => {
+              const inferred = inferWorkspaceNodeType(n);
+              const isShape = n.type === "shapeNode";
+              return {
+                ...n,
+                type: isShape ? "shapeNode" : "customNode",
+                style: isShape ? n.style : undefined,
+                data: {
+                  ...(n.data || {}),
+                  label: n.data?.label || (inferred.charAt(0).toUpperCase() + inferred.slice(1)),
+                  type: n.data?.type || inferred,
+                },
+              };
+            });
+            setNodes(sanitizedNodes);
+
+            const baseConfigs =
+              dto.configs && typeof dto.configs === "object"
+                ? { ...dto.configs }
+                : {};
+            for (const n of sanitizedNodes) {
+              if (!baseConfigs[n.id]) {
+                const nodeType = (n.data?.type || inferWorkspaceNodeType(n)) as ComponentType;
+                baseConfigs[n.id] = createDefaultConfig(
+                  nodeType,
+                  n.id,
+                  n.data?.label || n.id,
+                );
+              }
+            }
+            setNodeConfigs(baseConfigs);
+          } else if (dto.configs && typeof dto.configs === "object") {
+            setNodeConfigs(dto.configs);
           }
           if (Array.isArray(dto.edges)) {
             setEdges(dto.edges);
-          }
-          if (dto.configs && typeof dto.configs === "object") {
-            setNodeConfigs(dto.configs);
           }
           setTimeout(() => {
             fitView({ duration: 600 });
@@ -2994,7 +3103,13 @@ connect s1 -> db1
       const activeConfigs = overrideConfigs || nodeConfigs;
 
       // 1. Detect Clients
-      const clientNodes = activeNodes.filter((n) => n.data.type === "client");
+      const clientNodes = activeNodes.filter(
+        (n) =>
+          n.data?.type === "client" ||
+          (typeof n.data?.label === "string" &&
+            n.data.label.toLowerCase().includes("client")) ||
+          n.id.toLowerCase().startsWith("client"),
+      );
       if (clientNodes.length === 0) {
         setValidationWarning(
           "Please add at least one Client node to the canvas.",
@@ -3023,8 +3138,8 @@ connect s1 -> db1
 
       // 3. Register nodes
       activeNodes.forEach((n) => {
-        const type = n.data.type as ComponentType;
-        const labelStr = (n.data.label as string) || "";
+        const type = (n.data?.type || inferWorkspaceNodeType(n)) as ComponentType;
+        const labelStr = (n.data?.label as string) || "";
         const config =
           activeConfigs[n.id] || createDefaultConfig(type, n.id, labelStr);
 
@@ -3708,6 +3823,33 @@ connect s1 -> db1
     [setNodes, setEdges, fitView],
   );
 
+  const loadStarterTemplate = useCallback(
+    (templateId: string) => {
+      const architecture = getTemplateArchitecture(templateId);
+      if (architecture.nodes.length === 0) {
+        setValidationWarning(`Unable to load template: ${templateId}`);
+        return;
+      }
+
+      setNodes(architecture.nodes);
+      setEdges(
+        architecture.edges.map((edge) => ({
+          ...edge,
+          markerEnd: { type: MarkerType.ArrowClosed, color: "#60a5fa" },
+          style: { stroke: "#475569", strokeWidth: 1.8 },
+        })),
+      );
+      setNodeConfigs(architecture.configs);
+      setIsPlaying(false);
+      setRawSimulationFrames([]);
+      setFrameIndex(0);
+      setSelectedNodeId(null);
+      setValidationWarning(null);
+      setTimeout(() => fitView({ duration: 400 }), 80);
+    },
+    [fitView, setEdges, setNodes],
+  );
+
   // Open template selection picker modal ONLY on standalone sandbox load (not inside workspace diagrams or share view)
   useEffect(() => {
     if (!workspaceId && !diagramId && !shareId) {
@@ -4167,7 +4309,7 @@ connect s1 -> db1
 
       return {
         ...node,
-        type: node.type || "customNode",
+        type: isShape ? "shapeNode" : "customNode",
         selected: isSelected,
         style: isShape ? { ...node.style, zIndex: -1 } : undefined,
         data: {
@@ -4265,7 +4407,8 @@ connect s1 -> db1
   const onNodeClick = useCallback(
     (_: any, node: Node) => {
       setSelectedNodeId(node.id);
-      if (node.data.type === "client") {
+      const resolvedType = node.data?.type || inferWorkspaceNodeType(node);
+      if (resolvedType === "client") {
         handleStartSimulation(node.id);
       }
     },
@@ -5501,7 +5644,7 @@ connect s1 -> db1
                       title="Open Relay"
                       aria-label="Open Relay"
                     >
-                      <FiTerminal className="size-4 text-primary group-hover:scale-110 transition-transform" />
+                      <Sparkles className="size-4 text-primary group-hover:scale-110 transition-transform" />
                     </button>
                   </div>
                 )}
@@ -5866,7 +6009,10 @@ connect s1 -> db1
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-[var(--surface)] text-[color:var(--accent)] border border-[var(--border)] shrink-0">
                       {String(
-                        selectedNode.data?.type || selectedNode.type || "node",
+                        selectedNode.data?.type ||
+                          (selectedNode.type !== "default" && selectedNode.type ? selectedNode.type : "") ||
+                          inferWorkspaceNodeType(selectedNode) ||
+                          "node",
                       )}
                     </span>
                     <div className="min-w-0">
@@ -8601,7 +8747,7 @@ connect s1 -> db1
               isOpen={isTemplateBrowserOpen}
               onClose={() => setIsTemplateBrowserOpen(false)}
               onSelectTemplate={(templateId) => {
-                loadTemplate(templateId as any);
+                loadStarterTemplate(templateId);
                 const tpl = WORKSPACE_TEMPLATES.find((t) => t.id === templateId);
                 setSuccessToast(`Loaded ${tpl?.title || "Architecture"} template`);
               }}

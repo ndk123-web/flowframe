@@ -11,76 +11,33 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   FiSearch,
-  FiSliders,
-  FiDatabase,
-  FiLayers,
-  FiBox,
   FiArrowRight,
   FiX,
   FiAlertTriangle,
 } from "react-icons/fi";
+import {
+  STARTER_TEMPLATES,
+  StarterTemplateDefinition,
+} from "@/templates/starterTemplates";
 
-export interface TemplateDefinition {
-  id: string;
-  title: string;
-  category: "Traffic Routing" | "Data Caching" | "Microservices" | "Storage Offload";
-  desc: string;
-  nodeCount: number;
-  icon: React.ComponentType<{ className?: string }>;
-  components: string[];
-}
-
-export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
-  {
-    id: "loadBalancing",
-    title: "Load Balancer",
-    category: "Traffic Routing",
-    desc: "Distribute client requests across multiple backend web server nodes using Round Robin routing.",
-    nodeCount: 5,
-    icon: FiSliders,
-    components: ["Client", "Load Balancer", "Server 1", "Server 2", "Server 3"],
-  },
-  {
-    id: "cacheAside",
-    title: "Cache-Aside Pattern",
-    category: "Data Caching",
-    desc: "Write/read path caching strategy prioritizing low latency using Redis Cache and Postgres DB.",
-    nodeCount: 4,
-    icon: FiDatabase,
-    components: ["Client", "API Server", "Redis Cache", "Postgres DB"],
-  },
-  {
-    id: "apiGateway",
-    title: "API Gateway Routing",
-    category: "Microservices",
-    desc: "Central entry point routes requests dynamically to Post or User services based on path prefixes.",
-    nodeCount: 4,
-    icon: FiLayers,
-    components: ["Client", "API Gateway", "Posts Server", "Users Server"],
-  },
-  {
-    id: "valetKey",
-    title: "Valet Key Direct Upload",
-    category: "Storage Offload",
-    desc: "Clients fetch secure signed URLs from server, then upload files directly to Cloud Storage.",
-    nodeCount: 3,
-    icon: FiBox,
-    components: ["Client", "Upload Server", "Cloud Storage"],
-  },
-];
+export { STARTER_TEMPLATES as WORKSPACE_TEMPLATES };
+export type { StarterTemplateDefinition as TemplateDefinition };
 
 const CATEGORIES = [
   "All",
   "Traffic Routing",
   "Data Caching",
   "Microservices",
+  "Asynchronous",
   "Storage Offload",
+  "Pub/Sub Fan-Out",
 ] as const;
 
 interface TemplateBrowserDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectTemplate: (templateId: string) => void;
+  onSelectTemplate?: (templateId: string) => void;
+  onUseTemplate?: (template: StarterTemplateDefinition) => void;
   existingNodeCount?: number;
 }
 
@@ -88,15 +45,16 @@ export default function TemplateBrowserDialog({
   isOpen,
   onClose,
   onSelectTemplate,
+  onUseTemplate,
   existingNodeCount = 0,
 }: TemplateBrowserDialogProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [confirmTemplate, setConfirmTemplate] = useState<TemplateDefinition | null>(null);
+  const [confirmTemplate, setConfirmTemplate] = useState<StarterTemplateDefinition | null>(null);
 
   // Filter templates based on category and search query
   const filteredTemplates = useMemo(() => {
-    return WORKSPACE_TEMPLATES.filter((tpl) => {
+    return STARTER_TEMPLATES.filter((tpl) => {
       const matchesCategory =
         selectedCategory === "All" || tpl.category === selectedCategory;
       const q = searchQuery.toLowerCase().trim();
@@ -110,17 +68,27 @@ export default function TemplateBrowserDialog({
     });
   }, [selectedCategory, searchQuery]);
 
-  const handleTemplateClick = (template: TemplateDefinition) => {
+  const handleTemplateClick = (template: StarterTemplateDefinition) => {
+    // If used from Dashboard (create new diagram in workspace)
+    if (onUseTemplate) {
+      onUseTemplate(template);
+      onClose();
+      return;
+    }
+
+    // If used from Canvas (loading into active canvas)
     if (existingNodeCount > 0) {
       setConfirmTemplate(template);
     } else {
-      onSelectTemplate(template.id);
+      if (onSelectTemplate) {
+        onSelectTemplate(template.id);
+      }
       onClose();
     }
   };
 
   const handleConfirmReplace = () => {
-    if (confirmTemplate) {
+    if (confirmTemplate && onSelectTemplate) {
       onSelectTemplate(confirmTemplate.id);
       setConfirmTemplate(null);
       onClose();
@@ -139,7 +107,7 @@ export default function TemplateBrowserDialog({
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogChange}>
       <DialogContent className="max-w-[calc(100%-1.5rem)] sm:max-w-2xl md:max-w-3xl max-h-[88vh] overflow-y-auto p-4 sm:p-6 bg-background border border-border text-foreground shadow-2xl rounded-xl">
-        {/* Confirmation Shield when replacing existing diagram */}
+        {/* Confirmation Shield when replacing existing diagram on Canvas */}
         {confirmTemplate ? (
           <div className="space-y-4 py-2 animate-in fade-in-50 duration-150">
             <div className="flex items-start gap-3 p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-foreground">
@@ -203,11 +171,11 @@ export default function TemplateBrowserDialog({
             <DialogHeader className="space-y-1 text-left">
               <div className="flex items-center justify-between">
                 <DialogTitle className="text-base sm:text-lg font-bold tracking-tight text-foreground">
-                  Templates
+                  Architecture Templates
                 </DialogTitle>
               </div>
               <DialogDescription className="text-xs text-muted-foreground">
-                Start with a pre-configured, production-ready distributed system architecture.
+                Start with a production-ready, pre-configured distributed system architecture.
               </DialogDescription>
             </DialogHeader>
 
@@ -218,7 +186,7 @@ export default function TemplateBrowserDialog({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search templates by pattern, component, or keyword..."
+                placeholder="Search templates by pattern, component, or keyword…"
                 className="w-full h-9 pl-9 pr-8 text-xs font-sans rounded-lg border border-border bg-muted/20 focus:bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition"
               />
               {searchQuery && (
@@ -317,7 +285,7 @@ export default function TemplateBrowserDialog({
                             {template.category}
                           </span>
                           <span className="flex items-center gap-1 font-sans text-primary group-hover:translate-x-0.5 transition-transform font-semibold text-[11px]">
-                            <span>Open</span>
+                            <span>{onUseTemplate ? "Use Template" : "Open"}</span>
                             <FiArrowRight className="size-3" />
                           </span>
                         </div>
