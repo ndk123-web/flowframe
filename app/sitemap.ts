@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 
 const BASE_URL =
-  process.env.NEXT_PUBLIC_APP_URL || "https://flowframe.taskplexus.app";
+  process.env.NEXT_PUBLIC_APP_URL || "https://flowframe.ndkdev.tech";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static application routes

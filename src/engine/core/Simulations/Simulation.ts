@@ -14,7 +14,7 @@ import MessageQueueModel from "@/engine/models/MessageQueue/MessageQueue";
 import Message from "@/engine/models/MessageQueue/Message";
 import PubSubModel from "@/engine/models/PubSub/PubSubModel";
 
-type SimulationNodeKind =
+type SimulationNodeKind = 
   | "CLIENT"
   | "LOAD_BALANCER"
   | "SERVER"
@@ -251,7 +251,7 @@ class SimulationManager {
     // set the traversal path to the current node id 
     const traversalPath: NodeId[] = [currentNodeId];
 
-    // set the max steps to 24 
+    // set the max steps to 10000
     const maxSteps = 10000;
     let steps = 0;
 

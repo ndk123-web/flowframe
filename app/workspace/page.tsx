@@ -3610,7 +3610,7 @@ connect s1 -> db1
           setValidationWarning(`Simulation Error: ${err.message || err}`);
           setIsCompilingSimulation(false);
         }
-      }, 350);
+      }, 10);
     },
     [nodes, nodeConfigs, edges],
   );

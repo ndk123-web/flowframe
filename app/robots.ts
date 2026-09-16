@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next';
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://flowframe.taskplexus.app';
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://flowframe.ndkdev.tech';
 
 export default function robots(): MetadataRoute.Robots {
   return {
