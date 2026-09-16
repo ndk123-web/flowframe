@@ -211,6 +211,8 @@ export const DSL_PRESETS: Record<string, { label: string; code: string }> = {
     label: "Cache Aside",
     code: `// FlowFrame Architecture DSL - Cache Aside Pattern
 define CLIENT c1 {
+  x: 80,
+  y: 220,
   label: "Web Client",
   requests: [
     {
@@ -222,6 +224,8 @@ define CLIENT c1 {
 }
 
 define SERVER s1 {
+  x: 380,
+  y: 220,
   label: "API Server",
   capacity: 100,
   tcpConnectionsToPostgres: 5,
@@ -234,6 +238,8 @@ define SERVER s1 {
 }
 
 define REDIS r1 {
+  x: 680,
+  y: 100,
   label: "Redis Cache",
   data: [
     { key: "rohan", value: "cached post data" }
@@ -241,6 +247,8 @@ define REDIS r1 {
 }
 
 define POSTGRES db1 {
+  x: 680,
+  y: 340,
   label: "PostgreSQL Database",
   table: "posts",
   data: [
@@ -257,6 +265,8 @@ connect s1 -> db1
     label: "Load Balancer",
     code: `// FlowFrame Architecture DSL - Load Balancing Pattern
 define CLIENT c1 {
+  x: 80,
+  y: 240,
   label: "Web Client",
   requests: [
     {
@@ -268,11 +278,15 @@ define CLIENT c1 {
 }
 
 define LOADBALANCER lb1 {
+  x: 380,
+  y: 240,
   label: "Load Balancer",
   strategy: "ROUND_ROBIN"
 }
 
 define SERVER s1 {
+  x: 680,
+  y: 80,
   label: "Server 1",
   capacity: 100,
   acceptedEndpoints: [
@@ -284,6 +298,8 @@ define SERVER s1 {
 }
 
 define SERVER s2 {
+  x: 680,
+  y: 240,
   label: "Server 2",
   capacity: 100,
   acceptedEndpoints: [
@@ -295,6 +311,8 @@ define SERVER s2 {
 }
 
 define SERVER s3 {
+  x: 680,
+  y: 400,
   label: "Server 3",
   capacity: 100,
   acceptedEndpoints: [
@@ -315,6 +333,8 @@ connect lb1 -> s3
     label: "API Gateway",
     code: `// FlowFrame Architecture DSL - API Gateway Routing Pattern
 define CLIENT c1 {
+  x: 80,
+  y: 240,
   label: "Mobile Client",
   requests: [
     {
@@ -331,6 +351,8 @@ define CLIENT c1 {
 }
 
 define GATEWAY gw1 {
+  x: 380,
+  y: 240,
   label: "API Gateway",
   strategy: "ROUND_ROBIN",
   routes: [
@@ -346,6 +368,8 @@ define GATEWAY gw1 {
 }
 
 define SERVER s1 {
+  x: 680,
+  y: 140,
   label: "Posts Server",
   capacity: 100,
   acceptedEndpoints: [
@@ -357,6 +381,8 @@ define SERVER s1 {
 }
 
 define SERVER s2 {
+  x: 680,
+  y: 340,
   label: "Users Server",
   capacity: 100,
   acceptedEndpoints: [
@@ -376,6 +402,8 @@ connect gw1 -> s2
     label: "Message Queue",
     code: `// FlowFrame Architecture DSL - Asynchronous Message Queue Pattern
 define CLIENT c1 {
+  x: 80,
+  y: 240,
   label: "Mobile App",
   requests: [
     {
@@ -386,6 +414,8 @@ define CLIENT c1 {
 }
 
 define SERVER producer {
+  x: 340,
+  y: 240,
   label: "Order Producer API",
   capacity: 100,
   acceptedEndpoints: [
@@ -397,6 +427,8 @@ define SERVER producer {
 }
 
 define MESSAGEQUEUE mq1 {
+  x: 580,
+  y: 240,
   label: "RabbitMQ Order Queue",
   processingType: "FIFO",
   queueSize: 25,
@@ -404,6 +436,8 @@ define MESSAGEQUEUE mq1 {
 }
 
 define SERVER consumer {
+  x: 820,
+  y: 240,
   label: "Order Processor Worker",
   capacity: 50,
   prefetchLimit: 1
@@ -418,21 +452,29 @@ connect mq1 -> consumer
     label: "PubSub Fanout",
     code: `// FlowFrame Architecture DSL - Event PubSub Fanout Pattern
 define SERVER paymentServer {
+  x: 80,
+  y: 240,
   label: "Payment Server",
   capacity: 100
 }
 
 define PUBSUB eventBroker {
+  x: 380,
+  y: 240,
   label: "Redis Event Broker",
   topic: "order.completed"
 }
 
 define SERVER emailWorker {
+  x: 680,
+  y: 140,
   label: "Email Worker",
   registeredTopics: ["order.completed"]
 }
 
 define SERVER analyticsWorker {
+  x: 680,
+  y: 340,
   label: "Analytics Worker",
   registeredTopics: ["order.completed"]
 }
@@ -2735,43 +2777,62 @@ function WorkspaceInner({
 
   const [dslCode, setDslCode] =
     useState<string>(`// FlowFrame Architecture DSL Script
-// Define system nodes and connections
+// Define system nodes with canvas positions (x, y coordinates)
 
-// define "client" 
+// Define Client Node (left entrypoint)
 define CLIENT c1 {
+  x: 80,
+  y: 220,
   label: "Client 1",
   requests: [
     {
       endpoint: "/api/v1/posts",
       allowedMethods: ["GET", "POST"],
       key: "rohan"
-      }
-      ]
-      }
-      
-// define "server" 
+    }
+  ]
+}
+
+// Define API Server Node (center compute & routing)
 define SERVER s1 {
+  x: 380,
+  y: 220,
   label: "API Server",
   capacity: 100,
+  tcpConnectionsToPostgres: 5,
   acceptedEndpoints: [
     {
       endpoint: "/api/v1/posts",
       allowedMethod: ["GET", "POST"]
-      }
-      ]
-      }
-      
-// define "redis" 
+    }
+  ]
+}
+
+// Define In-Memory Redis Cache (top right)
 define REDIS r1 {
+  x: 680,
+  y: 100,
   label: "Redis Cache",
   data: [
     { key: "rohan", value: "cached post data" }
   ]
 }
 
-// Connections (u can also not use "connect" keyword)
+// Define Relational PostgreSQL Database (bottom right)
+define POSTGRES db1 {
+  x: 680,
+  y: 340,
+  label: "PostgreSQL DB",
+  table: "posts",
+  data: [
+    { key: "rohan", value: "persistent post record" }
+  ]
+}
+
+// System Request Flow Connections
 connect c1 -> s1
 connect s1 -> r1
+connect s1 -> db1
 `);
 
   // Movable / Resizable / Mobile sidebar states

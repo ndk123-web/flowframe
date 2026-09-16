@@ -145,7 +145,7 @@ function flowCompletionSource(context: CompletionContext): CompletionResult | nu
   // Snippets with pre-structured properties
   const snippets: Completion[] = [
     snippetCompletion(
-      'define CLIENT ${1:client1} {\n  label: "${2:Web Client}",\n  requests: [\n    { endpoint: "${3:/api/v1/posts}", allowedMethods: ["${4:GET}"], key: "${5:post:1}" }\n  ]\n}',
+      'define CLIENT ${1:client1} {\n  x: ${2:80},\n  y: ${3:220},\n  label: "${4:Web Client}",\n  requests: [\n    { endpoint: "${5:/api/v1/posts}", allowedMethods: ["${6:GET}"], key: "${7:post:1}" }\n  ]\n}',
       {
         label: "define CLIENT",
         detail: "Snippet: Client Node",
@@ -155,7 +155,7 @@ function flowCompletionSource(context: CompletionContext): CompletionResult | nu
       }
     ),
     snippetCompletion(
-      'define SERVER ${1:api_server} {\n  label: "${2:API Server}",\n  capacity: ${3:100},\n  acceptedEndpoints: [\n    { endpoint: "${4:/api/v1/posts}", allowedMethod: ["${5:GET}"] }\n  ]\n}',
+      'define SERVER ${1:api_server} {\n  x: ${2:380},\n  y: ${3:220},\n  label: "${4:API Server}",\n  capacity: ${5:100},\n  acceptedEndpoints: [\n    { endpoint: "${6:/api/v1/posts}", allowedMethod: ["${7:GET}"] }\n  ]\n}',
       {
         label: "define SERVER",
         detail: "Snippet: Application Server",
@@ -165,7 +165,7 @@ function flowCompletionSource(context: CompletionContext): CompletionResult | nu
       }
     ),
     snippetCompletion(
-      'define LOADBALANCER ${1:lb1} {\n  label: "${2:Load Balancer}",\n  strategy: "${3:ROUND_ROBIN}"\n}',
+      'define LOADBALANCER ${1:lb1} {\n  x: ${2:380},\n  y: ${3:220},\n  label: "${4:Load Balancer}",\n  strategy: "${5:ROUND_ROBIN}"\n}',
       {
         label: "define LOADBALANCER",
         detail: "Snippet: Load Balancer",
@@ -175,7 +175,7 @@ function flowCompletionSource(context: CompletionContext): CompletionResult | nu
       }
     ),
     snippetCompletion(
-      'define GATEWAY ${1:gw1} {\n  label: "${2:API Gateway}",\n  strategy: "${3:ROUND_ROBIN}"\n}',
+      'define GATEWAY ${1:gw1} {\n  x: ${2:380},\n  y: ${3:220},\n  label: "${4:API Gateway}",\n  strategy: "${5:ROUND_ROBIN}"\n}',
       {
         label: "define GATEWAY",
         detail: "Snippet: API Gateway",
@@ -185,7 +185,7 @@ function flowCompletionSource(context: CompletionContext): CompletionResult | nu
       }
     ),
     snippetCompletion(
-      'define REDIS ${1:cache1} {\n  label: "${2:Redis Cache}",\n  data: [\n    { key: "${3:post:1}", value: "${4:cached post data}" }\n  ]\n}',
+      'define REDIS ${1:cache1} {\n  x: ${2:680},\n  y: ${3:100},\n  label: "${4:Redis Cache}",\n  data: [\n    { key: "${5:post:1}", value: "${6:cached post data}" }\n  ]\n}',
       {
         label: "define REDIS",
         detail: "Snippet: Redis Cache",
@@ -195,7 +195,7 @@ function flowCompletionSource(context: CompletionContext): CompletionResult | nu
       }
     ),
     snippetCompletion(
-      'define POSTGRES ${1:db1} {\n  label: "${2:PostgreSQL DB}",\n  data: [\n    { key: "${3:post:1}", value: "${4:stored database record}" }\n  ]\n}',
+      'define POSTGRES ${1:db1} {\n  x: ${2:680},\n  y: ${3:340},\n  label: "${4:PostgreSQL DB}",\n  data: [\n    { key: "${5:post:1}", value: "${6:stored database record}" }\n  ]\n}',
       {
         label: "define POSTGRES",
         detail: "Snippet: PostgreSQL DB",
@@ -205,7 +205,7 @@ function flowCompletionSource(context: CompletionContext): CompletionResult | nu
       }
     ),
     snippetCompletion(
-      'define MESSAGEQUEUE ${1:mq1} {\n  label: "${2:Message Queue}",\n  queueSize: ${3:100},\n  processingType: "${4:FIFO}"\n}',
+      'define MESSAGEQUEUE ${1:mq1} {\n  x: ${2:580},\n  y: ${3:220},\n  label: "${4:Message Queue}",\n  queueSize: ${5:100},\n  processingType: "${6:FIFO}"\n}',
       {
         label: "define MESSAGEQUEUE",
         detail: "Snippet: Message Queue",
@@ -215,7 +215,7 @@ function flowCompletionSource(context: CompletionContext): CompletionResult | nu
       }
     ),
     snippetCompletion(
-      'define PUBSUB ${1:ps1} {\n  label: "${2:PubSub Broker}",\n  topic: "${3:events.all}"\n}',
+      'define PUBSUB ${1:ps1} {\n  x: ${2:380},\n  y: ${3:220},\n  label: "${4:PubSub Broker}",\n  topic: "${5:events.all}"\n}',
       {
         label: "define PUBSUB",
         detail: "Snippet: PubSub Broker",
