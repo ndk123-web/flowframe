@@ -177,6 +177,7 @@ export default function DashboardPage() {
   // ChatGPT-style composer state
   const [composerPrompt, setComposerPrompt] = useState("");
   const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isThinkEnabled, setIsThinkEnabled] = useState(true);
 
   // Sidebar, Mobile, Navigation & Workspace states
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -305,7 +306,8 @@ export default function DashboardPage() {
   const handlePromptSubmit = (customPrompt?: string) => {
     const finalPrompt = (customPrompt || composerPrompt).trim();
     const query = finalPrompt ? `&prompt=${encodeURIComponent(finalPrompt)}` : "";
-    router.push(`/workspace?ai=true${query}`);
+    const thinkParam = isThinkEnabled ? "&think=true" : "";
+    router.push(`/workspace?ai=true${thinkParam}${query}`);
   };
 
   const handleCreateWorkspace = async (e: React.FormEvent) => {
@@ -691,12 +693,51 @@ export default function DashboardPage() {
                   </Badge>
                 </button>
 
-                {/* Workspace Items / Skeletons */}
+                {/* Workspace Items / Realistic Tree Skeletons */}
                 {loading ? (
-                  <div className="py-2 px-2 space-y-2" aria-label="Loading workspaces…">
-                    <div className="h-6 w-full rounded-md bg-muted/50 animate-pulse" />
-                    <div className="h-6 w-4/5 rounded-md bg-muted/40 animate-pulse" />
-                    <div className="h-6 w-3/5 rounded-md bg-muted/30 animate-pulse" />
+                  <div className="space-y-2 px-1 py-1" aria-label="Loading workspaces…">
+                    {/* Item 1 with expanded child branch */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-muted/40 animate-pulse">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="size-3 rounded bg-muted/70 shrink-0" />
+                          <div className="size-3.5 rounded bg-muted/80 shrink-0" />
+                          <div className="h-3 rounded bg-muted/70 w-28" />
+                        </div>
+                        <div className="h-3.5 w-8 rounded-full bg-muted/50 shrink-0" />
+                      </div>
+                      {/* Indented child diagrams skeleton */}
+                      <div className="ml-3.5 pl-3 py-1 space-y-1.5 border-l-2 border-border/60">
+                        <div className="flex items-center gap-2 px-2 py-1 rounded bg-muted/25 animate-pulse">
+                          <div className="size-2.5 rounded bg-muted/60 shrink-0" />
+                          <div className="h-2.5 rounded bg-muted/50 w-24" />
+                        </div>
+                        <div className="flex items-center gap-2 px-2 py-1 rounded bg-muted/25 animate-pulse">
+                          <div className="size-2.5 rounded bg-muted/60 shrink-0" />
+                          <div className="h-2.5 rounded bg-muted/50 w-20" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Item 2 */}
+                    <div className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-muted/40 animate-pulse">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="size-3 rounded bg-muted/70 shrink-0" />
+                        <div className="size-3.5 rounded bg-muted/80 shrink-0" />
+                        <div className="h-3 rounded bg-muted/70 w-32" />
+                      </div>
+                      <div className="h-3.5 w-10 rounded-full bg-muted/50 shrink-0" />
+                    </div>
+
+                    {/* Item 3 */}
+                    <div className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-muted/40 animate-pulse">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="size-3 rounded bg-muted/70 shrink-0" />
+                        <div className="size-3.5 rounded bg-muted/80 shrink-0" />
+                        <div className="h-3 rounded bg-muted/70 w-20" />
+                      </div>
+                      <div className="h-3.5 w-8 rounded-full bg-muted/50 shrink-0" />
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-1">
@@ -755,9 +796,16 @@ export default function DashboardPage() {
                           {isExpanded && (
                             <div className="ml-3.5 pl-3 py-1 space-y-1 border-l-2 border-border/80 my-1">
                               {loadingWsDiagrams[ws.id] ? (
-                                <div className="flex items-center gap-1.5 px-2 py-1 text-[11px] text-muted-foreground font-mono">
-                                  <div className="size-2.5 rounded-full border border-primary/40 border-t-primary animate-spin shrink-0" />
-                                  <span>Loading…</span>
+                                <div className="space-y-1.5 py-0.5" aria-label="Loading diagrams…">
+                                  <div className="flex items-center gap-2 px-2 py-1 rounded bg-muted/30 animate-pulse">
+                                    <div className="size-3 rounded bg-muted/60 shrink-0" />
+                                    <div className="h-2.5 rounded bg-muted/50 w-28" />
+                                    <div className="size-2 rounded-full bg-primary/60 animate-ping ml-auto shrink-0" />
+                                  </div>
+                                  <div className="flex items-center gap-2 px-2 py-1 rounded bg-muted/20 animate-pulse">
+                                    <div className="size-3 rounded bg-muted/50 shrink-0" />
+                                    <div className="h-2.5 rounded bg-muted/40 w-20" />
+                                  </div>
                                 </div>
                               ) : childDiagrams.length > 0 ? (
                                 childDiagrams.map((diag) => (
@@ -830,9 +878,15 @@ export default function DashboardPage() {
                 </div>
 
                 {loading ? (
-                  <div className="py-2 px-2 space-y-1.5" aria-label="Loading recent diagrams…">
-                    <div className="h-5 w-full rounded bg-muted/40 animate-pulse" />
-                    <div className="h-5 w-3/4 rounded bg-muted/30 animate-pulse" />
+                  <div className="space-y-1.5 px-1 py-1" aria-label="Loading recent diagrams…">
+                    <div className="p-2 rounded-lg bg-muted/30 space-y-1 animate-pulse">
+                      <div className="h-3 rounded bg-muted/70 w-32" />
+                      <div className="h-2 rounded bg-muted/40 w-24" />
+                    </div>
+                    <div className="p-2 rounded-lg bg-muted/20 space-y-1 animate-pulse">
+                      <div className="h-3 rounded bg-muted/60 w-28" />
+                      <div className="h-2 rounded bg-muted/40 w-20" />
+                    </div>
                   </div>
                 ) : recentDiagrams.length > 0 ? (
                   <div className="space-y-1">
@@ -1108,17 +1162,39 @@ export default function DashboardPage() {
                 className="w-full bg-transparent resize-none text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none leading-relaxed"
               />
 
-              {/* Composer Controls Footer */}
+              {/* Composer Controls Footer with Modern AI IDE "Think" Toggle */}
               <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="size-6 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
-                    <FiCpu className="size-3" />
-                  </div>
+                  {/* Modern AI IDE "Think" Mode Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setIsThinkEnabled((prev) => !prev)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono font-medium transition-all cursor-pointer select-none ${
+                      isThinkEnabled
+                        ? "bg-indigo-500/15 border-indigo-500/35 text-indigo-400 shadow-xs shadow-indigo-500/10 ring-1 ring-indigo-500/20"
+                        : "bg-muted/40 border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    }`}
+                    title={
+                      isThinkEnabled
+                        ? "Deep Architecture Reasoning: ON (Evaluates bottlenecks, CAP trade-offs, queue sizing & failure modes before compiling DSL)"
+                        : "Deep Architecture Reasoning: OFF (Fast direct architecture generation)"
+                    }
+                    aria-pressed={isThinkEnabled}
+                  >
+                    <FiCpu className={`size-3.5 ${isThinkEnabled ? "text-indigo-400 animate-pulse" : "text-muted-foreground"}`} />
+                    <span>Think</span>
+                    <span
+                      className={`size-1.5 rounded-full ${
+                        isThinkEnabled ? "bg-indigo-400" : "bg-muted-foreground/40"
+                      }`}
+                    />
+                  </button>
+
                   <span className="text-[11px] text-muted-foreground font-mono truncate hidden sm:inline">
-                    Enter to generate · Shift+Enter for newline
+                    {isThinkEnabled ? "Deep Reasoning ON" : "Fast generation"} · Enter to submit
                   </span>
                   <span className="text-[11px] text-muted-foreground font-mono truncate sm:hidden">
-                    AI Copilot
+                    {isThinkEnabled ? "Reasoning ON" : "Fast"}
                   </span>
                 </div>
 

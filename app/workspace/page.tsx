@@ -2738,6 +2738,7 @@ function WorkspaceInner({
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [initialAIPrompt, setInitialAIPrompt] = useState<string>("");
+  const [initialThink, setInitialThink] = useState<boolean>(true);
 
   // Auto-open AI Architecture Assistant if ?ai=true is in URL query parameters
   useEffect(() => {
@@ -2749,6 +2750,10 @@ function WorkspaceInner({
       const promptParam = params.get("prompt");
       if (promptParam) {
         setInitialAIPrompt(promptParam);
+      }
+      const thinkParam = params.get("think");
+      if (thinkParam !== null) {
+        setInitialThink(thinkParam === "true");
       }
     }
   }, []);
@@ -8473,6 +8478,9 @@ connect s1 -> db1
               nodeConfigs={nodeConfigs}
               theme={theme}
               initialPrompt={initialAIPrompt}
+              initialThink={initialThink}
+              selectedNode={selectedNode}
+              onSelectNode={setSelectedNodeId}
               onApplyDsl={(code: string, explanation: string) => {
                 try {
                   const output = compileDSL(code);

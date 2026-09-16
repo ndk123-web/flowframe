@@ -1,25 +1,20 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import type { Node, Edge } from "@xyflow/react";
 import {
   FiCpu,
+  FiTerminal,
   FiX,
-  FiSend,
-  FiPlus,
-  FiHelpCircle,
   FiCheck,
   FiPlay,
   FiTrash2,
-  FiLayers,
   FiCopy,
-  FiAlertTriangle,
-  FiActivity,
-  FiSliders,
-  FiCheckCircle,
+  FiArrowUp,
+  FiCode,
 } from "react-icons/fi";
 
-interface AIAssistantDrawerProps {
+export interface AIAssistantDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   nodes: Node[];
@@ -29,15 +24,21 @@ interface AIAssistantDrawerProps {
   onRunSimulation?: () => void;
   theme?: "light" | "dark";
   initialPrompt?: string;
+  initialThink?: boolean;
+  selectedNode?: Node | null;
+  onSelectNode?: (nodeId: string | null) => void;
 }
 
-interface ChatMessage {
+export interface ChatMessage {
   id: string;
   sender: "user" | "assistant";
   text: string;
   dsl?: string;
   architectureTitle?: string;
   applied?: boolean;
+  thoughtProcess?: string;
+  thoughtTime?: string;
+  targetComponent?: string;
 }
 
 export default function AIAssistantDrawer({
@@ -49,24 +50,35 @@ export default function AIAssistantDrawer({
   onApplyDsl,
   onRunSimulation,
   initialPrompt,
+  initialThink,
+  selectedNode,
+  onSelectNode,
 }: AIAssistantDrawerProps) {
   // Mode: "create" (Generate architecture on canvas) or "ask" (Technical Q&A / Canvas explanation)
   const [mode, setMode] = useState<"create" | "ask">("create");
   const [input, setInput] = useState("");
+  const [thinkEnabled, setThinkEnabled] = useState(initialThink ?? true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome-1",
       sender: "assistant",
-      text: "Architecture Assistant ready. Ask about your current canvas topology, generate distributed systems architectures, or explain simulated request flows.",
+      text: "Architecture Assistant ready. Ask about the active canvas topology, request routing, component bottlenecks, or generate distributed system architecture definitions.",
     },
   ]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Prefill initial prompt if passed from dashboard quick AI
+  // Sync initialThink if changed from outside
+  useEffect(() => {
+    if (initialThink !== undefined) {
+      setThinkEnabled(initialThink);
+    }
+  }, [initialThink]);
+
+  // Prefill initial prompt if passed from dashboard or URL query
   useEffect(() => {
     if (isOpen && initialPrompt && initialPrompt.trim().length > 0) {
       setInput(initialPrompt);
@@ -84,24 +96,31 @@ export default function AIAssistantDrawer({
   // Focus input on drawer open
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 150);
+      setTimeout(() => textareaRef.current?.focus(), 150);
     }
   }, [isOpen]);
 
+  // Derive compact topology summary
+  const topologySummary = useMemo(() => {
+    if (nodes.length === 0) return "Empty canvas";
+    const types = Array.from(new Set(nodes.map((n) => (n.data?.type as string) || "node")));
+    return `${nodes.length} nodes · ${edges.length} connections (${types.slice(0, 3).join(", ")}${types.length > 3 ? "…" : ""})`;
+  }, [nodes, edges]);
+
   if (!isOpen) return null;
 
-  // Clear chat
+  // Clear conversation
   const handleClearChat = () => {
     setMessages([
       {
         id: `welcome-${Date.now()}`,
         sender: "assistant",
-        text: "Conversation cleared. Context is active for the current canvas topology.",
+        text: "Conversation cleared. Context is active for current canvas architecture.",
       },
     ]);
   };
 
-  // Quick action click
+  // Quick action chip click
   const handleQuickAction = (actionPrompt: string, targetMode: "create" | "ask") => {
     setMode(targetMode);
     setInput(actionPrompt);
@@ -123,8 +142,7 @@ export default function AIAssistantDrawer({
       text: textToSubmit,
     };
 
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setIsGenerating(true);
 
@@ -149,6 +167,8 @@ export default function AIAssistantDrawer({
             "Round-Robin Load Balancer distributing incoming traffic across multiple application servers to eliminate single points of failure.";
           generatedDsl = `// High Availability Load-Balanced Cluster
 define CLIENT client_node {
+  x: 80,
+  y: 240,
   label: "Web Client",
   requests: [
     { endpoint: "/api/v1/orders", allowedMethods: ["GET", "POST"], key: "order:550" }
@@ -156,11 +176,15 @@ define CLIENT client_node {
 }
 
 define LOADBALANCER edge_lb {
+  x: 380,
+  y: 240,
   label: "Round-Robin LB",
   strategy: "ROUND_ROBIN"
 }
 
 define SERVER app_server_1 {
+  x: 680,
+  y: 120,
   label: "App Server Alpha",
   capacity: 80,
   acceptedEndpoints: [
@@ -169,6 +193,8 @@ define SERVER app_server_1 {
 }
 
 define SERVER app_server_2 {
+  x: 680,
+  y: 360,
   label: "App Server Beta",
   capacity: 80,
   acceptedEndpoints: [
@@ -177,6 +203,8 @@ define SERVER app_server_2 {
 }
 
 define POSTGRES shared_db {
+  x: 960,
+  y: 240,
   label: "Primary Database",
   data: [
     { key: "order:550", value: "Order record #550" }
@@ -201,6 +229,8 @@ connect app_server_2 -> shared_db
             "Decoupled asynchronous processing using a Message Queue buffer to absorb bursts and feed downstream workers.";
           generatedDsl = `// Asynchronous Message Queue Processing
 define CLIENT client_node {
+  x: 80,
+  y: 240,
   label: "Web Client",
   requests: [
     { endpoint: "/api/v1/tasks", allowedMethods: ["POST"], key: "task:88" }
@@ -208,6 +238,8 @@ define CLIENT client_node {
 }
 
 define SERVER api_gateway {
+  x: 340,
+  y: 240,
   label: "Ingestion API",
   capacity: 120,
   acceptedEndpoints: [
@@ -216,18 +248,24 @@ define SERVER api_gateway {
 }
 
 define MESSAGEQUEUE task_queue {
+  x: 580,
+  y: 240,
   label: "Message Queue",
   queueSize: 100,
   processingType: "FIFO"
 }
 
 define SERVER background_worker {
+  x: 820,
+  y: 240,
   label: "Worker Instance",
   capacity: 60,
   prefetchLimit: 1
 }
 
 define POSTGRES analytics_db {
+  x: 1060,
+  y: 240,
   label: "PostgreSQL Database",
   data: [
     { key: "task:88", value: "processed task data" }
@@ -251,6 +289,8 @@ connect background_worker -> analytics_db
             "One-to-many publish-subscribe broker delivering events to decoupled notification and analytics subscribers simultaneously.";
           generatedDsl = `// PubSub Event Broadcast Fanout
 define CLIENT client_node {
+  x: 80,
+  y: 240,
   label: "Web Client",
   requests: [
     { endpoint: "/events/orders", allowedMethods: ["POST"], key: "event:order" }
@@ -258,6 +298,8 @@ define CLIENT client_node {
 }
 
 define SERVER order_service {
+  x: 340,
+  y: 240,
   label: "Order Service",
   capacity: 100,
   acceptedEndpoints: [
@@ -266,16 +308,22 @@ define SERVER order_service {
 }
 
 define PUBSUB event_broker {
+  x: 600,
+  y: 240,
   label: "PubSub Broker",
   topic: "order.created"
 }
 
 define SERVER notification_worker {
+  x: 860,
+  y: 120,
   label: "Notification Service",
   capacity: 50
 }
 
 define SERVER analytics_worker {
+  x: 860,
+  y: 360,
   label: "Analytics Service",
   capacity: 50
 }
@@ -295,6 +343,8 @@ connect event_broker -> analytics_worker
             "Central API Gateway providing route routing to isolated User and Order microservices backed by shared PostgreSQL persistence.";
           generatedDsl = `// API Gateway Microservices
 define CLIENT web_apps {
+  x: 80,
+  y: 240,
   label: "Client App",
   requests: [
     { endpoint: "/api/users", allowedMethods: ["GET"], key: "user:1" },
@@ -303,11 +353,15 @@ define CLIENT web_apps {
 }
 
 define GATEWAY api_gw {
+  x: 360,
+  y: 240,
   label: "API Gateway",
   strategy: "ROUND_ROBIN"
 }
 
 define SERVER user_service {
+  x: 660,
+  y: 120,
   label: "User Service",
   capacity: 100,
   acceptedEndpoints: [
@@ -316,6 +370,8 @@ define SERVER user_service {
 }
 
 define SERVER order_service {
+  x: 660,
+  y: 360,
   label: "Order Service",
   capacity: 100,
   acceptedEndpoints: [
@@ -324,6 +380,8 @@ define SERVER order_service {
 }
 
 define POSTGRES main_db {
+  x: 940,
+  y: 240,
   label: "Shared Postgres DB",
   data: [
     { key: "user:1", value: "User profile #1" },
@@ -348,6 +406,8 @@ connect order_service -> main_db
             "Direct client-to-cloud upload pattern reducing server compute and bandwidth pressure by issuing pre-signed tokens.";
           generatedDsl = `// Valet Key Direct Upload Architecture
 define CLIENT browser_client {
+  x: 80,
+  y: 240,
   label: "Browser Client",
   valet: true,
   requests: [
@@ -356,6 +416,8 @@ define CLIENT browser_client {
 }
 
 define SERVER token_issuer {
+  x: 380,
+  y: 140,
   label: "Token Issuer Server",
   capacity: 80,
   acceptedEndpoints: [
@@ -363,50 +425,60 @@ define SERVER token_issuer {
   ]
 }
 
-define SERVER storage_service {
-  label: "Cloud Storage Server",
-  capacity: 100,
-  acceptedEndpoints: [
-    { endpoint: "/upload/sign", allowedMethod: ["GET"] }
+define POSTGRES storage_blob {
+  x: 680,
+  y: 240,
+  label: "Cloud Storage Bucket",
+  data: [
+    { key: "file:image.png", value: "uploaded media binary" }
   ]
 }
 
 connect browser_client -> token_issuer
-connect token_issuer -> storage_service
-connect browser_client -> storage_service
+connect browser_client -> storage_blob
 `;
         } else {
-          // Default: Cache-Aside with Redis and PostgreSQL
-          title = "Cache-Aside Architecture";
+          // Default: Cache Aside Pattern
+          title = "Cache Aside Architecture";
           explanation =
-            "Cache-aside pattern: in-memory Redis layer handles reads to reduce database query latency and prevent read spikes.";
-          generatedDsl = `// Cache-Aside Architecture Template
+            "Standard high-performance cache-aside pattern routing reads through Redis cache with PostgreSQL database fallback.";
+          generatedDsl = `// Cache Aside Architecture
 define CLIENT web_client {
+  x: 80,
+  y: 220,
   label: "Web Client",
   requests: [
-    { endpoint: "/api/v1/users", allowedMethods: ["GET", "POST"], key: "user:101" }
+    { endpoint: "/api/v1/posts", allowedMethods: ["GET", "POST"], key: "post:1" }
   ]
 }
 
 define SERVER api_server {
+  x: 380,
+  y: 220,
   label: "API Server",
-  capacity: 150,
+  capacity: 100,
+  tcpConnectionsToPostgres: 5,
   acceptedEndpoints: [
-    { endpoint: "/api/v1/users", allowedMethod: ["GET", "POST"] }
+    { endpoint: "/api/v1/posts", allowedMethod: ["GET", "POST"] }
   ]
 }
 
 define REDIS redis_cache {
-  label: "Redis Cache Layer",
+  x: 680,
+  y: 100,
+  label: "Redis Cache",
   data: [
-    { key: "user:101", value: "cached user profile payload" }
+    { key: "post:1", value: "cached post data" }
   ]
 }
 
 define POSTGRES postgres_db {
-  label: "PostgreSQL Database",
+  x: 680,
+  y: 340,
+  label: "PostgreSQL DB",
+  table: "posts",
   data: [
-    { key: "user:101", value: "db record: user 101" }
+    { key: "post:1", value: "persistent post record" }
   ]
 }
 
@@ -416,28 +488,73 @@ connect api_server -> postgres_db
 `;
         }
 
+        let thoughtProcess: string | undefined;
+        let thoughtTime: string | undefined;
+
+        if (thinkEnabled) {
+          thoughtTime = "2.1s";
+          thoughtProcess = `Architectural Analysis & Design Plan:
+1. Concurrency & Buffers: Calculated ingress load against downstream compute capacity. Sized queue boundaries.
+2. Fault Tolerance: Identified single points of failure. Applied redundant paths and failover routes.
+3. Caching & Persistence: Configured cache-aside pattern with TTL invalidation to prevent stale reads and protect database connections.
+4. Canvas Positioning: Allocated explicit (x, y) coordinates ensuring clean horizontal flow and zero node collisions.`;
+        }
+
         const assistantMsg: ChatMessage = {
           id: `ast-${Date.now()}`,
           sender: "assistant",
           text: `Generated **${title}** architecture definition:\n\n${explanation}`,
           dsl: generatedDsl,
           architectureTitle: title,
+          thoughtProcess,
+          thoughtTime,
         };
         setMessages((prev) => [...prev, assistantMsg]);
       } else {
         // Technical Architecture Analysis & Q&A
         let responseText = "";
 
-        const clientCount = nodes.filter((n) => n.data.type === "client").length;
-        const serverCount = nodes.filter((n) => n.data.type === "server").length;
-        const dbCount = nodes.filter((n) => n.data.type === "postgres").length;
-        const cacheCount = nodes.filter((n) => n.data.type === "redis").length;
+        const clientCount = nodes.filter((n) => n.data?.type === "client").length;
+        const serverCount = nodes.filter((n) => n.data?.type === "server").length;
+        const dbCount = nodes.filter((n) => n.data?.type === "postgres").length;
+        const cacheCount = nodes.filter((n) => n.data?.type === "redis").length;
         const queueCount = nodes.filter(
-          (n) => n.data.type === "message-queue" || n.data.type === "messagequeue"
+          (n) => n.data?.type === "message-queue" || n.data?.type === "messagequeue"
         ).length;
-        const lbCount = nodes.filter((n) => n.data.type === "loadbalancer").length;
+        const lbCount = nodes.filter((n) => n.data?.type === "loadbalancer").length;
 
+        // Contextual: question about selected component
         if (
+          selectedNode &&
+          (lower.includes("selected") ||
+            lower.includes("this node") ||
+            lower.includes("this component") ||
+            lower.includes(selectedNode.id.toLowerCase()) ||
+            (typeof selectedNode.data?.label === "string" &&
+              lower.includes(selectedNode.data.label.toLowerCase())))
+        ) {
+          const inEdges = edges.filter((e) => e.target === selectedNode.id);
+          const outEdges = edges.filter((e) => e.source === selectedNode.id);
+          const roleMap: Record<string, string> = {
+            client: "HTTP request originator and payload generator",
+            server: "Compute, business logic, and database connection pooling",
+            redis: "In-memory sub-millisecond cache layer (Cache-Aside)",
+            postgres: "Persistent relational ACID storage",
+            loadbalancer: "Traffic distribution using Round Robin or Least Connections",
+            gateway: "API ingress routing based on path prefixes",
+            "message-queue": "Asynchronous FIFO buffer absorbing traffic spikes",
+            pubsub: "Event fanout broker delivering to multiple topic subscribers",
+          };
+
+          responseText =
+            `**Component Context: ${selectedNode.data?.label || selectedNode.id}** (${selectedNode.data?.type})\n\n` +
+            `- **Role**: ${roleMap[selectedNode.data?.type as string] || "Distributed node"}\n` +
+            `- **Upstream Sources**: ${inEdges.length > 0 ? inEdges.map((e) => e.source).join(", ") : "None (Ingress root)"}\n` +
+            `- **Downstream Targets**: ${outEdges.length > 0 ? outEdges.map((e) => e.target).join(", ") : "None (Terminal node)"}\n\n` +
+            (lower.includes("fail") || lower.includes("down")
+              ? `**Failure Impact**: If this node is partitioned or terminated, upstream requests will fail unless redundant instances or circuit breaker fallbacks are present.`
+              : `**Performance**: Incoming requests to this node are processed according to its configured capacity and latency parameters.`);
+        } else if (
           lower.includes("canvas") ||
           lower.includes("current") ||
           lower.includes("diagram") ||
@@ -445,7 +562,8 @@ connect api_server -> postgres_db
           lower.includes("understand") ||
           lower.includes("breakdown")
         ) {
-          responseText = `**Active Topology Breakdown:**\n\n` +
+          responseText =
+            `**Active Topology Breakdown:**\n\n` +
             `- **Total Components**: ${nodes.length}\n` +
             `  - Clients: ${clientCount}\n` +
             `  - Application Servers: ${serverCount}\n` +
@@ -462,10 +580,14 @@ connect api_server -> postgres_db
             (n) => !edges.some((e) => e.source === n.id || e.target === n.id)
           );
           if (nodes.length === 0) {
-            responseText = "**Topology Validation:**\n\nNo components detected on canvas. Place nodes or generate an architecture to validate.";
+            responseText =
+              "**Topology Validation:**\n\nNo components detected on canvas. Place nodes or generate an architecture to validate.";
           } else if (disconnectedNodes.length > 0) {
-            responseText = `**Validation Advisory:**\n\nFound **${disconnectedNodes.length}** disconnected component(s):\n` +
-              disconnectedNodes.map((n) => `- **${(n.data.label as string) || n.id}** (${n.data.type})`).join("\n") +
+            responseText =
+              `**Validation Advisory:**\n\nFound **${disconnectedNodes.length}** disconnected component(s):\n` +
+              disconnectedNodes
+                .map((n) => `- **${(n.data?.label as string) || n.id}** (${n.data?.type})`)
+                .join("\n") +
               "\n\nConnect these nodes to active ingress or downstream services so simulated packets can reach them.";
           } else if (serverCount > 1 && lbCount === 0) {
             responseText = `**Architecture Recommendation:**\n\nYou have **${serverCount}** application servers without an upstream Load Balancer or API Gateway. Add a Load Balancer with round-robin routing to distribute traffic evenly across instances.`;
@@ -473,17 +595,18 @@ connect api_server -> postgres_db
             responseText = `**Architecture Health Check:**\n\nAll ${nodes.length} nodes are connected with ${edges.length} edges. Component routes and endpoints are structured correctly. Run the simulation to check packet latency.`;
           }
         } else if (lower.includes("simulate") || lower.includes("flow") || lower.includes("packet")) {
-          responseText = `**Simulation Execution Dynamics:**\n\n` +
+          responseText =
+            `**Simulation Execution Dynamics:**\n\n` +
             `1. **Ingress**: Client initiates HTTP requests with defined endpoints and payload keys.\n` +
-            `2. **Hop Evaluation**: Load Balancers pick healthy target instances; Caches check key hits (1-frame response) vs misses.\n` +
-            `3. **State Mutation**: Databases process reads/writes deterministically.\n` +
-            `4. **Inspection**: Click the play/pause button or step through frame-by-frame in the top toolbar to trace packet progression.`;
-        } else if (lower.includes("redis") || lower.includes("cache")) {
-          responseText = "**Cache-Aside Pattern Specification:**\n\nIn-memory key-value storage delivers sub-millisecond retrieval. Application servers query Redis first. On a cache miss, the server falls back to PostgreSQL and populates Redis for future requests.";
-        } else if (lower.includes("load balancer") || lower.includes("round robin")) {
-          responseText = "**Load Balancing Algorithms:**\n\n- **ROUND_ROBIN**: Sequentially steps through backend instances.\n- **LEAST_CONNECTIONS**: Forwards requests to the instance with the lowest active load.\n- **IP_HASH**: Maps client identifiers to deterministic server targets for session stickiness.";
+            `2. **Hop Evaluation**: Load Balancers pick healthy target instances; Caches check key hits vs misses.\n` +
+            `3. **State Updates**: Updates persist to PostgreSQL; async tasks queue up in Message Queue buffers.\n` +
+            `4. **Completion**: Responses return along request paths back to initiating clients.`;
         } else {
-          responseText = `**Architecture Guidance on "${textToSubmit}":**\n\nIn distributed systems design, components must balance latency, throughput, and fault tolerance. You can model this pattern in FlowFrame, configure server capacities, and observe packet routing directly.`;
+          responseText =
+            `**Analysis of "${textToSubmit}":**\n\n` +
+            `In FlowFrame, distributed components interact via explicit edges. ` +
+            `To simulate this behavior, you can define nodes in DSL or drag components from the sidebar onto the canvas. ` +
+            `Switch to 'Create' mode if you want me to generate complete architecture definitions.`;
         }
 
         const assistantMsg: ChatMessage = {
@@ -493,8 +616,9 @@ connect api_server -> postgres_db
         };
         setMessages((prev) => [...prev, assistantMsg]);
       }
+
       setIsGenerating(false);
-    }, 400);
+    }, 450);
   };
 
   const handleApplyArchitecture = (msgId: string, dsl: string, explanation: string) => {
@@ -512,202 +636,293 @@ connect api_server -> postgres_db
 
   return (
     <aside
-      className="
-        fixed inset-y-0 right-0 z-40 w-full sm:w-96
-        md:static md:z-20 md:w-84 lg:w-96 md:h-full md:max-h-full
-        bg-[var(--surface)] border-l border-[var(--border)]
-        shadow-2xl md:shadow-none flex flex-col shrink-0 transition-all duration-200 select-text
-      "
+      className="fixed inset-y-0 right-0 z-40 w-full sm:w-[380px] md:static md:z-20 md:w-[360px] lg:w-[380px] md:h-full md:max-h-full bg-[var(--surface)] border-l border-[var(--border)] flex flex-col shrink-0 select-text overflow-hidden"
       data-testid="architecture-assistant-panel"
+      aria-label="Architecture Assistant"
     >
-      {/* ── 1. Clear Professional Header ── */}
-      <div className="h-12 px-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-7 h-7 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center text-[color:var(--accent)] shrink-0">
-            <FiCpu className="w-3.5 h-3.5" />
-          </div>
-          <div className="min-w-0">
-            <h3 className="text-xs font-bold text-[color:var(--foreground)] truncate">
-              Architecture Assistant
-            </h3>
-            <div className="flex items-center gap-1.5 text-[10px] text-[color:var(--muted)] font-mono">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-              <span className="truncate">{nodes.length} nodes · {edges.length} edges</span>
-            </div>
-          </div>
+      {/* ── 1. Compact Professional Header ── */}
+      <div className="h-10 px-3 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]">
+        <div className="flex items-center gap-2 min-w-0">
+          <FiTerminal className="size-3.5 text-muted-foreground shrink-0" />
+          <span className="text-xs font-semibold text-foreground tracking-tight truncate">
+            Architecture Assistant
+          </span>
+          <span
+            className="size-1.5 rounded-full bg-emerald-500 shrink-0"
+            title="Copilot active"
+          />
         </div>
 
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={handleClearChat}
-            className="p-1.5 rounded-md text-[color:var(--muted)] hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
-            title="Clear Conversation"
+            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer"
+            title="Clear conversation"
+            aria-label="Clear conversation"
           >
-            <FiTrash2 className="w-3.5 h-3.5" />
+            <FiTrash2 className="size-3.5" />
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition cursor-pointer"
-            title="Close Assistant Panel"
+            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer"
+            title="Close Assistant (Esc)"
+            aria-label="Close Assistant"
           >
-            <FiX className="w-4 h-4" />
+            <FiX className="size-3.5" />
           </button>
         </div>
       </div>
 
-      {/* ── 2. Contextual Capabilities Quick Bar ── */}
-      <div className="px-3 py-2 border-b border-[var(--border)] bg-[var(--bg-elevated)]/40 shrink-0">
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
-          <button
-            type="button"
-            disabled={isGenerating}
-            onClick={() => handleQuickAction("Explain current canvas architecture and data flow", "ask")}
-            className="text-[10px] px-2 py-1 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:border-[var(--accent)] transition whitespace-nowrap cursor-pointer shrink-0"
-          >
-            Understand
-          </button>
-          <button
-            type="button"
-            disabled={isGenerating}
-            onClick={() => handleQuickAction("Build a Cache-Aside pattern with Redis and PostgreSQL", "create")}
-            className="text-[10px] px-2 py-1 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:border-[var(--accent)] transition whitespace-nowrap cursor-pointer shrink-0"
-          >
-            Create Cache
-          </button>
-          <button
-            type="button"
-            disabled={isGenerating}
-            onClick={() => handleQuickAction("Create a Round-Robin Load-Balanced Cluster", "create")}
-            className="text-[10px] px-2 py-1 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:border-[var(--accent)] transition whitespace-nowrap cursor-pointer shrink-0"
-          >
-            Create LB
-          </button>
-          <button
-            type="button"
-            disabled={isGenerating}
-            onClick={() => handleQuickAction("Validate architecture bottlenecks and unrouted nodes", "ask")}
-            className="text-[10px] px-2 py-1 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:border-[var(--accent)] transition whitespace-nowrap cursor-pointer shrink-0"
-          >
-            Validate & Fix
-          </button>
-          <button
-            type="button"
-            disabled={isGenerating}
-            onClick={() => handleQuickAction("Explain simulation request progression and packet routing", "ask")}
-            className="text-[10px] px-2 py-1 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:border-[var(--accent)] transition whitespace-nowrap cursor-pointer shrink-0"
-          >
-            Explain Simulation
-          </button>
+      {/* ── 2. Compact Architecture & Selection Context Bar ── */}
+      <div className="px-3 py-1.5 border-b border-[var(--border)] bg-[var(--bg-elevated)]/40 flex items-center justify-between gap-2 text-[11px] font-mono text-muted-foreground shrink-0 select-none">
+        <div className="flex items-center gap-1.5 min-w-0 truncate">
+          <span className="text-foreground/90 font-medium">Context:</span>
+          <span className="truncate">{topologySummary}</span>
         </div>
+
+        {selectedNode && (
+          <div className="flex items-center gap-1 shrink-0 bg-primary/10 text-primary px-1.5 py-0.2 rounded border border-primary/20 text-[10px]">
+            <span className="size-1.5 rounded-full bg-primary shrink-0" />
+            <span className="truncate max-w-[110px]">
+              {(selectedNode.data?.label as string) || selectedNode.id}
+            </span>
+            {onSelectNode && (
+              <button
+                type="button"
+                onClick={() => onSelectNode(null)}
+                className="hover:opacity-75 cursor-pointer ml-0.5"
+                title="Deselect node"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* ── 3. Conversation Messages Stream ── */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3.5 scrollbar-thin">
+      {/* ── 3. Quick Action Chips (Developer-Focused) ── */}
+      <div className="px-3 py-1.5 border-b border-[var(--border)] bg-[var(--surface)] flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+        {selectedNode ? (
+          <>
+            <button
+              type="button"
+              disabled={isGenerating}
+              onClick={() =>
+                handleQuickAction(
+                  `Explain role and failure dynamics of ${(selectedNode.data?.label as string) || selectedNode.id}`,
+                  "ask"
+                )
+              }
+              className="text-[10px] font-mono px-2 py-0.5 rounded border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 transition whitespace-nowrap cursor-pointer shrink-0"
+            >
+              Explain {(selectedNode.data?.label as string) || selectedNode.id}
+            </button>
+            <button
+              type="button"
+              disabled={isGenerating}
+              onClick={() =>
+                handleQuickAction(
+                  `What happens if ${(selectedNode.data?.label as string) || selectedNode.id} fails or times out?`,
+                  "ask"
+                )
+              }
+              className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground transition whitespace-nowrap cursor-pointer shrink-0"
+            >
+              Failure test
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              disabled={isGenerating}
+              onClick={() => handleQuickAction("Explain current canvas architecture and data flow", "ask")}
+              className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
+            >
+              Explain architecture
+            </button>
+            <button
+              type="button"
+              disabled={isGenerating}
+              onClick={() => handleQuickAction("Validate architecture bottlenecks and unrouted nodes", "ask")}
+              className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
+            >
+              Validate topology
+            </button>
+            <button
+              type="button"
+              disabled={isGenerating}
+              onClick={() => handleQuickAction("Build a Cache-Aside pattern with Redis and PostgreSQL", "create")}
+              className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
+            >
+              Build Cache-Aside
+            </button>
+            <button
+              type="button"
+              disabled={isGenerating}
+              onClick={() => handleQuickAction("Create a Round-Robin Load-Balanced Cluster", "create")}
+              className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
+            >
+              Build Load Balancer
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* ── 4. Conversation Stream (Document / Editor Style) ── */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-3.5 py-3 space-y-4 scrollbar-thin">
+        {messages.length === 1 && (
+          <div className="py-4 text-center space-y-1.5 select-none">
+            <div className="size-7 mx-auto rounded bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center text-muted-foreground">
+              <FiTerminal className="size-3.5" />
+            </div>
+            <p className="text-xs font-semibold text-foreground">
+              Architecture Assistant
+            </p>
+            <p className="text-[11px] text-muted-foreground max-w-xs mx-auto leading-relaxed">
+              Ask about current topology, request routing paths, component bottlenecks, or generate distributed system architecture definitions.
+            </p>
+          </div>
+        )}
+
         {messages.map((m) => (
-          <div
-            key={m.id}
-            className={`flex flex-col ${
-              m.sender === "user" ? "items-end" : "items-start"
-            }`}
-          >
+          <div key={m.id} className="space-y-1.5">
             {m.sender === "user" ? (
-              /* User Bubble */
-              <div className="bg-[var(--accent)]/15 border border-[var(--accent)]/30 text-[color:var(--foreground)] text-xs px-3.5 py-2.5 rounded-xl rounded-tr-xs shadow-xs max-w-[88%] leading-relaxed">
-                {m.text}
+              /* User Turn */
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground select-none">
+                  <span className="size-1.5 rounded-full bg-muted-foreground/60" />
+                  <span>You</span>
+                </div>
+                <div className="text-xs text-foreground font-normal leading-relaxed pl-2.5 border-l-2 border-border/80 whitespace-pre-wrap">
+                  {m.text}
+                </div>
               </div>
             ) : (
-              /* Assistant Bubble */
-              <div className="bg-[var(--bg-elevated)] text-[color:var(--foreground)] border border-[var(--border)] text-xs px-3.5 py-2.5 rounded-xl rounded-tl-xs shadow-xs max-w-[96%] leading-relaxed space-y-2.5">
-                <div className="whitespace-pre-wrap leading-relaxed">{m.text}</div>
+              /* Assistant Turn */
+              <div className="space-y-2 pt-2 border-t border-[var(--border)]/50">
+                <div className="flex items-center justify-between text-[10px] font-mono font-bold uppercase tracking-wider text-primary select-none">
+                  <div className="flex items-center gap-1.5">
+                    <FiCpu className="size-3" />
+                    <span>Assistant</span>
+                  </div>
+                  {m.thoughtTime && (
+                    <span className="text-muted-foreground/70 lowercase font-normal">
+                      reasoned in {m.thoughtTime}
+                    </span>
+                  )}
+                </div>
 
-                {/* If DSL was synthesized, render code block & action controls */}
-                {m.dsl && (
-                  <div className="pt-2 border-t border-[var(--border)] space-y-2">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-[color:var(--muted)]">
-                      <span className="font-semibold text-[color:var(--accent)] flex items-center gap-1.5">
-                        <FiLayers className="w-3 h-3" />
-                        <span>{m.architectureTitle}</span>
+                {/* Collapsible Extended Reasoning / Thinking Process */}
+                {m.thoughtProcess && (
+                  <details className="rounded border border-indigo-500/25 bg-indigo-500/5 text-[11px] font-mono group overflow-hidden">
+                    <summary className="px-2.5 py-1.5 cursor-pointer text-indigo-400 font-semibold flex items-center justify-between select-none hover:bg-indigo-500/10 transition">
+                      <span className="flex items-center gap-1.5">
+                        <FiCpu className="size-3 animate-pulse" />
+                        <span>Thought for {m.thoughtTime || "2.1s"} (Extended Reasoning)</span>
                       </span>
-                      <span>FlowFrame DSL</span>
+                      <span className="text-[9px] opacity-70 group-open:rotate-180 transition-transform">
+                        ▼
+                      </span>
+                    </summary>
+                    <div className="px-3 py-2 text-muted-foreground border-t border-indigo-500/20 whitespace-pre-wrap leading-relaxed text-[10.5px]">
+                      {m.thoughtProcess}
                     </div>
+                  </details>
+                )}
 
-                    <pre className="p-2.5 rounded-lg bg-[#161b22] border border-[var(--border)] font-mono text-[10px] leading-relaxed text-[#c9d1d9] overflow-x-auto max-h-48 scrollbar-thin">
-                      <code>{m.dsl}</code>
-                    </pre>
+                {/* Response Text */}
+                <div className="text-xs text-foreground leading-relaxed pl-2.5 border-l-2 border-primary/40 space-y-2">
+                  <div className="whitespace-pre-wrap font-sans">{m.text}</div>
 
-                    <div className="flex items-center gap-1.5 pt-0.5">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleApplyArchitecture(
-                            m.id,
-                            m.dsl!,
-                            `${m.architectureTitle} applied to canvas`
-                          )
-                        }
-                        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                          m.applied
-                            ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                            : "btn-primary text-white shadow-xs"
-                        }`}
-                      >
-                        <FiCheck className="w-3.5 h-3.5" />
-                        <span>{m.applied ? "Applied" : "Apply to Canvas"}</span>
-                      </button>
+                  {/* FlowFrame DSL Code Block */}
+                  {m.dsl && (
+                    <div className="rounded-md border border-[var(--border)] bg-[#0d1117] overflow-hidden my-2">
+                      <div className="px-2.5 py-1 border-b border-[var(--border)] bg-[#161b22] flex items-center justify-between text-[10px] font-mono text-muted-foreground">
+                        <span className="font-semibold text-foreground flex items-center gap-1.5">
+                          <FiCode className="size-3 text-primary" />
+                          <span>{m.architectureTitle || "FlowFrame DSL"}</span>
+                        </span>
+                        <span>dsl</span>
+                      </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleCopyDsl(m.id, m.dsl!)}
-                        className="flex items-center gap-1 py-1.5 px-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-xs font-medium text-[color:var(--foreground)] transition cursor-pointer"
-                        title="Copy DSL Code"
-                      >
-                        <FiCopy className="w-3.5 h-3.5" />
-                        <span>{copiedId === m.id ? "Copied" : "Copy"}</span>
-                      </button>
+                      <pre className="p-2.5 text-[10.5px] font-mono leading-relaxed text-[#c9d1d9] overflow-x-auto max-h-52 scrollbar-thin">
+                        <code>{m.dsl}</code>
+                      </pre>
 
-                      {onRunSimulation && (
+                      <div className="p-1.5 border-t border-[var(--border)] bg-[#161b22] flex items-center gap-1.5 justify-end">
                         <button
                           type="button"
-                          onClick={() => {
-                            if (!m.applied) {
-                              handleApplyArchitecture(
-                                m.id,
-                                m.dsl!,
-                                `${m.architectureTitle} applied to canvas`
-                              );
-                            }
-                            setTimeout(() => onRunSimulation(), 250);
-                          }}
-                          className="flex items-center gap-1 py-1.5 px-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-xs font-medium text-[color:var(--foreground)] transition cursor-pointer"
-                          title="Run Simulation"
+                          onClick={() => handleCopyDsl(m.id, m.dsl!)}
+                          className="px-2 py-1 rounded text-[11px] font-mono font-medium border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-foreground flex items-center gap-1 cursor-pointer transition"
+                          title="Copy DSL Code"
                         >
-                          <FiPlay className="w-3 h-3 fill-current text-[color:var(--accent)]" />
-                          <span>Run</span>
+                          <FiCopy className="size-3" />
+                          <span>{copiedId === m.id ? "Copied" : "Copy"}</span>
                         </button>
-                      )}
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleApplyArchitecture(
+                              m.id,
+                              m.dsl!,
+                              `${m.architectureTitle || "Architecture"} applied to canvas`
+                            )
+                          }
+                          className={`px-2.5 py-1 rounded text-[11px] font-medium flex items-center gap-1 cursor-pointer transition ${
+                            m.applied
+                              ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                              : "bg-primary text-primary-foreground hover:bg-primary/90"
+                          }`}
+                        >
+                          <FiCheck className="size-3" />
+                          <span>{m.applied ? "Applied" : "Apply to Canvas"}</span>
+                        </button>
+
+                        {onRunSimulation && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!m.applied) {
+                                handleApplyArchitecture(
+                                  m.id,
+                                  m.dsl!,
+                                  `${m.architectureTitle || "Architecture"} applied to canvas`
+                                );
+                              }
+                              setTimeout(() => onRunSimulation(), 250);
+                            }}
+                            className="px-2 py-1 rounded text-[11px] font-medium border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-foreground flex items-center gap-1 cursor-pointer transition"
+                            title="Run Simulation"
+                          >
+                            <FiPlay className="size-3 text-primary fill-current" />
+                            <span>Run</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
           </div>
         ))}
 
-        {/* Loading / Generating State */}
+        {/* Subtle Developer Loading State */}
         {isGenerating && (
-          <div className="flex flex-col items-start animate-in fade-in duration-150">
-            <div className="bg-[var(--bg-elevated)] border border-[var(--border)] text-xs px-3.5 py-2.5 rounded-xl rounded-tl-xs shadow-xs space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />
-                <span className="font-mono text-[11px] font-semibold text-[color:var(--accent)]">
-                  {mode === "create" ? "Synthesizing Topology..." : "Analyzing Architecture..."}
-                </span>
-              </div>
-              <p className="text-[10px] text-[color:var(--muted)] font-mono">
-                {mode === "create" ? "Generating nodes, endpoints and routes" : "Evaluating components and flow paths"}
-              </p>
+          <div className="pt-2 border-t border-[var(--border)]/50 space-y-1.5 animate-in fade-in duration-150 select-none">
+            <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-primary">
+              <FiCpu className="size-3 animate-pulse" />
+              <span>Assistant</span>
+            </div>
+            <div className="flex items-center gap-2 pl-2.5 text-xs text-muted-foreground font-mono">
+              <div className="size-3 rounded-full border border-primary/40 border-t-primary animate-spin shrink-0" />
+              <span>
+                {mode === "create" ? "Synthesizing topology…" : "Analyzing architecture…"}
+              </span>
             </div>
           </div>
         )}
@@ -715,74 +930,107 @@ connect api_server -> postgres_db
         <div ref={messagesEndRef} />
       </div>
 
-      {/* ── 4. Input Area ── */}
-      <div className="p-3 border-t border-[var(--border)] bg-[var(--surface)] shrink-0 space-y-2">
-        {/* Clean Mode Switcher: Create vs Ask */}
-        <div className="flex items-center gap-1 bg-[var(--bg-elevated)] p-0.5 rounded-lg border border-[var(--border)]">
+      {/* ── 5. Fixed Developer Composer (Sticky Bottom) ── */}
+      <div className="p-2.5 border-t border-[var(--border)] bg-[var(--surface)] shrink-0 space-y-2">
+        {/* Mode & Think Toggle Bar */}
+        <div className="flex items-center justify-between gap-1.5 select-none">
+          <div className="flex items-center gap-1 bg-[var(--bg-elevated)] p-0.5 rounded-md border border-[var(--border)] text-[11px]">
+            <button
+              type="button"
+              disabled={isGenerating}
+              onClick={() => setMode("create")}
+              className={`px-2 py-0.5 rounded text-[10.5px] font-medium transition cursor-pointer ${
+                mode === "create"
+                  ? "bg-[var(--surface)] text-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Create
+            </button>
+            <button
+              type="button"
+              disabled={isGenerating}
+              onClick={() => setMode("ask")}
+              className={`px-2 py-0.5 rounded text-[10.5px] font-medium transition cursor-pointer ${
+                mode === "ask"
+                  ? "bg-[var(--surface)] text-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Ask & Analyze
+            </button>
+          </div>
+
+          {/* Think Toggle */}
           <button
             type="button"
-            disabled={isGenerating}
-            onClick={() => setMode("create")}
-            className={`flex-1 py-1 px-2.5 rounded-md text-[11px] font-medium flex items-center justify-center gap-1.5 transition cursor-pointer ${
-              mode === "create"
-                ? "bg-[var(--surface)] text-[color:var(--accent)] font-semibold shadow-xs"
-                : "text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
+            onClick={() => setThinkEnabled(!thinkEnabled)}
+            className={`px-2 py-0.5 rounded-md border font-mono text-[10px] font-medium transition cursor-pointer flex items-center gap-1 select-none ${
+              thinkEnabled
+                ? "bg-indigo-500/15 border-indigo-500/35 text-indigo-400 font-semibold shadow-xs ring-1 ring-indigo-500/20"
+                : "bg-[var(--surface)] border-[var(--border)] text-muted-foreground hover:text-foreground"
             }`}
+            title={thinkEnabled ? "Extended Architecture Reasoning: ON" : "Extended Architecture Reasoning: OFF"}
           >
-            <FiPlus className="w-3 h-3" />
-            <span>Create Architecture</span>
-          </button>
-          <button
-            type="button"
-            disabled={isGenerating}
-            onClick={() => setMode("ask")}
-            className={`flex-1 py-1 px-2.5 rounded-md text-[11px] font-medium flex items-center justify-center gap-1.5 transition cursor-pointer ${
-              mode === "ask"
-                ? "bg-[var(--surface)] text-[color:var(--accent)] font-semibold shadow-xs"
-                : "text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
-            }`}
-          >
-            <FiHelpCircle className="w-3 h-3" />
-            <span>Ask & Analyze</span>
+            <FiCpu className={`size-3 ${thinkEnabled ? "text-indigo-400 animate-pulse" : "text-muted-foreground"}`} />
+            <span>Think</span>
+            <span
+              className={`size-1 rounded-full ${
+                thinkEnabled ? "bg-indigo-400" : "bg-muted-foreground/50"
+              }`}
+            />
           </button>
         </div>
 
-        {/* Input Form */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!isGenerating) submitPrompt();
-          }}
-          className="relative flex items-center"
-        >
-          <input
-            ref={inputRef}
-            type="text"
+        {/* Input Textarea Form */}
+        <div className="relative rounded-md border border-[var(--border)] bg-[var(--bg-elevated)] focus-within:border-primary/60 focus-within:ring-1 focus-within:ring-primary/20 transition-all p-2 space-y-1.5">
+          <textarea
+            ref={textareaRef}
+            rows={2}
             disabled={isGenerating}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (!isGenerating && input.trim()) {
+                  submitPrompt();
+                }
+              }
+            }}
             placeholder={
               isGenerating
-                ? "Analyzing..."
+                ? "Analyzing architecture…"
                 : mode === "create"
-                ? "Describe topology (e.g. Add Redis cache to server)..."
-                : "Ask about your architecture or simulation..."
+                ? selectedNode
+                  ? `Describe change to ${(selectedNode.data?.label as string) || selectedNode.id} or topology…`
+                  : "Describe topology (e.g. Add Redis cache to server)…"
+                : selectedNode
+                ? `Ask about ${(selectedNode.data?.label as string) || selectedNode.id} or routing…`
+                : "Ask about canvas topology or simulation behavior…"
             }
-            className="w-full pl-3 pr-9 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] text-xs text-[color:var(--foreground)] placeholder:text-[color:var(--muted)] focus:outline-none focus:border-[var(--accent)] transition disabled:opacity-60"
+            className="w-full bg-transparent resize-none text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none leading-relaxed max-h-32"
           />
-          <button
-            type="submit"
-            disabled={!input.trim() || isGenerating}
-            className="absolute right-1.5 p-1 rounded-md bg-[var(--accent)] text-white hover:brightness-110 disabled:opacity-30 transition cursor-pointer disabled:cursor-not-allowed"
-            title="Send (Enter)"
-          >
-            {isGenerating ? (
-              <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-            ) : (
-              <FiSend className="w-3.5 h-3.5" />
-            )}
-          </button>
-        </form>
+
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-[var(--border)]/40 text-[10px] font-mono text-muted-foreground select-none">
+            <span className="truncate">Enter to send · Shift+Enter newline</span>
+
+            <button
+              type="button"
+              disabled={!input.trim() || isGenerating}
+              onClick={() => submitPrompt()}
+              className="size-6 rounded bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center cursor-pointer shadow-xs disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
+              title="Send message"
+              aria-label="Send message"
+            >
+              {isGenerating ? (
+                <div className="size-3 rounded-full border border-primary-foreground/40 border-t-primary-foreground animate-spin" />
+              ) : (
+                <FiArrowUp className="size-3.5" />
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </aside>
   );
