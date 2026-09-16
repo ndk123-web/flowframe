@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SiteHeader from "@/components/SiteHeader";
 import { useThemeStore } from "@/store/useThemeStore";
 import { NodeSocket } from "@/components/FlowDecorations";
+import { FiSearch } from "react-icons/fi";
 
 interface GlossaryTerm {
   id: string;
@@ -649,7 +650,9 @@ export default function GlossaryPage() {
         <motion.div layout className="space-y-2.5">
           {filtered.length === 0 ? (
             <div className="text-center py-16 space-y-2">
-              <p className="text-4xl">🔍</p>
+              <div className="size-10 mx-auto rounded-xl bg-muted/30 border border-border/80 flex items-center justify-center text-muted-foreground">
+                <FiSearch className="size-5" />
+              </div>
               <p className="text-base font-semibold text-[color:var(--foreground)]/60">No terms match "{query}"</p>
               <p className="text-sm text-[color:var(--foreground)]/35">Try a shorter search or browse by category above.</p>
             </div>

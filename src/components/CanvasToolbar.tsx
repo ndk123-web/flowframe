@@ -16,7 +16,6 @@ import {
   RotateCcw,
   SlidersHorizontal,
   Terminal,
-  Bot,
   Save,
   Menu,
   Loader2,
@@ -309,25 +308,6 @@ export default function CanvasToolbar({
           <TooltipContent side="bottom">Toggle Live Trace Logs</TooltipContent>
         </Tooltip>
 
-        {/* AI Architecture Assistant */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={isAssistantOpen ? "secondary" : "ghost"}
-              size="sm"
-              onClick={onToggleAssistant}
-              className={`h-8 px-2 gap-1.5 text-xs font-semibold hidden lg:inline-flex ${
-                isAssistantOpen
-                  ? "text-violet-400 border border-violet-500/30"
-                  : "text-[color:var(--foreground)]/70 hover:text-[color:var(--foreground)]"
-              }`}
-            >
-              <Bot className="size-3.5" />
-              <span className="hidden xl:inline text-[11px]">Assistant</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">AI Architecture Assistant</TooltipContent>
-        </Tooltip>
 
         {/* Dedicated Canvas Settings - Prominent & always visible */}
         <Tooltip>

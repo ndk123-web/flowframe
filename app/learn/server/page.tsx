@@ -568,7 +568,7 @@ export default function ServerLearnPage() {
                     : "text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)]/70"
                 }`}
               >
-                📖 Lessons
+                Lessons
               </button>
               <button
                 type="button"
@@ -579,7 +579,7 @@ export default function ServerLearnPage() {
                     : "text-[color:var(--foreground)]/40 hover:text-[color:var(--foreground)]/70"
                 }`}
               >
-                🎯 Challenges
+                Challenges
                 {completedCount === CHALLENGES.length && (
                   <span className="text-emerald-400 text-[10px]">✓</span>
                 )}
@@ -595,7 +595,7 @@ export default function ServerLearnPage() {
                 ))}
                 <div className="pt-2">
                   <Link href="/learn/glossary" className="flex items-center justify-between gap-2 rounded-xl border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/40 px-3 py-2.5 text-xs font-bold text-blue-400 transition-all duration-200">
-                    <span>📖 Systems Glossary</span>
+                    <span>Systems Glossary</span>
                     <span>→</span>
                   </Link>
                 </div>
@@ -651,7 +651,9 @@ export default function ServerLearnPage() {
 
                 {completedCount === CHALLENGES.length && (
                   <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center space-y-2">
-                    <p className="text-xl">🏆</p>
+                    <div className="size-8 mx-auto rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-sm">
+                      ✓
+                    </div>
                     <p className="text-xs font-bold text-emerald-400">All Challenges Completed!</p>
                     <p className="text-[10px] text-[color:var(--foreground)]/65 leading-relaxed">
                       You've successfully simulated requests, triggered errors, and queried endpoints. Now, build custom architectures in the sandbox!

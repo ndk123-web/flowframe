@@ -787,8 +787,8 @@ export default function CanvasSettingsSheet({
                           onClick={() => setVideoFormat?.(fmt)}
                           className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-medium transition cursor-pointer ${
                             videoFormat === fmt
-                              ? "bg-background text-foreground shadow-xs font-semibold"
-                              : "text-muted-foreground hover:text-foreground"
+                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-semibold"
+                              : "text-muted-foreground hover:text-foreground border border-transparent"
                           }`}
                         >
                           {fmt.toUpperCase()}
@@ -816,8 +816,8 @@ export default function CanvasSettingsSheet({
                           onClick={() => setExportTheme?.("dark")}
                           className={`flex items-center justify-center gap-1.5 py-1 rounded text-xs transition cursor-pointer ${
                             exportTheme === "dark"
-                              ? "bg-background text-foreground shadow-xs font-medium"
-                              : "text-muted-foreground hover:text-foreground"
+                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
+                              : "text-muted-foreground hover:text-foreground border border-transparent"
                           }`}
                         >
                           <Moon className="size-3" />
@@ -828,8 +828,8 @@ export default function CanvasSettingsSheet({
                           onClick={() => setExportTheme?.("light")}
                           className={`flex items-center justify-center gap-1.5 py-1 rounded text-xs transition cursor-pointer ${
                             exportTheme === "light"
-                              ? "bg-background text-foreground shadow-xs font-medium"
-                              : "text-muted-foreground hover:text-foreground"
+                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
+                              : "text-muted-foreground hover:text-foreground border border-transparent"
                           }`}
                         >
                           <Sun className="size-3" />
@@ -855,8 +855,8 @@ export default function CanvasSettingsSheet({
                           onClick={() => setExportExecutionMode?.("sequential")}
                           className={`py-1 rounded text-xs transition cursor-pointer ${
                             exportExecutionMode === "sequential"
-                              ? "bg-background text-foreground shadow-xs font-medium"
-                              : "text-muted-foreground hover:text-foreground"
+                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
+                              : "text-muted-foreground hover:text-foreground border border-transparent"
                           }`}
                         >
                           Sequential
@@ -866,8 +866,8 @@ export default function CanvasSettingsSheet({
                           onClick={() => setExportExecutionMode?.("parallel")}
                           className={`py-1 rounded text-xs transition cursor-pointer ${
                             exportExecutionMode === "parallel"
-                              ? "bg-background text-foreground shadow-xs font-medium"
-                              : "text-muted-foreground hover:text-foreground"
+                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
+                              : "text-muted-foreground hover:text-foreground border border-transparent"
                           }`}
                         >
                           Parallel
@@ -892,8 +892,8 @@ export default function CanvasSettingsSheet({
                           onClick={() => setExportPacketFilter?.("all")}
                           className={`py-1 rounded text-xs transition cursor-pointer ${
                             exportPacketFilter === "all"
-                              ? "bg-background text-foreground shadow-xs font-medium"
-                              : "text-muted-foreground hover:text-foreground"
+                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
+                              : "text-muted-foreground hover:text-foreground border border-transparent"
                           }`}
                         >
                           All Packets
@@ -903,8 +903,8 @@ export default function CanvasSettingsSheet({
                           onClick={() => setExportPacketFilter?.("forwardOnly")}
                           className={`py-1 rounded text-xs transition cursor-pointer ${
                             exportPacketFilter === "forwardOnly"
-                              ? "bg-background text-foreground shadow-xs font-medium"
-                              : "text-muted-foreground hover:text-foreground"
+                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
+                              : "text-muted-foreground hover:text-foreground border border-transparent"
                           }`}
                         >
                           Forward Only
@@ -931,8 +931,8 @@ export default function CanvasSettingsSheet({
                             onClick={() => setExportSpeed?.(s)}
                             className={`py-1 rounded text-xs font-mono transition cursor-pointer ${
                               exportSpeed === s
-                                ? "bg-background text-foreground shadow-xs font-semibold"
-                                : "text-muted-foreground hover:text-foreground"
+                                ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-semibold"
+                                : "text-muted-foreground hover:text-foreground border border-transparent"
                             }`}
                           >
                             {s}x

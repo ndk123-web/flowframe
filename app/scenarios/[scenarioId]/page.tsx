@@ -513,6 +513,7 @@ function GraphCanvas({
         panOnDrag
         zoomOnScroll
         zoomOnPinch
+        proOptions={{ hideAttribution: true }}
         style={{ background: bgColor }}
       />
 

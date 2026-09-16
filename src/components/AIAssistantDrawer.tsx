@@ -64,7 +64,7 @@ export default function AIAssistantDrawer({
     {
       id: "welcome-1",
       sender: "assistant",
-      text: "Architecture Assistant ready. Ask about the active canvas topology, request routing, component bottlenecks, or generate distributed system architecture definitions.",
+      text: "Relay architecture assistant ready. Ask about active canvas topology, request routing, component bottlenecks, or generate distributed system architecture definitions.",
     },
   ]);
 
@@ -636,20 +636,23 @@ connect api_server -> postgres_db
 
   return (
     <aside
-      className="fixed inset-y-0 right-0 z-40 w-full sm:w-[380px] md:static md:z-20 md:w-[360px] lg:w-[380px] md:h-full md:max-h-full bg-[var(--surface)] border-l border-[var(--border)] flex flex-col shrink-0 select-text overflow-hidden"
-      data-testid="architecture-assistant-panel"
-      aria-label="Architecture Assistant"
+      className="fixed inset-y-0 right-0 z-40 w-full sm:w-[380px] md:static md:z-20 md:w-[360px] lg:w-[380px] md:h-full md:max-h-full bg-[var(--surface)] border-l border-[var(--border)] flex flex-col shrink-0 select-text overflow-hidden shadow-xl md:shadow-none"
+      data-testid="relay-assistant-panel"
+      aria-label="Relay Architecture Assistant"
     >
       {/* ── 1. Compact Professional Header ── */}
       <div className="h-10 px-3 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]">
         <div className="flex items-center gap-2 min-w-0">
-          <FiTerminal className="size-3.5 text-muted-foreground shrink-0" />
+          <FiTerminal className="size-3.5 text-primary shrink-0" />
           <span className="text-xs font-semibold text-foreground tracking-tight truncate">
+            Relay
+          </span>
+          <span className="text-[10px] font-mono text-muted-foreground bg-[var(--surface-muted)] px-1.5 py-0.5 rounded border border-[var(--border)] hidden sm:inline-block">
             Architecture Assistant
           </span>
           <span
             className="size-1.5 rounded-full bg-emerald-500 shrink-0"
-            title="Copilot active"
+            title="Relay active"
           />
         </div>
 
@@ -775,11 +778,11 @@ connect api_server -> postgres_db
       <div className="flex-1 min-h-0 overflow-y-auto px-3.5 py-3 space-y-4 scrollbar-thin">
         {messages.length === 1 && (
           <div className="py-4 text-center space-y-1.5 select-none">
-            <div className="size-7 mx-auto rounded bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center text-muted-foreground">
+            <div className="size-7 mx-auto rounded bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center text-primary">
               <FiTerminal className="size-3.5" />
             </div>
             <p className="text-xs font-semibold text-foreground">
-              Architecture Assistant
+              Relay Architecture Assistant
             </p>
             <p className="text-[11px] text-muted-foreground max-w-xs mx-auto leading-relaxed">
               Ask about current topology, request routing paths, component bottlenecks, or generate distributed system architecture definitions.
@@ -805,8 +808,8 @@ connect api_server -> postgres_db
               <div className="space-y-2 pt-2 border-t border-[var(--border)]/50">
                 <div className="flex items-center justify-between text-[10px] font-mono font-bold uppercase tracking-wider text-primary select-none">
                   <div className="flex items-center gap-1.5">
-                    <FiCpu className="size-3" />
-                    <span>Assistant</span>
+                    <FiTerminal className="size-3 text-primary" />
+                    <span>Relay</span>
                   </div>
                   {m.thoughtTime && (
                     <span className="text-muted-foreground/70 lowercase font-normal">
@@ -817,17 +820,17 @@ connect api_server -> postgres_db
 
                 {/* Collapsible Extended Reasoning / Thinking Process */}
                 {m.thoughtProcess && (
-                  <details className="rounded border border-indigo-500/25 bg-indigo-500/5 text-[11px] font-mono group overflow-hidden">
-                    <summary className="px-2.5 py-1.5 cursor-pointer text-indigo-400 font-semibold flex items-center justify-between select-none hover:bg-indigo-500/10 transition">
+                  <details className="rounded border border-[var(--border)] bg-[var(--bg-elevated)]/50 text-[11px] font-mono group overflow-hidden">
+                    <summary className="px-2.5 py-1.5 cursor-pointer text-foreground/80 font-semibold flex items-center justify-between select-none hover:bg-[var(--bg-elevated)] transition">
                       <span className="flex items-center gap-1.5">
-                        <FiCpu className="size-3 animate-pulse" />
-                        <span>Thought for {m.thoughtTime || "2.1s"} (Extended Reasoning)</span>
+                        <FiCpu className="size-3 text-primary animate-pulse" />
+                        <span>Thought for {m.thoughtTime || "2.1s"} (Reasoning)</span>
                       </span>
                       <span className="text-[9px] opacity-70 group-open:rotate-180 transition-transform">
                         ▼
                       </span>
                     </summary>
-                    <div className="px-3 py-2 text-muted-foreground border-t border-indigo-500/20 whitespace-pre-wrap leading-relaxed text-[10.5px]">
+                    <div className="px-3 py-2 text-muted-foreground border-t border-[var(--border)]/60 whitespace-pre-wrap leading-relaxed text-[10.5px]">
                       {m.thoughtProcess}
                     </div>
                   </details>
@@ -839,8 +842,8 @@ connect api_server -> postgres_db
 
                   {/* FlowFrame DSL Code Block */}
                   {m.dsl && (
-                    <div className="rounded-md border border-[var(--border)] bg-[#0d1117] overflow-hidden my-2">
-                      <div className="px-2.5 py-1 border-b border-[var(--border)] bg-[#161b22] flex items-center justify-between text-[10px] font-mono text-muted-foreground">
+                    <div className="rounded-md border border-[var(--border)] bg-[#121215] overflow-hidden my-2">
+                      <div className="px-2.5 py-1 border-b border-[var(--border)] bg-[#18181b] flex items-center justify-between text-[10px] font-mono text-muted-foreground">
                         <span className="font-semibold text-foreground flex items-center gap-1.5">
                           <FiCode className="size-3 text-primary" />
                           <span>{m.architectureTitle || "FlowFrame DSL"}</span>
@@ -848,11 +851,11 @@ connect api_server -> postgres_db
                         <span>dsl</span>
                       </div>
 
-                      <pre className="p-2.5 text-[10.5px] font-mono leading-relaxed text-[#c9d1d9] overflow-x-auto max-h-52 scrollbar-thin">
+                      <pre className="p-2.5 text-[10.5px] font-mono leading-relaxed text-[#d4d4d8] overflow-x-auto max-h-52 scrollbar-thin">
                         <code>{m.dsl}</code>
                       </pre>
 
-                      <div className="p-1.5 border-t border-[var(--border)] bg-[#161b22] flex items-center gap-1.5 justify-end">
+                      <div className="p-1.5 border-t border-[var(--border)] bg-[#18181b] flex items-center gap-1.5 justify-end">
                         <button
                           type="button"
                           onClick={() => handleCopyDsl(m.id, m.dsl!)}
@@ -915,8 +918,8 @@ connect api_server -> postgres_db
         {isGenerating && (
           <div className="pt-2 border-t border-[var(--border)]/50 space-y-1.5 animate-in fade-in duration-150 select-none">
             <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-primary">
-              <FiCpu className="size-3 animate-pulse" />
-              <span>Assistant</span>
+              <FiTerminal className="size-3 animate-pulse text-primary" />
+              <span>Relay</span>
             </div>
             <div className="flex items-center gap-2 pl-2.5 text-xs text-muted-foreground font-mono">
               <div className="size-3 rounded-full border border-primary/40 border-t-primary animate-spin shrink-0" />
@@ -967,16 +970,16 @@ connect api_server -> postgres_db
             onClick={() => setThinkEnabled(!thinkEnabled)}
             className={`px-2 py-0.5 rounded-md border font-mono text-[10px] font-medium transition cursor-pointer flex items-center gap-1 select-none ${
               thinkEnabled
-                ? "bg-indigo-500/15 border-indigo-500/35 text-indigo-400 font-semibold shadow-xs ring-1 ring-indigo-500/20"
+                ? "bg-primary/10 border-primary/30 text-primary font-semibold shadow-xs ring-1 ring-primary/20"
                 : "bg-[var(--surface)] border-[var(--border)] text-muted-foreground hover:text-foreground"
             }`}
             title={thinkEnabled ? "Extended Architecture Reasoning: ON" : "Extended Architecture Reasoning: OFF"}
           >
-            <FiCpu className={`size-3 ${thinkEnabled ? "text-indigo-400 animate-pulse" : "text-muted-foreground"}`} />
+            <FiCpu className={`size-3 ${thinkEnabled ? "text-primary animate-pulse" : "text-muted-foreground"}`} />
             <span>Think</span>
             <span
               className={`size-1 rounded-full ${
-                thinkEnabled ? "bg-indigo-400" : "bg-muted-foreground/50"
+                thinkEnabled ? "bg-primary" : "bg-muted-foreground/50"
               }`}
             />
           </button>

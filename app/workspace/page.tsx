@@ -68,6 +68,7 @@ import AIAssistantDrawer from "@/components/AIAssistantDrawer";
 import CanvasToolbar from "@/components/CanvasToolbar";
 import CanvasSettingsSheet from "@/components/CanvasSettingsSheet";
 import CanvasControlsBar from "@/components/CanvasControlsBar";
+import TemplateBrowserDialog, { WORKSPACE_TEMPLATES } from "@/components/TemplateBrowserDialog";
 import { recordSimulationVideo } from "@/utils/recordSimulationVideo";
 
 // DSL Interpreter & Graph Engine
@@ -1068,10 +1069,10 @@ function CustomNode({ id, data, selected }: any) {
     { ring: string; glow: string; accent: string; dot: string }
   > = {
     client: {
-      ring: "rgba(139,92,246,0.6)",
-      glow: "rgba(139,92,246,0.12)",
-      accent: "#7c3aed",
-      dot: "#8b5cf6",
+      ring: "rgba(59,130,246,0.5)",
+      glow: "rgba(59,130,246,0.1)",
+      accent: "#2563eb",
+      dot: "#3b82f6",
     },
     "api-gateway": {
       ring: "rgba(217,70,239,0.6)",
@@ -1280,7 +1281,7 @@ function CustomNode({ id, data, selected }: any) {
                 </p>
               )}
               {data.type === "client" && !isDiamond && (
-                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-violet-400 font-mono tracking-tight mt-0.5 bg-violet-500/10 px-1 py-0.2 rounded border border-violet-500/20">
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-primary font-mono tracking-tight mt-0.5 bg-primary/10 px-1 py-0.2 rounded border border-primary/20">
                   <svg className="w-2 h-2 fill-current" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z" />
                   </svg>
@@ -1441,7 +1442,7 @@ function PacketEdge(props: EdgeProps) {
             style={{
               filter: isReverseMotion
                 ? "drop-shadow(0 0 5px rgba(245,158,11,0.85))"
-                : "drop-shadow(0 0 5px rgba(139,92,246,0.85))",
+                : "drop-shadow(0 0 5px rgba(59,130,246,0.85))",
               opacity: Math.max(0.45, 0.9 - index * 0.15),
             }}
           >
@@ -2316,12 +2317,15 @@ function WorkspaceInner({
     }
   };
 
-  // Keyboard shortcut Ctrl+S / Cmd+S for quick save
+  // Keyboard shortcut Ctrl+S (Save) and Ctrl+I (Toggle Relay Assistant)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
         handleSaveDiagramToBackend();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") {
+        e.preventDefault();
+        setIsAIAssistantOpen((prev) => !prev);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -2736,6 +2740,7 @@ function WorkspaceInner({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [isTemplateBrowserOpen, setIsTemplateBrowserOpen] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [initialAIPrompt, setInitialAIPrompt] = useState<string>("");
   const [initialThink, setInitialThink] = useState<boolean>(true);
@@ -4992,9 +4997,21 @@ connect s1 -> db1
                               Templates
                             </span>
                           </div>
-                          <span className="text-[9px] text-[color:var(--foreground)]/40 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-mono">
-                            {Object.keys(TEMPLATES).length}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsTemplateBrowserOpen(true);
+                              }}
+                              className="text-[10px] font-medium text-primary hover:underline px-1 py-0.5 cursor-pointer"
+                              title="Browse all templates"
+                            >
+                              Browse
+                            </span>
+                            <span className="text-[9px] text-[color:var(--foreground)]/40 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-mono">
+                              {Object.keys(TEMPLATES).length}
+                            </span>
+                          </div>
                         </button>
 
                         {isTemplatesExpanded && (
@@ -5415,6 +5432,7 @@ connect s1 -> db1
                   snapGrid={[gridSize, gridSize]}
                   minZoom={0.2}
                   maxZoom={2.5}
+                  proOptions={{ hideAttribution: true }}
                   style={{ width: "100%", height: "100%" }}
                 >
                   {bgPattern !== "none" && (
@@ -5459,7 +5477,7 @@ connect s1 -> db1
                   )}
                 </ReactFlow>
 
-                {/* Minimal Floating Canvas Controls Dock */}
+                {/* Minimal Floating Canvas Controls Dock (Bottom Left) */}
                 <CanvasControlsBar
                   onZoomIn={() => zoomIn({ duration: 200 })}
                   onZoomOut={() => zoomOut({ duration: 200 })}
@@ -5472,6 +5490,21 @@ connect s1 -> db1
                   }
                   onOpenSettings={() => setIsSettingsOpen(true)}
                 />
+
+                {/* Circular Floating Relay Assistant Trigger Button (Bottom Right) */}
+                {!isAIAssistantOpen && (
+                  <div className="absolute bottom-5 right-5 sm:bottom-6 sm:right-6 z-20 select-none">
+                    <button
+                      type="button"
+                      onClick={() => setIsAIAssistantOpen(true)}
+                      className="size-11 rounded-full border border-[var(--border)] bg-[var(--surface)]/95 hover:bg-[var(--bg-elevated)] backdrop-blur-md shadow-md flex items-center justify-center text-foreground hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all cursor-pointer group"
+                      title="Open Relay"
+                      aria-label="Open Relay"
+                    >
+                      <FiTerminal className="size-4 text-primary group-hover:scale-110 transition-transform" />
+                    </button>
+                  </div>
+                )}
 
                 {/* Floating Active Recording HUD Pill */}
                 {isRecording && (
@@ -5512,13 +5545,8 @@ connect s1 -> db1
                       <div className="flex items-center gap-2 pointer-events-auto">
                         <button
                           type="button"
-                          onClick={() => {
-                            if (isSidebarCollapsed)
-                              setIsSidebarCollapsed(false);
-                            setSidebarTab("library");
-                            setIsTemplatesExpanded(true);
-                          }}
-                          className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent)] text-white hover:brightness-110 shadow-xs cursor-pointer transition"
+                          onClick={() => setIsTemplateBrowserOpen(true)}
+                          className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs cursor-pointer transition"
                         >
                           Browse Templates
                         </button>
@@ -7270,7 +7298,7 @@ connect s1 -> db1
                                         >
                                           {info.activeConnections}/
                                           {info.poolSize}
-                                          {info.exhausted ? " 🔴 WAIT" : ""}
+                                          {info.exhausted ? " [WAIT]" : ""}
                                         </span>
                                       </div>
                                       <div
@@ -7378,8 +7406,8 @@ connect s1 -> db1
                               Delete ×
                             </button>
 
-                            <p className="text-[10px] font-bold text-indigo-400 font-mono">
-                              🌐 {domain}
+                            <p className="text-[10px] font-bold text-primary font-mono">
+                              host: {domain}
                             </p>
 
                             <div className="space-y-2 pl-1.5 border-l border-[var(--border)]">
@@ -8379,8 +8407,8 @@ connect s1 -> db1
                                     className="border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50 space-y-1.5"
                                   >
                                     <div className="flex items-center justify-between border-b border-[var(--border)]/45 pb-1">
-                                      <span className="text-[10px] font-bold text-yellow-500 font-mono">
-                                        📁 {bucketName}
+                                      <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400 font-mono">
+                                        bucket: {bucketName}
                                       </span>
                                       <span className="text-[9px] text-[color:var(--foreground)]/55 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-semibold">
                                         {filesInBucket.length} file
@@ -8411,7 +8439,7 @@ connect s1 -> db1
                                                 className="text-[11px] bg-[var(--surface)] p-1.5 rounded border border-[var(--border)]/35 font-mono flex flex-col gap-0.5"
                                               >
                                                 <div className="flex justify-between items-center text-xs font-semibold text-[color:var(--foreground)]/80">
-                                                  <span>📄 {fileName}</span>
+                                                  <span>{fileName}</span>
                                                 </div>
                                                 {info && (
                                                   <div className="text-[9px] text-[color:var(--foreground)]/50 mt-0.5 flex flex-col gap-0.5 border-t border-[var(--border)]/20 pt-1">
@@ -8567,6 +8595,19 @@ connect s1 -> db1
               isExportingVideo={isExportingVideo}
               onExportSimulationVideo={handleExportSimulationVideo}
             />
+
+            {/* Template Browser Dialog */}
+            <TemplateBrowserDialog
+              isOpen={isTemplateBrowserOpen}
+              onClose={() => setIsTemplateBrowserOpen(false)}
+              onSelectTemplate={(templateId) => {
+                loadTemplate(templateId as any);
+                const tpl = WORKSPACE_TEMPLATES.find((t) => t.id === templateId);
+                setSuccessToast(`Loaded ${tpl?.title || "Architecture"} template`);
+              }}
+              existingNodeCount={nodes.length}
+            />
+
             <input
               type="file"
               ref={fileInputRef}

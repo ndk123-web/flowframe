@@ -92,7 +92,7 @@ const STARTER_TEMPLATES = [
     category: "Traffic Routing",
     desc: "Round-robin L7 traffic distribution across 3 backend application servers.",
     icon: FiSliders,
-    iconColor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    iconColor: "text-muted-foreground bg-muted/40 border-border/80 group-hover:text-primary group-hover:border-primary/30 group-hover:bg-primary/5",
     href: "/scenarios/simple-load-balancer",
     prompt: "Client sending requests to a Round-Robin Load Balancer distributing across 3 backend application servers",
   },
@@ -102,7 +102,7 @@ const STARTER_TEMPLATES = [
     category: "Data Caching",
     desc: "Redis in-memory caching with PostgreSQL fallback and automatic backfilling.",
     icon: FiDatabase,
-    iconColor: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+    iconColor: "text-muted-foreground bg-muted/40 border-border/80 group-hover:text-primary group-hover:border-primary/30 group-hover:bg-primary/5",
     href: "/scenarios/simple-cache",
     prompt: "API Gateway routing to a User Service with Redis read-through caching and PostgreSQL fallback",
   },
@@ -112,7 +112,7 @@ const STARTER_TEMPLATES = [
     category: "Microservices",
     desc: "Unified entry point routing /posts and /users to isolated microservices.",
     icon: FiLayers,
-    iconColor: "text-indigo-400 bg-indigo-500/10 border-indigo-500/20",
+    iconColor: "text-muted-foreground bg-muted/40 border-border/80 group-hover:text-primary group-hover:border-primary/30 group-hover:bg-primary/5",
     href: "/scenarios/simple-api-gateway",
     prompt: "API Gateway routing /posts and /users to separate microservices with isolated buffers",
   },
@@ -122,7 +122,7 @@ const STARTER_TEMPLATES = [
     category: "Asynchronous",
     desc: "FIFO queue buffer leveling traffic spikes across competing worker pools.",
     icon: FiCpu,
-    iconColor: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
+    iconColor: "text-muted-foreground bg-muted/40 border-border/80 group-hover:text-primary group-hover:border-primary/30 group-hover:bg-primary/5",
     href: "/scenarios/simple-message-queue",
     prompt: "Order Producer publishing events into a FIFO Message Queue processed by worker consumer",
   },
@@ -132,7 +132,7 @@ const STARTER_TEMPLATES = [
     category: "Storage Offload",
     desc: "Pre-signed token negotiation for direct client-to-storage binary streaming.",
     icon: FiBox,
-    iconColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+    iconColor: "text-muted-foreground bg-muted/40 border-border/80 group-hover:text-primary group-hover:border-primary/30 group-hover:bg-primary/5",
     href: "/scenarios/simple-valet-key",
     prompt: "Client requesting pre-signed valet key from server then uploading directly to S3 Cloud Storage",
   },
@@ -142,7 +142,7 @@ const STARTER_TEMPLATES = [
     category: "Pub/Sub Fan-Out",
     desc: "Topic-based pub/sub broker broadcasting parallel message dispatches.",
     icon: FiZap,
-    iconColor: "text-violet-400 bg-violet-500/10 border-violet-500/20",
+    iconColor: "text-muted-foreground bg-muted/40 border-border/80 group-hover:text-primary group-hover:border-primary/30 group-hover:bg-primary/5",
     href: "/scenarios/event-driven",
     prompt: "Publisher dispatching events into PubSub broker fanning out to Email and Analytics services",
   },
@@ -176,10 +176,35 @@ export default function DashboardPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // ChatGPT-style composer state
+  // Conversational prompt composer state
   const [composerPrompt, setComposerPrompt] = useState("");
   const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [isThinkEnabled, setIsThinkEnabled] = useState(true);
+
+  // Subtle rotating prompts for main dashboard heading
+  const ROTATING_PROMPTS = useMemo(
+    () => [
+      "What do you want to build?",
+      "What do you want to simulate?",
+      "Design a distributed system.",
+      "Explore how requests flow.",
+      "Build an architecture.",
+    ],
+    [],
+  );
+  const [activePromptIdx, setActivePromptIdx] = useState(0);
+  const [isPromptTransitioning, setIsPromptTransitioning] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIsPromptTransitioning(true);
+      setTimeout(() => {
+        setActivePromptIdx((prev) => (prev + 1) % ROTATING_PROMPTS.length);
+        setIsPromptTransitioning(false);
+      }, 250);
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [ROTATING_PROMPTS]);
 
   // Sidebar, Mobile, Navigation & Workspace states
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -1127,22 +1152,30 @@ export default function DashboardPage() {
         <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12">
           {/* ── A. TOP / HERO & MAIN PROMPT COMPOSER (ChatGPT Style) ──────── */}
           <section className="space-y-6 text-center max-w-3xl mx-auto">
-            {/* Minimal Welcome Heading */}
+            {/* Minimal Welcome Heading with Subtle Rotating Prompts */}
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-primary/20 bg-primary/10 text-primary text-[11px] font-mono font-medium">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-border/80 bg-muted/40 text-muted-foreground text-[11px] font-mono font-medium">
                 <span>FlowFrame Engine</span>
                 <span className="opacity-60">·</span>
                 <span>Distributed Systems Simulator</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground text-pretty">
-                What do you want to build?
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground text-pretty min-h-[44px] flex items-center justify-center">
+                <span
+                  className={`transition-all duration-300 ease-out ${
+                    isPromptTransitioning
+                      ? "opacity-0 -translate-y-1"
+                      : "opacity-100 translate-y-0"
+                  }`}
+                >
+                  {ROTATING_PROMPTS[activePromptIdx]}
+                </span>
               </h1>
               <p className="text-xs sm:text-sm text-muted-foreground max-w-xl mx-auto leading-relaxed">
                 Describe a distributed architecture to simulate with AI, choose a starter topology, or continue working on your workspaces.
               </p>
             </div>
 
-            {/* ── ChatGPT-style Prompt Composer ── */}
+            {/* ── Conversational Prompt Composer ── */}
             <div className="relative rounded-2xl border border-border bg-card shadow-xs transition-all duration-200 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/15 text-left p-3.5 sm:p-4 space-y-3">
               <label htmlFor="dashboard-prompt-composer" className="sr-only">
                 Describe your distributed system or simulation
@@ -1165,16 +1198,25 @@ export default function DashboardPage() {
                 className="w-full bg-transparent resize-none text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none leading-relaxed"
               />
 
-              {/* Composer Controls Footer with Modern AI IDE "Think" Toggle */}
+              {/* Composer Controls Footer */}
               <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
-                  {/* Modern AI IDE "Think" Mode Toggle */}
+                  <span className="text-[11px] text-muted-foreground font-mono truncate hidden sm:inline">
+                    Enter to simulate · Shift+Enter for new line
+                  </span>
+                  <span className="text-[11px] text-muted-foreground font-mono truncate sm:hidden">
+                    Enter to simulate
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Modern AI IDE "Think" Mode Toggle — immediately to the LEFT of Send button */}
                   <button
                     type="button"
                     onClick={() => setIsThinkEnabled((prev) => !prev)}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono font-medium transition-all cursor-pointer select-none ${
                       isThinkEnabled
-                        ? "bg-indigo-500/15 border-indigo-500/35 text-indigo-400 shadow-xs shadow-indigo-500/10 ring-1 ring-indigo-500/20"
+                        ? "bg-primary/10 border-primary/30 text-primary shadow-xs"
                         : "bg-muted/40 border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/60"
                     }`}
                     title={
@@ -1184,24 +1226,15 @@ export default function DashboardPage() {
                     }
                     aria-pressed={isThinkEnabled}
                   >
-                    <FiCpu className={`size-3.5 ${isThinkEnabled ? "text-indigo-400 animate-pulse" : "text-muted-foreground"}`} />
+                    <FiCpu className={`size-3.5 ${isThinkEnabled ? "text-primary" : "text-muted-foreground"}`} />
                     <span>Think</span>
                     <span
                       className={`size-1.5 rounded-full ${
-                        isThinkEnabled ? "bg-indigo-400" : "bg-muted-foreground/40"
+                        isThinkEnabled ? "bg-primary" : "bg-muted-foreground/40"
                       }`}
                     />
                   </button>
 
-                  <span className="text-[11px] text-muted-foreground font-mono truncate hidden sm:inline">
-                    {isThinkEnabled ? "Deep Reasoning ON" : "Fast generation"} · Enter to submit
-                  </span>
-                  <span className="text-[11px] text-muted-foreground font-mono truncate sm:hidden">
-                    {isThinkEnabled ? "Reasoning ON" : "Fast"}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
                   {composerPrompt && (
                     <button
                       type="button"
