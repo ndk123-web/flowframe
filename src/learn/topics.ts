@@ -35,13 +35,13 @@ export const LEARN_TOPICS: LearnTopic[] = [
         title: "1. Components in This Simulation",
         content: `Before diving in, let's understand each component you'll see on the canvas:
 
-### 💻 Client
+### Client
 The **Client** is the starting point of every request — think of it as a browser, mobile app, or any user device. It sends [HTTP requests](/learn/glossary/http) (GET, POST, etc.) to the network. In this simulation, the client sends **3 identical GET requests** back to back.
 
-### ⚖️ Load Balancer
+### Load Balancer
 The [Load Balancer](/learn/glossary/load-balancer) sits between the client and your servers. It intercepts every incoming request and decides *which server* should handle it. The client never talks directly to a server — it always goes through the load balancer first.
 
-### 🖥️ Web Servers (×3)
+### Web Servers (×3)
 The three [Web Servers](/learn/glossary/server) are identical backend workers. Each one can independently handle the same requests. The load balancer decides which of them gets each incoming request.
 
 ---
@@ -120,7 +120,7 @@ This is **automatic failover** in action. No client-side change is needed.
 
 ---
 
-### 🛠️ Go Practice in the Sandbox!
+### Go Practice in the Sandbox!
 Now that you understand Load Balancers, try building your own from scratch:
 
 1. Open the **Interactive Sandbox** (button below or in the nav bar) — it will open in a new tab.
@@ -143,19 +143,19 @@ Now that you understand Load Balancers, try building your own from scratch:
         title: "1. Components in This Simulation",
         content: `Here's what each node in the simulator represents:
 
-### 💻 Client
+### Client
 Sends 3 GET requests — each asking for a different user record by key:
 - Request 1 → key: \`rohan\` (exists in Redis)
 - Request 2 → key: \`john\` (exists in Redis)
 - Request 3 → key: \`doe\` (not in Redis, but exists in Postgres)
 
-### 🖥️ Server
+### Server
 Acts as the application logic layer. It receives requests from the client and decides: *"Should I check cache first, or go straight to the database?"* In the [Cache-Aside Pattern](/learn/glossary/cache-aside), the server **always checks Redis first**.
 
-### 💾 Redis Cache
+### Redis Cache
 An **in-memory key-value store** — blazing fast (~1ms [latency](/learn/glossary/latency)). It stores frequently accessed data in RAM. Think of it as your app's short-term [Cache](/learn/glossary/cache) memory. See details under [Redis](/learn/glossary/redis).
 
-### 🗄️ Postgres Database
+### Postgres Database
 A **disk-based SQL database** — reliable but slower than Redis (~10–100ms [latency](/learn/glossary/latency)). It's the source of truth where all records live permanently. See details under [PostgreSQL](/learn/glossary/postgres).
 
 ---
@@ -238,7 +238,7 @@ Watch the packet paths — a cache miss shows 2 hops (→ Redis → Postgres), w
         title: "4. Try It in the Sandbox",
         content: `Now that you understand cache-aside, build it yourself:
 
-### 🛠️ Step-by-Step in the Sandbox
+### Step-by-Step in the Sandbox
 1. Open the **Interactive Sandbox** in a new tab (link below).
 2. Add a **Client** node — configure it with a GET request, key: \`myuser\`.
 3. Add a **Server** node — connect Client → Server.
@@ -264,19 +264,19 @@ That's the [Cache-Aside](/learn/glossary/cache-aside) pattern — fully in your 
         title: "1. Components in This Simulation",
         content: `This is the most complex scenario — let's meet all the players:
 
-### 💻 Client
+### Client
 Sends 3 different requests — each targeting different API paths:
 - \`GET /api/v1/posts/list\` — a posts query
 - \`GET /api/v1/users/profile\` — a users query
 - \`GET /api/v1/posts/list\` — another posts query
 
-### 🚪 API Gateway
+### API Gateway
 The **single entry point** for all client requests. It looks at the URL path and decides: *"Which backend service should handle this?"* See details under [API Gateway](/learn/glossary/api-gateway).
 
-### 🖥️ Post Server
+### Post Server
 Only handles \`/api/v1/posts/*\` [endpoints](/learn/glossary/endpoint). Ignores anything else.
 
-### 🖥️ User Server
+### User Server
 Only handles \`/api/v1/users/*\` [endpoints](/learn/glossary/endpoint). Ignores anything else.
 
 ---
@@ -356,7 +356,7 @@ If you added more Post Servers and connected them, the gateway would load-balanc
         title: "4. Build It in the Sandbox",
         content: `Create your own API Gateway architecture:
 
-### 🛠️ Step-by-Step
+### Step-by-Step
 1. Open the **Interactive Sandbox** in a new tab.
 2. Add a **Client** — set up a request to \`/api/v1/users/me\` with method GET.
 3. Add an **API Gateway** — connect Client → Gateway.
@@ -380,10 +380,10 @@ If you added more Post Servers and connected them, the gateway would load-balanc
       {
         id: "valet-components",
         title: "1. Components in This Simulation",
-        content: `### 💻 Client
+        content: `### Client
 The user's device that wants to upload a file — like a profile photo (\`avatar-1.png\`) or a PDF.
 
-### 🖥️ Upload Server
+### Upload Server
 A backend [Web Server](/learn/glossary/server) that **generates secure signed URLs** for specific files. It doesn't receive the file data itself — it only issues permission tokens.
 
 ### ☁️ Cloud Storage
@@ -465,7 +465,7 @@ Watch the packet colors — **purple = request going forward**, **amber/yellow =
         title: "4. Build It in the Sandbox",
         content: `Implement the Valet Key pattern from scratch:
 
-### 🛠️ Step-by-Step
+### Step-by-Step
 1. Open the **Interactive Sandbox** in a new tab.
 2. Add a **Client** — in the inspector, enable **Valet Key Flow** and set \`fileName: my-photo.jpg\`, \`targetBucket: user-uploads\`.
 3. Add a **Server** (rename it "Upload Server") — connect Client → Server.
@@ -478,7 +478,7 @@ After completing, notice that the server only appeared in steps 1–2. The actua
 
 ---
 
-### 🎉 You've Finished All Guides!
+### You've Finished All Guides!
 Ready to design any system you can imagine? Open the Sandbox and experiment freely. Some ideas to try:
 - Build a full stack with API Gateway + Load Balancer + Cache + DB
 - Add a CDN in front of Storage for faster global delivery
@@ -498,19 +498,19 @@ Ready to design any system you can imagine? Open the Sandbox and experiment free
         title: "1. Components in This Simulation",
         content: `Let's understand each component of the Message Queue architecture on the canvas:
 
-### 💻 Client
+### Client
 Initiates the action (e.g., clicking 'Order Now' in an e-commerce app). It sends requests to the Web Server.
 
-### 🖥️ Web Server
+### Web Server
 The entrypoint API. Instead of executing heavy tasks (like processing payment or generating PDF invoices) synchronously, it packages the task into a message and publishes it to the queue immediately, returning a quick \`202 Accepted\` back to the client.
 
-### 📬 Message Queue Broker
+### Message Queue Broker
 Acts as the buffer storage. It receives messages from producers (Web Server) and queues them. It manages message routing using FIFO/LIFO ordering.
 
 ### ⚙️ Worker Servers (×2)
 Independent background consumers that pull messages from the queue, execute the heavy tasks in parallel, and store the final results in the database.
 
-### 💾 Postgres Database
+### Postgres Database
 The shared persistent storage where Worker Servers write completed transaction records.`
       },
       {
@@ -540,16 +540,16 @@ Press **Play**. The client fires 3 requests. The web server sends them straight 
         title: "1. Components in This Simulation",
         content: `Let's understand each component of the Pub/Sub architecture:
 
-### 💻 Client
+### Client
 Sends requests to the Publisher Server (e.g. creating a new post or making a purchase).
 
-### 🖥️ Publisher Server
+### Publisher Server
 Receives user requests and publishes the event to the Pub/Sub Broker (e.g., publishing an \`order.created\` event).
 
-### 📡 Pub/Sub Broker
+### Pub/Sub Broker
 The event router (like Redis Pub/Sub, Kafka, or AWS SNS). It manages channels/topics and delivers published messages to all subscribed services.
 
-### 🖥️ Email & Analytics Services
+### Email & Analytics Services
 Decoupled subscriber microservices. They subscribe to specific channels on the broker. When an event is published, the broker pushes the message to all of them concurrently.`
       },
       {

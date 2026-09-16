@@ -990,6 +990,7 @@ export default function LandingPage() {
               nodesConnectable={false}
               zoomOnScroll={false}
               panOnDrag={false}
+              proOptions={{ hideAttribution: true }}
             >
               <Background
                 variant={BackgroundVariant.Dots}

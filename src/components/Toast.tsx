@@ -1,6 +1,7 @@
 "use client";
 
 import { useToastStore } from "@/store/useToastStore";
+import { FiAlertCircle, FiCheckCircle, FiInfo } from "react-icons/fi";
 
 export default function ToastContainer() {
   const { toasts, removeToast } = useToastStore();
@@ -25,8 +26,14 @@ export default function ToastContainer() {
             }`}
           >
             <div className="flex items-center gap-2.5 text-sm font-medium">
-              <span>
-                {isError ? "🚨" : isSuccess ? "✅" : "ℹ️"}
+              <span className="shrink-0">
+                {isError ? (
+                  <FiAlertCircle className="size-4 text-rose-400" />
+                ) : isSuccess ? (
+                  <FiCheckCircle className="size-4 text-emerald-400" />
+                ) : (
+                  <FiInfo className="size-4 text-primary" />
+                )}
               </span>
               <p className="leading-tight">{toast.message}</p>
             </div>

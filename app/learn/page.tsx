@@ -545,7 +545,7 @@ export default function LearnOverviewPage() {
               {/* Action Footer */}
               <div className="pt-4 border-t border-[var(--border)] flex items-center justify-between">
                 <span className="text-[11px] font-mono text-[color:var(--muted)]">
-                  📚 Searchable Technical Dictionary
+                  Searchable Technical Dictionary
                 </span>
                 <Link
                   href="/learn/glossary"

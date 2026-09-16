@@ -194,7 +194,7 @@ function createSimpleMessageQueueSimulationBundle(options: ScenarioRunOptions): 
     {
       id: clientId,
       data: { label: "Client" },
-      position: { x: 50, y: 220 },
+      position: { x: 80, y: 220 },
       type: "default",
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
@@ -210,7 +210,7 @@ function createSimpleMessageQueueSimulationBundle(options: ScenarioRunOptions): 
     {
       id: serverId,
       data: { label: "Web Server" },
-      position: { x: 280, y: 220 },
+      position: { x: 380, y: 220 },
       type: "default",
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
@@ -226,7 +226,7 @@ function createSimpleMessageQueueSimulationBundle(options: ScenarioRunOptions): 
     {
       id: queueId,
       data: { label: "Message Queue" },
-      position: { x: 500, y: 220 },
+      position: { x: 680, y: 220 },
       type: "default",
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
@@ -242,7 +242,7 @@ function createSimpleMessageQueueSimulationBundle(options: ScenarioRunOptions): 
     {
       id: consumer1Id,
       data: { label: "Worker Server 1" },
-      position: { x: 740, y: 120 },
+      position: { x: 980, y: 120 },
       type: "default",
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
@@ -258,7 +258,7 @@ function createSimpleMessageQueueSimulationBundle(options: ScenarioRunOptions): 
     {
       id: consumer2Id,
       data: { label: "Worker Server 2" },
-      position: { x: 740, y: 320 },
+      position: { x: 980, y: 320 },
       type: "default",
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
@@ -274,7 +274,7 @@ function createSimpleMessageQueueSimulationBundle(options: ScenarioRunOptions): 
     {
       id: dbId,
       data: { label: "Postgres Database" },
-      position: { x: 980, y: 220 },
+      position: { x: 1280, y: 220 },
       type: "default",
       sourcePosition: Position.Right,
       targetPosition: Position.Left,

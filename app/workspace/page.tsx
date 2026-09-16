@@ -68,7 +68,10 @@ import AIAssistantDrawer from "@/components/AIAssistantDrawer";
 import CanvasToolbar from "@/components/CanvasToolbar";
 import CanvasSettingsSheet from "@/components/CanvasSettingsSheet";
 import CanvasControlsBar from "@/components/CanvasControlsBar";
+import TemplateBrowserDialog, { WORKSPACE_TEMPLATES } from "@/components/TemplateBrowserDialog";
+import { getTemplateArchitecture } from "@/templates/starterTemplates";
 import { recordSimulationVideo } from "@/utils/recordSimulationVideo";
+import { Sparkles } from "lucide-react";
 
 // DSL Interpreter & Graph Engine
 import { compileDSL } from "@/DSL";
@@ -211,6 +214,8 @@ export const DSL_PRESETS: Record<string, { label: string; code: string }> = {
     label: "Cache Aside",
     code: `// FlowFrame Architecture DSL - Cache Aside Pattern
 define CLIENT c1 {
+  x: 80,
+  y: 220,
   label: "Web Client",
   requests: [
     {
@@ -222,6 +227,8 @@ define CLIENT c1 {
 }
 
 define SERVER s1 {
+  x: 380,
+  y: 220,
   label: "API Server",
   capacity: 100,
   tcpConnectionsToPostgres: 5,
@@ -234,6 +241,8 @@ define SERVER s1 {
 }
 
 define REDIS r1 {
+  x: 680,
+  y: 100,
   label: "Redis Cache",
   data: [
     { key: "rohan", value: "cached post data" }
@@ -241,6 +250,8 @@ define REDIS r1 {
 }
 
 define POSTGRES db1 {
+  x: 680,
+  y: 340,
   label: "PostgreSQL Database",
   table: "posts",
   data: [
@@ -257,6 +268,8 @@ connect s1 -> db1
     label: "Load Balancer",
     code: `// FlowFrame Architecture DSL - Load Balancing Pattern
 define CLIENT c1 {
+  x: 80,
+  y: 240,
   label: "Web Client",
   requests: [
     {
@@ -268,11 +281,15 @@ define CLIENT c1 {
 }
 
 define LOADBALANCER lb1 {
+  x: 380,
+  y: 240,
   label: "Load Balancer",
   strategy: "ROUND_ROBIN"
 }
 
 define SERVER s1 {
+  x: 680,
+  y: 80,
   label: "Server 1",
   capacity: 100,
   acceptedEndpoints: [
@@ -284,6 +301,8 @@ define SERVER s1 {
 }
 
 define SERVER s2 {
+  x: 680,
+  y: 240,
   label: "Server 2",
   capacity: 100,
   acceptedEndpoints: [
@@ -295,6 +314,8 @@ define SERVER s2 {
 }
 
 define SERVER s3 {
+  x: 680,
+  y: 400,
   label: "Server 3",
   capacity: 100,
   acceptedEndpoints: [
@@ -315,6 +336,8 @@ connect lb1 -> s3
     label: "API Gateway",
     code: `// FlowFrame Architecture DSL - API Gateway Routing Pattern
 define CLIENT c1 {
+  x: 80,
+  y: 240,
   label: "Mobile Client",
   requests: [
     {
@@ -331,6 +354,8 @@ define CLIENT c1 {
 }
 
 define GATEWAY gw1 {
+  x: 380,
+  y: 240,
   label: "API Gateway",
   strategy: "ROUND_ROBIN",
   routes: [
@@ -346,6 +371,8 @@ define GATEWAY gw1 {
 }
 
 define SERVER s1 {
+  x: 680,
+  y: 140,
   label: "Posts Server",
   capacity: 100,
   acceptedEndpoints: [
@@ -357,6 +384,8 @@ define SERVER s1 {
 }
 
 define SERVER s2 {
+  x: 680,
+  y: 340,
   label: "Users Server",
   capacity: 100,
   acceptedEndpoints: [
@@ -376,6 +405,8 @@ connect gw1 -> s2
     label: "Message Queue",
     code: `// FlowFrame Architecture DSL - Asynchronous Message Queue Pattern
 define CLIENT c1 {
+  x: 80,
+  y: 240,
   label: "Mobile App",
   requests: [
     {
@@ -386,6 +417,8 @@ define CLIENT c1 {
 }
 
 define SERVER producer {
+  x: 380,
+  y: 240,
   label: "Order Producer API",
   capacity: 100,
   acceptedEndpoints: [
@@ -397,6 +430,8 @@ define SERVER producer {
 }
 
 define MESSAGEQUEUE mq1 {
+  x: 680,
+  y: 240,
   label: "RabbitMQ Order Queue",
   processingType: "FIFO",
   queueSize: 25,
@@ -404,6 +439,8 @@ define MESSAGEQUEUE mq1 {
 }
 
 define SERVER consumer {
+  x: 980,
+  y: 240,
   label: "Order Processor Worker",
   capacity: 50,
   prefetchLimit: 1
@@ -418,21 +455,29 @@ connect mq1 -> consumer
     label: "PubSub Fanout",
     code: `// FlowFrame Architecture DSL - Event PubSub Fanout Pattern
 define SERVER paymentServer {
+  x: 80,
+  y: 240,
   label: "Payment Server",
   capacity: 100
 }
 
 define PUBSUB eventBroker {
+  x: 380,
+  y: 240,
   label: "Redis Event Broker",
   topic: "order.completed"
 }
 
 define SERVER emailWorker {
+  x: 680,
+  y: 140,
   label: "Email Worker",
   registeredTopics: ["order.completed"]
 }
 
 define SERVER analyticsWorker {
+  x: 680,
+  y: 340,
   label: "Analytics Worker",
   registeredTopics: ["order.completed"]
 }
@@ -681,7 +726,7 @@ const TEMPLATES = {
   //     {
   //       id: "client-1",
   //       type: "customNode",
-  //       position: { x: 40, y: 220 },
+  //       position: { x: 80, y: 240 },
   //       sourcePosition: Position.Right,
   //       targetPosition: Position.Left,
   //       data: { label: "Client", type: "client" },
@@ -689,7 +734,7 @@ const TEMPLATES = {
   //     {
   //       id: "server-1",
   //       type: "customNode",
-  //       position: { x: 280, y: 220 },
+  //       position: { x: 380, y: 240 },
   //       sourcePosition: Position.Right,
   //       targetPosition: Position.Left,
   //       data: { label: "Order Server", type: "server" },
@@ -697,7 +742,7 @@ const TEMPLATES = {
   //     {
   //       id: "queue-1",
   //       type: "customNode",
-  //       position: { x: 520, y: 220 },
+  //       position: { x: 680, y: 240 },
   //       sourcePosition: Position.Right,
   //       targetPosition: Position.Left,
   //       data: { label: "Message Queue", type: "message-queue" },
@@ -705,7 +750,7 @@ const TEMPLATES = {
   //     {
   //       id: "server-2",
   //       type: "customNode",
-  //       position: { x: 760, y: 220 },
+  //       position: { x: 980, y: 240 },
   //       sourcePosition: Position.Right,
   //       targetPosition: Position.Left,
   //       data: { label: "Worker Server", type: "server" },
@@ -713,7 +758,7 @@ const TEMPLATES = {
   //     {
   //       id: "postgres-1",
   //       type: "customNode",
-  //       position: { x: 1000, y: 220 },
+  //       position: { x: 1280, y: 240 },
   //       sourcePosition: Position.Right,
   //       targetPosition: Position.Left,
   //       data: { label: "Postgres Database", type: "postgres" },
@@ -963,6 +1008,54 @@ function createDefaultConfig(type: ComponentType, id: string, label: string) {
   }
 }
 
+function inferWorkspaceNodeType(node: any): ComponentType {
+  if (node?.data?.type && node.data.type !== "default") {
+    return node.data.type as ComponentType;
+  }
+  const id = (node?.id || "").toLowerCase();
+  const label = (node?.data?.label || "").toLowerCase();
+
+  if (id.includes("client") || label.includes("client") || label.includes("browser") || label.includes("user")) {
+    return "client";
+  }
+  if (id.includes("api") || id.includes("gateway") || label.includes("gateway")) {
+    return "api-gateway";
+  }
+  if (id.includes("lb") || label.includes("load balancer")) {
+    return "load-balancer";
+  }
+  if (id.includes("redis") || id.includes("cache") || label.includes("redis") || label.includes("cache")) {
+    return "redis";
+  }
+  if (
+    id.includes("postgres") ||
+    id.includes("sql") ||
+    id.includes("db") ||
+    id.includes("database") ||
+    label.includes("postgres") ||
+    label.includes("db") ||
+    label.includes("database")
+  ) {
+    return "postgres";
+  }
+  if (id.includes("storage") || id.includes("s3") || id.includes("blob") || label.includes("storage")) {
+    return "storage";
+  }
+  if (id.includes("pubsub") || id.includes("broker") || label.includes("pub/sub") || label.includes("broker")) {
+    return "pubsub";
+  }
+  if (id.includes("queue") || label.includes("queue")) {
+    return "message-queue";
+  }
+  if (id.includes("dns") || label.includes("dns")) {
+    return "dns";
+  }
+  if (id.includes("cdn") || label.includes("cdn")) {
+    return "cdn";
+  }
+  return "server";
+}
+
 // ── Node shape geometry helpers ────────────────────────────────────────────
 // Shapes that need a wrapper SVG overlay (non-rectangular geometry)
 const NODE_SHAPES = [
@@ -1026,10 +1119,10 @@ function CustomNode({ id, data, selected }: any) {
     { ring: string; glow: string; accent: string; dot: string }
   > = {
     client: {
-      ring: "rgba(139,92,246,0.6)",
-      glow: "rgba(139,92,246,0.12)",
-      accent: "#7c3aed",
-      dot: "#8b5cf6",
+      ring: "rgba(59,130,246,0.5)",
+      glow: "rgba(59,130,246,0.1)",
+      accent: "#2563eb",
+      dot: "#3b82f6",
     },
     "api-gateway": {
       ring: "rgba(217,70,239,0.6)",
@@ -1238,7 +1331,7 @@ function CustomNode({ id, data, selected }: any) {
                 </p>
               )}
               {data.type === "client" && !isDiamond && (
-                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-violet-400 font-mono tracking-tight mt-0.5 bg-violet-500/10 px-1 py-0.2 rounded border border-violet-500/20">
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-primary font-mono tracking-tight mt-0.5 bg-primary/10 px-1 py-0.2 rounded border border-primary/20">
                   <svg className="w-2 h-2 fill-current" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z" />
                   </svg>
@@ -1399,7 +1492,7 @@ function PacketEdge(props: EdgeProps) {
             style={{
               filter: isReverseMotion
                 ? "drop-shadow(0 0 5px rgba(245,158,11,0.85))"
-                : "drop-shadow(0 0 5px rgba(139,92,246,0.85))",
+                : "drop-shadow(0 0 5px rgba(59,130,246,0.85))",
               opacity: Math.max(0.45, 0.9 - index * 0.15),
             }}
           >
@@ -2162,6 +2255,7 @@ function ShapeNode({ data, selected }: any) {
 
 const nodeTypes = {
   customNode: CustomNode,
+  default: CustomNode,
   shapeNode: ShapeNode,
 };
 
@@ -2198,13 +2292,42 @@ function WorkspaceInner({
         .then((dto) => {
           setDiagramTitle(dto.title);
           if (Array.isArray(dto.nodes) && dto.nodes.length > 0) {
-            setNodes(dto.nodes);
+            const sanitizedNodes = dto.nodes.map((n: any) => {
+              const inferred = inferWorkspaceNodeType(n);
+              const isShape = n.type === "shapeNode";
+              return {
+                ...n,
+                type: isShape ? "shapeNode" : "customNode",
+                style: isShape ? n.style : undefined,
+                data: {
+                  ...(n.data || {}),
+                  label: n.data?.label || (inferred.charAt(0).toUpperCase() + inferred.slice(1)),
+                  type: n.data?.type || inferred,
+                },
+              };
+            });
+            setNodes(sanitizedNodes);
+
+            const baseConfigs =
+              dto.configs && typeof dto.configs === "object"
+                ? { ...dto.configs }
+                : {};
+            for (const n of sanitizedNodes) {
+              if (!baseConfigs[n.id]) {
+                const nodeType = (n.data?.type || inferWorkspaceNodeType(n)) as ComponentType;
+                baseConfigs[n.id] = createDefaultConfig(
+                  nodeType,
+                  n.id,
+                  n.data?.label || n.id,
+                );
+              }
+            }
+            setNodeConfigs(baseConfigs);
+          } else if (dto.configs && typeof dto.configs === "object") {
+            setNodeConfigs(dto.configs);
           }
           if (Array.isArray(dto.edges)) {
             setEdges(dto.edges);
-          }
-          if (dto.configs && typeof dto.configs === "object") {
-            setNodeConfigs(dto.configs);
           }
           setTimeout(() => {
             fitView({ duration: 600 });
@@ -2223,13 +2346,42 @@ function WorkspaceInner({
         .then((dto) => {
           setDiagramTitle(dto.title);
           if (Array.isArray(dto.nodes) && dto.nodes.length > 0) {
-            setNodes(dto.nodes);
+            const sanitizedNodes = dto.nodes.map((n: any) => {
+              const inferred = inferWorkspaceNodeType(n);
+              const isShape = n.type === "shapeNode";
+              return {
+                ...n,
+                type: isShape ? "shapeNode" : "customNode",
+                style: isShape ? n.style : undefined,
+                data: {
+                  ...(n.data || {}),
+                  label: n.data?.label || (inferred.charAt(0).toUpperCase() + inferred.slice(1)),
+                  type: n.data?.type || inferred,
+                },
+              };
+            });
+            setNodes(sanitizedNodes);
+
+            const baseConfigs =
+              dto.configs && typeof dto.configs === "object"
+                ? { ...dto.configs }
+                : {};
+            for (const n of sanitizedNodes) {
+              if (!baseConfigs[n.id]) {
+                const nodeType = (n.data?.type || inferWorkspaceNodeType(n)) as ComponentType;
+                baseConfigs[n.id] = createDefaultConfig(
+                  nodeType,
+                  n.id,
+                  n.data?.label || n.id,
+                );
+              }
+            }
+            setNodeConfigs(baseConfigs);
+          } else if (dto.configs && typeof dto.configs === "object") {
+            setNodeConfigs(dto.configs);
           }
           if (Array.isArray(dto.edges)) {
             setEdges(dto.edges);
-          }
-          if (dto.configs && typeof dto.configs === "object") {
-            setNodeConfigs(dto.configs);
           }
           setTimeout(() => {
             fitView({ duration: 600 });
@@ -2274,12 +2426,15 @@ function WorkspaceInner({
     }
   };
 
-  // Keyboard shortcut Ctrl+S / Cmd+S for quick save
+  // Keyboard shortcut Ctrl+S (Save) and Ctrl+I (Toggle Relay Assistant)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
         handleSaveDiagramToBackend();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") {
+        e.preventDefault();
+        setIsAIAssistantOpen((prev) => !prev);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -2694,8 +2849,10 @@ function WorkspaceInner({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [isTemplateBrowserOpen, setIsTemplateBrowserOpen] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [initialAIPrompt, setInitialAIPrompt] = useState<string>("");
+  const [initialThink, setInitialThink] = useState<boolean>(true);
 
   // Auto-open AI Architecture Assistant if ?ai=true is in URL query parameters
   useEffect(() => {
@@ -2707,6 +2864,10 @@ function WorkspaceInner({
       const promptParam = params.get("prompt");
       if (promptParam) {
         setInitialAIPrompt(promptParam);
+      }
+      const thinkParam = params.get("think");
+      if (thinkParam !== null) {
+        setInitialThink(thinkParam === "true");
       }
     }
   }, []);
@@ -2735,43 +2896,62 @@ function WorkspaceInner({
 
   const [dslCode, setDslCode] =
     useState<string>(`// FlowFrame Architecture DSL Script
-// Define system nodes and connections
+// Define system nodes with canvas positions (x, y coordinates)
 
-// define "client" 
+// Define Client Node (left entrypoint)
 define CLIENT c1 {
+  x: 80,
+  y: 220,
   label: "Client 1",
   requests: [
     {
       endpoint: "/api/v1/posts",
       allowedMethods: ["GET", "POST"],
       key: "rohan"
-      }
-      ]
-      }
-      
-// define "server" 
+    }
+  ]
+}
+
+// Define API Server Node (center compute & routing)
 define SERVER s1 {
+  x: 380,
+  y: 220,
   label: "API Server",
   capacity: 100,
+  tcpConnectionsToPostgres: 5,
   acceptedEndpoints: [
     {
       endpoint: "/api/v1/posts",
       allowedMethod: ["GET", "POST"]
-      }
-      ]
-      }
-      
-// define "redis" 
+    }
+  ]
+}
+
+// Define In-Memory Redis Cache (top right)
 define REDIS r1 {
+  x: 680,
+  y: 100,
   label: "Redis Cache",
   data: [
     { key: "rohan", value: "cached post data" }
   ]
 }
 
-// Connections (u can also not use "connect" keyword)
+// Define Relational PostgreSQL Database (bottom right)
+define POSTGRES db1 {
+  x: 680,
+  y: 340,
+  label: "PostgreSQL DB",
+  table: "posts",
+  data: [
+    { key: "rohan", value: "persistent post record" }
+  ]
+}
+
+// System Request Flow Connections
 connect c1 -> s1
 connect s1 -> r1
+connect s1 -> db1
 `);
 
   // Movable / Resizable / Mobile sidebar states
@@ -2923,7 +3103,13 @@ connect s1 -> r1
       const activeConfigs = overrideConfigs || nodeConfigs;
 
       // 1. Detect Clients
-      const clientNodes = activeNodes.filter((n) => n.data.type === "client");
+      const clientNodes = activeNodes.filter(
+        (n) =>
+          n.data?.type === "client" ||
+          (typeof n.data?.label === "string" &&
+            n.data.label.toLowerCase().includes("client")) ||
+          n.id.toLowerCase().startsWith("client"),
+      );
       if (clientNodes.length === 0) {
         setValidationWarning(
           "Please add at least one Client node to the canvas.",
@@ -2952,8 +3138,8 @@ connect s1 -> r1
 
       // 3. Register nodes
       activeNodes.forEach((n) => {
-        const type = n.data.type as ComponentType;
-        const labelStr = (n.data.label as string) || "";
+        const type = (n.data?.type || inferWorkspaceNodeType(n)) as ComponentType;
+        const labelStr = (n.data?.label as string) || "";
         const config =
           activeConfigs[n.id] || createDefaultConfig(type, n.id, labelStr);
 
@@ -3637,6 +3823,33 @@ connect s1 -> r1
     [setNodes, setEdges, fitView],
   );
 
+  const loadStarterTemplate = useCallback(
+    (templateId: string) => {
+      const architecture = getTemplateArchitecture(templateId);
+      if (architecture.nodes.length === 0) {
+        setValidationWarning(`Unable to load template: ${templateId}`);
+        return;
+      }
+
+      setNodes(architecture.nodes);
+      setEdges(
+        architecture.edges.map((edge) => ({
+          ...edge,
+          markerEnd: { type: MarkerType.ArrowClosed, color: "#60a5fa" },
+          style: { stroke: "#475569", strokeWidth: 1.8 },
+        })),
+      );
+      setNodeConfigs(architecture.configs);
+      setIsPlaying(false);
+      setRawSimulationFrames([]);
+      setFrameIndex(0);
+      setSelectedNodeId(null);
+      setValidationWarning(null);
+      setTimeout(() => fitView({ duration: 400 }), 80);
+    },
+    [fitView, setEdges, setNodes],
+  );
+
   // Open template selection picker modal ONLY on standalone sandbox load (not inside workspace diagrams or share view)
   useEffect(() => {
     if (!workspaceId && !diagramId && !shareId) {
@@ -4096,7 +4309,7 @@ connect s1 -> r1
 
       return {
         ...node,
-        type: node.type || "customNode",
+        type: isShape ? "shapeNode" : "customNode",
         selected: isSelected,
         style: isShape ? { ...node.style, zIndex: -1 } : undefined,
         data: {
@@ -4194,7 +4407,8 @@ connect s1 -> r1
   const onNodeClick = useCallback(
     (_: any, node: Node) => {
       setSelectedNodeId(node.id);
-      if (node.data.type === "client") {
+      const resolvedType = node.data?.type || inferWorkspaceNodeType(node);
+      if (resolvedType === "client") {
         handleStartSimulation(node.id);
       }
     },
@@ -4926,9 +5140,21 @@ connect s1 -> r1
                               Templates
                             </span>
                           </div>
-                          <span className="text-[9px] text-[color:var(--foreground)]/40 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-mono">
-                            {Object.keys(TEMPLATES).length}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsTemplateBrowserOpen(true);
+                              }}
+                              className="text-[10px] font-medium text-primary hover:underline px-1 py-0.5 cursor-pointer"
+                              title="Browse all templates"
+                            >
+                              Browse
+                            </span>
+                            <span className="text-[9px] text-[color:var(--foreground)]/40 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-mono">
+                              {Object.keys(TEMPLATES).length}
+                            </span>
+                          </div>
                         </button>
 
                         {isTemplatesExpanded && (
@@ -5349,6 +5575,7 @@ connect s1 -> r1
                   snapGrid={[gridSize, gridSize]}
                   minZoom={0.2}
                   maxZoom={2.5}
+                  proOptions={{ hideAttribution: true }}
                   style={{ width: "100%", height: "100%" }}
                 >
                   {bgPattern !== "none" && (
@@ -5393,7 +5620,7 @@ connect s1 -> r1
                   )}
                 </ReactFlow>
 
-                {/* Minimal Floating Canvas Controls Dock */}
+                {/* Minimal Floating Canvas Controls Dock (Bottom Left) */}
                 <CanvasControlsBar
                   onZoomIn={() => zoomIn({ duration: 200 })}
                   onZoomOut={() => zoomOut({ duration: 200 })}
@@ -5406,6 +5633,21 @@ connect s1 -> r1
                   }
                   onOpenSettings={() => setIsSettingsOpen(true)}
                 />
+
+                {/* Circular Floating Relay Assistant Trigger Button (Bottom Right) */}
+                {!isAIAssistantOpen && (
+                  <div className="absolute bottom-5 right-5 sm:bottom-6 sm:right-6 z-20 select-none">
+                    <button
+                      type="button"
+                      onClick={() => setIsAIAssistantOpen(true)}
+                      className="size-11 rounded-full border border-[var(--border)] bg-[var(--surface)]/95 hover:bg-[var(--bg-elevated)] backdrop-blur-md shadow-md flex items-center justify-center text-foreground hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all cursor-pointer group"
+                      title="Open Relay"
+                      aria-label="Open Relay"
+                    >
+                      <Sparkles className="size-4 text-primary group-hover:scale-110 transition-transform" />
+                    </button>
+                  </div>
+                )}
 
                 {/* Floating Active Recording HUD Pill */}
                 {isRecording && (
@@ -5446,13 +5688,8 @@ connect s1 -> r1
                       <div className="flex items-center gap-2 pointer-events-auto">
                         <button
                           type="button"
-                          onClick={() => {
-                            if (isSidebarCollapsed)
-                              setIsSidebarCollapsed(false);
-                            setSidebarTab("library");
-                            setIsTemplatesExpanded(true);
-                          }}
-                          className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent)] text-white hover:brightness-110 shadow-xs cursor-pointer transition"
+                          onClick={() => setIsTemplateBrowserOpen(true)}
+                          className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs cursor-pointer transition"
                         >
                           Browse Templates
                         </button>
@@ -5772,7 +6009,10 @@ connect s1 -> r1
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-[var(--surface)] text-[color:var(--accent)] border border-[var(--border)] shrink-0">
                       {String(
-                        selectedNode.data?.type || selectedNode.type || "node",
+                        selectedNode.data?.type ||
+                          (selectedNode.type !== "default" && selectedNode.type ? selectedNode.type : "") ||
+                          inferWorkspaceNodeType(selectedNode) ||
+                          "node",
                       )}
                     </span>
                     <div className="min-w-0">
@@ -7204,7 +7444,7 @@ connect s1 -> r1
                                         >
                                           {info.activeConnections}/
                                           {info.poolSize}
-                                          {info.exhausted ? " 🔴 WAIT" : ""}
+                                          {info.exhausted ? " [WAIT]" : ""}
                                         </span>
                                       </div>
                                       <div
@@ -7312,8 +7552,8 @@ connect s1 -> r1
                               Delete ×
                             </button>
 
-                            <p className="text-[10px] font-bold text-indigo-400 font-mono">
-                              🌐 {domain}
+                            <p className="text-[10px] font-bold text-primary font-mono">
+                              host: {domain}
                             </p>
 
                             <div className="space-y-2 pl-1.5 border-l border-[var(--border)]">
@@ -8313,8 +8553,8 @@ connect s1 -> r1
                                     className="border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50 space-y-1.5"
                                   >
                                     <div className="flex items-center justify-between border-b border-[var(--border)]/45 pb-1">
-                                      <span className="text-[10px] font-bold text-yellow-500 font-mono">
-                                        📁 {bucketName}
+                                      <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400 font-mono">
+                                        bucket: {bucketName}
                                       </span>
                                       <span className="text-[9px] text-[color:var(--foreground)]/55 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded font-semibold">
                                         {filesInBucket.length} file
@@ -8345,7 +8585,7 @@ connect s1 -> r1
                                                 className="text-[11px] bg-[var(--surface)] p-1.5 rounded border border-[var(--border)]/35 font-mono flex flex-col gap-0.5"
                                               >
                                                 <div className="flex justify-between items-center text-xs font-semibold text-[color:var(--foreground)]/80">
-                                                  <span>📄 {fileName}</span>
+                                                  <span>{fileName}</span>
                                                 </div>
                                                 {info && (
                                                   <div className="text-[9px] text-[color:var(--foreground)]/50 mt-0.5 flex flex-col gap-0.5 border-t border-[var(--border)]/20 pt-1">
@@ -8412,6 +8652,9 @@ connect s1 -> r1
               nodeConfigs={nodeConfigs}
               theme={theme}
               initialPrompt={initialAIPrompt}
+              initialThink={initialThink}
+              selectedNode={selectedNode}
+              onSelectNode={setSelectedNodeId}
               onApplyDsl={(code: string, explanation: string) => {
                 try {
                   const output = compileDSL(code);
@@ -8498,6 +8741,19 @@ connect s1 -> r1
               isExportingVideo={isExportingVideo}
               onExportSimulationVideo={handleExportSimulationVideo}
             />
+
+            {/* Template Browser Dialog */}
+            <TemplateBrowserDialog
+              isOpen={isTemplateBrowserOpen}
+              onClose={() => setIsTemplateBrowserOpen(false)}
+              onSelectTemplate={(templateId) => {
+                loadStarterTemplate(templateId);
+                const tpl = WORKSPACE_TEMPLATES.find((t) => t.id === templateId);
+                setSuccessToast(`Loaded ${tpl?.title || "Architecture"} template`);
+              }}
+              existingNodeCount={nodes.length}
+            />
+
             <input
               type="file"
               ref={fileInputRef}

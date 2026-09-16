@@ -269,7 +269,7 @@ export function InteractiveTopologyHero() {
         <div className="flex flex-col items-center gap-1">
           <div className="relative rounded-xl border border-sky-500/40 bg-[var(--bg)] px-3 py-2 text-center shadow-xs">
             <NodeSocket position="right" active />
-            <span className="text-[10px] font-mono font-bold text-sky-400">💻 Client</span>
+            <span className="text-[10px] font-mono font-bold text-sky-400">Client</span>
             <p className="text-[8px] font-mono text-[color:var(--muted)]">2 req/s</p>
           </div>
         </div>
@@ -296,7 +296,7 @@ export function InteractiveTopologyHero() {
           <div className="relative rounded-xl border border-blue-500/40 bg-[var(--bg)] px-3 py-2 text-center shadow-xs">
             <NodeSocket position="left" active />
             <NodeSocket position="right" active />
-            <span className="text-[10px] font-mono font-bold text-blue-400">⚖️ Balancer</span>
+            <span className="text-[10px] font-mono font-bold text-blue-400">Balancer</span>
             <p className="text-[8px] font-mono text-[color:var(--muted)]">Round Robin</p>
           </div>
         </div>
@@ -337,13 +337,13 @@ export function InteractiveTopologyHero() {
           <div className="relative rounded-xl border border-emerald-500/40 bg-[var(--bg)] px-2.5 py-1.5 text-center shadow-xs">
             <NodeSocket position="left" active />
             <NodeSocket position="right" active />
-            <span className="text-[9px] font-mono font-bold text-emerald-400">🖥️ Server 1</span>
+            <span className="text-[9px] font-mono font-bold text-emerald-400">Server 1</span>
             <p className="text-[8px] font-mono text-emerald-400/80">200 OK</p>
           </div>
           <div className="relative rounded-xl border border-emerald-500/40 bg-[var(--bg)] px-2.5 py-1.5 text-center shadow-xs">
             <NodeSocket position="left" active />
             <NodeSocket position="right" active />
-            <span className="text-[9px] font-mono font-bold text-emerald-400">🖥️ Server 2</span>
+            <span className="text-[9px] font-mono font-bold text-emerald-400">Server 2</span>
             <p className="text-[8px] font-mono text-emerald-400/80">200 OK</p>
           </div>
         </div>
@@ -368,7 +368,7 @@ export function InteractiveTopologyHero() {
         {/* Redis Cache */}
         <div className="relative rounded-xl border border-amber-500/40 bg-[var(--bg)] px-2.5 py-2 text-center shadow-xs">
           <NodeSocket position="left" active />
-          <span className="text-[9px] font-mono font-bold text-amber-400">💾 Redis</span>
+          <span className="text-[9px] font-mono font-bold text-amber-400">Redis</span>
           <p className="text-[8px] font-mono text-amber-400/80">Hit: 88%</p>
         </div>
       </div>
