@@ -414,7 +414,7 @@ define CLIENT c1 {
 }
 
 define SERVER producer {
-  x: 340,
+  x: 380,
   y: 240,
   label: "Order Producer API",
   capacity: 100,
@@ -427,7 +427,7 @@ define SERVER producer {
 }
 
 define MESSAGEQUEUE mq1 {
-  x: 580,
+  x: 680,
   y: 240,
   label: "RabbitMQ Order Queue",
   processingType: "FIFO",
@@ -436,7 +436,7 @@ define MESSAGEQUEUE mq1 {
 }
 
 define SERVER consumer {
-  x: 820,
+  x: 980,
   y: 240,
   label: "Order Processor Worker",
   capacity: 50,
@@ -723,7 +723,7 @@ const TEMPLATES = {
   //     {
   //       id: "client-1",
   //       type: "customNode",
-  //       position: { x: 40, y: 220 },
+  //       position: { x: 80, y: 240 },
   //       sourcePosition: Position.Right,
   //       targetPosition: Position.Left,
   //       data: { label: "Client", type: "client" },
@@ -731,7 +731,7 @@ const TEMPLATES = {
   //     {
   //       id: "server-1",
   //       type: "customNode",
-  //       position: { x: 280, y: 220 },
+  //       position: { x: 380, y: 240 },
   //       sourcePosition: Position.Right,
   //       targetPosition: Position.Left,
   //       data: { label: "Order Server", type: "server" },
@@ -739,7 +739,7 @@ const TEMPLATES = {
   //     {
   //       id: "queue-1",
   //       type: "customNode",
-  //       position: { x: 520, y: 220 },
+  //       position: { x: 680, y: 240 },
   //       sourcePosition: Position.Right,
   //       targetPosition: Position.Left,
   //       data: { label: "Message Queue", type: "message-queue" },
@@ -747,7 +747,7 @@ const TEMPLATES = {
   //     {
   //       id: "server-2",
   //       type: "customNode",
-  //       position: { x: 760, y: 220 },
+  //       position: { x: 980, y: 240 },
   //       sourcePosition: Position.Right,
   //       targetPosition: Position.Left,
   //       data: { label: "Worker Server", type: "server" },
@@ -755,7 +755,7 @@ const TEMPLATES = {
   //     {
   //       id: "postgres-1",
   //       type: "customNode",
-  //       position: { x: 1000, y: 220 },
+  //       position: { x: 1280, y: 240 },
   //       sourcePosition: Position.Right,
   //       targetPosition: Position.Left,
   //       data: { label: "Postgres Database", type: "postgres" },

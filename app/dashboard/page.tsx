@@ -42,6 +42,8 @@ import {
   FiServer,
   FiExternalLink,
   FiCheck,
+  FiCompass,
+  FiTerminal,
 } from "react-icons/fi";
 import {
   FolderIcon,
@@ -635,8 +637,9 @@ export default function DashboardPage() {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between px-2 pb-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
-                      Workspaces
+                    <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <FiFolder className="size-3 text-primary" />
+                      <span>Workspaces</span>
                     </span>
                     <span
                       className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full border ${
@@ -919,7 +922,7 @@ export default function DashboardPage() {
               <div className="pt-2 border-t border-border/60 space-y-1">
                 <div className="px-2 pb-0.5">
                   <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <FiBookOpen className="size-3 text-indigo-400" />
+                    <FiCompass className="size-3 text-indigo-400" />
                     <span>Learning Hub</span>
                   </span>
                 </div>
@@ -959,7 +962,7 @@ export default function DashboardPage() {
               <div className="pt-2 border-t border-border/60 space-y-1">
                 <div className="px-2 pb-0.5">
                   <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <FiCode className="size-3 text-blue-400" />
+                    <FiTerminal className="size-3 text-blue-400" />
                     <span>Developer Tools</span>
                   </span>
                 </div>

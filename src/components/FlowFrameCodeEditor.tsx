@@ -205,7 +205,7 @@ function flowCompletionSource(context: CompletionContext): CompletionResult | nu
       }
     ),
     snippetCompletion(
-      'define MESSAGEQUEUE ${1:mq1} {\n  x: ${2:580},\n  y: ${3:220},\n  label: "${4:Message Queue}",\n  queueSize: ${5:100},\n  processingType: "${6:FIFO}"\n}',
+      'define MESSAGEQUEUE ${1:mq1} {\n  x: ${2:680},\n  y: ${3:240},\n  label: "${4:Message Queue}",\n  queueSize: ${5:100},\n  processingType: "${6:FIFO}"\n}',
       {
         label: "define MESSAGEQUEUE",
         detail: "Snippet: Message Queue",

@@ -238,7 +238,7 @@ define CLIENT client_node {
 }
 
 define SERVER api_gateway {
-  x: 340,
+  x: 380,
   y: 240,
   label: "Ingestion API",
   capacity: 120,
@@ -248,7 +248,7 @@ define SERVER api_gateway {
 }
 
 define MESSAGEQUEUE task_queue {
-  x: 580,
+  x: 680,
   y: 240,
   label: "Message Queue",
   queueSize: 100,
@@ -256,7 +256,7 @@ define MESSAGEQUEUE task_queue {
 }
 
 define SERVER background_worker {
-  x: 820,
+  x: 980,
   y: 240,
   label: "Worker Instance",
   capacity: 60,
@@ -264,7 +264,7 @@ define SERVER background_worker {
 }
 
 define POSTGRES analytics_db {
-  x: 1060,
+  x: 1280,
   y: 240,
   label: "PostgreSQL Database",
   data: [
