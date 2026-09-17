@@ -36,23 +36,46 @@ export default function SignInPage() {
   const handleFirebaseUserSync = async (fbUser: any, typeOfSignin: string) => {
     const userEmail = fbUser.email || "";
     const name = fbUser.displayName || "";
-    const avatar = fbUser.photoURL || "";
     const uid = fbUser.uid;
+
+    // Check if user previously saved a custom cartoon avatar
+    const savedCustomAvatar =
+      typeof window !== "undefined"
+        ? localStorage.getItem(`flowframe_avatar_${userEmail}`)
+        : null;
 
     try {
       const idToken = await fbUser.getIdToken();
 
       // Sync with backend API
+      // If user has a custom cartoon avatar, send it explicitly so DB is reinforced.
+      // If not, DO NOT send fbUser.photoURL so backend DB retains whatever custom avatar was already saved in MongoDB.
       const res = await syncFirebaseUserApi({
         email: userEmail,
         firebase_uid: uid,
         type_of_signin: typeOfSignin,
-        name,
-        avatar,
+        name: name || undefined,
+        avatar: savedCustomAvatar || undefined,
         id_token: idToken,
       });
 
-      setAuth(res.access_token, res.user);
+      // Preserve custom cartoon avatar over default Google/Firebase photo
+      const resolvedAvatar =
+        savedCustomAvatar ||
+        res.user.avatar ||
+        fbUser.photoURL ||
+        undefined;
+
+      const finalUser = {
+        ...res.user,
+        avatar: resolvedAvatar,
+      };
+
+      if (resolvedAvatar && typeof window !== "undefined") {
+        localStorage.setItem(`flowframe_avatar_${userEmail}`, resolvedAvatar);
+      }
+
+      setAuth(res.access_token, finalUser);
       showToast("Signed in successfully!", "success");
       router.push("/dashboard");
     } catch (err: any) {

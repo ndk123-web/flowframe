@@ -193,6 +193,16 @@ export default function DashboardPage() {
   // Settings Dialog state
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
+  // Auto-open settings if URL query specifies ?settings=true
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("settings") === "true") {
+        setSettingsModalOpen(true);
+      }
+    }
+  }, []);
+
   // Template & Diagram Creation states
   const [selectedTemplateForUse, setSelectedTemplateForUse] = useState<StarterTemplateDefinition | null>(null);
   const [useTemplateModalOpen, setUseTemplateModalOpen] = useState(false);

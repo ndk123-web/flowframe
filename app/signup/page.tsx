@@ -38,7 +38,11 @@ export default function SignUpPage() {
   const handleFirebaseUserSync = async (fbUser: any, typeOfSignin: string) => {
     const userEmail = fbUser.email || "";
     const userName = name || fbUser.displayName || userEmail.split("@")[0];
-    const avatar = fbUser.photoURL || "";
+    const savedCustomAvatar =
+      typeof window !== "undefined"
+        ? localStorage.getItem(`flowframe_avatar_${userEmail}`)
+        : null;
+    const avatar = savedCustomAvatar || fbUser.photoURL || undefined;
     const uid = fbUser.uid;
 
     try {
@@ -54,7 +58,16 @@ export default function SignUpPage() {
         id_token: idToken,
       });
 
-      setAuth(res.access_token, res.user);
+      const finalUser = {
+        ...res.user,
+        avatar: savedCustomAvatar || res.user.avatar || fbUser.photoURL || undefined,
+      };
+
+      if (finalUser.avatar && typeof window !== "undefined") {
+        localStorage.setItem(`flowframe_avatar_${userEmail}`, finalUser.avatar);
+      }
+
+      setAuth(res.access_token, finalUser);
       showToast("Account created successfully!", "success");
       router.push("/dashboard");
     } catch (err: any) {
