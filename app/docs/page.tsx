@@ -5,9 +5,10 @@ import Link from "next/link";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import { useThemeStore } from "@/store/useThemeStore";
+import { APP_VERSION, APP_DSL_SPEC } from "@/config/version";
 
 const FLAGSHIP_BLUEPRINT_CODE = `// ==========================================
-// FLOWFRAME ARCHITECTURE DSL v2.0.0
+// FLOWFRAME ARCHITECTURE DSL ${APP_VERSION}
 // Flagship Enterprise Microservices Blueprint
 // ==========================================
 
@@ -423,7 +424,7 @@ export default function DocsPage() {
             <div className="sticky top-20 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xs space-y-4">
               <div className="border-b border-[var(--border)] pb-3">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent)] font-mono">
-                  DSL Reference v2.0
+                  DSL Reference {APP_VERSION}
                 </span>
                 <h2 className="text-base font-bold text-[color:var(--foreground)] mt-0.5">
                   Language Specs
@@ -505,7 +506,7 @@ export default function DocsPage() {
             {/* Overview */}
             <section id="overview" className="space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold text-[color:var(--accent)]">
-                <span>FlowFrame DSL Specifications v2.0.0</span>
+                <span>{APP_DSL_SPEC}</span>
               </div>
               <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-[color:var(--foreground)]">
                 FlowFrame Architecture DSL Reference
@@ -689,6 +690,52 @@ connect lb1 -> s2`}
                     <li>Chained connections (<code className="font-mono">{"a -> b -> c"}</code>) split into directed edges (<code className="font-mono">{"a -> b"}</code> and <code className="font-mono">{"b -> c"}</code>).</li>
                     <li>The <code className="font-mono text-[color:var(--accent)]">connect</code> keyword is optional.</li>
                   </ul>
+                </div>
+
+                {/* Coordinate Positioning: x, y (Explicit or Auto-Layout) */}
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4.5 space-y-3 md:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-[color:var(--accent)] flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[var(--accent)]/10 text-[color:var(--accent)] border border-[var(--accent)]/20">NEW</span>
+                      <span>Canvas Coordinates (x, y) & Intelligent Auto-Layout</span>
+                    </h3>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--bg-elevated)] text-[color:var(--muted)] font-bold">
+                      Spatial Layout
+                    </span>
+                  </div>
+                  <FlowCodeBlock
+                    code={`// Option A: Explicit pixel placement on canvas
+define CLIENT c1 {
+  x: 80,
+  y: 220,
+  label: "Mobile Client",
+  requests: [{ endpoint: "/api/v1/posts", key: "rohan" }]
+}
+
+// Option B: Omitted coordinates (FlowFrame Auto-Layout Engine automatically computes layout)
+define SERVER s1 {
+  label: "Order Server",
+  capacity: 100
+}`}
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs text-[color:var(--muted)]">
+                    <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] space-y-1.5">
+                      <p className="font-bold text-[color:var(--foreground)] flex items-center gap-1.5">
+                        <span>📍 Explicit Coordinates (x, y)</span>
+                      </p>
+                      <p className="leading-relaxed text-[11.5px]">
+                        Har node definition mein ab optional <code className="font-mono text-[color:var(--accent)] font-semibold">x</code> aur <code className="font-mono text-[color:var(--accent)] font-semibold">y</code> properties allowed hain. Agar specify kiya jaye, toh node direct unhi exact pixel coordinates par canvas me place hoga.
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] space-y-1.5">
+                      <p className="font-bold text-[color:var(--foreground)] flex items-center gap-1.5">
+                        <span>✨ Automatic Layout Fallback</span>
+                      </p>
+                      <p className="leading-relaxed text-[11.5px]">
+                        Agar aap <code className="font-mono text-[color:var(--accent)] font-semibold">x, y</code> coordinates omit karte hain, toh FlowFrame ka internal DAG interpreter graph topology aur tiers analyze karke components ko automatically structured pipeline layout (Clients → Gateways → Servers → DBs) me organize kar deta hai.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>

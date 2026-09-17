@@ -7,6 +7,7 @@ import { ComponentIcon } from "@/components/ComponentIcons";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useThemeStore } from "@/store/useThemeStore";
+import { APP_VERSION, APP_RELEASE_NAME } from "@/config/version";
 import {
   ReactFlow,
   BaseEdge,
@@ -846,14 +847,17 @@ export default function LandingPage() {
       {/* ── Hero Section (Centered & High Impact) ─────────────────────────── */}
       <section className="relative mx-auto max-w-6xl px-4 sm:px-6 pt-10 sm:pt-14 pb-16 text-center flex flex-col items-center">
         {/* Status Badge */}
-        <Badge
-          variant="outline"
-          className="fade-up inline-flex items-center gap-2 rounded-full border-border bg-card/80 backdrop-blur-xs px-3.5 py-1.5 text-xs font-mono text-muted-foreground mb-6 shadow-xs"
-        >
-          <span className="font-semibold text-foreground">FlowFrame Engine</span>
-          <span className="text-border">/</span>
-          <span className="text-primary font-medium">v2.0 Declarative Simulator</span>
-        </Badge>
+        <Link href="/docs#overview">
+          <Badge
+            variant="outline"
+            className="fade-up inline-flex items-center gap-2 rounded-full border-border bg-card/80 hover:bg-card hover:border-primary/40 transition-colors backdrop-blur-xs px-3.5 py-1.5 text-xs font-mono text-muted-foreground mb-6 shadow-xs cursor-pointer"
+          >
+            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-semibold text-foreground">FlowFrame {APP_VERSION}</span>
+            <span className="text-border">/</span>
+            <span className="text-primary font-medium">{APP_RELEASE_NAME}</span>
+          </Badge>
+        </Link>
 
         {/* H1 Title */}
         <h1

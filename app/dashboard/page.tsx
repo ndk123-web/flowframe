@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import DashboardSettingsDialog from "@/components/DashboardSettingsDialog";
 import GitHubStarButton from "@/components/GitHubStarButton";
+import { APP_VERSION } from "@/config/version";
 import {
   FiGrid,
   FiClock,
@@ -1161,6 +1162,8 @@ export default function DashboardPage() {
             <div className="space-y-2">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-border/80 bg-muted/40 text-muted-foreground text-[11px] font-mono font-medium">
                 <span>FlowFrame Engine</span>
+                <span className="opacity-60">·</span>
+                <span className="text-primary font-semibold">{APP_VERSION}</span>
                 <span className="opacity-60">·</span>
                 <span>Distributed Systems Simulator</span>
               </div>

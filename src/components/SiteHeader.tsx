@@ -8,6 +8,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import UserDropdown from "@/components/UserDropdown";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { APP_VERSION } from "@/config/version";
 import {
   Tooltip,
   TooltipContent,
@@ -152,9 +153,14 @@ export default function SiteHeader({
             />
           </div>
           <div className="leading-tight min-w-0">
-            <p className="text-sm font-bold tracking-tight text-foreground truncate">
-              FlowFrame
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-bold tracking-tight text-foreground truncate">
+                FlowFrame
+              </p>
+              <span className="hidden sm:inline-flex px-1.5 py-0.2 rounded text-[9.5px] font-mono font-semibold bg-muted/70 text-muted-foreground border border-border/80">
+                {APP_VERSION}
+              </span>
+            </div>
             <p className="hidden md:block text-[10px] text-muted-foreground tracking-wide truncate">
               {badgeText}
             </p>
@@ -478,6 +484,13 @@ export default function SiteHeader({
 
                 {/* GitHub link with live stars */}
                 <GitHubStarButton variant="drawer" />
+
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono pt-1">
+                  <span>FlowFrame Studio</span>
+                  <span className="px-1.5 py-0.5 rounded bg-muted border border-border text-foreground font-semibold text-[10px]">
+                    {APP_VERSION}
+                  </span>
+                </div>
               </div>
             </SheetContent>
           </Sheet>

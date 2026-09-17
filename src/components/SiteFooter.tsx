@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FiGithub, FiYoutube, FiLinkedin, FiMail, FiCheckCircle } from "react-icons/fi";
+import { APP_VERSION } from "@/config/version";
 
 export default function SiteFooter() {
   return (
@@ -13,7 +14,7 @@ export default function SiteFooter() {
                 FlowFrame
               </span>
               <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-[var(--surface-muted)] text-[color:var(--muted)] border border-[var(--border)]">
-                v1.2
+                {APP_VERSION}
               </span>
             </div>
             <p className="text-xs text-[color:var(--muted)] leading-relaxed max-w-sm">

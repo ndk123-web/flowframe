@@ -69,6 +69,7 @@ import {
   FiShare2,
   FiGlobe,
   FiFilm,
+  FiLock,
 } from "react-icons/fi";
 import AIAssistantDrawer from "@/components/AIAssistantDrawer";
 import CanvasToolbar from "@/components/CanvasToolbar";
@@ -5676,11 +5677,23 @@ connect s1 -> db1
                     <button
                       type="button"
                       onClick={() => setIsAIAssistantOpen(true)}
-                      className="size-11 rounded-full border border-[var(--border)] bg-[var(--surface)]/95 hover:bg-[var(--bg-elevated)] backdrop-blur-md shadow-md flex items-center justify-center text-foreground hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all cursor-pointer group"
-                      title="Open Relay"
+                      className="relative size-11 rounded-full border border-[var(--border)] bg-[var(--surface)]/95 hover:bg-[var(--bg-elevated)] backdrop-blur-md shadow-md flex items-center justify-center text-foreground hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all cursor-pointer group"
+                      title={
+                        !workspaceId
+                          ? "Relay AI (Locked in Sandbox — Click to view)"
+                          : "Open Relay AI Copilot"
+                      }
                       aria-label="Open Relay"
                     >
                       <Sparkles className="size-4 text-primary group-hover:scale-110 transition-transform" />
+                      {!workspaceId && (
+                        <span
+                          className="absolute -top-1 -right-1 size-4 rounded-full bg-amber-500 text-black flex items-center justify-center border-2 border-[var(--surface)] shadow-xs"
+                          title="Locked in Sandbox"
+                        >
+                          <FiLock className="size-2.5 stroke-[2.5]" />
+                        </span>
+                      )}
                     </button>
                   </div>
                 )}
@@ -8739,6 +8752,7 @@ connect s1 -> db1
               onClose={() => setIsAIAssistantOpen(false)}
               workspaceId={workspaceId}
               diagramId={diagramId}
+              isSandbox={!workspaceId || !diagramId}
               token={token}
               nodes={nodes}
               edges={edges}

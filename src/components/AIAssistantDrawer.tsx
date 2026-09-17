@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import type { Node, Edge } from "@xyflow/react";
 import {
   FiCpu,
@@ -53,6 +53,7 @@ export interface AIAssistantDrawerProps {
   workspaceId?: string;
   diagramId?: string;
   token?: string | null;
+  isSandbox?: boolean;
 }
 
 export type AIMode = "ask" | "analyze" | "modify";
@@ -87,6 +88,7 @@ export default function AIAssistantDrawer({
   workspaceId,
   diagramId,
   token: propToken,
+  isSandbox: propIsSandbox,
 }: AIAssistantDrawerProps) {
   // 3 Modes Only: "ask" | "analyze" | "modify" (Create / Modify)
   const [mode, setMode] = useState<AIMode>("ask");
@@ -102,6 +104,16 @@ export default function AIAssistantDrawer({
   const token = propToken || authStoreToken;
   const isLoggedIn = Boolean(token && (isAuthenticated || user));
   const router = useRouter();
+  const pathname = usePathname() || "";
+
+  // Dedicated check for public sandbox environment
+  const isSandbox = Boolean(
+    propIsSandbox ||
+    !workspaceId ||
+    !diagramId ||
+    pathname === "/workspace" ||
+    pathname.startsWith("/workspace?")
+  );
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -136,7 +148,7 @@ export default function AIAssistantDrawer({
 
   // Load authoritative usage and history from backend on open / diagram change
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || isSandbox) return;
 
     if (token) {
       // 1. Fetch latest usage limit
@@ -253,6 +265,7 @@ export default function AIAssistantDrawer({
 
   // Quick action chip click
   const handleQuickAction = (actionPrompt: string, targetMode: AIMode) => {
+    if (isSandbox) return;
     if (!isLoggedIn) {
       router.push("/signin");
       return;
@@ -266,6 +279,7 @@ export default function AIAssistantDrawer({
 
   // Submit prompt logic
   const submitPrompt = async (userPromptText?: string, forcedMode?: AIMode) => {
+    if (isSandbox) return;
     if (!isLoggedIn || !token) {
       router.push("/signin");
       return;
@@ -829,7 +843,15 @@ export default function AIAssistantDrawer({
 
         {/* Top Right Controls & Usage Credit Badge */}
         <div className="flex items-center gap-2">
-          {!isLoggedIn ? (
+          {isSandbox ? (
+            <div
+              className="flex items-center gap-1.5 px-2.5 py-0.5 text-amber-400 text-[10.5px] font-mono font-medium select-none"
+              title="Relay AI is locked in public Sandbox. Switch to a Dashboard Workspace."
+            >
+              {/* <FiLock className="size-3" />
+              <span>Sandbox (Locked)</span> */}
+            </div>
+          ) : !isLoggedIn ? (
             <Link
               href="/signin"
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-[10.5px] font-mono font-medium transition cursor-pointer"
@@ -895,7 +917,57 @@ export default function AIAssistantDrawer({
 
       {/* ── 2. Conversation Stream & Main Body Suggestions ── */}
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4 scrollbar-thin">
-        {!hasUserChat ? (
+        {isSandbox ? (
+          /* ── Sandbox Lock Banner Screen ── */
+          <div className="max-w-md mx-auto py-6 sm:py-8 space-y-5 animate-in fade-in duration-200 text-center select-none">
+            <div className="size-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 shadow-sm">
+              <FiLock className="size-7" />
+            </div>
+
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10.5px] font-mono font-semibold uppercase tracking-wider">
+                Sandbox Playground
+              </div>
+              <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
+                Relay AI Copilot is Locked in Sandbox
+              </h2>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                Yeh public sandbox environment hai. Relay AI context-based architecture generation aur simulation engine keval authenticated <strong>Dashboard Workspaces</strong> ke sath chalta hai.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-left space-y-2 text-xs text-muted-foreground">
+              <div className="font-semibold text-foreground flex items-center gap-1.5">
+                <FiZap className="size-3.5 text-amber-400" />
+                <span>Dashboard Workspace Features:</span>
+              </div>
+              <ul className="space-y-1.5 list-disc list-inside text-[11.5px] leading-relaxed">
+                <li>Cloud-saved topologies and architecture versions</li>
+                <li>5 free Relay AI credits per user account</li>
+                <li>Deep Reasoning (Think mode) and 1-click DSL canvas deployment</li>
+              </ul>
+            </div>
+
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+              <Link
+                href="/dashboard"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold flex items-center justify-center gap-2 shadow-xs transition cursor-pointer"
+              >
+                <span>Go to Dashboard</span>
+                <FiArrowRight className="size-3.5" />
+              </Link>
+              {!isLoggedIn && (
+                <Link
+                  href="/signin"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-elevated)] text-foreground text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                >
+                  <FiLock className="size-3" />
+                  <span>Sign In</span>
+                </Link>
+              )}
+            </div>
+          </div>
+        ) : !hasUserChat ? (
           <div className="max-w-md mx-auto py-3 space-y-5 animate-in fade-in duration-200">
             <div className="text-center space-y-1.5 select-none">
               <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
@@ -1232,8 +1304,25 @@ export default function AIAssistantDrawer({
           </div>
         </div>
 
-        {/* If user is not logged in: display sign in prompt card */}
-        {!isLoggedIn ? (
+        {/* If in sandbox: display locked card */}
+        {isSandbox ? (
+          <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-center space-y-2 select-none animate-in fade-in duration-200">
+            <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-amber-400">
+              <FiLock className="size-3.5" />
+              <span>Sandbox Mode — Relay AI Disabled</span>
+            </div>
+            <p className="text-[11.5px] text-muted-foreground leading-relaxed max-w-sm mx-auto">
+              Sandbox playground par AI generation allowed nahi hai. Cloud workspace open karein to generate or modify architectures.
+            </p>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xs transition-all cursor-pointer"
+            >
+              <span>Open Dashboard Workspace</span>
+              <FiArrowRight className="size-3" />
+            </Link>
+          </div>
+        ) : !isLoggedIn ? (
           <div className="p-4 rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/10 via-[var(--bg-elevated)] to-[var(--surface)] text-center space-y-2.5 shadow-md select-none animate-in fade-in duration-200">
             <div className="size-9 mx-auto rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary shadow-2xs">
               <FiLock className="size-4" />
