@@ -1092,7 +1092,7 @@ export default function CanvasSettingsSheet({
                             type="button"
                             onClick={() => {
                               onProLockedNotice?.(
-                                "Clean export (No Watermark) is locked. Watermark removal requires FlowFrame Pro (Free for author navnathkadam284@gmail.com).",
+                                "Clean export (No Watermark) is locked. Watermark removal requires FlowFrame Pro",
                               );
                             }}
                             className="py-1.5 px-2 rounded-md text-xs transition cursor-pointer flex items-center justify-center gap-1.5 text-muted-foreground/75 hover:text-foreground bg-muted/20 border border-transparent hover:border-amber-500/30 group"
@@ -1107,7 +1107,7 @@ export default function CanvasSettingsSheet({
                       {!isAuthorUser && (
                         <p className="text-[10px] text-muted-foreground/65 leading-normal flex items-center gap-1.5 pt-0.5">
                           <Lock className="size-3 text-amber-400 shrink-0" />
-                          <span>Clean export is reserved for Pro plan (Author: navnathkadam284@gmail.com).</span>
+                          <span>Clean export is reserved for Pro plan</span>
                         </p>
                       )}
                     </div>
