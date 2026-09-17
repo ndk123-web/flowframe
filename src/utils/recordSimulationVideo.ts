@@ -24,7 +24,13 @@ export interface RecordSimulationOptions {
   theme?: "light" | "dark";
   videoFormat?: "webm" | "mp4";
   speed?: number;
+  bgPattern?: "dots" | "lines" | "cross" | "none";
+  resolution?: "720p" | "1080p" | "1440p";
   connectionStyle?: "default" | "smooth" | "straight";
+  selectedNodeId?: string | null;
+  includeSelection?: boolean;
+  watermark?: "none" | "branded";
+  showPorts?: boolean;
   onProgress?: (percent: number, status: string) => void;
   onComplete?: (blob: Blob, url: string, ext: string) => void;
   onError?: (err: Error) => void;
@@ -36,10 +42,10 @@ const ACCENT_COLORS: Record<
   { ring: string; glow: string; accent: string; dot: string }
 > = {
   client: {
-    ring: "rgba(139,92,246,0.6)",
-    glow: "rgba(139,92,246,0.12)",
-    accent: "#7c3aed",
-    dot: "#8b5cf6",
+    ring: "rgba(59,130,246,0.5)",
+    glow: "rgba(59,130,246,0.1)",
+    accent: "#2563eb",
+    dot: "#3b82f6",
   },
   "api-gateway": {
     ring: "rgba(217,70,239,0.6)",
@@ -101,6 +107,20 @@ const ACCENT_COLORS: Record<
     accent: "#4338ca",
     dot: "#6366f1",
   },
+};
+
+const TYPE_DISPLAY_NAMES: Record<string, string> = {
+  client: "Client Device",
+  "api-gateway": "API Gateway",
+  "load-balancer": "Load Balancer",
+  server: "Application Server",
+  redis: "Redis Cache",
+  postgres: "PostgreSQL Database",
+  storage: "Object Storage",
+  dns: "DNS Resolver",
+  cdn: "Edge CDN",
+  "message-queue": "Message Queue",
+  pubsub: "Event Pub/Sub",
 };
 
 // SVG Path icon drawers matching ComponentIcons.tsx in FlowFrame
@@ -371,7 +391,13 @@ export async function recordSimulationVideo({
   theme = "dark",
   videoFormat = "webm",
   speed = 1,
+  bgPattern = "dots",
+  resolution = "1080p",
   connectionStyle = "default",
+  selectedNodeId,
+  includeSelection = true,
+  watermark = "branded",
+  showPorts = true,
   onProgress,
   onComplete,
   onError,
@@ -387,8 +413,20 @@ export async function recordSimulationVideo({
       throw new Error("Cannot record empty canvas. Add at least one node.");
     }
 
-    const width = 1920;
-    const height = 1080;
+    let width = 1920;
+    let height = 1080;
+    let bitrate = 8000000;
+
+    if (resolution === "720p") {
+      width = 1280;
+      height = 720;
+      bitrate = 4500000;
+    } else if (resolution === "1440p") {
+      width = 2560;
+      height = 1440;
+      bitrate = 16000000;
+    }
+
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
@@ -447,6 +485,8 @@ export async function recordSimulationVideo({
       type: string;
       flavor?: string;
       flavorShortLabel?: string;
+      hasTarget: boolean;
+      hasSource: boolean;
       isCylinder: boolean;
       isShapeNode: boolean;
       shapeColor?: string;
@@ -471,9 +511,27 @@ export async function recordSimulationVideo({
       const w = rawW * scale;
       const h = rawH * scale;
 
-      const nType = String(n.data?.type || n.type || "server").toLowerCase();
+      // Authentic FlowFrame type normalization & inference
+      let nType = String(n.data?.type || "").toLowerCase().trim();
+      if (!nType || nType === "customnode" || nType === "default") {
+        const lbl = String(n.data?.label || n.id || "").toLowerCase();
+        if (lbl.includes("client") || n.id.includes("client")) nType = "client";
+        else if (lbl.includes("gateway") || lbl.includes("gw") || n.id.includes("gw")) nType = "api-gateway";
+        else if (lbl.includes("balancer") || lbl.includes("lb") || n.id.includes("lb")) nType = "load-balancer";
+        else if (lbl.includes("redis") || lbl.includes("cache") || n.id.includes("redis")) nType = "redis";
+        else if (lbl.includes("postgres") || lbl.includes("database") || lbl.includes("db") || lbl.includes("sql") || n.id.includes("db")) nType = "postgres";
+        else if (lbl.includes("queue") || lbl.includes("mq") || lbl.includes("rabbit") || lbl.includes("kafka") || n.id.includes("queue")) nType = "message-queue";
+        else if (lbl.includes("pubsub") || lbl.includes("topic") || lbl.includes("sns") || n.id.includes("pubsub")) nType = "pubsub";
+        else if (lbl.includes("storage") || lbl.includes("s3") || lbl.includes("bucket") || n.id.includes("storage")) nType = "storage";
+        else if (lbl.includes("dns") || n.id.includes("dns")) nType = "dns";
+        else if (lbl.includes("cdn") || lbl.includes("edge") || n.id.includes("cdn")) nType = "cdn";
+        else nType = "server";
+      }
+
       const colors = ACCENT_COLORS[nType] || ACCENT_COLORS.server;
       const isCylinder = nType === "postgres" || nType === "database" || n.data?.shape === "cylinder";
+      const hasTarget = nType !== "client";
+      const hasSource = nType !== "redis" && nType !== "postgres" && nType !== "storage";
 
       const flavorId = (n.data?.flavor as string) || undefined;
       let flavorShortLabel = "";
@@ -492,6 +550,8 @@ export async function recordSimulationVideo({
         type: nType,
         flavor: flavorId,
         flavorShortLabel,
+        hasTarget,
+        hasSource,
         isCylinder,
         isShapeNode: isShape,
         shapeColor: (n.data?.color as string) || "#3b82f6",
@@ -504,13 +564,13 @@ export async function recordSimulationVideo({
     });
 
     const isDark = theme === "dark";
-    const canvasBg = isDark ? "#0f1117" : "#f8fafc";
+    const canvasBg = isDark ? "#0a0c10" : "#f8fafc";
     const dotColor = isDark ? "rgba(148, 163, 184, 0.12)" : "rgba(15, 23, 42, 0.08)";
-    const cardBg = isDark ? "#1c2130" : "#ffffff";
+    const cardBg = isDark ? "#11141d" : "#ffffff";
     const cardBorder = isDark ? "rgba(255, 255, 255, 0.10)" : "rgba(15, 23, 42, 0.12)";
     const textColor = isDark ? "#f8fafc" : "#0f172a";
-    const subtextColor = isDark ? "rgba(248, 250, 252, 0.45)" : "rgba(15, 23, 42, 0.45)";
-    const edgeInactiveStroke = isDark ? "#475569" : "#cbd5e1";
+    const subtextColor = isDark ? "rgba(248, 250, 252, 0.50)" : "rgba(15, 23, 42, 0.50)";
+    const edgeInactiveStroke = isDark ? "#334155" : "#cbd5e1";
 
     // Setup MediaRecorder
     const stream = canvas.captureStream(60);
@@ -528,7 +588,7 @@ export async function recordSimulationVideo({
     }
 
     const recorder = mimeType
-      ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8000000 })
+      ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate })
       : new MediaRecorder(stream);
 
     const chunks: Blob[] = [];
@@ -585,7 +645,15 @@ export async function recordSimulationVideo({
               targetY: p3.y,
             })
           : connectionStyle === "smooth"
-            ? getSmoothStepPath({
+            ? getBezierPath({
+                sourceX: p0.x,
+                sourceY: p0.y,
+                sourcePosition: Position.Right,
+                targetX: p3.x,
+                targetY: p3.y,
+                targetPosition: Position.Left,
+              })
+            : getSmoothStepPath({
                 sourceX: p0.x,
                 sourceY: p0.y,
                 sourcePosition: Position.Right,
@@ -594,14 +662,6 @@ export async function recordSimulationVideo({
                 targetPosition: Position.Left,
                 borderRadius: 12 * scale,
                 offset: 20 * scale,
-              })
-            : getBezierPath({
-                sourceX: p0.x,
-                sourceY: p0.y,
-                sourcePosition: Position.Right,
-                targetX: p3.x,
-                targetY: p3.y,
-                targetPosition: Position.Left,
               });
 
       const [reverseSvgPath] =
@@ -613,7 +673,15 @@ export async function recordSimulationVideo({
               targetY: p0.y,
             })
           : connectionStyle === "smooth"
-            ? getSmoothStepPath({
+            ? getBezierPath({
+                sourceX: p3.x,
+                sourceY: p3.y,
+                sourcePosition: Position.Left,
+                targetX: p0.x,
+                targetY: p0.y,
+                targetPosition: Position.Right,
+              })
+            : getSmoothStepPath({
                 sourceX: p3.x,
                 sourceY: p3.y,
                 sourcePosition: Position.Left,
@@ -622,14 +690,6 @@ export async function recordSimulationVideo({
                 targetPosition: Position.Right,
                 borderRadius: 12 * scale,
                 offset: 20 * scale,
-              })
-            : getBezierPath({
-                sourceX: p3.x,
-                sourceY: p3.y,
-                sourcePosition: Position.Left,
-                targetX: p0.x,
-                targetY: p0.y,
-                targetPosition: Position.Right,
               });
 
       const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -661,15 +721,47 @@ export async function recordSimulationVideo({
       ctx.fillStyle = canvasBg;
       ctx.fillRect(0, 0, width, height);
 
-      // ReactFlow Background Dot Grid
-      ctx.fillStyle = dotColor;
-      const dotSpacing = Math.max(16, 20 * scale);
-      for (let gx = 0; gx < width; gx += dotSpacing) {
-        for (let gy = 0; gy < height; gy += dotSpacing) {
-          ctx.beginPath();
-          ctx.arc(gx, gy, 1.2, 0, Math.PI * 2);
-          ctx.fill();
+      // ReactFlow Background Pattern (dots / lines / cross / none)
+      const resScale = width / 1920;
+      if (bgPattern === "dots") {
+        ctx.fillStyle = dotColor;
+        const dotSpacing = Math.max(16, 20 * scale);
+        for (let gx = 0; gx < width; gx += dotSpacing) {
+          for (let gy = 0; gy < height; gy += dotSpacing) {
+            ctx.beginPath();
+            ctx.arc(gx, gy, 1.2 * resScale, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
+      } else if (bgPattern === "lines") {
+        ctx.strokeStyle = isDark ? "rgba(148, 163, 184, 0.08)" : "rgba(15, 23, 42, 0.07)";
+        ctx.lineWidth = Math.max(0.8, 1.0 * resScale);
+        const lineSpacing = Math.max(28, 36 * scale);
+        ctx.beginPath();
+        for (let gx = 0; gx < width; gx += lineSpacing) {
+          ctx.moveTo(gx, 0);
+          ctx.lineTo(gx, height);
+        }
+        for (let gy = 0; gy < height; gy += lineSpacing) {
+          ctx.moveTo(0, gy);
+          ctx.lineTo(width, gy);
+        }
+        ctx.stroke();
+      } else if (bgPattern === "cross") {
+        ctx.strokeStyle = isDark ? "rgba(148, 163, 184, 0.16)" : "rgba(15, 23, 42, 0.13)";
+        ctx.lineWidth = Math.max(0.9, 1.2 * resScale);
+        const crossSpacing = Math.max(28, 36 * scale);
+        const arm = 3.5 * resScale;
+        ctx.beginPath();
+        for (let gx = 0; gx < width; gx += crossSpacing) {
+          for (let gy = 0; gy < height; gy += crossSpacing) {
+            ctx.moveTo(gx - arm, gy);
+            ctx.lineTo(gx + arm, gy);
+            ctx.moveTo(gx, gy - arm);
+            ctx.lineTo(gx, gy + arm);
+          }
+        }
+        ctx.stroke();
       }
 
       // Draw Shape Nodes in the background
@@ -747,14 +839,15 @@ export async function recordSimulationVideo({
 
         const accent = n.colors.accent;
         const isActive = activeNodeIds.has(n.id);
+        const isSelected = Boolean(includeSelection && selectedNodeId && n.id === selectedNodeId);
 
         ctx.save();
 
         if (n.isCylinder) {
           drawCylinder(ctx, n.x, n.y, n.w, n.h, accent, cardBg, cardBorder);
         } else {
-          ctx.shadowColor = "rgba(0, 0, 0, 0.08)";
-          ctx.shadowBlur = 6;
+          ctx.shadowColor = "rgba(0, 0, 0, 0.12)";
+          ctx.shadowBlur = 8;
           ctx.shadowOffsetY = 2;
 
           ctx.fillStyle = cardBg;
@@ -763,7 +856,26 @@ export async function recordSimulationVideo({
 
           ctx.shadowColor = "transparent";
 
-          if (isActive) {
+          if (isSelected) {
+            // Glowing outer selection ring matching ReactFlow
+            ctx.strokeStyle = n.colors.ring;
+            ctx.lineWidth = 3.5 * scale;
+            roundRect(
+              ctx,
+              n.x - 2.5 * scale,
+              n.y - 2.5 * scale,
+              n.w + 5 * scale,
+              n.h + 5 * scale,
+              14 * scale,
+            );
+            ctx.stroke();
+
+            // Accent border
+            ctx.strokeStyle = accent;
+            ctx.lineWidth = 2.0 * scale;
+            roundRect(ctx, n.x, n.y, n.w, n.h, 12 * scale);
+            ctx.stroke();
+          } else if (isActive) {
             ctx.strokeStyle = accent;
             ctx.lineWidth = 2.0 * scale;
             ctx.stroke();
@@ -809,28 +921,35 @@ export async function recordSimulationVideo({
 
         ctx.fillStyle = textColor;
         ctx.font = `600 ${(12.5 * scale).toFixed(1)}px Inter, system-ui, sans-serif`;
-        const labelText = n.label.length > 15 ? n.label.slice(0, 14) + "…" : n.label;
-        ctx.fillText(labelText, textStartX, n.y + 24 * scale);
+        const labelText = n.label.length > 18 ? n.label.slice(0, 17) + "…" : n.label;
+        ctx.fillText(labelText, textStartX, n.y + 23 * scale);
 
-        if (n.flavorShortLabel) {
-          ctx.fillStyle = subtextColor;
-          ctx.font = `500 ${(10 * scale).toFixed(1)}px Inter, system-ui, sans-serif`;
-          ctx.fillText(n.flavorShortLabel, textStartX, n.y + 39 * scale);
-        } else if (n.type === "client") {
-          ctx.fillStyle = "rgba(139, 92, 246, 0.12)";
-          roundRect(ctx, textStartX, n.y + 29 * scale, 74 * scale, 16 * scale, 4 * scale);
+        // Sublabel: Display flavor label or exact readable component type name
+        const sublabel = n.flavorShortLabel || TYPE_DISPLAY_NAMES[n.type] || "Component Node";
+        ctx.fillStyle = subtextColor;
+        ctx.font = `500 ${(9.5 * scale).toFixed(1)}px Inter, system-ui, sans-serif`;
+        ctx.fillText(sublabel, textStartX, n.y + (n.type === "client" ? 36 * scale : 39 * scale));
+
+        // Client Run Flow Pill Badge matching Cobalt Blue theme
+        if (n.type === "client") {
+          const badgeX = textStartX;
+          const badgeY = n.y + 40 * scale;
+          const badgeW = 70 * scale;
+          const badgeH = 14 * scale;
+          ctx.fillStyle = "rgba(37, 99, 235, 0.12)";
+          roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 4 * scale);
           ctx.fill();
-          ctx.strokeStyle = "rgba(139, 92, 246, 0.25)";
-          ctx.lineWidth = 1;
+          ctx.strokeStyle = "rgba(37, 99, 235, 0.3)";
+          ctx.lineWidth = 1 * scale;
           ctx.stroke();
 
-          ctx.fillStyle = "#a78bfa";
-          ctx.font = `700 ${(8.5 * scale).toFixed(1)}px monospace`;
-          ctx.fillText("▶ Run Flow", textStartX + 6 * scale, n.y + 40 * scale);
+          ctx.fillStyle = "#3b82f6";
+          ctx.font = `700 ${(7.5 * scale).toFixed(1)}px monospace`;
+          ctx.fillText("▶ Run Flow", badgeX + 5 * scale, badgeY + 10 * scale);
         }
 
         // Right Brand Flavor Badge
-        if (n.flavor && n.flavorShortLabel && !n.isCylinder) {
+        if (n.flavor && !n.isCylinder) {
           const brandSize = 20 * scale;
           const brandX = n.x + n.w - brandSize - 10 * scale;
           const brandY = n.y + (n.h - brandSize) / 2;
@@ -845,8 +964,28 @@ export async function recordSimulationVideo({
           ctx.fillStyle = accent;
           ctx.font = `bold ${(8 * scale).toFixed(1)}px Inter, sans-serif`;
           ctx.textAlign = "center";
-          ctx.fillText(n.flavor.slice(0, 3).toUpperCase(), brandX + brandSize / 2, brandY + brandSize * 0.68);
+          ctx.fillText(n.flavor.slice(0, 4).toUpperCase(), brandX + brandSize / 2, brandY + brandSize * 0.68);
           ctx.textAlign = "start";
+        }
+
+        // Selection Resizer Handles (Corners) matching NodeResizer in ReactFlow
+        if (isSelected) {
+          const handleR = 3.5 * scale;
+          const corners = [
+            { x: n.x, y: n.y },
+            { x: n.x + n.w, y: n.y },
+            { x: n.x, y: n.y + n.h },
+            { x: n.x + n.w, y: n.y + n.h },
+          ];
+          corners.forEach((c) => {
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, handleR, 0, Math.PI * 2);
+            ctx.fillStyle = accent;
+            ctx.fill();
+            ctx.lineWidth = 1.5 * scale;
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+            ctx.stroke();
+          });
         }
 
         // Active Node Pulse Radar Ping
@@ -869,7 +1008,7 @@ export async function recordSimulationVideo({
         }
 
         // Target handle (Left)
-        if (n.type !== "client") {
+        if (showPorts && n.type !== "client") {
           ctx.fillStyle = n.colors.dot;
           ctx.beginPath();
           ctx.arc(n.leftHandle.x, n.leftHandle.y, 4 * scale, 0, Math.PI * 2);
@@ -880,7 +1019,7 @@ export async function recordSimulationVideo({
         }
 
         // Source handle (Right)
-        if (n.type !== "redis" && n.type !== "postgres" && n.type !== "storage") {
+        if (showPorts && n.type !== "redis" && n.type !== "postgres" && n.type !== "storage") {
           ctx.fillStyle = n.colors.dot;
           ctx.beginPath();
           ctx.arc(n.rightHandle.x, n.rightHandle.y, 4 * scale, 0, Math.PI * 2);
@@ -892,6 +1031,39 @@ export async function recordSimulationVideo({
 
         ctx.restore();
       });
+
+      // Optional FlowFrame Watermark Badge
+      if (watermark === "branded") {
+        const badgeW = 168 * resScale;
+        const badgeH = 34 * resScale;
+        const bx = width - badgeW - 24 * resScale;
+        const by = height - badgeH - 20 * resScale;
+
+        ctx.save();
+        ctx.fillStyle = isDark ? "rgba(15, 23, 42, 0.85)" : "rgba(255, 255, 255, 0.9)";
+        ctx.strokeStyle = isDark ? "rgba(255, 255, 255, 0.12)" : "rgba(15, 23, 42, 0.12)";
+        ctx.lineWidth = 1.2;
+        roundRect(ctx, bx, by, badgeW, badgeH, 8 * resScale);
+        ctx.fill();
+        ctx.stroke();
+
+        // Cobalt blue indicator
+        ctx.fillStyle = "#3b82f6";
+        ctx.beginPath();
+        ctx.arc(bx + 16 * resScale, by + badgeH / 2, 4.5 * resScale, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = isDark ? "#ffffff" : "#0f172a";
+        ctx.font = `bold ${(12 * resScale).toFixed(1)}px Inter, sans-serif`;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText("FlowFrame", bx + 26 * resScale, by + badgeH / 2);
+
+        ctx.fillStyle = isDark ? "rgba(255, 255, 255, 0.55)" : "rgba(15, 23, 42, 0.55)";
+        ctx.font = `600 ${(10 * resScale).toFixed(1)}px Inter, sans-serif`;
+        ctx.fillText(`· ${resolution}`, bx + 98 * resScale, by + badgeH / 2);
+        ctx.restore();
+      }
     };
 
     // 3. Execution Animation Engine: 100% exact match to ReactFlow PacketEdge & duration

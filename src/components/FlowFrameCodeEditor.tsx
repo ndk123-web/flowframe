@@ -6,7 +6,7 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { StreamLanguage } from "@codemirror/language";
 
 // ─── FlowFrame Architecture DSL Syntax Lexer for CodeMirror 6 ─────────────────
-const flowLanguage = StreamLanguage.define({
+export const flowLanguage = StreamLanguage.define({
   token(stream) {
     // Skip whitespace
     if (stream.eatSpace()) return null;
@@ -315,15 +315,17 @@ function flowCompletionSource(context: CompletionContext): CompletionResult | nu
   };
 }
 
-interface FlowFrameCodeEditorProps {
+export interface FlowFrameCodeEditorProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange?: (value: string) => void;
   theme?: "light" | "dark";
   fontSize?: number;
   readOnly?: boolean;
   minHeight?: string;
+  maxHeight?: string;
   className?: string;
   onRun?: () => void;
+  lineNumbers?: boolean;
 }
 
 export default function FlowFrameCodeEditor({
@@ -333,8 +335,10 @@ export default function FlowFrameCodeEditor({
   fontSize = 13,
   readOnly = false,
   minHeight = "100%",
+  maxHeight,
   className = "",
   onRun,
+  lineNumbers = true,
 }: FlowFrameCodeEditorProps) {
   const extensions = useMemo(() => {
     return [
@@ -364,13 +368,14 @@ export default function FlowFrameCodeEditor({
       <CodeMirror
         value={value}
         height={minHeight}
+        maxHeight={maxHeight}
         theme={theme === "dark" ? oneDark : "light"}
         extensions={extensions}
         onChange={onChange}
         readOnly={readOnly}
         basicSetup={{
-          lineNumbers: true,
-          highlightActiveLineGutter: true,
+          lineNumbers: lineNumbers,
+          highlightActiveLineGutter: !readOnly,
           highlightSpecialChars: true,
           history: true,
           foldGutter: true,

@@ -1,19 +1,41 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Node, Edge } from "@xyflow/react";
 import {
   FiCpu,
-  FiTerminal,
   FiX,
   FiCheck,
   FiPlay,
   FiTrash2,
   FiCopy,
-  FiArrowUp,
+  FiArrowRight,
+  FiMaximize2,
+  FiMinimize2,
+  FiSend,
   FiCode,
+  FiAlertTriangle,
+  FiZap,
+  FiLayers,
+  FiHelpCircle,
+  FiSearch,
+  FiCheckCircle,
+  FiLock,
 } from "react-icons/fi";
 import { Sparkles } from "lucide-react";
+import FlowFrameCodeEditor from "./FlowFrameCodeEditor";
+import { compileDSL } from "@/DSL";
+import { diagramToDsl } from "@/utils/diagramToDsl";
+import {
+  sendAiChat,
+  getAiUsage,
+  getAiHistory,
+  type AiUsageDTO,
+  type AiChatPayload,
+} from "@/services/aiApi";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export interface AIAssistantDrawerProps {
   isOpen: boolean;
@@ -28,15 +50,23 @@ export interface AIAssistantDrawerProps {
   initialThink?: boolean;
   selectedNode?: Node | null;
   onSelectNode?: (nodeId: string | null) => void;
+  workspaceId?: string;
+  diagramId?: string;
+  token?: string | null;
 }
+
+export type AIMode = "ask" | "analyze" | "modify";
 
 export interface ChatMessage {
   id: string;
   sender: "user" | "assistant";
   text: string;
+  mode?: AIMode;
   dsl?: string;
   architectureTitle?: string;
   applied?: boolean;
+  rejected?: boolean;
+  compileError?: string | null;
   thoughtProcess?: string;
   thoughtTime?: string;
   targetComponent?: string;
@@ -54,23 +84,40 @@ export default function AIAssistantDrawer({
   initialThink,
   selectedNode,
   onSelectNode,
+  workspaceId,
+  diagramId,
+  token: propToken,
 }: AIAssistantDrawerProps) {
-  // Mode: "create" (Generate architecture on canvas) or "ask" (Technical Q&A / Canvas explanation)
-  const [mode, setMode] = useState<"create" | "ask">("create");
+  // 3 Modes Only: "ask" | "analyze" | "modify" (Create / Modify)
+  const [mode, setMode] = useState<AIMode>("modify");
   const [input, setInput] = useState("");
   const [thinkEnabled, setThinkEnabled] = useState(initialThink ?? true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome-1",
-      sender: "assistant",
-      text: "Relay architecture assistant ready. Ask about active canvas topology, request routing, component bottlenecks, or generate distributed system architecture definitions.",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [usage, setUsage] = useState<AiUsageDTO | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const { token: authStoreToken, isAuthenticated, user } = useAuthStore();
+  const token = propToken || authStoreToken;
+  const isLoggedIn = Boolean(token && (isAuthenticated || user));
+  const router = useRouter();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Guarantee valid 24-hex ObjectIds for MongoDB backend
+  const effectiveWorkspaceId = useMemo(() => {
+    return workspaceId && /^[0-9a-fA-F]{24}$/.test(workspaceId)
+      ? workspaceId
+      : "000000000000000000000001";
+  }, [workspaceId]);
+
+  const effectiveDiagramId = useMemo(() => {
+    return diagramId && /^[0-9a-fA-F]{24}$/.test(diagramId)
+      ? diagramId
+      : "000000000000000000000002";
+  }, [diagramId]);
 
   // Sync initialThink if changed from outside
   useEffect(() => {
@@ -83,9 +130,50 @@ export default function AIAssistantDrawer({
   useEffect(() => {
     if (isOpen && initialPrompt && initialPrompt.trim().length > 0) {
       setInput(initialPrompt);
-      setMode("create");
+      setMode("modify");
     }
   }, [isOpen, initialPrompt]);
+
+  // Load authoritative usage and history from backend on open / diagram change
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (token) {
+      // 1. Fetch latest usage limit
+      getAiUsage(token)
+        .then((u) => setUsage(u))
+        .catch((err) => console.warn("Could not fetch AI usage:", err));
+
+      // 2. Fetch isolated chat history for this workspace + diagram
+      getAiHistory(effectiveWorkspaceId, effectiveDiagramId, token)
+        .then((hist) => {
+          if (hist.usage) setUsage(hist.usage);
+          if (Array.isArray(hist.messages) && hist.messages.length > 0) {
+            const mapped: ChatMessage[] = hist.messages.map((m) => {
+              let compileErr: string | null = null;
+              if (m.flow) {
+                try {
+                  compileDSL(m.flow);
+                } catch (err: any) {
+                  compileErr = err.message || "DSL syntax error";
+                }
+              }
+              return {
+                id: m.id,
+                sender: m.role === "assistant" ? "assistant" : "user",
+                text: m.message || m.explanation || "",
+                mode: (m.mode as AIMode) || "modify",
+                dsl: m.flow || undefined,
+                compileError: compileErr,
+                thoughtProcess: m.thought_process || undefined,
+              };
+            });
+            setMessages(mapped);
+          }
+        })
+        .catch((err) => console.warn("Could not load AI history:", err));
+    }
+  }, [isOpen, token, effectiveWorkspaceId, effectiveDiagramId]);
 
   // Auto-scroll messages to bottom
   useEffect(() => {
@@ -101,23 +189,74 @@ export default function AIAssistantDrawer({
     }
   }, [isOpen]);
 
-  const hasUserChat = messages.some((message) => message.sender === "user");
+  const hasUserChat = messages.length > 0;
+  const isLimitReached = usage !== null && usage.remaining <= 0;
+
+  // Curated Starter Questions for each of the 3 modes
+  const starterQuestions = useMemo(() => {
+    if (selectedNode) {
+      const label = (selectedNode.data?.label as string) || selectedNode.id;
+      return [
+        {
+          mode: "ask" as const,
+          label: `How does request and data flow through ${label}?`,
+          prompt: `Explain the exact role and data flow through ${label} in this architecture.`,
+        },
+        {
+          mode: "analyze" as const,
+          label: `Analyze failure dynamics & bottlenecks for ${label}`,
+          prompt: `Analyze failure dynamics, capacity limits, and bottlenecks for ${label}.`,
+        },
+        {
+          mode: "modify" as const,
+          label: `Scale ${label} with redundant cluster & load balancer`,
+          prompt: `Scale ${label} by placing a round-robin load balancer in front with redundant instances.`,
+        },
+        {
+          mode: "modify" as const,
+          label: `Attach an in-memory Redis cache to ${label}`,
+          prompt: `Attach a Redis cache to ${label} implementing a high-throughput Cache-Aside pattern.`,
+        },
+      ];
+    }
+
+    return [
+      {
+        mode: "ask" as const,
+        label: "What is a Load Balancer & how does caching work?",
+        prompt: "Explain how load balancers and cache-aside layers interact in distributed systems.",
+      },
+      {
+        mode: "analyze" as const,
+        label: "Analyze canvas topology for bottlenecks & single points of failure",
+        prompt: "Analyze the current canvas topology for bottlenecks, single points of failure, and unrouted components.",
+      },
+      {
+        mode: "modify" as const,
+        label: "Create a Round-Robin Load-Balanced Cluster",
+        prompt: "Create a high availability round-robin load balanced cluster with multiple application servers.",
+      },
+      {
+        mode: "modify" as const,
+        label: "Build a Cache-Aside pattern with Redis & PostgreSQL",
+        prompt: "Build a Cache-Aside pattern with Redis and PostgreSQL database fallback.",
+      },
+    ];
+  }, [selectedNode]);
 
   if (!isOpen) return null;
 
-  // Clear conversation
+  // Clear conversation in UI
   const handleClearChat = () => {
-    setMessages([
-      {
-        id: `welcome-${Date.now()}`,
-        sender: "assistant",
-        text: "Conversation cleared. Context is active for current canvas architecture.",
-      },
-    ]);
+    setMessages([]);
   };
 
   // Quick action chip click
-  const handleQuickAction = (actionPrompt: string, targetMode: "create" | "ask") => {
+  const handleQuickAction = (actionPrompt: string, targetMode: AIMode) => {
+    if (!isLoggedIn) {
+      router.push("/signin");
+      return;
+    }
     setMode(targetMode);
     setInput(actionPrompt);
     setTimeout(() => {
@@ -126,9 +265,18 @@ export default function AIAssistantDrawer({
   };
 
   // Submit prompt logic
-  const submitPrompt = (userPromptText?: string, forcedMode?: "create" | "ask") => {
+  const submitPrompt = async (userPromptText?: string, forcedMode?: AIMode) => {
+    if (!isLoggedIn || !token) {
+      router.push("/signin");
+      return;
+    }
+
     const textToSubmit = (userPromptText ?? input).trim();
-    if (!textToSubmit) return;
+    if (!textToSubmit || isGenerating) return;
+
+    if (isLimitReached) {
+      return;
+    }
 
     const currentMode = forcedMode ?? mode;
     const userMsgId = `usr-${Date.now()}`;
@@ -136,491 +284,106 @@ export default function AIAssistantDrawer({
       id: userMsgId,
       sender: "user",
       text: textToSubmit,
+      mode: currentMode,
     };
 
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setIsGenerating(true);
 
-    // Generate assistant response
-    setTimeout(() => {
-      const lower = textToSubmit.toLowerCase();
+    // Current canvas DSL serialized as context
+    const currentDsl = diagramToDsl(nodes, edges, nodeConfigs);
 
-      if (currentMode === "create") {
-        // Architecture Generation Engine
-        let generatedDsl = "";
-        let title = "";
-        let explanation = "";
+    try {
+      const payload: AiChatPayload = {
+        workspace_id: effectiveWorkspaceId,
+        diagram_id: effectiveDiagramId,
+        mode: currentMode,
+        think: thinkEnabled,
+        message: textToSubmit,
+        context: {
+          dsl: currentDsl,
+          node_count: nodes.length,
+          edge_count: edges.length,
+          selected_node_id: selectedNode?.id || null,
+        },
+      };
 
-        if (
-          lower.includes("load") ||
-          lower.includes("round robin") ||
-          lower.includes("balance") ||
-          lower.includes("cluster")
-        ) {
-          title = "Load-Balanced Cluster";
-          explanation =
-            "Round-Robin Load Balancer distributing incoming traffic across multiple application servers to eliminate single points of failure.";
-          generatedDsl = `// High Availability Load-Balanced Cluster
-define CLIENT client_node {
-  x: 80,
-  y: 240,
-  label: "Web Client",
-  requests: [
-    { endpoint: "/api/v1/orders", allowedMethods: ["GET", "POST"], key: "order:550" }
-  ]
-}
+      const res = await sendAiChat(payload, token);
 
-define LOADBALANCER edge_lb {
-  x: 380,
-  y: 240,
-  label: "Round-Robin LB",
-  strategy: "ROUND_ROBIN"
-}
-
-define SERVER app_server_1 {
-  x: 680,
-  y: 120,
-  label: "App Server Alpha",
-  capacity: 80,
-  acceptedEndpoints: [
-    { endpoint: "/api/v1/orders", allowedMethod: ["GET", "POST"] }
-  ]
-}
-
-define SERVER app_server_2 {
-  x: 680,
-  y: 360,
-  label: "App Server Beta",
-  capacity: 80,
-  acceptedEndpoints: [
-    { endpoint: "/api/v1/orders", allowedMethod: ["GET", "POST"] }
-  ]
-}
-
-define POSTGRES shared_db {
-  x: 960,
-  y: 240,
-  label: "Primary Database",
-  data: [
-    { key: "order:550", value: "Order record #550" }
-  ]
-}
-
-connect client_node -> edge_lb
-connect edge_lb -> app_server_1
-connect edge_lb -> app_server_2
-connect app_server_1 -> shared_db
-connect app_server_2 -> shared_db
-`;
-        } else if (
-          lower.includes("queue") ||
-          lower.includes("rabbit") ||
-          lower.includes("sqs") ||
-          lower.includes("worker") ||
-          lower.includes("kafka")
-        ) {
-          title = "Asynchronous Message Queue & Worker";
-          explanation =
-            "Decoupled asynchronous processing using a Message Queue buffer to absorb bursts and feed downstream workers.";
-          generatedDsl = `// Asynchronous Message Queue Processing
-define CLIENT client_node {
-  x: 80,
-  y: 240,
-  label: "Web Client",
-  requests: [
-    { endpoint: "/api/v1/tasks", allowedMethods: ["POST"], key: "task:88" }
-  ]
-}
-
-define SERVER api_gateway {
-  x: 380,
-  y: 240,
-  label: "Ingestion API",
-  capacity: 120,
-  acceptedEndpoints: [
-    { endpoint: "/api/v1/tasks", allowedMethod: ["POST"] }
-  ]
-}
-
-define MESSAGEQUEUE task_queue {
-  x: 680,
-  y: 240,
-  label: "Message Queue",
-  queueSize: 100,
-  processingType: "FIFO"
-}
-
-define SERVER background_worker {
-  x: 980,
-  y: 240,
-  label: "Worker Instance",
-  capacity: 60,
-  prefetchLimit: 1
-}
-
-define POSTGRES analytics_db {
-  x: 1280,
-  y: 240,
-  label: "PostgreSQL Database",
-  data: [
-    { key: "task:88", value: "processed task data" }
-  ]
-}
-
-connect client_node -> api_gateway
-connect api_gateway -> task_queue
-connect task_queue -> background_worker
-connect background_worker -> analytics_db
-`;
-        } else if (
-          lower.includes("pubsub") ||
-          lower.includes("fanout") ||
-          lower.includes("sns") ||
-          lower.includes("broadcast") ||
-          lower.includes("event")
-        ) {
-          title = "PubSub Event Fanout Architecture";
-          explanation =
-            "One-to-many publish-subscribe broker delivering events to decoupled notification and analytics subscribers simultaneously.";
-          generatedDsl = `// PubSub Event Broadcast Fanout
-define CLIENT client_node {
-  x: 80,
-  y: 240,
-  label: "Web Client",
-  requests: [
-    { endpoint: "/events/orders", allowedMethods: ["POST"], key: "event:order" }
-  ]
-}
-
-define SERVER order_service {
-  x: 340,
-  y: 240,
-  label: "Order Service",
-  capacity: 100,
-  acceptedEndpoints: [
-    { endpoint: "/events/orders", allowedMethod: ["POST"] }
-  ]
-}
-
-define PUBSUB event_broker {
-  x: 600,
-  y: 240,
-  label: "PubSub Broker",
-  topic: "order.created"
-}
-
-define SERVER notification_worker {
-  x: 860,
-  y: 120,
-  label: "Notification Service",
-  capacity: 50
-}
-
-define SERVER analytics_worker {
-  x: 860,
-  y: 360,
-  label: "Analytics Service",
-  capacity: 50
-}
-
-connect client_node -> order_service
-connect order_service -> event_broker
-connect event_broker -> notification_worker
-connect event_broker -> analytics_worker
-`;
-        } else if (
-          lower.includes("gateway") ||
-          lower.includes("microservice") ||
-          lower.includes("api gw")
-        ) {
-          title = "API Gateway Microservices Architecture";
-          explanation =
-            "Central API Gateway providing route routing to isolated User and Order microservices backed by shared PostgreSQL persistence.";
-          generatedDsl = `// API Gateway Microservices
-define CLIENT web_apps {
-  x: 80,
-  y: 240,
-  label: "Client App",
-  requests: [
-    { endpoint: "/api/users", allowedMethods: ["GET"], key: "user:1" },
-    { endpoint: "/api/orders", allowedMethods: ["POST"], key: "order:1" }
-  ]
-}
-
-define GATEWAY api_gw {
-  x: 360,
-  y: 240,
-  label: "API Gateway",
-  strategy: "ROUND_ROBIN"
-}
-
-define SERVER user_service {
-  x: 660,
-  y: 120,
-  label: "User Service",
-  capacity: 100,
-  acceptedEndpoints: [
-    { endpoint: "/api/users", allowedMethod: ["GET"] }
-  ]
-}
-
-define SERVER order_service {
-  x: 660,
-  y: 360,
-  label: "Order Service",
-  capacity: 100,
-  acceptedEndpoints: [
-    { endpoint: "/api/orders", allowedMethod: ["POST"] }
-  ]
-}
-
-define POSTGRES main_db {
-  x: 940,
-  y: 240,
-  label: "Shared Postgres DB",
-  data: [
-    { key: "user:1", value: "User profile #1" },
-    { key: "order:1", value: "Order summary #1" }
-  ]
-}
-
-connect web_apps -> api_gw
-connect api_gw -> user_service
-connect api_gw -> order_service
-connect user_service -> main_db
-connect order_service -> main_db
-`;
-        } else if (
-          lower.includes("valet") ||
-          lower.includes("s3") ||
-          lower.includes("storage") ||
-          lower.includes("upload")
-        ) {
-          title = "Valet Key Direct Storage Upload";
-          explanation =
-            "Direct client-to-cloud upload pattern reducing server compute and bandwidth pressure by issuing pre-signed tokens.";
-          generatedDsl = `// Valet Key Direct Upload Architecture
-define CLIENT browser_client {
-  x: 80,
-  y: 240,
-  label: "Browser Client",
-  valet: true,
-  requests: [
-    { endpoint: "/upload/sign", allowedMethods: ["GET"], key: "file:image.png" }
-  ]
-}
-
-define SERVER token_issuer {
-  x: 380,
-  y: 140,
-  label: "Token Issuer Server",
-  capacity: 80,
-  acceptedEndpoints: [
-    { endpoint: "/upload/sign", allowedMethod: ["GET"] }
-  ]
-}
-
-define POSTGRES storage_blob {
-  x: 680,
-  y: 240,
-  label: "Cloud Storage Bucket",
-  data: [
-    { key: "file:image.png", value: "uploaded media binary" }
-  ]
-}
-
-connect browser_client -> token_issuer
-connect browser_client -> storage_blob
-`;
-        } else {
-          // Default: Cache Aside Pattern
-          title = "Cache Aside Architecture";
-          explanation =
-            "Standard high-performance cache-aside pattern routing reads through Redis cache with PostgreSQL database fallback.";
-          generatedDsl = `// Cache Aside Architecture
-define CLIENT web_client {
-  x: 80,
-  y: 220,
-  label: "Web Client",
-  requests: [
-    { endpoint: "/api/v1/posts", allowedMethods: ["GET", "POST"], key: "post:1" }
-  ]
-}
-
-define SERVER api_server {
-  x: 380,
-  y: 220,
-  label: "API Server",
-  capacity: 100,
-  tcpConnectionsToPostgres: 5,
-  acceptedEndpoints: [
-    { endpoint: "/api/v1/posts", allowedMethod: ["GET", "POST"] }
-  ]
-}
-
-define REDIS redis_cache {
-  x: 680,
-  y: 100,
-  label: "Redis Cache",
-  data: [
-    { key: "post:1", value: "cached post data" }
-  ]
-}
-
-define POSTGRES postgres_db {
-  x: 680,
-  y: 340,
-  label: "PostgreSQL DB",
-  table: "posts",
-  data: [
-    { key: "post:1", value: "persistent post record" }
-  ]
-}
-
-connect web_client -> api_server
-connect api_server -> redis_cache
-connect api_server -> postgres_db
-`;
-        }
-
-        let thoughtProcess: string | undefined;
-        let thoughtTime: string | undefined;
-
-        if (thinkEnabled) {
-          thoughtTime = "2.1s";
-          thoughtProcess = `Architectural Analysis & Design Plan:
-1. Concurrency & Buffers: Calculated ingress load against downstream compute capacity. Sized queue boundaries.
-2. Fault Tolerance: Identified single points of failure. Applied redundant paths and failover routes.
-3. Caching & Persistence: Configured cache-aside pattern with TTL invalidation to prevent stale reads and protect database connections.
-4. Canvas Positioning: Allocated explicit (x, y) coordinates ensuring clean horizontal flow and zero node collisions.`;
-        }
-
-        const assistantMsg: ChatMessage = {
-          id: `ast-${Date.now()}`,
-          sender: "assistant",
-          text: `Generated **${title}** architecture definition:\n\n${explanation}`,
-          dsl: generatedDsl,
-          architectureTitle: title,
-          thoughtProcess,
-          thoughtTime,
-        };
-        setMessages((prev) => [...prev, assistantMsg]);
-      } else {
-        // Technical Architecture Analysis & Q&A
-        let responseText = "";
-
-        const clientCount = nodes.filter((n) => n.data?.type === "client").length;
-        const serverCount = nodes.filter((n) => n.data?.type === "server").length;
-        const dbCount = nodes.filter((n) => n.data?.type === "postgres").length;
-        const cacheCount = nodes.filter((n) => n.data?.type === "redis").length;
-        const queueCount = nodes.filter(
-          (n) => n.data?.type === "message-queue" || n.data?.type === "messagequeue"
-        ).length;
-        const lbCount = nodes.filter((n) => n.data?.type === "loadbalancer").length;
-
-        // Contextual: question about selected component
-        if (
-          selectedNode &&
-          (lower.includes("selected") ||
-            lower.includes("this node") ||
-            lower.includes("this component") ||
-            lower.includes(selectedNode.id.toLowerCase()) ||
-            (typeof selectedNode.data?.label === "string" &&
-              lower.includes(selectedNode.data.label.toLowerCase())))
-        ) {
-          const inEdges = edges.filter((e) => e.target === selectedNode.id);
-          const outEdges = edges.filter((e) => e.source === selectedNode.id);
-          const roleMap: Record<string, string> = {
-            client: "HTTP request originator and payload generator",
-            server: "Compute, business logic, and database connection pooling",
-            redis: "In-memory sub-millisecond cache layer (Cache-Aside)",
-            postgres: "Persistent relational ACID storage",
-            loadbalancer: "Traffic distribution using Round Robin or Least Connections",
-            gateway: "API ingress routing based on path prefixes",
-            "message-queue": "Asynchronous FIFO buffer absorbing traffic spikes",
-            pubsub: "Event fanout broker delivering to multiple topic subscribers",
-          };
-
-          responseText =
-            `**Component Context: ${selectedNode.data?.label || selectedNode.id}** (${selectedNode.data?.type})\n\n` +
-            `- **Role**: ${roleMap[selectedNode.data?.type as string] || "Distributed node"}\n` +
-            `- **Upstream Sources**: ${inEdges.length > 0 ? inEdges.map((e) => e.source).join(", ") : "None (Ingress root)"}\n` +
-            `- **Downstream Targets**: ${outEdges.length > 0 ? outEdges.map((e) => e.target).join(", ") : "None (Terminal node)"}\n\n` +
-            (lower.includes("fail") || lower.includes("down")
-              ? `**Failure Impact**: If this node is partitioned or terminated, upstream requests will fail unless redundant instances or circuit breaker fallbacks are present.`
-              : `**Performance**: Incoming requests to this node are processed according to its configured capacity and latency parameters.`);
-        } else if (
-          lower.includes("canvas") ||
-          lower.includes("current") ||
-          lower.includes("diagram") ||
-          lower.includes("my architecture") ||
-          lower.includes("understand") ||
-          lower.includes("breakdown")
-        ) {
-          responseText =
-            `**Active Topology Breakdown:**\n\n` +
-            `- **Total Components**: ${nodes.length}\n` +
-            `  - Clients: ${clientCount}\n` +
-            `  - Application Servers: ${serverCount}\n` +
-            `  - Load Balancers: ${lbCount}\n` +
-            `  - Caches (Redis): ${cacheCount}\n` +
-            `  - Databases (Postgres): ${dbCount}\n` +
-            `  - Message Queues: ${queueCount}\n` +
-            `- **Total Connections**: ${edges.length}\n\n` +
-            (nodes.length === 0
-              ? "Your canvas is currently empty. Use the quick action below to generate a starter cluster or cache-aside topology."
-              : `Ingress traffic originates from ${clientCount} client(s). Packets route downstream across configured edges. You can step through execution using the simulation toolbar.`);
-        } else if (lower.includes("fix") || lower.includes("bottleneck") || lower.includes("validate")) {
-          const disconnectedNodes = nodes.filter(
-            (n) => !edges.some((e) => e.source === n.id || e.target === n.id)
-          );
-          if (nodes.length === 0) {
-            responseText =
-              "**Topology Validation:**\n\nNo components detected on canvas. Place nodes or generate an architecture to validate.";
-          } else if (disconnectedNodes.length > 0) {
-            responseText =
-              `**Validation Advisory:**\n\nFound **${disconnectedNodes.length}** disconnected component(s):\n` +
-              disconnectedNodes
-                .map((n) => `- **${(n.data?.label as string) || n.id}** (${n.data?.type})`)
-                .join("\n") +
-              "\n\nConnect these nodes to active ingress or downstream services so simulated packets can reach them.";
-          } else if (serverCount > 1 && lbCount === 0) {
-            responseText = `**Architecture Recommendation:**\n\nYou have **${serverCount}** application servers without an upstream Load Balancer or API Gateway. Add a Load Balancer with round-robin routing to distribute traffic evenly across instances.`;
-          } else {
-            responseText = `**Architecture Health Check:**\n\nAll ${nodes.length} nodes are connected with ${edges.length} edges. Component routes and endpoints are structured correctly. Run the simulation to check packet latency.`;
-          }
-        } else if (lower.includes("simulate") || lower.includes("flow") || lower.includes("packet")) {
-          responseText =
-            `**Simulation Execution Dynamics:**\n\n` +
-            `1. **Ingress**: Client initiates HTTP requests with defined endpoints and payload keys.\n` +
-            `2. **Hop Evaluation**: Load Balancers pick healthy target instances; Caches check key hits vs misses.\n` +
-            `3. **State Updates**: Updates persist to PostgreSQL; async tasks queue up in Message Queue buffers.\n` +
-            `4. **Completion**: Responses return along request paths back to initiating clients.`;
-        } else {
-          responseText =
-            `**Analysis of "${textToSubmit}":**\n\n` +
-            `In FlowFrame, distributed components interact via explicit edges. ` +
-            `To simulate this behavior, you can define nodes in DSL or drag components from the sidebar onto the canvas. ` +
-            `Switch to 'Create' mode if you want me to generate complete architecture definitions.`;
-        }
-
-        const assistantMsg: ChatMessage = {
-          id: `ast-${Date.now()}`,
-          sender: "assistant",
-          text: responseText,
-        };
-        setMessages((prev) => [...prev, assistantMsg]);
+      // Update authoritative usage limit from server
+      if (res.usage) {
+        setUsage(res.usage);
       }
 
+      // DSL validation via compileDSL (FlowFrame DSL Interpreter)
+      let compileError: string | null = null;
+      if (res.flow && res.flow.trim().length > 0) {
+        try {
+          const compiled = compileDSL(res.flow);
+          if (!compiled.nodes || compiled.nodes.length === 0) {
+            compileError = "No valid nodes parsed in generated DSL.";
+          }
+        } catch (err: any) {
+          compileError = err.message || "DSL syntax error";
+        }
+      }
+
+      // Format response
+      const assistantMsg: ChatMessage = {
+        id: `ast-${Date.now()}`,
+        sender: "assistant",
+        text: res.message || res.explanation || "Response generated.",
+        mode: res.mode as AIMode,
+        dsl: res.flow && res.flow.trim().length > 0 ? res.flow : undefined,
+        compileError,
+        thoughtProcess: res.thought_process || undefined,
+        thoughtTime: thinkEnabled ? "Gemini Flash" : undefined,
+      };
+
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch (err: any) {
+      const errMsg = err.message || "Failed to process AI request.";
+
+      if (errMsg.includes("429") || errMsg.toLowerCase().includes("limit reached")) {
+        setUsage((prev) => (prev ? { ...prev, remaining: 0, used: prev.limit } : { used: 5, limit: 5, remaining: 0 }));
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `err-${Date.now()}`,
+            sender: "assistant",
+            text: "You have reached your limit of 5 free AI requests. Upgrade for unlimited AI architecture generation, analysis, and modifications.",
+            mode: currentMode,
+          },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `err-${Date.now()}`,
+            sender: "assistant",
+            text: `AI Request Error: ${errMsg}`,
+            mode: currentMode,
+          },
+        ]);
+      }
+    } finally {
       setIsGenerating(false);
-    }, 450);
+    }
   };
 
+  // Explicit User Action: Apply Changes to Canvas
   const handleApplyArchitecture = (msgId: string, dsl: string, explanation: string) => {
     onApplyDsl(dsl, explanation);
     setMessages((prev) =>
-      prev.map((m) => (m.id === msgId ? { ...m, applied: true } : m))
+      prev.map((m) => (m.id === msgId ? { ...m, applied: true, rejected: false } : m))
+    );
+  };
+
+  // Explicit User Action: Reject Proposed Changes
+  const handleRejectArchitecture = (msgId: string) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === msgId ? { ...m, rejected: true, applied: false } : m))
     );
   };
 
@@ -630,155 +393,273 @@ connect api_server -> postgres_db
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  return (
-    <aside
-      className="fixed inset-y-0 right-0 z-40 w-full sm:w-[380px] md:static md:z-20 md:w-[360px] lg:w-[380px] md:h-full md:max-h-full bg-[var(--surface)] border-l border-[var(--border)] flex flex-col shrink-0 select-text overflow-hidden shadow-xl md:shadow-none"
-      data-testid="relay-assistant-panel"
-      aria-label="Relay Architecture Assistant"
-    >
-      {/* ── 1. Compact Professional Header ── */}
-      <div className="h-10 px-3 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]">
-        <div className="flex items-center gap-2 min-w-0">
-          <Sparkles className="size-3.5 text-primary shrink-0" />
-          <span className="text-xs font-semibold text-foreground tracking-tight truncate">
-            Relay
-          </span>
-          <span className="text-[10px] font-mono text-muted-foreground bg-[var(--surface-muted)] px-1.5 py-0.5 rounded border border-[var(--border)] hidden sm:inline-block">
-            Architecture Assistant
-          </span>
-          <span
-            className="size-1.5 rounded-full bg-emerald-500 shrink-0"
-            title="Relay active"
-          />
-          {selectedNode && (
-            <div className="flex items-center gap-1 shrink-0 bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 text-[10px]">
-              <span className="size-1 rounded-full bg-primary shrink-0" />
-              <span className="truncate max-w-[100px]">
-                {(selectedNode.data?.label as string) || selectedNode.id}
+  // Helper to render markdown text and embed FlowFrameCodeEditor for any code blocks
+  const renderMessageBody = (text: string, msgId: string) => {
+    if (!text.includes("```")) {
+      return <div className="whitespace-pre-wrap font-sans">{text}</div>;
+    }
+
+    const segments: React.ReactNode[] = [];
+    const codeRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
+    let lastPos = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = codeRegex.exec(text)) !== null) {
+      const precedingText = text.slice(lastPos, match.index);
+      if (precedingText.trim()) {
+        segments.push(
+          <div key={`txt-${lastPos}`} className="whitespace-pre-wrap font-sans">
+            {precedingText}
+          </div>
+        );
+      }
+
+      const lang = match[1]?.trim() || "dsl";
+      const codeSnippet = match[2]?.trim() || "";
+      const snippetId = `${msgId}-snippet-${match.index}`;
+      const isDsl =
+        lang === "dsl" ||
+        lang === "flow" ||
+        codeSnippet.includes("define ") ||
+        codeSnippet.includes("connect ");
+
+      segments.push(
+        <div
+          key={`code-${match.index}`}
+          className="rounded-xl border border-[var(--border)] bg-[#121215] overflow-hidden my-2.5 shadow-md text-left"
+        >
+          <div className="px-3 py-1.5 border-b border-[var(--border)] bg-[#18181b] flex items-center justify-between text-[10.5px] font-mono text-muted-foreground">
+            <span className="font-semibold text-foreground flex items-center gap-1.5">
+              <FiCode className="size-3.5 text-primary" />
+              <span>{isDsl ? "FlowFrame DSL" : lang.toUpperCase()}</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono font-semibold uppercase">
+                {lang || "dsl"}
               </span>
-              {onSelectNode && (
-                <button
-                  type="button"
-                  onClick={() => onSelectNode(null)}
-                  className="hover:opacity-75 cursor-pointer ml-0.5 leading-none"
-                  title="Deselect node"
-                >
-                  ×
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => handleCopyDsl(snippetId, codeSnippet)}
+                className="text-xs hover:text-foreground text-muted-foreground transition cursor-pointer flex items-center gap-1"
+                title="Copy snippet"
+              >
+                <FiCopy className="size-3" />
+                <span>{copiedId === snippetId ? "Copied" : "Copy"}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-hidden">
+            <FlowFrameCodeEditor
+              value={codeSnippet}
+              readOnly={true}
+              fontSize={12}
+              minHeight="auto"
+              maxHeight="220px"
+              theme="dark"
+            />
+          </div>
+
+          {isDsl && (
+            <div className="p-1.5 border-t border-[var(--border)] bg-[#18181b] flex justify-end">
+              <button
+                type="button"
+                onClick={() =>
+                  handleApplyArchitecture(
+                    snippetId,
+                    codeSnippet,
+                    "Code snippet applied to canvas"
+                  )
+                }
+                className="px-2.5 py-0.5 rounded text-[11px] font-semibold bg-primary hover:bg-primary/90 text-primary-foreground flex items-center gap-1 cursor-pointer transition shadow-2xs"
+              >
+                <FiCheck className="size-3" />
+                <span>Apply to Canvas</span>
+              </button>
             </div>
           )}
         </div>
+      );
 
-        <div className="flex items-center gap-1">
+      lastPos = match.index + match[0].length;
+    }
+
+    const trailingText = text.slice(lastPos);
+    if (trailingText.trim()) {
+      segments.push(
+        <div key={`txt-${lastPos}`} className="whitespace-pre-wrap font-sans">
+          {trailingText}
+        </div>
+      );
+    }
+
+    return <div className="space-y-2">{segments}</div>;
+  };
+
+  return (
+    <aside
+      className={`fixed inset-y-0 right-0 z-40 w-full transition-all duration-200 ${
+        isExpanded
+          ? "sm:w-[560px] md:w-[620px] lg:w-[680px]"
+          : "sm:w-[390px] md:w-[380px] lg:w-[410px]"
+      } md:static md:z-20 md:h-full md:max-h-full bg-[var(--surface)] border-l border-[var(--border)] flex flex-col shrink-0 select-text overflow-hidden shadow-xl md:shadow-none`}
+      data-testid="relay-assistant-panel"
+      aria-label="Relay Architecture Assistant"
+    >
+      {/* ── 1. Top Header with Active Relay Indicator & Credit Pill ── */}
+      <div className="h-14 px-3.5 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="relative size-8 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-2xs">
+            <Sparkles className="size-4" />
+            <span
+              className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-blue-500 border-2 border-[var(--surface)]"
+              title="Relay AI Online"
+            />
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-bold text-foreground tracking-tight truncate">
+                Relay AI
+              </span>
+              {selectedNode && (
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-primary/10 text-primary border border-primary/20 truncate max-w-[90px]">
+                  {(selectedNode.data?.label as string) || selectedNode.id}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground truncate leading-tight">
+              Architecture Copilot · 3 Modes
+            </p>
+          </div>
+        </div>
+
+        {/* Top Right Controls & Usage Credit Badge */}
+        <div className="flex items-center gap-2">
+          {!isLoggedIn ? (
+            <Link
+              href="/signin"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-[10.5px] font-mono font-medium transition cursor-pointer"
+              title="Sign in to unlock Relay AI"
+            >
+              <FiLock className="size-3" />
+              <span>Sign In</span>
+            </Link>
+          ) : (
+            /* AI Usage Badge: AI: X/5 */
+            <div
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10.5px] font-mono font-medium transition select-none ${
+                isLimitReached
+                  ? "border-red-500/40 bg-red-500/10 text-red-400"
+                  : "border-primary/30 bg-primary/10 text-primary"
+              }`}
+              title={
+                usage
+                  ? `${usage.remaining} of ${usage.limit} free requests remaining`
+                  : "5 free requests per user"
+              }
+            >
+              <FiZap className="size-3" />
+              <span>AI: {usage ? `${usage.used}/${usage.limit}` : "0/5"}</span>
+            </div>
+          )}
+
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearChat}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer"
+              title="Clear conversation"
+              aria-label="Clear conversation"
+            >
+              <FiTrash2 className="size-3.5" />
+            </button>
+          )}
           <button
             type="button"
-            onClick={handleClearChat}
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer"
-            title="Clear conversation"
-            aria-label="Clear conversation"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer"
+            title={isExpanded ? "Collapse width" : "Expand width"}
+            aria-label={isExpanded ? "Collapse width" : "Expand width"}
           >
-            <FiTrash2 className="size-3.5" />
+            {isExpanded ? (
+              <FiMinimize2 className="size-3.5" />
+            ) : (
+              <FiMaximize2 className="size-3.5" />
+            )}
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer"
             title="Close Assistant (Esc)"
             aria-label="Close Assistant"
           >
-            <FiX className="size-3.5" />
+            <FiX className="size-4" />
           </button>
         </div>
       </div>
 
-      {/* ── 2. Quick Action Chips (Shown only before the first user message) ── */}
-      {!hasUserChat && (
-        <div className="px-3 py-1.5 border-b border-[var(--border)] bg-[var(--surface)] flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
-          {selectedNode ? (
-            <>
-              <button
-                type="button"
-                disabled={isGenerating}
-                onClick={() =>
-                  handleQuickAction(
-                    `Explain role and failure dynamics of ${(selectedNode.data?.label as string) || selectedNode.id}`,
-                    "ask"
-                  )
-                }
-                className="text-[10px] font-mono px-2 py-0.5 rounded border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 transition whitespace-nowrap cursor-pointer shrink-0"
-              >
-                Explain {(selectedNode.data?.label as string) || selectedNode.id}
-              </button>
-              <button
-                type="button"
-                disabled={isGenerating}
-                onClick={() =>
-                  handleQuickAction(
-                    `What happens if ${(selectedNode.data?.label as string) || selectedNode.id} fails or times out?`,
-                    "ask"
-                  )
-                }
-                className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground transition whitespace-nowrap cursor-pointer shrink-0"
-              >
-                Failure test
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                disabled={isGenerating}
-                onClick={() => handleQuickAction("Explain current canvas architecture and data flow", "ask")}
-                className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
-              >
-                Explain architecture
-              </button>
-              <button
-                type="button"
-                disabled={isGenerating}
-                onClick={() => handleQuickAction("Validate architecture bottlenecks and unrouted nodes", "ask")}
-                className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
-              >
-                Validate topology
-              </button>
-              <button
-                type="button"
-                disabled={isGenerating}
-                onClick={() => handleQuickAction("Build a Cache-Aside pattern with Redis and PostgreSQL", "create")}
-                className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
-              >
-                Build Cache-Aside
-              </button>
-              <button
-                type="button"
-                disabled={isGenerating}
-                onClick={() => handleQuickAction("Create a Round-Robin Load-Balanced Cluster", "create")}
-                className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
-              >
-                Build Load Balancer
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── 4. Conversation Stream (Document / Editor Style) ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-3.5 py-3 space-y-4 scrollbar-thin">
-        {!hasUserChat && (
-          <div className="py-4 text-center space-y-1.5 select-none">
-            <div className="size-7 mx-auto rounded bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center text-primary">
-              <Sparkles className="size-3.5" />
+      {/* ── 2. Conversation Stream & Main Body Suggestions ── */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4 scrollbar-thin">
+        {!hasUserChat ? (
+          <div className="max-w-md mx-auto py-3 space-y-5 animate-in fade-in duration-200">
+            <div className="text-center space-y-1.5 select-none">
+              <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
+                Ask Relay about your Architecture
+              </h2>
+              <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
+                Ask technical questions, analyze failure dynamics, or propose live FlowFrame DSL topologies.
+              </p>
             </div>
-            <p className="text-xs font-semibold text-foreground">
-              Relay Architecture Assistant
-            </p>
-            <p className="text-[11px] text-muted-foreground max-w-xs mx-auto leading-relaxed">
-              Ask about current topology, request routing paths, component bottlenecks, or generate distributed system architecture definitions.
-            </p>
-          </div>
-        )}
 
+            {/* Curated 3-Mode Starter Cards */}
+            <div className="space-y-2.5">
+              {starterQuestions.map((q) => {
+                const badgeLabel =
+                  q.mode === "ask"
+                    ? "Ask"
+                    : q.mode === "analyze"
+                    ? "Analyze"
+                    : "Create / Modify";
+
+                return (
+                  <button
+                    type="button"
+                    key={q.prompt}
+                    disabled={isGenerating || isLimitReached}
+                    onClick={() => handleQuickAction(q.prompt, q.mode)}
+                    className="w-full p-3 px-3.5 rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)]/70 hover:bg-[var(--bg-elevated)] hover:border-primary/50 text-left flex items-center justify-between gap-3 group transition-all cursor-pointer shadow-2xs hover:shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9.5px] uppercase font-mono font-bold tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                          {badgeLabel}
+                        </span>
+                        {!isLoggedIn && (
+                          <span className="text-[9.5px] font-mono text-amber-400 flex items-center gap-1">
+                            <FiLock className="size-2.5" />
+                            <span>Sign in required</span>
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs font-medium text-foreground group-hover:text-primary transition-colors leading-snug block truncate">
+                        {q.label}
+                      </span>
+                    </div>
+                    {isLoggedIn ? (
+                      <FiArrowRight className="size-4 text-muted-foreground/60 group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
+                    ) : (
+                      <FiLock className="size-3.5 text-amber-400/80 group-hover:text-amber-400 transition-all shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Message Turns */}
         {messages.map((m) => (
           <div key={m.id} className="space-y-1.5">
             {m.sender === "user" ? (
@@ -787,6 +668,13 @@ connect api_server -> postgres_db
                 <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground select-none">
                   <span className="size-1.5 rounded-full bg-muted-foreground/60" />
                   <span>You</span>
+                  {m.mode && (
+                    <span className="text-[9px] px-1 py-0.2 rounded bg-muted/40 text-muted-foreground font-normal">
+                      {m.mode === "modify"
+                        ? "CREATE / MODIFY"
+                        : m.mode.toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-foreground font-normal leading-relaxed pl-2.5 border-l-2 border-border/80 whitespace-pre-wrap">
                   {m.text}
@@ -799,10 +687,17 @@ connect api_server -> postgres_db
                   <div className="flex items-center gap-1.5">
                     <Sparkles className="size-3 text-primary" />
                     <span>Relay</span>
+                    {m.mode && (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-primary/10 text-primary font-normal">
+                        {m.mode === "modify"
+                          ? "PROPOSED TOPOLOGY"
+                          : m.mode.toUpperCase()}
+                      </span>
+                    )}
                   </div>
                   {m.thoughtTime && (
                     <span className="text-muted-foreground/70 lowercase font-normal">
-                      reasoned in {m.thoughtTime}
+                      reasoned with {m.thoughtTime}
                     </span>
                   )}
                 </div>
@@ -813,7 +708,7 @@ connect api_server -> postgres_db
                     <summary className="px-2.5 py-1.5 cursor-pointer text-foreground/80 font-semibold flex items-center justify-between select-none hover:bg-[var(--bg-elevated)] transition">
                       <span className="flex items-center gap-1.5">
                         <FiCpu className="size-3 text-primary animate-pulse" />
-                        <span>Thought for {m.thoughtTime || "2.1s"} (Reasoning)</span>
+                        <span>Architectural Reasoning Trace</span>
                       </span>
                       <span className="text-[9px] opacity-70 group-open:rotate-180 transition-transform">
                         ▼
@@ -827,73 +722,137 @@ connect api_server -> postgres_db
 
                 {/* Response Text */}
                 <div className="text-xs text-foreground leading-relaxed pl-2.5 border-l-2 border-primary/40 space-y-2">
-                  <div className="whitespace-pre-wrap font-sans">{m.text}</div>
+                  {renderMessageBody(m.text, m.id)}
 
-                  {/* FlowFrame DSL Code Block */}
+                  {/* Canvas Protection: Proposed FlowFrame DSL Preview */}
                   {m.dsl && (
-                    <div className="rounded-md border border-[var(--border)] bg-[#121215] overflow-hidden my-2">
-                      <div className="px-2.5 py-1 border-b border-[var(--border)] bg-[#18181b] flex items-center justify-between text-[10px] font-mono text-muted-foreground">
+                    <div className="rounded-xl border border-[var(--border)] bg-[#121215] overflow-hidden my-2.5 shadow-md">
+                      {/* Card Header with DSL validation indicator */}
+                      <div className="px-3 py-1.5 border-b border-[var(--border)] bg-[#18181b] flex items-center justify-between text-[10.5px] font-mono text-muted-foreground">
                         <span className="font-semibold text-foreground flex items-center gap-1.5">
-                          <FiCode className="size-3 text-primary" />
-                          <span>{m.architectureTitle || "FlowFrame DSL"}</span>
+                          <FiCode className="size-3.5 text-primary" />
+                          <span>Proposed Architecture DSL</span>
                         </span>
-                        <span>dsl</span>
+                        <div className="flex items-center gap-1.5">
+                          {m.compileError ? (
+                            <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-mono font-semibold flex items-center gap-1">
+                              <FiAlertTriangle className="size-2.5" />
+                              <span>Syntax Warning</span>
+                            </span>
+                          ) : (
+                            <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-mono font-semibold flex items-center gap-1">
+                              <FiCheckCircle className="size-2.5" />
+                              <span>DSL Validated</span>
+                            </span>
+                          )}
+                          <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono font-semibold uppercase">
+                            DSL
+                          </span>
+                        </div>
                       </div>
 
-                      <pre className="p-2.5 text-[10.5px] font-mono leading-relaxed text-[#d4d4d8] overflow-x-auto max-h-52 scrollbar-thin">
-                        <code>{m.dsl}</code>
-                      </pre>
+                      {/* Compilation Error Notice if any */}
+                      {m.compileError && (
+                        <div className="p-2 bg-amber-500/10 border-b border-amber-500/20 text-[10.5px] font-mono text-amber-400">
+                          {m.compileError}
+                        </div>
+                      )}
 
-                      <div className="p-1.5 border-t border-[var(--border)] bg-[#18181b] flex items-center gap-1.5 justify-end">
-                        <button
-                          type="button"
-                          onClick={() => handleCopyDsl(m.id, m.dsl!)}
-                          className="px-2 py-1 rounded text-[11px] font-mono font-medium border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-foreground flex items-center gap-1 cursor-pointer transition"
-                          title="Copy DSL Code"
-                        >
-                          <FiCopy className="size-3" />
-                          <span>{copiedId === m.id ? "Copied" : "Copy"}</span>
-                        </button>
+                      {/* CodeMirror 6 with FlowFrame DSL Syntax Highlighting */}
+                      <div className="overflow-hidden">
+                        <FlowFrameCodeEditor
+                          value={m.dsl}
+                          readOnly={true}
+                          fontSize={12}
+                          minHeight="auto"
+                          maxHeight="250px"
+                          theme="dark"
+                        />
+                      </div>
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleApplyArchitecture(
-                              m.id,
-                              m.dsl!,
-                              `${m.architectureTitle || "Architecture"} applied to canvas`
-                            )
-                          }
-                          className={`px-2.5 py-1 rounded text-[11px] font-medium flex items-center gap-1 cursor-pointer transition ${
-                            m.applied
-                              ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                              : "bg-primary text-primary-foreground hover:bg-primary/90"
-                          }`}
-                        >
-                          <FiCheck className="size-3" />
-                          <span>{m.applied ? "Applied" : "Apply to Canvas"}</span>
-                        </button>
+                      {/* Canvas Protection Action Bar: Explicit Apply or Reject */}
+                      <div className="p-2 border-t border-[var(--border)] bg-[#18181b] flex items-center gap-2 justify-between flex-wrap">
+                        <div className="text-[10px] font-mono text-muted-foreground">
+                          {m.applied ? (
+                            <span className="text-emerald-400 font-medium flex items-center gap-1">
+                              <FiCheck className="size-3" />
+                              Applied to Canvas
+                            </span>
+                          ) : m.rejected ? (
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <FiX className="size-3" />
+                              Proposed changes dismissed
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/75">
+                              Canvas is protected until applied
+                            </span>
+                          )}
+                        </div>
 
-                        {onRunSimulation && (
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => {
-                              if (!m.applied) {
-                                handleApplyArchitecture(
-                                  m.id,
-                                  m.dsl!,
-                                  `${m.architectureTitle || "Architecture"} applied to canvas`
-                                );
-                              }
-                              setTimeout(() => onRunSimulation(), 250);
-                            }}
-                            className="px-2 py-1 rounded text-[11px] font-medium border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-foreground flex items-center gap-1 cursor-pointer transition"
-                            title="Run Simulation"
+                            onClick={() => handleCopyDsl(m.id, m.dsl!)}
+                            className="px-2.5 py-1 rounded text-[11px] font-mono font-medium border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-foreground flex items-center gap-1 cursor-pointer transition"
+                            title="Copy DSL Code"
                           >
-                            <FiPlay className="size-3 text-primary fill-current" />
-                            <span>Run</span>
+                            <FiCopy className="size-3" />
+                            <span>{copiedId === m.id ? "Copied" : "Copy"}</span>
                           </button>
-                        )}
+
+                          {!m.applied && !m.rejected && (
+                            <button
+                              type="button"
+                              onClick={() => handleRejectArchitecture(m.id)}
+                              className="px-2.5 py-1 rounded text-[11px] font-medium border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer transition"
+                              title="Dismiss proposed changes without touching canvas"
+                            >
+                              <FiX className="size-3" />
+                              <span>Reject</span>
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleApplyArchitecture(
+                                m.id,
+                                m.dsl!,
+                                m.text || "AI Architecture applied to canvas"
+                              )
+                            }
+                            className={`px-3 py-1 rounded text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer transition shadow-2xs ${
+                              m.applied
+                                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-medium"
+                                : "bg-primary text-primary-foreground hover:bg-primary/90"
+                            }`}
+                          >
+                            <FiCheck className="size-3.5" />
+                            <span>{m.applied ? "Applied" : "Apply Changes"}</span>
+                          </button>
+
+                          {onRunSimulation && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!m.applied) {
+                                  handleApplyArchitecture(
+                                    m.id,
+                                    m.dsl!,
+                                    m.text || "AI Architecture applied to canvas"
+                                  );
+                                }
+                                setTimeout(() => onRunSimulation(), 250);
+                              }}
+                              className="px-2.5 py-1 rounded text-[11px] font-medium border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-foreground flex items-center gap-1.5 cursor-pointer transition"
+                              title="Run Simulation on Canvas"
+                            >
+                              <FiPlay className="size-3 text-primary fill-current" />
+                              <span>Run</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -903,17 +862,21 @@ connect api_server -> postgres_db
           </div>
         ))}
 
-        {/* Subtle Developer Loading State */}
+        {/* AI Generating Indicator */}
         {isGenerating && (
           <div className="pt-2 border-t border-[var(--border)]/50 space-y-1.5 animate-in fade-in duration-150 select-none">
             <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-primary">
               <Sparkles className="size-3 animate-pulse text-primary" />
-              <span>Relay</span>
+              <span>Relay AI</span>
             </div>
             <div className="flex items-center gap-2 pl-2.5 text-xs text-muted-foreground font-mono">
               <div className="size-3 rounded-full border border-primary/40 border-t-primary animate-spin shrink-0" />
               <span>
-                {mode === "create" ? "Synthesizing topology…" : "Analyzing architecture…"}
+                {mode === "modify"
+                  ? "Synthesizing FlowFrame DSL architecture…"
+                  : mode === "analyze"
+                  ? "Analyzing topology for bottlenecks & failures…"
+                  : "Formulating technical architecture response…"}
               </span>
             </div>
           </div>
@@ -922,110 +885,188 @@ connect api_server -> postgres_db
         <div ref={messagesEndRef} />
       </div>
 
-      {/* ── 5. Fixed Developer Composer (Sticky Bottom) ── */}
+      {/* ── 3. Bottom Composer with Exactly Three Modes ── */}
       <div className="p-2.5 border-t border-[var(--border)] bg-[var(--surface)] shrink-0 space-y-2">
-        {/* Mode Selector Bar */}
+        {/* Exactly 3 Modes: ASK, ANALYZE, CREATE / MODIFY */}
         <div className="flex items-center justify-between gap-1.5 select-none">
-          <div className="flex items-center p-0.5 rounded-md border border-[var(--border)] bg-[var(--bg-elevated)] text-[11px]">
-            <button
-              type="button"
-              disabled={isGenerating}
-              onClick={() => setMode("create")}
-              className={`px-2.5 py-0.5 rounded text-[10.5px] font-medium transition cursor-pointer ${
-                mode === "create"
-                  ? "bg-primary/10 text-primary border border-primary/30 font-semibold shadow-2xs"
-                  : "text-muted-foreground hover:text-foreground border border-transparent"
-              }`}
-            >
-              Create
-            </button>
+          <div className="flex items-center p-0.5 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] text-[11px]">
             <button
               type="button"
               disabled={isGenerating}
               onClick={() => setMode("ask")}
-              className={`px-2.5 py-0.5 rounded text-[10.5px] font-medium transition cursor-pointer ${
+              className={`px-3 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 ${
                 mode === "ask"
                   ? "bg-primary/10 text-primary border border-primary/30 font-semibold shadow-2xs"
                   : "text-muted-foreground hover:text-foreground border border-transparent"
               }`}
+              title="Ask technical questions (Canvas will never mutate)"
             >
-              Ask & Analyze
+              <FiHelpCircle className="size-3" />
+              <span>Ask</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isGenerating}
+              onClick={() => setMode("analyze")}
+              className={`px-3 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 ${
+                mode === "analyze"
+                  ? "bg-primary/10 text-primary border border-primary/30 font-semibold shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground border border-transparent"
+              }`}
+              title="Analyze bottlenecks & topology (Canvas will never mutate)"
+            >
+              <FiSearch className="size-3" />
+              <span>Analyze</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isGenerating}
+              onClick={() => setMode("modify")}
+              className={`px-3 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 ${
+                mode === "modify"
+                  ? "bg-primary/10 text-primary border border-primary/30 font-semibold shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground border border-transparent"
+              }`}
+              title="Create or modify topologies with explicit preview"
+            >
+              <FiLayers className="size-3" />
+              <span>Create / Modify</span>
             </button>
           </div>
         </div>
 
-        {/* Input Textarea Form */}
-        <div className="relative rounded-md border border-[var(--border)] bg-[var(--bg-elevated)] focus-within:border-primary/60 focus-within:ring-1 focus-within:ring-primary/20 transition-all p-2 space-y-1.5">
-          <textarea
-            ref={textareaRef}
-            rows={2}
-            disabled={isGenerating}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                if (!isGenerating && input.trim()) {
-                  submitPrompt();
-                }
-              }
-            }}
-            placeholder={
-              isGenerating
-                ? "Analyzing architecture…"
-                : mode === "create"
-                ? selectedNode
-                  ? `Describe change to ${(selectedNode.data?.label as string) || selectedNode.id} or topology…`
-                  : "Describe topology (e.g. Add Redis cache to server)…"
-                : selectedNode
-                ? `Ask about ${(selectedNode.data?.label as string) || selectedNode.id} or routing…`
-                : "Ask about canvas topology or simulation behavior…"
-            }
-            className="w-full bg-transparent resize-none text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none leading-relaxed max-h-32"
-          />
-
-          <div className="flex items-center justify-between gap-2 pt-1 border-t border-[var(--border)]/40 text-[10px] font-mono text-muted-foreground select-none">
-            <span className="truncate">Enter to send · Shift+Enter newline</span>
-
-            <div className="flex items-center gap-1.5 shrink-0">
-              {/* Think Toggle immediately to the left of Send */}
-              <button
-                type="button"
-                onClick={() => setThinkEnabled(!thinkEnabled)}
-                className={`px-2 py-0.5 rounded border font-mono text-[10px] font-medium transition cursor-pointer flex items-center gap-1 select-none ${
-                  thinkEnabled
-                    ? "bg-primary/10 border-primary/30 text-primary font-semibold shadow-2xs ring-1 ring-primary/20"
-                    : "bg-transparent border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                }`}
-                title={thinkEnabled ? "Extended Architecture Reasoning: ON" : "Extended Architecture Reasoning: OFF"}
-              >
-                <FiCpu className={`size-3 ${thinkEnabled ? "text-primary animate-pulse" : "text-muted-foreground"}`} />
-                <span>Think</span>
-                <span
-                  className={`size-1 rounded-full ${
-                    thinkEnabled ? "bg-primary" : "bg-muted-foreground/50"
-                  }`}
-                />
-              </button>
-
-              {/* Send Button */}
-              <button
-                type="button"
-                disabled={!input.trim() || isGenerating}
-                onClick={() => submitPrompt()}
-                className="size-6 rounded bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center cursor-pointer shadow-xs disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
-                title="Send message"
-                aria-label="Send message"
-              >
-                {isGenerating ? (
-                  <div className="size-3 rounded-full border border-primary-foreground/40 border-t-primary-foreground animate-spin" />
-                ) : (
-                  <FiArrowUp className="size-3.5" />
-                )}
-              </button>
+        {/* If user is not logged in: display sign in prompt card */}
+        {!isLoggedIn ? (
+          <div className="p-4 rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/10 via-[var(--bg-elevated)] to-[var(--surface)] text-center space-y-2.5 shadow-md select-none animate-in fade-in duration-200">
+            <div className="size-9 mx-auto rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary shadow-2xs">
+              <FiLock className="size-4" />
             </div>
+            <div className="space-y-1">
+              <h4 className="text-xs sm:text-sm font-bold text-foreground">
+                Sign in to Prompt Relay AI
+              </h4>
+              <p className="text-[11px] text-muted-foreground max-w-xs mx-auto leading-relaxed">
+                Only logged in users can prompt the Relay Architecture Assistant. Sign in to access your 5 free AI requests.
+              </p>
+            </div>
+            <Link
+              href="/signin"
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xs transition-all cursor-pointer"
+            >
+              <span>Sign In to Continue</span>
+              <FiArrowRight className="size-3.5" />
+            </Link>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Limit Warning Banner if exhausted */}
+            {isLimitReached && (
+              <div className="p-2 rounded-xl border border-red-500/30 bg-red-500/10 text-[11px] text-red-400 flex items-center justify-between select-none">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <FiAlertTriangle className="size-3.5 shrink-0" />
+                  <span>Free AI limit reached (5/5). Upgrade for unlimited requests.</span>
+                </span>
+              </div>
+            )}
+
+            {/* Input Textarea Form */}
+            <div className="relative rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] focus-within:border-primary/60 focus-within:ring-1 focus-within:ring-primary/20 transition-all p-2.5 space-y-1.5 shadow-2xs">
+              <textarea
+                ref={textareaRef}
+                rows={2}
+                disabled={isGenerating || isLimitReached}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!isGenerating && input.trim() && !isLimitReached) {
+                      submitPrompt();
+                    }
+                  }
+                }}
+                placeholder={
+                  isLimitReached
+                    ? "5 free requests used. Upgrade your plan for unlimited AI."
+                    : isGenerating
+                    ? "Processing architecture request…"
+                    : mode === "modify"
+                    ? selectedNode
+                      ? `Modify ${(selectedNode.data?.label as string) || selectedNode.id} or attach components…`
+                      : "Describe topology to generate (e.g. Add Redis cache between server and postgres)…"
+                    : mode === "analyze"
+                    ? selectedNode
+                      ? `Analyze failure impact or scaling bottlenecks for ${(selectedNode.data?.label as string) || selectedNode.id}…`
+                      : "Ask Relay to analyze bottlenecks, single points of failure, or unrouted nodes…"
+                    : selectedNode
+                    ? `Ask Relay about ${(selectedNode.data?.label as string) || selectedNode.id}…`
+                    : "Ask Relay about distributed architecture concepts, protocols, or flow…"
+                }
+                className="w-full bg-transparent resize-none text-xs sm:text-[13px] text-foreground placeholder:text-muted-foreground/55 focus:outline-none leading-relaxed max-h-32 px-1 disabled:opacity-50"
+              />
+
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-[var(--border)]/40 text-[10.5px] font-mono text-muted-foreground select-none">
+                <span className="truncate text-muted-foreground/50 text-[10px]">
+                  {isLimitReached
+                    ? "AI requests paused"
+                    : "Enter to send · Shift+Enter newline"}
+                </span>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Think Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setThinkEnabled(!thinkEnabled)}
+                    className={`px-2 py-0.5 rounded-lg border font-mono text-[10px] font-medium transition cursor-pointer flex items-center gap-1 select-none ${
+                      thinkEnabled
+                        ? "bg-primary/10 border-primary/30 text-primary font-semibold shadow-2xs ring-1 ring-primary/20"
+                        : "bg-transparent border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                    }`}
+                    title={
+                      thinkEnabled
+                        ? "Deep Architectural Reasoning: ON"
+                        : "Deep Architectural Reasoning: OFF"
+                    }
+                  >
+                    <FiCpu
+                      className={`size-3 ${
+                        thinkEnabled ? "text-primary animate-pulse" : "text-muted-foreground"
+                      }`}
+                    />
+                    <span>Think</span>
+                    <span
+                      className={`size-1 rounded-full ${
+                        thinkEnabled ? "bg-primary" : "bg-muted-foreground/50"
+                      }`}
+                    />
+                  </button>
+
+                  {/* Send Button */}
+                  <button
+                    type="button"
+                    disabled={!input.trim() || isGenerating || isLimitReached}
+                    onClick={() => submitPrompt()}
+                    className="size-7 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center cursor-pointer shadow-xs disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0 font-bold"
+                    title="Send message"
+                    aria-label="Send message"
+                  >
+                    {isGenerating ? (
+                      <div className="size-3.5 rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground animate-spin" />
+                    ) : (
+                      <FiSend className="size-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[10px] text-muted-foreground/60 text-center select-none pt-0.5">
+              AI can make mistakes. Verify important details in canvas topology before applying.
+            </p>
+          </>
+        )}
       </div>
     </aside>
   );
