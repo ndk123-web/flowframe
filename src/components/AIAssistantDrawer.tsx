@@ -862,7 +862,7 @@ export default function AIAssistantDrawer({
           </div>
         ))}
 
-        {/* Loading Spinner Indicator */}
+        {/* AI Generating Indicator */}
         {isGenerating && (
           <div className="pt-2 border-t border-[var(--border)]/50 space-y-1.5 animate-in fade-in duration-150 select-none">
             <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-primary">

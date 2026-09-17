@@ -1,9 +1,9 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { FiZap } from "react-icons/fi";
 import { useAuthStore } from "@/store/useAuthStore";
 import WorkspacePage from "../../../../workspace/page";
+import FlowLoader from "@/components/FlowLoader";
 
 export default function DashboardDiagramEditorPage() {
   const params = useParams();
@@ -13,20 +13,11 @@ export default function DashboardDiagramEditorPage() {
 
   if (!_hasHydrated || !workspaceId || !diagramId) {
     return (
-      <div className="min-h-screen bg-[var(--background)] text-[color:var(--foreground)] flex flex-col items-center justify-center p-6 transition-colors duration-300">
-        <div className="flex flex-col items-center gap-4 p-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl">
-          <div className="relative">
-            <div className="w-14 h-14 rounded-full border-4 border-blue-500/20 border-t-blue-500 animate-spin" />
-            <div className="absolute inset-0 flex items-center justify-center text-sm">
-              <FiZap className="w-5 h-5 text-blue-500" />
-            </div>
-          </div>
-          <div className="text-center space-y-1">
-            <h2 className="text-base font-bold tracking-tight text-[color:var(--foreground)]">Opening Diagram Canvas...</h2>
-            <p className="text-xs text-[color:var(--foreground)]/50 font-mono">Initializing workspace & node configurations</p>
-          </div>
-        </div>
-      </div>
+      <FlowLoader
+        size="fullscreen"
+        label="Opening Diagram Canvas..."
+        sublabel="Initializing workspace & node configurations"
+      />
     );
   }
 
