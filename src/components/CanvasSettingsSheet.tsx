@@ -1044,33 +1044,32 @@ export default function CanvasSettingsSheet({
                     </div>
 
                     {/* Watermark Badge */}
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5">
+                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-2">
                       <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
                         <span className="flex items-center gap-1.5 text-muted-foreground">
                           <Sparkles className="size-3 text-primary" />
                           <span>Watermark Badge</span>
                         </span>
-                        <span className="text-[10px] font-mono text-muted-foreground">
+                        <span className="text-[10px] font-mono">
                           {exportWatermark === "branded" ? (
-                            <span className="text-primary font-semibold">FlowFrame Tag (Default)</span>
+                            <span className="text-primary font-medium">Branded</span>
                           ) : (
-                            <span className="text-emerald-400 font-semibold">Clean (Author)</span>
+                            <span className="text-emerald-400 font-medium">Clean</span>
                           )}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-1 p-0.5 rounded-md bg-muted/40 border border-border/50">
-                        {/* FlowFrame Tag (Default) */}
+                      <div className="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-muted/40 border border-border/50">
+                        {/* FlowFrame Tag */}
                         <button
                           type="button"
                           onClick={() => setExportWatermark?.("branded")}
-                          className={`py-1 rounded text-xs transition cursor-pointer flex items-center justify-center gap-1 ${
+                          className={`py-1.5 px-2 rounded-md text-xs transition cursor-pointer flex items-center justify-center ${
                             exportWatermark === "branded"
                               ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-semibold"
                               : "text-muted-foreground hover:text-foreground border border-transparent"
                           }`}
                         >
-                          <span>FlowFrame Tag</span>
-                          <span className="text-[9px] px-1 py-0.2 rounded bg-primary/20 text-primary font-bold">Default</span>
+                          <span className="truncate">FlowFrame Tag</span>
                         </button>
 
                         {/* Clean (Locked for non-author) */}
@@ -1078,7 +1077,7 @@ export default function CanvasSettingsSheet({
                           <button
                             type="button"
                             onClick={() => setExportWatermark?.("none")}
-                            className={`py-1 rounded text-xs transition cursor-pointer flex items-center justify-center gap-1 ${
+                            className={`py-1.5 px-2 rounded-md text-xs transition cursor-pointer flex items-center justify-center gap-1.5 ${
                               exportWatermark === "none"
                                 ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-2xs font-semibold"
                                 : "text-muted-foreground hover:text-foreground border border-transparent"
@@ -1086,7 +1085,7 @@ export default function CanvasSettingsSheet({
                             title="Author Access: Clean export unlocked"
                           >
                             <span>Clean</span>
-                            <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-bold">Author</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold leading-none">Author</span>
                           </button>
                         ) : (
                           <button
@@ -1096,18 +1095,18 @@ export default function CanvasSettingsSheet({
                                 "Clean export (No Watermark) is locked. Watermark removal requires FlowFrame Pro (Free for author navnathkadam284@gmail.com).",
                               );
                             }}
-                            className="py-1 rounded text-xs transition cursor-pointer flex items-center justify-center gap-1.5 text-muted-foreground/65 hover:text-muted-foreground bg-muted/20 border border-transparent hover:border-amber-500/30 group"
+                            className="py-1.5 px-2 rounded-md text-xs transition cursor-pointer flex items-center justify-center gap-1.5 text-muted-foreground/75 hover:text-foreground bg-muted/20 border border-transparent hover:border-amber-500/30 group"
                             title="Locked: Watermark removal requires Pro plan (Unlocked for navnathkadam284@gmail.com)"
                           >
-                            <Lock className="size-3 text-amber-400 group-hover:scale-110 transition-transform" />
+                            <Lock className="size-3 text-amber-400 group-hover:scale-110 transition-transform shrink-0" />
                             <span>Clean</span>
-                            <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-400 font-bold">PRO</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold leading-none">PRO</span>
                           </button>
                         )}
                       </div>
                       {!isAuthorUser && (
-                        <p className="text-[9.5px] text-muted-foreground/60 leading-tight flex items-center gap-1 pt-0.5">
-                          <Lock className="size-2.5 text-amber-400 shrink-0" />
+                        <p className="text-[10px] text-muted-foreground/65 leading-normal flex items-center gap-1.5 pt-0.5">
+                          <Lock className="size-3 text-amber-400 shrink-0" />
                           <span>Clean export is reserved for Pro plan (Author: navnathkadam284@gmail.com).</span>
                         </p>
                       )}

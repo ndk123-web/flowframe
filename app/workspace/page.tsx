@@ -8737,6 +8737,9 @@ connect s1 -> db1
             <AIAssistantDrawer
               isOpen={isAIAssistantOpen}
               onClose={() => setIsAIAssistantOpen(false)}
+              workspaceId={workspaceId}
+              diagramId={diagramId}
+              token={token}
               nodes={nodes}
               edges={edges}
               nodeConfigs={nodeConfigs}
