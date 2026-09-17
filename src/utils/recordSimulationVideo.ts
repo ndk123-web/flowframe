@@ -24,8 +24,13 @@ export interface RecordSimulationOptions {
   theme?: "light" | "dark";
   videoFormat?: "webm" | "mp4";
   speed?: number;
+  bgPattern?: "dots" | "lines" | "cross" | "none";
+  resolution?: "720p" | "1080p" | "1440p";
   connectionStyle?: "default" | "smooth" | "straight";
   selectedNodeId?: string | null;
+  includeSelection?: boolean;
+  watermark?: "none" | "branded";
+  showPorts?: boolean;
   onProgress?: (percent: number, status: string) => void;
   onComplete?: (blob: Blob, url: string, ext: string) => void;
   onError?: (err: Error) => void;
@@ -386,8 +391,13 @@ export async function recordSimulationVideo({
   theme = "dark",
   videoFormat = "webm",
   speed = 1,
+  bgPattern = "dots",
+  resolution = "1080p",
   connectionStyle = "default",
   selectedNodeId,
+  includeSelection = true,
+  watermark = "none",
+  showPorts = true,
   onProgress,
   onComplete,
   onError,
@@ -403,8 +413,20 @@ export async function recordSimulationVideo({
       throw new Error("Cannot record empty canvas. Add at least one node.");
     }
 
-    const width = 1920;
-    const height = 1080;
+    let width = 1920;
+    let height = 1080;
+    let bitrate = 8000000;
+
+    if (resolution === "720p") {
+      width = 1280;
+      height = 720;
+      bitrate = 4500000;
+    } else if (resolution === "1440p") {
+      width = 2560;
+      height = 1440;
+      bitrate = 16000000;
+    }
+
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
@@ -566,7 +588,7 @@ export async function recordSimulationVideo({
     }
 
     const recorder = mimeType
-      ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8000000 })
+      ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate })
       : new MediaRecorder(stream);
 
     const chunks: Blob[] = [];
@@ -699,15 +721,47 @@ export async function recordSimulationVideo({
       ctx.fillStyle = canvasBg;
       ctx.fillRect(0, 0, width, height);
 
-      // ReactFlow Background Dot Grid
-      ctx.fillStyle = dotColor;
-      const dotSpacing = Math.max(16, 20 * scale);
-      for (let gx = 0; gx < width; gx += dotSpacing) {
-        for (let gy = 0; gy < height; gy += dotSpacing) {
-          ctx.beginPath();
-          ctx.arc(gx, gy, 1.2, 0, Math.PI * 2);
-          ctx.fill();
+      // ReactFlow Background Pattern (dots / lines / cross / none)
+      const resScale = width / 1920;
+      if (bgPattern === "dots") {
+        ctx.fillStyle = dotColor;
+        const dotSpacing = Math.max(16, 20 * scale);
+        for (let gx = 0; gx < width; gx += dotSpacing) {
+          for (let gy = 0; gy < height; gy += dotSpacing) {
+            ctx.beginPath();
+            ctx.arc(gx, gy, 1.2 * resScale, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
+      } else if (bgPattern === "lines") {
+        ctx.strokeStyle = isDark ? "rgba(148, 163, 184, 0.08)" : "rgba(15, 23, 42, 0.07)";
+        ctx.lineWidth = Math.max(0.8, 1.0 * resScale);
+        const lineSpacing = Math.max(28, 36 * scale);
+        ctx.beginPath();
+        for (let gx = 0; gx < width; gx += lineSpacing) {
+          ctx.moveTo(gx, 0);
+          ctx.lineTo(gx, height);
+        }
+        for (let gy = 0; gy < height; gy += lineSpacing) {
+          ctx.moveTo(0, gy);
+          ctx.lineTo(width, gy);
+        }
+        ctx.stroke();
+      } else if (bgPattern === "cross") {
+        ctx.strokeStyle = isDark ? "rgba(148, 163, 184, 0.16)" : "rgba(15, 23, 42, 0.13)";
+        ctx.lineWidth = Math.max(0.9, 1.2 * resScale);
+        const crossSpacing = Math.max(28, 36 * scale);
+        const arm = 3.5 * resScale;
+        ctx.beginPath();
+        for (let gx = 0; gx < width; gx += crossSpacing) {
+          for (let gy = 0; gy < height; gy += crossSpacing) {
+            ctx.moveTo(gx - arm, gy);
+            ctx.lineTo(gx + arm, gy);
+            ctx.moveTo(gx, gy - arm);
+            ctx.lineTo(gx, gy + arm);
+          }
+        }
+        ctx.stroke();
       }
 
       // Draw Shape Nodes in the background
@@ -785,7 +839,7 @@ export async function recordSimulationVideo({
 
         const accent = n.colors.accent;
         const isActive = activeNodeIds.has(n.id);
-        const isSelected = Boolean(selectedNodeId && n.id === selectedNodeId);
+        const isSelected = Boolean(includeSelection && selectedNodeId && n.id === selectedNodeId);
 
         ctx.save();
 
@@ -954,7 +1008,7 @@ export async function recordSimulationVideo({
         }
 
         // Target handle (Left)
-        if (n.type !== "client") {
+        if (showPorts && n.type !== "client") {
           ctx.fillStyle = n.colors.dot;
           ctx.beginPath();
           ctx.arc(n.leftHandle.x, n.leftHandle.y, 4 * scale, 0, Math.PI * 2);
@@ -965,7 +1019,7 @@ export async function recordSimulationVideo({
         }
 
         // Source handle (Right)
-        if (n.type !== "redis" && n.type !== "postgres" && n.type !== "storage") {
+        if (showPorts && n.type !== "redis" && n.type !== "postgres" && n.type !== "storage") {
           ctx.fillStyle = n.colors.dot;
           ctx.beginPath();
           ctx.arc(n.rightHandle.x, n.rightHandle.y, 4 * scale, 0, Math.PI * 2);
@@ -977,6 +1031,39 @@ export async function recordSimulationVideo({
 
         ctx.restore();
       });
+
+      // Optional FlowFrame Watermark Badge
+      if (watermark === "branded") {
+        const badgeW = 168 * resScale;
+        const badgeH = 34 * resScale;
+        const bx = width - badgeW - 24 * resScale;
+        const by = height - badgeH - 20 * resScale;
+
+        ctx.save();
+        ctx.fillStyle = isDark ? "rgba(15, 23, 42, 0.85)" : "rgba(255, 255, 255, 0.9)";
+        ctx.strokeStyle = isDark ? "rgba(255, 255, 255, 0.12)" : "rgba(15, 23, 42, 0.12)";
+        ctx.lineWidth = 1.2;
+        roundRect(ctx, bx, by, badgeW, badgeH, 8 * resScale);
+        ctx.fill();
+        ctx.stroke();
+
+        // Cobalt blue indicator
+        ctx.fillStyle = "#3b82f6";
+        ctx.beginPath();
+        ctx.arc(bx + 16 * resScale, by + badgeH / 2, 4.5 * resScale, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = isDark ? "#ffffff" : "#0f172a";
+        ctx.font = `bold ${(12 * resScale).toFixed(1)}px Inter, sans-serif`;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText("FlowFrame", bx + 26 * resScale, by + badgeH / 2);
+
+        ctx.fillStyle = isDark ? "rgba(255, 255, 255, 0.55)" : "rgba(15, 23, 42, 0.55)";
+        ctx.font = `600 ${(10 * resScale).toFixed(1)}px Inter, sans-serif`;
+        ctx.fillText(`· ${resolution}`, bx + 98 * resScale, by + badgeH / 2);
+        ctx.restore();
+      }
     };
 
     // 3. Execution Animation Engine: 100% exact match to ReactFlow PacketEdge & duration

@@ -2500,6 +2500,20 @@ function WorkspaceInner({
     "all" | "forwardOnly"
   >(hideResponse ? "forwardOnly" : "all");
   const [exportSpeed, setExportSpeed] = useState<number>(speed || 1);
+  const [exportBgPattern, setExportBgPattern] = useState<
+    "dots" | "lines" | "cross" | "none"
+  >(bgPattern || "dots");
+  const [exportResolution, setExportResolution] = useState<
+    "720p" | "1080p" | "1440p"
+  >("1080p");
+  const [exportConnectionStyle, setExportConnectionStyle] = useState<
+    "default" | "smooth" | "straight"
+  >((connectionStyle as any) || "default");
+  const [exportIncludeSelection, setExportIncludeSelection] =
+    useState<boolean>(true);
+  const [exportWatermark, setExportWatermark] = useState<"none" | "branded">(
+    "none",
+  );
   const [isExportingVideo, setIsExportingVideo] = useState(false);
 
   // Format MM:SS helper for recording duration
@@ -2616,8 +2630,13 @@ function WorkspaceInner({
         theme: exportTheme,
         videoFormat,
         speed: exportSpeed,
-        connectionStyle: (connectionStyle as any) || "default",
+        bgPattern: exportBgPattern,
+        resolution: exportResolution,
+        connectionStyle: exportConnectionStyle,
         selectedNodeId: selectedNode?.id ?? null,
+        includeSelection: exportIncludeSelection,
+        watermark: exportWatermark,
+        showPorts: true,
         onProgress: (_percent, _status) => {
           // Progress updates
         },
@@ -2628,7 +2647,9 @@ function WorkspaceInner({
           }
           setRecordedVideoBlob(blob);
           setRecordedVideoUrl(url);
-          setSuccessToast(`1080p Simulation video saved as .${ext}!`);
+          setSuccessToast(
+            `${exportResolution} Simulation video saved as .${ext}!`,
+          );
         },
         onError: (err) => {
           setIsExportingVideo(false);
@@ -8742,6 +8763,16 @@ connect s1 -> db1
               setExportPacketFilter={setExportPacketFilter}
               exportSpeed={exportSpeed}
               setExportSpeed={setExportSpeed}
+              exportBgPattern={exportBgPattern}
+              setExportBgPattern={setExportBgPattern}
+              exportResolution={exportResolution}
+              setExportResolution={setExportResolution}
+              exportConnectionStyle={exportConnectionStyle}
+              setExportConnectionStyle={setExportConnectionStyle}
+              exportIncludeSelection={exportIncludeSelection}
+              setExportIncludeSelection={setExportIncludeSelection}
+              exportWatermark={exportWatermark}
+              setExportWatermark={setExportWatermark}
               isExportingVideo={isExportingVideo}
               onExportSimulationVideo={handleExportSimulationVideo}
             />

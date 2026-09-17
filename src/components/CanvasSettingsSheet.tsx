@@ -41,6 +41,7 @@ import {
   Square,
   Zap,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 
 interface CanvasSettingsSheetProps {
@@ -100,6 +101,16 @@ interface CanvasSettingsSheetProps {
   setExportPacketFilter?: (filter: "all" | "forwardOnly") => void;
   exportSpeed?: number;
   setExportSpeed?: (speed: number) => void;
+  exportBgPattern?: "dots" | "lines" | "cross" | "none";
+  setExportBgPattern?: (pattern: "dots" | "lines" | "cross" | "none") => void;
+  exportResolution?: "720p" | "1080p" | "1440p";
+  setExportResolution?: (res: "720p" | "1080p" | "1440p") => void;
+  exportConnectionStyle?: "default" | "smooth" | "straight";
+  setExportConnectionStyle?: (style: "default" | "smooth" | "straight") => void;
+  exportIncludeSelection?: boolean;
+  setExportIncludeSelection?: (include: boolean) => void;
+  exportWatermark?: "none" | "branded";
+  setExportWatermark?: (wm: "none" | "branded") => void;
   isExportingVideo?: boolean;
   onExportSimulationVideo?: () => void;
 }
@@ -157,6 +168,16 @@ export default function CanvasSettingsSheet({
   setExportPacketFilter,
   exportSpeed = 1,
   setExportSpeed,
+  exportBgPattern = "dots",
+  setExportBgPattern,
+  exportResolution = "1080p",
+  setExportResolution,
+  exportConnectionStyle = "default",
+  setExportConnectionStyle,
+  exportIncludeSelection = true,
+  setExportIncludeSelection,
+  exportWatermark = "none",
+  setExportWatermark,
   isExportingVideo = false,
   onExportSimulationVideo,
 }: CanvasSettingsSheetProps) {
@@ -819,7 +840,7 @@ export default function CanvasSettingsSheet({
                           Simulation Video Export
                         </span>
                         <Badge variant="outline" className="px-1.5 py-0 text-[10px] font-mono text-muted-foreground border-border font-normal">
-                          1080p 60fps
+                          {exportResolution} 60fps
                         </Badge>
                       </div>
                       <p className="text-[11px] text-muted-foreground leading-relaxed">
@@ -848,6 +869,35 @@ export default function CanvasSettingsSheet({
 
                   {/* Settings Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
+                    {/* Background Pattern */}
+                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5 sm:col-span-2">
+                      <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <Grid3X3 className="size-3" />
+                          <span>Background Pattern</span>
+                        </span>
+                        <span className="text-[10px] font-mono capitalize text-muted-foreground">
+                          {exportBgPattern}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1 p-0.5 rounded-md bg-muted/40 border border-border/50">
+                        {(["dots", "lines", "cross", "none"] as const).map((pat) => (
+                          <button
+                            key={pat}
+                            type="button"
+                            onClick={() => setExportBgPattern?.(pat)}
+                            className={`py-1 rounded text-xs capitalize transition cursor-pointer ${
+                              exportBgPattern === pat
+                                ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
+                                : "text-muted-foreground hover:text-foreground border border-transparent"
+                            }`}
+                          >
+                            {pat}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* Appearance / Theme */}
                     <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5">
                       <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
@@ -883,6 +933,142 @@ export default function CanvasSettingsSheet({
                         >
                           <Sun className="size-3" />
                           <span>Light</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Resolution Quality */}
+                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <Maximize2 className="size-3" />
+                          <span>Resolution</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          {exportResolution === "720p" ? "HD (720p)" : exportResolution === "1440p" ? "2K (1440p)" : "FHD (1080p)"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1 p-0.5 rounded-md bg-muted/40 border border-border/50">
+                        {(["720p", "1080p", "1440p"] as const).map((res) => (
+                          <button
+                            key={res}
+                            type="button"
+                            onClick={() => setExportResolution?.(res)}
+                            className={`py-1 rounded text-xs font-mono transition cursor-pointer ${
+                              exportResolution === res
+                                ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-semibold"
+                                : "text-muted-foreground hover:text-foreground border border-transparent"
+                            }`}
+                          >
+                            {res}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Connection Style */}
+                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <Waves className="size-3" />
+                          <span>Connection Style</span>
+                        </span>
+                        <span className="text-[10px] font-mono capitalize text-muted-foreground">
+                          {exportConnectionStyle === "default" ? "Stepped" : exportConnectionStyle}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1 p-0.5 rounded-md bg-muted/40 border border-border/50">
+                        {[
+                          { id: "default", label: "Stepped" },
+                          { id: "smooth", label: "Smooth" },
+                          { id: "straight", label: "Straight" },
+                        ].map((style) => (
+                          <button
+                            key={style.id}
+                            type="button"
+                            onClick={() => setExportConnectionStyle?.(style.id as any)}
+                            className={`py-1 rounded text-xs transition cursor-pointer ${
+                              exportConnectionStyle === style.id
+                                ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
+                                : "text-muted-foreground hover:text-foreground border border-transparent"
+                            }`}
+                          >
+                            {style.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Selection State Highlight */}
+                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <Layers className="size-3" />
+                          <span>Selected Node</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          {exportIncludeSelection ? "Highlight" : "Clean"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1 p-0.5 rounded-md bg-muted/40 border border-border/50">
+                        <button
+                          type="button"
+                          onClick={() => setExportIncludeSelection?.(true)}
+                          className={`py-1 rounded text-xs transition cursor-pointer ${
+                            exportIncludeSelection
+                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
+                              : "text-muted-foreground hover:text-foreground border border-transparent"
+                          }`}
+                        >
+                          Highlight
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExportIncludeSelection?.(false)}
+                          className={`py-1 rounded text-xs transition cursor-pointer ${
+                            !exportIncludeSelection
+                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
+                              : "text-muted-foreground hover:text-foreground border border-transparent"
+                          }`}
+                        >
+                          Clean (No Aura)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Watermark Badge */}
+                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <Sparkles className="size-3 text-primary" />
+                          <span>Watermark</span>
+                        </span>
+                        <span className="text-[10px] font-mono capitalize text-muted-foreground">
+                          {exportWatermark === "branded" ? "FlowFrame Tag" : "Clean"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1 p-0.5 rounded-md bg-muted/40 border border-border/50">
+                        <button
+                          type="button"
+                          onClick={() => setExportWatermark?.("none")}
+                          className={`py-1 rounded text-xs transition cursor-pointer ${
+                            exportWatermark === "none"
+                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
+                              : "text-muted-foreground hover:text-foreground border border-transparent"
+                          }`}
+                        >
+                          Clean
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExportWatermark?.("branded")}
+                          className={`py-1 rounded text-xs transition cursor-pointer ${
+                            exportWatermark === "branded"
+                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
+                              : "text-muted-foreground hover:text-foreground border border-transparent"
+                          }`}
+                        >
+                          FlowFrame Tag
                         </button>
                       </div>
                     </div>
@@ -925,7 +1111,7 @@ export default function CanvasSettingsSheet({
                     </div>
 
                     {/* Packet Flows */}
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5">
+                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5 sm:col-span-2 sm:grid-cols-1">
                       <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
                         <span className="flex items-center gap-1.5 text-muted-foreground">
                           <Activity className="size-3" />
@@ -962,7 +1148,7 @@ export default function CanvasSettingsSheet({
                     </div>
 
                     {/* Simulation Speed */}
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5">
+                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5 sm:col-span-2">
                       <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
                         <span className="flex items-center gap-1.5 text-muted-foreground">
                           <FastForward className="size-3" />
