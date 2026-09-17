@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { FiDownload, FiX, FiShare } from "react-icons/fi";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -13,10 +14,11 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
 }
 
+const PWA_SHOWN_KEY = "flowframe_pwa_first_time_shown";
 const DISMISS_KEY = "flowframe_pwa_dismissed_at";
-const DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export default function PWAInstallPrompt() {
+  const pathname = usePathname();
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
@@ -24,7 +26,20 @@ export default function PWAInstallPrompt() {
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    // 1. Check if already running in standalone PWA window
+    // 1. STRICT ROUTE CHECK: Only show on the home page ('/'). Never show in workspace, dashboard, docs, etc.
+    if (pathname !== "/") {
+      setShowPrompt(false);
+      return;
+    }
+
+    // 2. CHECK IF ALREADY SHOWN OR DISMISSED: Only 1 time ever per user/device
+    const alreadyShown = localStorage.getItem(PWA_SHOWN_KEY);
+    const dismissedAt = localStorage.getItem(DISMISS_KEY);
+    if (alreadyShown || dismissedAt) {
+      return; // Never show again
+    }
+
+    // 3. Check if already running in standalone PWA window
     const isStandaloneMode =
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as unknown as { standalone?: boolean }).standalone === true;
@@ -34,31 +49,12 @@ export default function PWAInstallPrompt() {
       return;
     }
 
-    // 2. Register Service Worker
-    if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
-      navigator.serviceWorker
-        .register("/sw.js")
-        .then((reg) => {
-          console.log("[PWA] Service Worker registered:", reg.scope);
-        })
-        .catch((err) => {
-          console.warn("[PWA] Service Worker registration failed:", err);
-        });
-    } else if ("serviceWorker" in navigator) {
-      // In dev mode register as well so install prompt fires locally
+    // 4. Register Service Worker
+    if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
 
-    // 3. Check dismissal cooldown
-    const dismissedAt = localStorage.getItem(DISMISS_KEY);
-    if (dismissedAt) {
-      const timeSince = Date.now() - parseInt(dismissedAt, 10);
-      if (timeSince < DISMISS_COOLDOWN_MS) {
-        return; // Still in cooldown
-      }
-    }
-
-    // 4. Detect iOS Safari
+    // 5. Detect iOS Safari
     const ua = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(ua);
     const isSafari =
@@ -67,23 +63,25 @@ export default function PWAInstallPrompt() {
 
     if (isIosDevice && isSafari) {
       setIsIOS(true);
-      // Show iOS helper with delay
       const timer = setTimeout(() => {
+        // Mark as shown so it never repeats
+        localStorage.setItem(PWA_SHOWN_KEY, "true");
         setShowPrompt(true);
-      }, 3500);
+      }, 4000);
       return () => clearTimeout(timer);
     }
 
-    // 5. Chromium beforeinstallprompt handler
+    // 6. Chromium beforeinstallprompt handler
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       const pwaEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(pwaEvent);
 
-      // Brief delay before showing to ensure page settles
+      // Show only once after home page settles
       setTimeout(() => {
+        localStorage.setItem(PWA_SHOWN_KEY, "true");
         setShowPrompt(true);
-      }, 2500);
+      }, 3500);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -92,6 +90,7 @@ export default function PWAInstallPrompt() {
     const handleAppInstalled = () => {
       setShowPrompt(false);
       setDeferredPrompt(null);
+      localStorage.setItem(PWA_SHOWN_KEY, "true");
       localStorage.setItem(DISMISS_KEY, Date.now().toString());
     };
 
@@ -101,9 +100,10 @@ export default function PWAInstallPrompt() {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
-  }, []);
+  }, [pathname]);
 
   const handleInstallClick = async () => {
+    localStorage.setItem(PWA_SHOWN_KEY, "true");
     if (!deferredPrompt) return;
 
     try {
@@ -124,10 +124,11 @@ export default function PWAInstallPrompt() {
 
   const handleDismiss = () => {
     setShowPrompt(false);
+    localStorage.setItem(PWA_SHOWN_KEY, "true");
     localStorage.setItem(DISMISS_KEY, Date.now().toString());
   };
 
-  if (!showPrompt || isStandalone) {
+  if (pathname !== "/" || !showPrompt || isStandalone) {
     return null;
   }
 

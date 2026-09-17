@@ -81,6 +81,7 @@ import {
 } from "@/templates/starterTemplates";
 import UseTemplateDialog from "@/components/UseTemplateDialog";
 import TemplateBrowserDialog from "@/components/TemplateBrowserDialog";
+import DashboardAIDialog from "@/components/DashboardAIDialog";
 
 type ViewMode = "grid" | "list";
 type FilterTab = "all" | "development" | "production" | "starred";
@@ -129,6 +130,8 @@ export default function DashboardPage() {
   const [composerPrompt, setComposerPrompt] = useState("");
   const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [isThinkEnabled, setIsThinkEnabled] = useState(true);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiPromptForDialog, setAiPromptForDialog] = useState("");
 
   // Subtle rotating prompts for main dashboard heading
   const ROTATING_PROMPTS = useMemo(
@@ -348,12 +351,24 @@ export default function DashboardPage() {
     );
   };
 
-  // Submit Prompt to Workspace AI Copilot
+  // Submit Prompt to Workspace AI Copilot (Opens Target Selection Dialog)
   const handlePromptSubmit = (customPrompt?: string) => {
     const finalPrompt = (customPrompt || composerPrompt).trim();
-    const query = finalPrompt ? `&prompt=${encodeURIComponent(finalPrompt)}` : "";
-    const thinkParam = isThinkEnabled ? "&think=true" : "";
-    router.push(`/workspace?ai=true${thinkParam}${query}`);
+    if (!finalPrompt) return;
+    setAiPromptForDialog(finalPrompt);
+    setAiModalOpen(true);
+  };
+
+  const handleConfirmLaunchAI = (
+    workspaceId: string,
+    diagramId: string,
+    prompt: string,
+    think: boolean
+  ) => {
+    setComposerPrompt("");
+    const query = prompt ? `&prompt=${encodeURIComponent(prompt)}` : "";
+    const thinkParam = think ? "&think=true" : "";
+    router.push(`/dashboard/workspace/${workspaceId}/${diagramId}?ai=true${thinkParam}${query}`);
   };
 
   const handleCreateWorkspace = async (e: React.FormEvent) => {
@@ -2071,6 +2086,19 @@ export default function DashboardPage() {
           setBrowseTemplatesOpen(false);
           handleOpenUseTemplate(tmpl);
         }}
+      />
+
+      {/* ── Relay AI Target Workspace & Diagram Dialog ───────────────────── */}
+      <DashboardAIDialog
+        isOpen={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        prompt={aiPromptForDialog}
+        thinkEnabled={isThinkEnabled}
+        workspaces={workspaces}
+        token={token}
+        defaultWorkspaceId={selectedWsId}
+        onCreateWorkspace={handleCreateWorkspaceForTemplate}
+        onConfirmLaunch={handleConfirmLaunchAI}
       />
     </div>
   );
