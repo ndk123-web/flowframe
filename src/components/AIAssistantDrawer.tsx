@@ -89,7 +89,7 @@ export default function AIAssistantDrawer({
   token: propToken,
 }: AIAssistantDrawerProps) {
   // 3 Modes Only: "ask" | "analyze" | "modify" (Create / Modify)
-  const [mode, setMode] = useState<AIMode>("modify");
+  const [mode, setMode] = useState<AIMode>("ask");
   const [input, setInput] = useState("");
   const [thinkEnabled, setThinkEnabled] = useState(initialThink ?? true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -316,11 +316,42 @@ export default function AIAssistantDrawer({
         setUsage(res.usage);
       }
 
+      let effectiveMessage = res.message || res.explanation || "Response generated.";
+      let effectiveFlow = res.flow && res.flow.trim().length > 0 ? res.flow : undefined;
+      let effectiveThought = res.thought_process || undefined;
+      let effectiveMode = (res.mode as AIMode) || currentMode;
+
+      // Smart Safety Unpack: if flow wasn't extracted by server but message contains raw JSON
+      if (!effectiveFlow && typeof effectiveMessage === "string" && effectiveMessage.includes('"flow"')) {
+        try {
+          const firstB = effectiveMessage.indexOf("{");
+          const lastB = effectiveMessage.lastIndexOf("}");
+          if (firstB !== -1 && lastB > firstB) {
+            const parsed = JSON.parse(effectiveMessage.slice(firstB, lastB + 1));
+            if (parsed.flow && typeof parsed.flow === "string" && parsed.flow.trim().length > 0) {
+              effectiveFlow = parsed.flow;
+            }
+            if (parsed.message && typeof parsed.message === "string") {
+              effectiveMessage = parsed.message;
+            }
+            if (parsed.thought_process && typeof parsed.thought_process === "string") {
+              effectiveThought = parsed.thought_process;
+            }
+            if (parsed.mode) {
+              effectiveMode = parsed.mode as AIMode;
+            }
+          }
+        } catch (_) {}
+      }
+
       // DSL validation via compileDSL (FlowFrame DSL Interpreter)
       let compileError: string | null = null;
-      if (res.flow && res.flow.trim().length > 0) {
+      if (effectiveFlow && effectiveFlow.trim().length > 0) {
+        // Auto-sanitize hyphens in node identifiers (e.g. client-1 -> client_1) while preserving -> connection arrows
+        effectiveFlow = effectiveFlow.replace(/\b([a-zA-Z0-9_]+)-(?!>)([a-zA-Z0-9_]+)\b/g, "$1_$2");
+
         try {
-          const compiled = compileDSL(res.flow);
+          const compiled = compileDSL(effectiveFlow);
           if (!compiled.nodes || compiled.nodes.length === 0) {
             compileError = "No valid nodes parsed in generated DSL.";
           }
@@ -333,11 +364,11 @@ export default function AIAssistantDrawer({
       const assistantMsg: ChatMessage = {
         id: `ast-${Date.now()}`,
         sender: "assistant",
-        text: res.message || res.explanation || "Response generated.",
-        mode: res.mode as AIMode,
-        dsl: res.flow && res.flow.trim().length > 0 ? res.flow : undefined,
+        text: effectiveMessage,
+        mode: effectiveMode,
+        dsl: effectiveFlow,
         compileError,
-        thoughtProcess: res.thought_process || undefined,
+        thoughtProcess: effectiveThought,
         thoughtTime: thinkEnabled ? "Gemini Flash" : undefined,
       };
 
@@ -869,8 +900,10 @@ export default function AIAssistantDrawer({
               <Sparkles className="size-3 animate-pulse text-primary" />
               <span>Relay AI</span>
             </div>
-            <div className="flex items-center gap-2 pl-2.5 text-xs text-muted-foreground font-mono">
-              <div className="size-3 rounded-full border border-primary/40 border-t-primary animate-spin shrink-0" />
+            <div className="flex items-center gap-2.5 pl-2.5 text-xs text-muted-foreground font-mono">
+              <div className="flex items-center justify-center size-3.5 shrink-0">
+                <span className="size-2 rounded-full bg-primary animate-chatgpt-pulse shrink-0" />
+              </div>
               <span>
                 {mode === "modify"
                   ? "Synthesizing FlowFrame DSL architecture…"
