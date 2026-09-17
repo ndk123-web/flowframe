@@ -23,6 +23,7 @@ import {
   FiSearch,
   FiCheckCircle,
   FiLock,
+  FiChevronLeft,
 } from "react-icons/fi";
 import { Sparkles } from "lucide-react";
 import FlowFrameCodeEditor from "./FlowFrameCodeEditor";
@@ -805,7 +806,7 @@ export default function AIAssistantDrawer({
 
   return (
     <aside
-      className={`fixed inset-y-0 right-0 z-40 w-full transition-all duration-200 ${
+      className={`fixed inset-y-0 right-0 z-50 w-full transition-all duration-200 ${
         isExpanded
           ? "sm:w-[560px] md:w-[620px] lg:w-[680px]"
           : "sm:w-[390px] md:w-[380px] lg:w-[410px]"
@@ -813,9 +814,33 @@ export default function AIAssistantDrawer({
       data-testid="relay-assistant-panel"
       aria-label="Relay Architecture Assistant"
     >
+      {/* ── Mobile Top Quick Navigation Bar (Explicit Back to Canvas for mobile screens) ── */}
+      <div className="md:hidden flex items-center justify-between px-3.5 py-2.5 bg-[var(--bg-elevated)] border-b border-[var(--border)] shrink-0 select-none shadow-xs">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 text-xs font-semibold transition cursor-pointer active:scale-95 shadow-2xs"
+          aria-label="Back to Canvas"
+        >
+          <FiChevronLeft className="size-4" />
+          <span>Back to Canvas</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--bg)] border border-[var(--border)] transition cursor-pointer active:scale-95 text-xs font-medium"
+          title="Close Assistant"
+          aria-label="Close Assistant"
+        >
+          <FiX className="size-4 text-rose-400" />
+          <span>Close</span>
+        </button>
+      </div>
+
       {/* ── 1. Top Header with Active Relay Indicator & Credit Pill ── */}
       <div className="h-14 px-3.5 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]">
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
           <div className="relative size-8 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-2xs">
             <Sparkles className="size-4" />
             <span
@@ -824,7 +849,7 @@ export default function AIAssistantDrawer({
             />
           </div>
 
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-bold text-foreground tracking-tight truncate">
                 Relay AI
@@ -835,14 +860,14 @@ export default function AIAssistantDrawer({
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-muted-foreground truncate leading-tight">
+            <p className="text-[11px] text-muted-foreground truncate leading-tight hidden xs:block sm:block">
               Architecture Copilot · 3 Modes
             </p>
           </div>
         </div>
 
         {/* Top Right Controls & Usage Credit Badge */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {isSandbox ? (
             <div
               className="flex items-center gap-1.5 px-2.5 py-0.5 text-amber-400 text-[10.5px] font-mono font-medium select-none"
@@ -890,10 +915,11 @@ export default function AIAssistantDrawer({
               <FiTrash2 className="size-3.5" />
             </button>
           )}
+
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer"
+            className="hidden md:flex p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer"
             title={isExpanded ? "Collapse width" : "Expand width"}
             aria-label={isExpanded ? "Collapse width" : "Expand width"}
           >
@@ -903,14 +929,16 @@ export default function AIAssistantDrawer({
               <FiMaximize2 className="size-3.5" />
             )}
           </button>
+
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer"
+            className="flex items-center gap-1 p-1.5 sm:px-2 sm:py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer border border-transparent hover:border-[var(--border)]"
             title="Close Assistant (Esc)"
             aria-label="Close Assistant"
           >
-            <FiX className="size-4" />
+            <FiX className="size-4 text-foreground" />
+            <span className="text-xs font-semibold sm:hidden">Close</span>
           </button>
         </div>
       </div>
@@ -965,6 +993,14 @@ export default function AIAssistantDrawer({
                   <span>Sign In</span>
                 </Link>
               )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+              >
+                <FiChevronLeft className="size-3.5" />
+                <span>Back to Canvas</span>
+              </button>
             </div>
           </div>
         ) : !hasUserChat ? (
