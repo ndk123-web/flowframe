@@ -2617,6 +2617,7 @@ function WorkspaceInner({
         videoFormat,
         speed: exportSpeed,
         connectionStyle: (connectionStyle as any) || "default",
+        selectedNodeId: selectedNode?.id ?? null,
         onProgress: (_percent, _status) => {
           // Progress updates
         },
