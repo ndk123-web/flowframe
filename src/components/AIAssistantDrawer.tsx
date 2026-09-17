@@ -424,10 +424,272 @@ export default function AIAssistantDrawer({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // Helper to parse inline markdown: **bold**, `code`, *italic*, [link](url)
+  const parseInlineMarkdown = (text: string): React.ReactNode => {
+    const parts: React.ReactNode[] = [];
+    const pattern = /(\*\*(.*?)\*\*|`(.*?)`|\*(.*?)\*|\[([^\]]+)\]\(([^)]+)\))/g;
+    let match: RegExpExecArray | null;
+    let lastIndex = 0;
+    let key = 0;
+
+    while ((match = pattern.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(text.slice(lastIndex, match.index));
+      }
+
+      const fullMatch = match[1];
+      if (fullMatch.startsWith("**")) {
+        parts.push(
+          <strong key={`b-${key++}`} className="font-semibold text-foreground">
+            {match[2]}
+          </strong>
+        );
+      } else if (fullMatch.startsWith("`")) {
+        parts.push(
+          <code
+            key={`c-${key++}`}
+            className="px-1 py-0.5 rounded bg-muted/70 text-primary border border-border/50 font-mono text-[10.5px]"
+          >
+            {match[3]}
+          </code>
+        );
+      } else if (fullMatch.startsWith("*")) {
+        parts.push(
+          <em key={`i-${key++}`} className="italic text-foreground/90">
+            {match[4]}
+          </em>
+        );
+      } else if (fullMatch.startsWith("[")) {
+        const isExternal = match[6].startsWith("http");
+        parts.push(
+          <a
+            key={`a-${key++}`}
+            href={match[6]}
+            target={isExternal ? "_blank" : undefined}
+            rel={isExternal ? "noopener noreferrer" : undefined}
+            className="text-primary hover:underline font-medium"
+          >
+            {match[5]}
+          </a>
+        );
+      }
+
+      lastIndex = pattern.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+      parts.push(text.slice(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : text;
+  };
+
+  // Block-level Markdown Renderer (Headings, Tables, Lists, Blockquotes, Dividers)
+  const renderMarkdownBlocks = (markdown: string, blockKeyPrefix: string): React.ReactNode => {
+    const lines = markdown.split("\n");
+    const elements: React.ReactNode[] = [];
+    let i = 0;
+    let elemKey = 0;
+
+    while (i < lines.length) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      // 1. Table Detection
+      if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+        const tableLines: string[] = [];
+        while (i < lines.length && lines[i].trim().startsWith("|") && lines[i].trim().endsWith("|")) {
+          tableLines.push(lines[i].trim());
+          i++;
+        }
+
+        if (tableLines.length >= 1) {
+          const headerLine = tableLines[0];
+          const hasSeparator = tableLines.length > 1 && tableLines[1].replace(/[-|:\s]/g, "") === "";
+          const rowLines = hasSeparator ? tableLines.slice(2) : tableLines.slice(1);
+
+          const parseRow = (r: string) =>
+            r
+              .slice(1, -1)
+              .split("|")
+              .map((c) => c.trim());
+
+          const headers = parseRow(headerLine);
+
+          elements.push(
+            <div
+              key={`${blockKeyPrefix}-tbl-${elemKey++}`}
+              className="overflow-x-auto my-2 rounded-lg border border-border/70 bg-card/40 shadow-2xs"
+            >
+              <table className="w-full text-[11px] text-left border-collapse">
+                <thead className="bg-muted/50 text-foreground font-mono font-bold uppercase tracking-wider text-[10px] border-b border-border/70">
+                  <tr>
+                    {headers.map((h, hi) => (
+                      <th
+                        key={hi}
+                        className="px-2.5 py-1.5 border-r border-border/40 last:border-r-0 whitespace-nowrap"
+                      >
+                        {parseInlineMarkdown(h)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40 font-sans">
+                  {rowLines.map((rowText, ri) => {
+                    const cells = parseRow(rowText);
+                    return (
+                      <tr key={ri} className="hover:bg-muted/20 transition-colors">
+                        {cells.map((cell, ci) => (
+                          <td
+                            key={ci}
+                            className="px-2.5 py-1.5 border-r border-border/30 last:border-r-0 text-foreground/85 leading-snug"
+                          >
+                            {parseInlineMarkdown(cell)}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+          continue;
+        }
+      }
+
+      // 2. Headings
+      if (trimmed.startsWith("### ")) {
+        elements.push(
+          <h3
+            key={`${blockKeyPrefix}-h3-${elemKey++}`}
+            className="text-[11.5px] font-bold text-primary mt-2.5 mb-1 flex items-center gap-1.5 font-mono"
+          >
+            {parseInlineMarkdown(trimmed.slice(4))}
+          </h3>
+        );
+        i++;
+        continue;
+      }
+      if (trimmed.startsWith("## ")) {
+        elements.push(
+          <h2
+            key={`${blockKeyPrefix}-h2-${elemKey++}`}
+            className="text-xs font-bold text-foreground mt-3 mb-1 pb-1 border-b border-border/40 uppercase tracking-wide font-mono"
+          >
+            {parseInlineMarkdown(trimmed.slice(3))}
+          </h2>
+        );
+        i++;
+        continue;
+      }
+      if (trimmed.startsWith("# ")) {
+        elements.push(
+          <h1
+            key={`${blockKeyPrefix}-h1-${elemKey++}`}
+            className="text-sm font-bold text-foreground mt-3 mb-1.5 pb-1 border-b border-border/50 font-sans"
+          >
+            {parseInlineMarkdown(trimmed.slice(2))}
+          </h1>
+        );
+        i++;
+        continue;
+      }
+      if (trimmed.startsWith("#### ")) {
+        elements.push(
+          <h4
+            key={`${blockKeyPrefix}-h4-${elemKey++}`}
+            className="text-[11px] font-semibold text-foreground/90 mt-2 mb-0.5 font-sans"
+          >
+            {parseInlineMarkdown(trimmed.slice(5))}
+          </h4>
+        );
+        i++;
+        continue;
+      }
+
+      // 3. Blockquotes
+      if (trimmed.startsWith("> ")) {
+        elements.push(
+          <blockquote
+            key={`${blockKeyPrefix}-bq-${elemKey++}`}
+            className="border-l-2 border-primary/70 bg-primary/5 pl-2.5 py-1 my-1.5 rounded-r text-[11.5px] text-muted-foreground italic leading-relaxed"
+          >
+            {parseInlineMarkdown(trimmed.slice(2))}
+          </blockquote>
+        );
+        i++;
+        continue;
+      }
+
+      // 4. Horizontal Dividers
+      if (trimmed === "---" || trimmed === "***" || trimmed === "___") {
+        elements.push(
+          <hr key={`${blockKeyPrefix}-hr-${elemKey++}`} className="my-2.5 border-border/60" />
+        );
+        i++;
+        continue;
+      }
+
+      // 5. Unordered Lists (- or *)
+      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+        elements.push(
+          <li
+            key={`${blockKeyPrefix}-li-${elemKey++}`}
+            className="ml-4 list-disc text-xs text-foreground/85 leading-relaxed my-0.5"
+          >
+            {parseInlineMarkdown(trimmed.slice(2))}
+          </li>
+        );
+        i++;
+        continue;
+      }
+
+      // 6. Numbered Lists (1. 2. etc)
+      const numMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
+      if (numMatch) {
+        elements.push(
+          <li
+            key={`${blockKeyPrefix}-oli-${elemKey++}`}
+            className="ml-4 list-decimal text-xs text-foreground/85 leading-relaxed my-0.5"
+          >
+            {parseInlineMarkdown(numMatch[2])}
+          </li>
+        );
+        i++;
+        continue;
+      }
+
+      // 7. Empty line
+      if (trimmed === "") {
+        elements.push(<div key={`${blockKeyPrefix}-gap-${elemKey++}`} className="h-1" />);
+        i++;
+        continue;
+      }
+
+      // 8. Normal Paragraph
+      elements.push(
+        <p
+          key={`${blockKeyPrefix}-p-${elemKey++}`}
+          className="text-xs text-foreground/90 leading-relaxed font-sans my-1"
+        >
+          {parseInlineMarkdown(line)}
+        </p>
+      );
+      i++;
+    }
+
+    return elements;
+  };
+
   // Helper to render markdown text and embed FlowFrameCodeEditor for any code blocks
   const renderMessageBody = (text: string, msgId: string) => {
     if (!text.includes("```")) {
-      return <div className="whitespace-pre-wrap font-sans">{text}</div>;
+      return (
+        <div className="space-y-0.5 text-xs text-foreground">
+          {renderMarkdownBlocks(text, msgId)}
+        </div>
+      );
     }
 
     const segments: React.ReactNode[] = [];
@@ -439,8 +701,8 @@ export default function AIAssistantDrawer({
       const precedingText = text.slice(lastPos, match.index);
       if (precedingText.trim()) {
         segments.push(
-          <div key={`txt-${lastPos}`} className="whitespace-pre-wrap font-sans">
-            {precedingText}
+          <div key={`txt-${lastPos}`} className="space-y-0.5">
+            {renderMarkdownBlocks(precedingText, `${msgId}-pre-${lastPos}`)}
           </div>
         );
       }
@@ -518,13 +780,13 @@ export default function AIAssistantDrawer({
     const trailingText = text.slice(lastPos);
     if (trailingText.trim()) {
       segments.push(
-        <div key={`txt-${lastPos}`} className="whitespace-pre-wrap font-sans">
-          {trailingText}
+        <div key={`txt-${lastPos}`} className="space-y-0.5">
+          {renderMarkdownBlocks(trailingText, `${msgId}-post-${lastPos}`)}
         </div>
       );
     }
 
-    return <div className="space-y-2">{segments}</div>;
+    return <div className="space-y-1">{segments}</div>;
   };
 
   return (
