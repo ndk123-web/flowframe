@@ -869,8 +869,10 @@ export default function AIAssistantDrawer({
               <Sparkles className="size-3 animate-pulse text-primary" />
               <span>Relay AI</span>
             </div>
-            <div className="flex items-center gap-2 pl-2.5 text-xs text-muted-foreground font-mono">
-              <div className="size-3 rounded-full border border-primary/40 border-t-primary animate-spin shrink-0" />
+            <div className="flex items-center gap-2.5 pl-2.5 text-xs text-muted-foreground font-mono">
+              <div className="flex items-center justify-center size-3.5 shrink-0">
+                <span className="size-2 rounded-full bg-primary animate-chatgpt-pulse shrink-0" />
+              </div>
               <span>
                 {mode === "modify"
                   ? "Synthesizing FlowFrame DSL architecture…"
