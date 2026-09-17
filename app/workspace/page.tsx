@@ -43,9 +43,11 @@ import {
   FiZap,
   FiGrid,
   FiCode,
+  FiCheck,
   FiCheckCircle,
   FiAlertTriangle,
   FiAlertCircle,
+  FiX,
   FiClock,
   FiChevronRight,
   FiChevronLeft,
@@ -1425,7 +1427,15 @@ function PacketEdge(props: EdgeProps) {
     connectionStyle === "straight"
       ? getStraightPath({ sourceX, sourceY, targetX, targetY })
       : connectionStyle === "smooth"
-        ? getSmoothStepPath({
+        ? getBezierPath({
+            sourceX,
+            sourceY,
+            sourcePosition,
+            targetX,
+            targetY,
+            targetPosition,
+          })
+        : getSmoothStepPath({
             sourceX,
             sourceY,
             targetX,
@@ -1434,14 +1444,6 @@ function PacketEdge(props: EdgeProps) {
             targetPosition,
             borderRadius: 12,
             offset: 20,
-          })
-        : getBezierPath({
-            sourceX,
-            sourceY,
-            sourcePosition,
-            targetX,
-            targetY,
-            targetPosition,
           });
 
   const isActive = Boolean(data?.active);
@@ -5471,6 +5473,7 @@ connect s1 -> db1
                 onNextFrame={goToNextFrame}
                 onReset={resetPlayback}
                 frameIndex={frameIndex}
+                completedFrames={accumulatedFrames.length}
                 totalFrames={simulationFrames.length}
                 speed={speed}
                 onSpeedChange={setSpeed}
@@ -5887,17 +5890,22 @@ connect s1 -> db1
 
               {/* Floating Warning Message */}
               {validationWarning && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4 animate-fade-in">
-                  <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 backdrop-blur-xl px-4 py-3 text-xs text-amber-300 flex items-center justify-between shadow-lg">
-                    <span className="flex items-center gap-1.5">
-                      <FiAlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                      {validationWarning}
-                    </span>
+                <div className="absolute top-5 left-1/2 -translate-x-1/2 z-40 max-w-md w-auto px-4 pointer-events-none animate-in fade-in slide-in-from-top-3 duration-200">
+                  <div className="pointer-events-auto rounded-2xl border border-amber-500/30 bg-[var(--surface)]/95 shadow-2xl backdrop-blur-xl px-4 py-2.5 text-xs text-foreground flex items-center justify-between gap-3 select-none">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="size-6 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                        <FiAlertTriangle className="size-3.5" />
+                      </div>
+                      <p className="font-medium text-foreground text-xs leading-snug">
+                        {validationWarning}
+                      </p>
+                    </div>
                     <button
                       onClick={() => setValidationWarning(null)}
-                      className="text-amber-400 font-bold ml-2 text-base hover:text-amber-300 cursor-pointer"
+                      className="size-5 rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground flex items-center justify-center transition cursor-pointer shrink-0 ml-1"
+                      aria-label="Dismiss warning"
                     >
-                      ×
+                      <FiX className="size-3.5" />
                     </button>
                   </div>
                 </div>
@@ -5905,29 +5913,22 @@ connect s1 -> db1
 
               {/* Floating Success Message */}
               {successToast && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4 animate-fade-in">
-                  <div className="rounded-xl border border-emerald-500/50 bg-emerald-500/10 backdrop-blur-xl px-4 py-3 text-xs text-emerald-300 flex items-center justify-between shadow-lg">
-                    <span className="flex items-center gap-1.5 font-medium">
-                      <svg
-                        className="w-4 h-4 text-emerald-400 shrink-0"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      {successToast}
-                    </span>
+                <div className="absolute top-5 left-1/2 -translate-x-1/2 z-40 max-w-md w-auto px-4 pointer-events-none animate-in fade-in slide-in-from-top-3 duration-200">
+                  <div className="pointer-events-auto rounded-2xl border border-emerald-500/30 bg-[var(--surface)]/95 shadow-2xl backdrop-blur-xl px-4 py-2.5 text-xs text-foreground flex items-center justify-between gap-3 select-none">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="size-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                        <FiCheck className="size-3.5 stroke-[2.5]" />
+                      </div>
+                      <p className="font-medium text-foreground text-xs leading-snug">
+                        {successToast}
+                      </p>
+                    </div>
                     <button
                       onClick={() => setSuccessToast(null)}
-                      className="text-emerald-400 font-bold ml-2 text-base hover:text-emerald-300 cursor-pointer"
+                      className="size-5 rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground flex items-center justify-center transition cursor-pointer shrink-0 ml-1"
+                      aria-label="Dismiss success notification"
                     >
-                      ×
+                      <FiX className="size-3.5" />
                     </button>
                   </div>
                 </div>
@@ -5956,8 +5957,10 @@ connect s1 -> db1
                           </span>
                           <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--surface-muted)] text-[color:var(--foreground)]/60 border border-[var(--border)]">
                             Frame{" "}
-                            {simulationFrames.length > 0 ? frameIndex + 1 : 0} /{" "}
-                            {simulationFrames.length}
+                            {simulationFrames.length > 0
+                              ? accumulatedFrames.length
+                              : 0}{" "}
+                            / {simulationFrames.length}
                           </span>
                         </div>
 

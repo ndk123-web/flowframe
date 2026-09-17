@@ -585,7 +585,15 @@ export async function recordSimulationVideo({
               targetY: p3.y,
             })
           : connectionStyle === "smooth"
-            ? getSmoothStepPath({
+            ? getBezierPath({
+                sourceX: p0.x,
+                sourceY: p0.y,
+                sourcePosition: Position.Right,
+                targetX: p3.x,
+                targetY: p3.y,
+                targetPosition: Position.Left,
+              })
+            : getSmoothStepPath({
                 sourceX: p0.x,
                 sourceY: p0.y,
                 sourcePosition: Position.Right,
@@ -594,14 +602,6 @@ export async function recordSimulationVideo({
                 targetPosition: Position.Left,
                 borderRadius: 12 * scale,
                 offset: 20 * scale,
-              })
-            : getBezierPath({
-                sourceX: p0.x,
-                sourceY: p0.y,
-                sourcePosition: Position.Right,
-                targetX: p3.x,
-                targetY: p3.y,
-                targetPosition: Position.Left,
               });
 
       const [reverseSvgPath] =
@@ -613,7 +613,15 @@ export async function recordSimulationVideo({
               targetY: p0.y,
             })
           : connectionStyle === "smooth"
-            ? getSmoothStepPath({
+            ? getBezierPath({
+                sourceX: p3.x,
+                sourceY: p3.y,
+                sourcePosition: Position.Left,
+                targetX: p0.x,
+                targetY: p0.y,
+                targetPosition: Position.Right,
+              })
+            : getSmoothStepPath({
                 sourceX: p3.x,
                 sourceY: p3.y,
                 sourcePosition: Position.Left,
@@ -622,14 +630,6 @@ export async function recordSimulationVideo({
                 targetPosition: Position.Right,
                 borderRadius: 12 * scale,
                 offset: 20 * scale,
-              })
-            : getBezierPath({
-                sourceX: p3.x,
-                sourceY: p3.y,
-                sourcePosition: Position.Left,
-                targetX: p0.x,
-                targetY: p0.y,
-                targetPosition: Position.Right,
               });
 
       const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");

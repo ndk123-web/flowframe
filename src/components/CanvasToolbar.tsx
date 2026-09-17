@@ -41,6 +41,7 @@ interface CanvasToolbarProps {
   onNextFrame: () => void;
   onReset: () => void;
   frameIndex: number;
+  completedFrames?: number;
   totalFrames: number;
   // Speed
   speed: number;
@@ -73,6 +74,7 @@ export default function CanvasToolbar({
   onNextFrame,
   onReset,
   frameIndex,
+  completedFrames,
   totalFrames,
   speed,
   onSpeedChange,
@@ -237,7 +239,11 @@ export default function CanvasToolbar({
         <div className="hidden sm:flex items-center px-1.5 text-[11px] font-mono text-[color:var(--foreground)]/75 select-none whitespace-nowrap">
           {totalFrames > 0 ? (
             <span>
-              Frame <strong className="text-[color:var(--accent)]">{frameIndex + 1}</strong>/{totalFrames}
+              Frame{" "}
+              <strong className="text-[color:var(--accent)]">
+                {completedFrames !== undefined ? completedFrames : frameIndex + 1}
+              </strong>
+              /{totalFrames}
             </span>
           ) : (
             <span className="text-[color:var(--muted)]">Idle</span>

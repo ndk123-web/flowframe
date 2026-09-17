@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import type { Node, Edge } from "@xyflow/react";
 import {
   FiCpu,
@@ -11,6 +11,10 @@ import {
   FiTrash2,
   FiCopy,
   FiArrowUp,
+  FiArrowRight,
+  FiMaximize2,
+  FiMinimize2,
+  FiSend,
   FiCode,
 } from "react-icons/fi";
 import { Sparkles } from "lucide-react";
@@ -61,13 +65,7 @@ export default function AIAssistantDrawer({
   const [thinkEnabled, setThinkEnabled] = useState(initialThink ?? true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome-1",
-      sender: "assistant",
-      text: "Relay architecture assistant ready. Ask about active canvas topology, request routing, component bottlenecks, or generate distributed system architecture definitions.",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -101,19 +99,65 @@ export default function AIAssistantDrawer({
     }
   }, [isOpen]);
 
-  const hasUserChat = messages.some((message) => message.sender === "user");
+  const [isExpanded, setIsExpanded] = useState(false);
+  const hasUserChat = messages.length > 0;
+
+  const starterQuestions = useMemo(() => {
+    if (selectedNode) {
+      const label = (selectedNode.data?.label as string) || selectedNode.id;
+      return [
+        {
+          label: `How do I optimize or scale ${label}?`,
+          prompt: `How can we optimize and scale ${label} in this architecture?`,
+          mode: "ask" as const,
+        },
+        {
+          label: `Explain role and failure dynamics of ${label}?`,
+          prompt: `Explain role and failure dynamics of ${label}`,
+          mode: "ask" as const,
+        },
+        {
+          label: `What happens if ${label} times out or fails?`,
+          prompt: `What happens if ${label} fails or times out?`,
+          mode: "ask" as const,
+        },
+        {
+          label: `How does request and response flow through ${label}?`,
+          prompt: `Detail the request and response flow through ${label}`,
+          mode: "ask" as const,
+        },
+      ];
+    }
+
+    return [
+      {
+        label: "Explain current canvas architecture & data flow?",
+        prompt: "Explain current canvas architecture and data flow",
+        mode: "ask" as const,
+      },
+      {
+        label: "Validate topology bottlenecks & unrouted nodes?",
+        prompt: "Validate architecture bottlenecks and unrouted nodes",
+        mode: "ask" as const,
+      },
+      {
+        label: "How do I build a Cache-Aside pattern with Redis?",
+        prompt: "Build a Cache-Aside pattern with Redis and PostgreSQL",
+        mode: "create" as const,
+      },
+      {
+        label: "How do load balancing and failover work here?",
+        prompt: "Create a Round-Robin Load-Balanced Cluster",
+        mode: "create" as const,
+      },
+    ];
+  }, [selectedNode]);
 
   if (!isOpen) return null;
 
   // Clear conversation
   const handleClearChat = () => {
-    setMessages([
-      {
-        id: `welcome-${Date.now()}`,
-        sender: "assistant",
-        text: "Conversation cleared. Context is active for current canvas architecture.",
-      },
-    ]);
+    setMessages([]);
   };
 
   // Quick action chip click
@@ -632,152 +676,113 @@ connect api_server -> postgres_db
 
   return (
     <aside
-      className="fixed inset-y-0 right-0 z-40 w-full sm:w-[380px] md:static md:z-20 md:w-[360px] lg:w-[380px] md:h-full md:max-h-full bg-[var(--surface)] border-l border-[var(--border)] flex flex-col shrink-0 select-text overflow-hidden shadow-xl md:shadow-none"
+      className={`fixed inset-y-0 right-0 z-40 w-full transition-all duration-200 ${
+        isExpanded
+          ? "sm:w-[540px] md:w-[600px] lg:w-[660px]"
+          : "sm:w-[380px] md:w-[360px] lg:w-[390px]"
+      } md:static md:z-20 md:h-full md:max-h-full bg-[var(--surface)] border-l border-[var(--border)] flex flex-col shrink-0 select-text overflow-hidden shadow-xl md:shadow-none`}
       data-testid="relay-assistant-panel"
       aria-label="Relay Architecture Assistant"
     >
-      {/* ── 1. Compact Professional Header ── */}
-      <div className="h-10 px-3 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]">
-        <div className="flex items-center gap-2 min-w-0">
-          <Sparkles className="size-3.5 text-primary shrink-0" />
-          <span className="text-xs font-semibold text-foreground tracking-tight truncate">
-            Relay
-          </span>
-          <span className="text-[10px] font-mono text-muted-foreground bg-[var(--surface-muted)] px-1.5 py-0.5 rounded border border-[var(--border)] hidden sm:inline-block">
-            Architecture Assistant
-          </span>
-          <span
-            className="size-1.5 rounded-full bg-emerald-500 shrink-0"
-            title="Relay active"
-          />
-          {selectedNode && (
-            <div className="flex items-center gap-1 shrink-0 bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 text-[10px]">
-              <span className="size-1 rounded-full bg-primary shrink-0" />
-              <span className="truncate max-w-[100px]">
-                {(selectedNode.data?.label as string) || selectedNode.id}
+      {/* ── 1. Top Header Matching the User's Screenshot ── */}
+      <div className="h-14 px-3.5 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface)]">
+        <div className="flex items-center gap-2.5 min-w-0">
+          {/* Avatar with glowing active indicator */}
+          <div className="relative size-8 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-2xs">
+            <Sparkles className="size-4" />
+            <span
+              className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-blue-500 border-2 border-[var(--surface)]"
+              title="Relay online"
+            />
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-bold text-foreground tracking-tight truncate">
+                Relay
               </span>
-              {onSelectNode && (
-                <button
-                  type="button"
-                  onClick={() => onSelectNode(null)}
-                  className="hover:opacity-75 cursor-pointer ml-0.5 leading-none"
-                  title="Deselect node"
-                >
-                  ×
-                </button>
+              {selectedNode && (
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-primary/10 text-primary border border-primary/20 truncate max-w-[90px]">
+                  {(selectedNode.data?.label as string) || selectedNode.id}
+                </span>
               )}
             </div>
-          )}
+            <p className="text-[11px] text-muted-foreground truncate leading-tight">
+              Online · Answers from FlowFrame...
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-1">
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearChat}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer"
+              title="Clear conversation"
+              aria-label="Clear conversation"
+            >
+              <FiTrash2 className="size-3.5" />
+            </button>
+          )}
           <button
             type="button"
-            onClick={handleClearChat}
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer"
-            title="Clear conversation"
-            aria-label="Clear conversation"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer"
+            title={isExpanded ? "Collapse width" : "Expand width"}
+            aria-label={isExpanded ? "Collapse width" : "Expand width"}
           >
-            <FiTrash2 className="size-3.5" />
+            {isExpanded ? (
+              <FiMinimize2 className="size-3.5" />
+            ) : (
+              <FiMaximize2 className="size-3.5" />
+            )}
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[var(--bg-elevated)] transition cursor-pointer"
             title="Close Assistant (Esc)"
             aria-label="Close Assistant"
           >
-            <FiX className="size-3.5" />
+            <FiX className="size-4" />
           </button>
         </div>
       </div>
 
-      {/* ── 2. Quick Action Chips (Shown only before the first user message) ── */}
-      {!hasUserChat && (
-        <div className="px-3 py-1.5 border-b border-[var(--border)] bg-[var(--surface)] flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
-          {selectedNode ? (
-            <>
-              <button
-                type="button"
-                disabled={isGenerating}
-                onClick={() =>
-                  handleQuickAction(
-                    `Explain role and failure dynamics of ${(selectedNode.data?.label as string) || selectedNode.id}`,
-                    "ask"
-                  )
-                }
-                className="text-[10px] font-mono px-2 py-0.5 rounded border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 transition whitespace-nowrap cursor-pointer shrink-0"
-              >
-                Explain {(selectedNode.data?.label as string) || selectedNode.id}
-              </button>
-              <button
-                type="button"
-                disabled={isGenerating}
-                onClick={() =>
-                  handleQuickAction(
-                    `What happens if ${(selectedNode.data?.label as string) || selectedNode.id} fails or times out?`,
-                    "ask"
-                  )
-                }
-                className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground transition whitespace-nowrap cursor-pointer shrink-0"
-              >
-                Failure test
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                disabled={isGenerating}
-                onClick={() => handleQuickAction("Explain current canvas architecture and data flow", "ask")}
-                className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
-              >
-                Explain architecture
-              </button>
-              <button
-                type="button"
-                disabled={isGenerating}
-                onClick={() => handleQuickAction("Validate architecture bottlenecks and unrouted nodes", "ask")}
-                className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
-              >
-                Validate topology
-              </button>
-              <button
-                type="button"
-                disabled={isGenerating}
-                onClick={() => handleQuickAction("Build a Cache-Aside pattern with Redis and PostgreSQL", "create")}
-                className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
-              >
-                Build Cache-Aside
-              </button>
-              <button
-                type="button"
-                disabled={isGenerating}
-                onClick={() => handleQuickAction("Create a Round-Robin Load-Balanced Cluster", "create")}
-                className="text-[10px] font-mono px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-elevated)] text-muted-foreground hover:text-foreground hover:border-primary/40 transition whitespace-nowrap cursor-pointer shrink-0"
-              >
-                Build Load Balancer
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── 4. Conversation Stream (Document / Editor Style) ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-3.5 py-3 space-y-4 scrollbar-thin">
-        {!hasUserChat && (
-          <div className="py-4 text-center space-y-1.5 select-none">
-            <div className="size-7 mx-auto rounded bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center text-primary">
-              <Sparkles className="size-3.5" />
+      {/* ── 2. Conversation Stream & Main Body Suggestions ── */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4 scrollbar-thin">
+        {!hasUserChat ? (
+          /* Main body question suggestions matching the user's uploaded image */
+          <div className="max-w-md mx-auto py-4 space-y-5 animate-in fade-in duration-200">
+            <div className="text-center space-y-1.5 select-none">
+              <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
+                Ask Relay about your Architecture
+              </h2>
+              <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
+                Get answers from the active canvas topology, with failure dynamics.
+              </p>
             </div>
-            <p className="text-xs font-semibold text-foreground">
-              Relay Architecture Assistant
-            </p>
-            <p className="text-[11px] text-muted-foreground max-w-xs mx-auto leading-relaxed">
-              Ask about current topology, request routing paths, component bottlenecks, or generate distributed system architecture definitions.
-            </p>
+
+            {/* Vertical Stacked Question Cards with right arrows */}
+            <div className="space-y-2.5">
+              {starterQuestions.map((q) => (
+                <button
+                  type="button"
+                  key={q.prompt}
+                  disabled={isGenerating}
+                  onClick={() => handleQuickAction(q.prompt, q.mode)}
+                  className="w-full p-3.5 px-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)]/70 hover:bg-[var(--bg-elevated)] hover:border-primary/50 text-left flex items-center justify-between gap-3 group transition-all cursor-pointer shadow-2xs hover:shadow-xs"
+                >
+                  <span className="text-xs sm:text-[13px] font-medium text-foreground group-hover:text-primary transition-colors leading-snug">
+                    {q.label}
+                  </span>
+                  <FiArrowRight className="size-4 text-muted-foreground/60 group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
+                </button>
+              ))}
+            </div>
           </div>
-        )}
+        ) : null}
 
         {messages.map((m) => (
           <div key={m.id} className="space-y-1.5">
@@ -955,7 +960,7 @@ connect api_server -> postgres_db
         </div>
 
         {/* Input Textarea Form */}
-        <div className="relative rounded-md border border-[var(--border)] bg-[var(--bg-elevated)] focus-within:border-primary/60 focus-within:ring-1 focus-within:ring-primary/20 transition-all p-2 space-y-1.5">
+        <div className="relative rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] focus-within:border-primary/60 focus-within:ring-1 focus-within:ring-primary/20 transition-all p-2.5 space-y-1.5 shadow-2xs">
           <textarea
             ref={textareaRef}
             rows={2}
@@ -975,24 +980,26 @@ connect api_server -> postgres_db
                 ? "Analyzing architecture…"
                 : mode === "create"
                 ? selectedNode
-                  ? `Describe change to ${(selectedNode.data?.label as string) || selectedNode.id} or topology…`
-                  : "Describe topology (e.g. Add Redis cache to server)…"
+                  ? `Describe change to ${(selectedNode.data?.label as string) || selectedNode.id}…`
+                  : "Describe topology to generate (e.g. Add Redis cache to server)…"
                 : selectedNode
-                ? `Ask about ${(selectedNode.data?.label as string) || selectedNode.id} or routing…`
-                : "Ask about canvas topology or simulation behavior…"
+                ? `Ask Relay about ${(selectedNode.data?.label as string) || selectedNode.id}…`
+                : "Ask Relay..."
             }
-            className="w-full bg-transparent resize-none text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none leading-relaxed max-h-32"
+            className="w-full bg-transparent resize-none text-xs sm:text-[13px] text-foreground placeholder:text-muted-foreground/55 focus:outline-none leading-relaxed max-h-32 px-1"
           />
 
-          <div className="flex items-center justify-between gap-2 pt-1 border-t border-[var(--border)]/40 text-[10px] font-mono text-muted-foreground select-none">
-            <span className="truncate">Enter to send · Shift+Enter newline</span>
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-[var(--border)]/40 text-[10.5px] font-mono text-muted-foreground select-none">
+            <span className="truncate text-muted-foreground/50 text-[10px]">
+              Enter to send · Shift+Enter newline
+            </span>
 
             <div className="flex items-center gap-1.5 shrink-0">
               {/* Think Toggle immediately to the left of Send */}
               <button
                 type="button"
                 onClick={() => setThinkEnabled(!thinkEnabled)}
-                className={`px-2 py-0.5 rounded border font-mono text-[10px] font-medium transition cursor-pointer flex items-center gap-1 select-none ${
+                className={`px-2 py-0.5 rounded-lg border font-mono text-[10px] font-medium transition cursor-pointer flex items-center gap-1 select-none ${
                   thinkEnabled
                     ? "bg-primary/10 border-primary/30 text-primary font-semibold shadow-2xs ring-1 ring-primary/20"
                     : "bg-transparent border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
@@ -1008,24 +1015,29 @@ connect api_server -> postgres_db
                 />
               </button>
 
-              {/* Send Button */}
+              {/* Send Button matching blue theme */}
               <button
                 type="button"
                 disabled={!input.trim() || isGenerating}
                 onClick={() => submitPrompt()}
-                className="size-6 rounded bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center cursor-pointer shadow-xs disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
+                className="size-7 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center cursor-pointer shadow-xs disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0 font-bold"
                 title="Send message"
                 aria-label="Send message"
               >
                 {isGenerating ? (
-                  <div className="size-3 rounded-full border border-primary-foreground/40 border-t-primary-foreground animate-spin" />
+                  <div className="size-3.5 rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground animate-spin" />
                 ) : (
-                  <FiArrowUp className="size-3.5" />
+                  <FiSend className="size-3.5" />
                 )}
               </button>
             </div>
           </div>
         </div>
+
+        {/* Disclaimer below composer matching screenshot */}
+        <p className="text-[10px] text-muted-foreground/60 text-center select-none pt-0.5">
+          AI can make mistakes. Verify important details in canvas topology.
+        </p>
       </div>
     </aside>
   );
