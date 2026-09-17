@@ -25,6 +25,7 @@ import {
   Moon,
   LogOut,
   ChevronDown,
+  Smile,
 } from "lucide-react";
 
 interface UserDropdownProps {
@@ -104,6 +105,12 @@ export default function UserDropdown({ theme: propTheme, onToggleTheme: propOnTo
             <Link href="/dashboard" className="flex items-center gap-2.5 w-full cursor-pointer">
               <LayoutDashboard className="size-4 text-muted-foreground shrink-0" />
               <span className="flex-1">Dashboard</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard?settings=true" className="flex items-center gap-2.5 w-full cursor-pointer">
+              <Smile className="size-4 text-primary shrink-0" />
+              <span className="flex-1">Profile & Avatar</span>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>

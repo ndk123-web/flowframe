@@ -27,7 +27,12 @@ import {
   LogOut,
   Check,
   Laptop,
+  Sparkles,
+  Shuffle,
+  Loader2,
 } from "lucide-react";
+import { CARTOON_AVATARS, generateRandomCartoonAvatar } from "@/config/cartoonAvatars";
+import { syncFirebaseUserApi } from "@/services/authApi";
 
 interface DashboardSettingsDialogProps {
   open?: boolean;
@@ -35,6 +40,7 @@ interface DashboardSettingsDialogProps {
   onOpenChange: (open: boolean) => void;
   user?: {
     id?: string;
+    firebase_uid?: string;
     name?: string;
     email?: string;
     avatar?: string;
@@ -78,6 +84,9 @@ export default function DashboardSettingsDialog({
 
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
   const [nameInput, setNameInput] = useState(user.name || "");
+  const [selectedAvatar, setSelectedAvatar] = useState(user.avatar || "");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
   const [editorFontSize, setEditorFontSize] = useState<number>(13);
   const [editorWordWrap, setEditorWordWrap] = useState<boolean>(true);
   const [editorTabSize, setEditorTabSize] = useState<number>(2);
@@ -86,17 +95,67 @@ export default function DashboardSettingsDialog({
   const [simulationDefaultSpeed, setSimulationDefaultSpeed] = useState<number>(1);
   const [simulationDebugLogs, setSimulationDebugLogs] = useState<boolean>(true);
 
-  // Derive initial letters for user avatar
-  const initials = (user.name || user.email || "FF")
+  // Sync state if user prop changes or saved locally
+  React.useEffect(() => {
+    const savedLocalAvatar =
+      user.email && typeof window !== "undefined"
+        ? localStorage.getItem(`flowframe_avatar_${user.email}`)
+        : null;
+    if (user.avatar || savedLocalAvatar) {
+      setSelectedAvatar(user.avatar || savedLocalAvatar || "");
+    }
+    if (user.name) setNameInput(user.name);
+  }, [user.avatar, user.name, user.email]);
+
+  // Derive initial letters for user avatar fallback
+  const initials = (nameInput || user.name || user.email || "FF")
     .split(" ")
     .map((n: string) => n[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
 
-  const handleSaveProfile = () => {
-    onUpdateUser({ name: nameInput.trim() || undefined });
-    showToast("Profile settings saved successfully.", "success");
+  const handleRollRandomAvatar = () => {
+    const randomUrl = generateRandomCartoonAvatar();
+    setSelectedAvatar(randomUrl);
+  };
+
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true);
+    const updatedName = nameInput.trim() || undefined;
+    const updatedAvatar = selectedAvatar.trim() || undefined;
+
+    // 1. Update in local Zustand store immediately
+    onUpdateUser({ name: updatedName, avatar: updatedAvatar });
+
+    // 2. Persist to localStorage backup for this user account
+    if (user.email && typeof window !== "undefined") {
+      if (updatedAvatar) {
+        localStorage.setItem(`flowframe_avatar_${user.email}`, updatedAvatar);
+      } else {
+        localStorage.removeItem(`flowframe_avatar_${user.email}`);
+      }
+    }
+
+    // 3. Persist to MongoDB database via sync API
+    if (user.email) {
+      try {
+        await syncFirebaseUserApi({
+          email: user.email,
+          firebase_uid: user.firebase_uid || user.id || "standard_user",
+          name: updatedName,
+          avatar: updatedAvatar,
+          type_of_signin: user.type_of_signin || "email",
+        });
+        showToast("Profile & cartoon avatar saved to database!", "success");
+      } catch (err) {
+        console.warn("Could not sync avatar to database:", err);
+        showToast("Profile updated locally", "info");
+      }
+    } else {
+      showToast("Profile updated locally", "success");
+    }
+    setIsSavingProfile(false);
   };
 
   const navItems = [
@@ -171,13 +230,21 @@ export default function DashboardSettingsDialog({
 
                 {/* Identity Card */}
                 <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-muted/20">
-                  <div className="size-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-lg font-mono shrink-0 shadow-xs">
-                    {initials}
+                  <div className="size-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-lg font-mono shrink-0 shadow-xs overflow-hidden">
+                    {selectedAvatar ? (
+                      <img
+                        src={selectedAvatar}
+                        alt="User Cartoon Avatar"
+                        className="size-full object-cover p-1"
+                      />
+                    ) : (
+                      initials
+                    )}
                   </div>
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold text-foreground truncate">
-                        {user.name || "Architect"}
+                        {nameInput || user.name || "Architect"}
                       </span>
                       <Badge variant="outline" className="text-[10px] font-mono text-primary bg-primary/10 border-primary/25">
                         Developer Tier
@@ -187,6 +254,75 @@ export default function DashboardSettingsDialog({
                       {user.email}
                     </p>
                   </div>
+                </div>
+
+                {/* Cartoon Avatar Picker */}
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <Sparkles className="size-3.5 text-primary" />
+                      <span>Choose Cartoon Avatar</span>
+                    </label>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleRollRandomAvatar}
+                        className="text-[11px] font-mono text-primary hover:underline flex items-center gap-1 cursor-pointer select-none"
+                        title="Generate random cartoon character"
+                      >
+                        <Shuffle className="size-3" />
+                        <span>Surprise Me</span>
+                      </button>
+                      {selectedAvatar && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAvatar("")}
+                          className="text-[10.5px] font-mono text-muted-foreground hover:text-foreground hover:underline cursor-pointer select-none"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Curated Grid of 12 Cartoon Avatars */}
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {CARTOON_AVATARS.map((av) => {
+                      const isSelected = selectedAvatar === av.url;
+                      return (
+                        <button
+                          key={av.id}
+                          type="button"
+                          onClick={() => setSelectedAvatar(av.url)}
+                          className={`group relative p-1.5 rounded-xl border transition-all cursor-pointer flex flex-col items-center gap-1 aspect-square justify-center ${
+                            isSelected
+                              ? "border-primary bg-primary/15 ring-2 ring-primary/40 shadow-xs"
+                              : "border-border/80 bg-muted/20 hover:bg-muted/50 hover:border-primary/40"
+                          }`}
+                          title={av.name}
+                        >
+                          <img
+                            src={av.url}
+                            alt={av.name}
+                            className="size-8 sm:size-9 rounded-lg object-contain transition-transform group-hover:scale-105"
+                            loading="lazy"
+                          />
+                          <span className="text-[8.5px] font-mono text-muted-foreground truncate max-w-full block">
+                            {av.name}
+                          </span>
+                          {isSelected && (
+                            <span className="absolute -top-1 -right-1 size-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[8px] font-bold shadow-xs">
+                              <Check className="size-2.5 stroke-[3]" />
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* <p className="text-[10px] font-mono text-muted-foreground/70">
+                    100% Royalty-Free & Open-Source Cartoon Avatars (Public Domain / MIT License).
+                  </p> */}
                 </div>
 
                 {/* Name Input Form */}
@@ -223,9 +359,23 @@ export default function DashboardSettingsDialog({
                 </div>
 
                 <div className="pt-2 flex justify-end">
-                  <Button size="sm" onClick={handleSaveProfile} className="gap-1.5 shadow-xs">
-                    <Check className="size-3.5" />
-                    <span>Save Changes</span>
+                  <Button
+                    size="sm"
+                    disabled={isSavingProfile}
+                    onClick={handleSaveProfile}
+                    className="gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    {isSavingProfile ? (
+                      <>
+                        <Loader2 className="size-3.5 animate-spin" />
+                        <span>Saving to DB…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="size-3.5" />
+                        <span>Save Changes</span>
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
