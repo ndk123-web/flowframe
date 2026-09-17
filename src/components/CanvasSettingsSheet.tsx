@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useThemeStore } from "@/store/useThemeStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import {
   Grid3X3,
   ZoomIn,
@@ -42,6 +43,7 @@ import {
   Zap,
   Loader2,
   Sparkles,
+  Lock,
 } from "lucide-react";
 
 interface CanvasSettingsSheetProps {
@@ -111,6 +113,7 @@ interface CanvasSettingsSheetProps {
   setExportIncludeSelection?: (include: boolean) => void;
   exportWatermark?: "none" | "branded";
   setExportWatermark?: (wm: "none" | "branded") => void;
+  onProLockedNotice?: (message: string) => void;
   isExportingVideo?: boolean;
   onExportSimulationVideo?: () => void;
 }
@@ -176,12 +179,16 @@ export default function CanvasSettingsSheet({
   setExportConnectionStyle,
   exportIncludeSelection = true,
   setExportIncludeSelection,
-  exportWatermark = "none",
+  exportWatermark = "branded",
   setExportWatermark,
+  onProLockedNotice,
   isExportingVideo = false,
   onExportSimulationVideo,
 }: CanvasSettingsSheetProps) {
   const { theme: storeTheme, setTheme } = useThemeStore();
+  const authUser = useAuthStore((state) => state.user);
+  const isAuthorUser =
+    authUser?.email?.toLowerCase().trim() === "navnathkadam284@gmail.com";
   const currentTheme = propTheme || storeTheme || "dark";
   const [activeTab, setActiveTab] = useState<SettingsTab>("canvas");
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
@@ -1041,36 +1048,69 @@ export default function CanvasSettingsSheet({
                       <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
                         <span className="flex items-center gap-1.5 text-muted-foreground">
                           <Sparkles className="size-3 text-primary" />
-                          <span>Watermark</span>
+                          <span>Watermark Badge</span>
                         </span>
-                        <span className="text-[10px] font-mono capitalize text-muted-foreground">
-                          {exportWatermark === "branded" ? "FlowFrame Tag" : "Clean"}
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          {exportWatermark === "branded" ? (
+                            <span className="text-primary font-semibold">FlowFrame Tag (Default)</span>
+                          ) : (
+                            <span className="text-emerald-400 font-semibold">Clean (Author)</span>
+                          )}
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-1 p-0.5 rounded-md bg-muted/40 border border-border/50">
-                        <button
-                          type="button"
-                          onClick={() => setExportWatermark?.("none")}
-                          className={`py-1 rounded text-xs transition cursor-pointer ${
-                            exportWatermark === "none"
-                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
-                              : "text-muted-foreground hover:text-foreground border border-transparent"
-                          }`}
-                        >
-                          Clean
-                        </button>
+                        {/* FlowFrame Tag (Default) */}
                         <button
                           type="button"
                           onClick={() => setExportWatermark?.("branded")}
-                          className={`py-1 rounded text-xs transition cursor-pointer ${
+                          className={`py-1 rounded text-xs transition cursor-pointer flex items-center justify-center gap-1 ${
                             exportWatermark === "branded"
-                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
+                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-semibold"
                               : "text-muted-foreground hover:text-foreground border border-transparent"
                           }`}
                         >
-                          FlowFrame Tag
+                          <span>FlowFrame Tag</span>
+                          <span className="text-[9px] px-1 py-0.2 rounded bg-primary/20 text-primary font-bold">Default</span>
                         </button>
+
+                        {/* Clean (Locked for non-author) */}
+                        {isAuthorUser ? (
+                          <button
+                            type="button"
+                            onClick={() => setExportWatermark?.("none")}
+                            className={`py-1 rounded text-xs transition cursor-pointer flex items-center justify-center gap-1 ${
+                              exportWatermark === "none"
+                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-2xs font-semibold"
+                                : "text-muted-foreground hover:text-foreground border border-transparent"
+                            }`}
+                            title="Author Access: Clean export unlocked"
+                          >
+                            <span>Clean</span>
+                            <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-bold">Author</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onProLockedNotice?.(
+                                "Clean export (No Watermark) is locked. Watermark removal requires FlowFrame Pro (Free for author navnathkadam284@gmail.com).",
+                              );
+                            }}
+                            className="py-1 rounded text-xs transition cursor-pointer flex items-center justify-center gap-1.5 text-muted-foreground/65 hover:text-muted-foreground bg-muted/20 border border-transparent hover:border-amber-500/30 group"
+                            title="Locked: Watermark removal requires Pro plan (Unlocked for navnathkadam284@gmail.com)"
+                          >
+                            <Lock className="size-3 text-amber-400 group-hover:scale-110 transition-transform" />
+                            <span>Clean</span>
+                            <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-400 font-bold">PRO</span>
+                          </button>
+                        )}
                       </div>
+                      {!isAuthorUser && (
+                        <p className="text-[9.5px] text-muted-foreground/60 leading-tight flex items-center gap-1 pt-0.5">
+                          <Lock className="size-2.5 text-amber-400 shrink-0" />
+                          <span>Clean export is reserved for Pro plan (Author: navnathkadam284@gmail.com).</span>
+                        </p>
+                      )}
                     </div>
 
                     {/* Mode (Sequential / Parallel) */}

@@ -66,6 +66,9 @@ import {
   FiCpu,
   FiBox,
   FiSquare,
+  FiShare2,
+  FiGlobe,
+  FiFilm,
 } from "react-icons/fi";
 import AIAssistantDrawer from "@/components/AIAssistantDrawer";
 import CanvasToolbar from "@/components/CanvasToolbar";
@@ -2279,7 +2282,7 @@ function WorkspaceInner({
   isSharedView?: boolean;
 }) {
   const { screenToFlowPosition, fitView, zoomIn, zoomOut } = useReactFlow();
-  const { token } = useAuthStore();
+  const { token, user } = useAuthStore();
   const { theme, toggleTheme, setTheme } = useThemeStore();
   const [diagramTitle, setDiagramTitle] = useState<string>("");
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -2514,7 +2517,7 @@ function WorkspaceInner({
   const [exportIncludeSelection, setExportIncludeSelection] =
     useState<boolean>(true);
   const [exportWatermark, setExportWatermark] = useState<"none" | "branded">(
-    "none",
+    "branded",
   );
   const [isExportingVideo, setIsExportingVideo] = useState(false);
 
@@ -2625,6 +2628,10 @@ function WorkspaceInner({
           .filter((g) => g.frames.length > 0);
       }
 
+      const isAuthorUser =
+        user?.email?.toLowerCase().trim() === "navnathkadam284@gmail.com";
+      const effectiveWatermark = isAuthorUser ? exportWatermark : "branded";
+
       const cancel = await recordSimulationVideo({
         nodes,
         edges,
@@ -2637,7 +2644,7 @@ function WorkspaceInner({
         connectionStyle: exportConnectionStyle,
         selectedNodeId: selectedNode?.id ?? null,
         includeSelection: exportIncludeSelection,
-        watermark: exportWatermark,
+        watermark: effectiveWatermark,
         showPorts: true,
         onProgress: (_percent, _status) => {
           // Progress updates
@@ -8831,6 +8838,7 @@ connect s1 -> db1
               setExportIncludeSelection={setExportIncludeSelection}
               exportWatermark={exportWatermark}
               setExportWatermark={setExportWatermark}
+              onProLockedNotice={(msg) => setValidationWarning(msg)}
               isExportingVideo={isExportingVideo}
               onExportSimulationVideo={handleExportSimulationVideo}
             />
@@ -9018,10 +9026,10 @@ connect s1 -> db1
             </div>
           )}
 
-          {/* ── Share Modal ────────────────────────────────────────────────── */}
+          {/* ── World-Class Redesigned Share Modal ────────────────────────────── */}
           {showShareModal && (
             <div
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm animate-fade-in"
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md animate-in fade-in duration-200"
               role="presentation"
               onMouseDown={(event) => {
                 if (event.target === event.currentTarget) {
@@ -9033,207 +9041,205 @@ connect s1 -> db1
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="share-flow-title"
-                className="relative flex max-h-[min(760px,calc(100dvh-2rem))] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-white/15 bg-[var(--surface)] shadow-[0_24px_90px_rgba(0,0,0,0.4)]"
+                className="relative flex max-h-[min(820px,calc(100dvh-2rem))] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-border bg-[var(--surface)] shadow-2xl animate-in zoom-in-95 duration-200"
               >
-                <div className="h-1 w-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-400" />
-                <div className="overflow-y-auto p-5 sm:p-7">
-                <button
-                  type="button"
-                  onClick={() => setShowShareModal(false)}
-                  className="absolute right-4 top-5 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] text-lg font-semibold text-[color:var(--foreground)]/50 transition hover:bg-[var(--surface-muted)] hover:text-[color:var(--foreground)] cursor-pointer"
-                  title="Close"
-                  aria-label="Close share dialog"
-                >
-                  ×
-                </button>
+                {/* Glowing Blue Top Gradient Accent */}
+                <div className="h-1 w-full bg-gradient-to-r from-primary via-blue-500 to-sky-400 shrink-0" />
 
-                <div className="pr-10 text-left">
-                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-violet-400/20 bg-violet-500/10 text-violet-400">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"
-                      />
-                    </svg>
-                  </div>
-                  <h2 id="share-flow-title" className="mt-2 text-xl font-bold tracking-tight text-[color:var(--foreground)]">
-                    Save & Share Your Flow
-                  </h2>
-                  <p className="mt-1 max-w-md text-xs leading-relaxed text-[color:var(--foreground)]/60">
-                    Download your architecture diagram as an image and copy a
-                    post template to share on your networks.
-                  </p>
-                </div>
+                <div className="overflow-y-auto p-6 sm:p-7 space-y-5">
+                  {/* Close button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowShareModal(false)}
+                    className="absolute right-5 top-5 size-8 flex items-center justify-center rounded-full border border-border bg-[var(--surface-muted)] text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] hover:bg-[var(--bg-elevated)] transition cursor-pointer"
+                    title="Close"
+                    aria-label="Close share dialog"
+                  >
+                    <FiX className="size-4" />
+                  </button>
 
-                <div className="h-px bg-[var(--border)]/70 w-full" />
-
-                {/* Public Shareable Link */}
-                {(diagramId || shareId) && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] uppercase font-bold tracking-widest text-violet-400 font-mono">
-                        Public Share Link
-                      </p>
-                      <span className="text-[10px] text-emerald-400 font-mono font-semibold">
-                        Public Access Ready
-                      </span>
+                  {/* Header */}
+                  <div className="flex items-start gap-3.5 pr-8">
+                    <div className="size-11 rounded-2xl border border-primary/25 bg-primary/10 text-primary flex items-center justify-center shrink-0 shadow-xs">
+                      <FiShare2 className="size-5" />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        readOnly
-                        value={`${typeof window !== "undefined" ? window.location.origin : ""}/share/${diagramId || shareId}`}
-                        className="flex-1 rounded-xl border border-violet-500/30 bg-[var(--surface-muted)] px-3 py-2 text-xs font-mono text-violet-400 select-all outline-none"
-                      />
+                    <div className="space-y-1">
+                      <h2 id="share-flow-title" className="text-lg font-bold text-foreground tracking-tight">
+                        Share Architecture Flow
+                      </h2>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Share interactive simulation links, export crisp HD diagrams, or post directly to social channels.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Public Link Container */}
+                  {(diagramId || shareId) ? (
+                    <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                          <FiGlobe className="size-3.5 text-primary" />
+                          <span>Public Simulation Link</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-medium">
+                          <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          Live Interactive
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <input
+                            type="text"
+                            readOnly
+                            value={`${typeof window !== "undefined" ? window.location.origin : ""}/share/${diagramId || shareId}`}
+                            className="w-full rounded-xl border border-border bg-[var(--bg-elevated)] px-3.5 py-2 text-xs font-mono text-foreground select-all outline-none focus:border-primary/50 transition"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const url = `${typeof window !== "undefined" ? window.location.origin : ""}/share/${diagramId || shareId}`;
+                            navigator.clipboard.writeText(url);
+                            setSuccessToast("Public share link copied to clipboard!");
+                          }}
+                          className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 active:scale-95 text-primary-foreground text-xs font-semibold transition shadow-sm cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+                        >
+                          <FiCopy className="size-3.5" />
+                          <span>Copy Link</span>
+                        </button>
+                      </div>
+                      
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        Anyone with this link can view the diagram topology, inspect latency metrics, and run interactive packet simulations.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-border bg-muted/20 p-4 space-y-2 text-left">
+                      <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold">
+                        <FiGlobe className="size-3.5" />
+                        <span>Save Diagram to Enable Public Link</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Save this architecture to your workspace (Ctrl+S) to generate a permanent public interactive link.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Quick Export Actions */}
+                  <div className="space-y-2">
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground font-mono">
+                      Export Options
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={downloadCanvasImage}
+                        className="flex items-center justify-center gap-2 py-2.5 px-3.5 rounded-xl border border-border bg-[var(--bg-elevated)] hover:border-primary/40 hover:bg-[var(--surface-muted)] text-foreground text-xs font-semibold transition active:scale-95 cursor-pointer group"
+                      >
+                        <FiDownload className="size-4 text-primary group-hover:scale-110 transition-transform" />
+                        <span>Download HD PNG (2x)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowShareModal(false);
+                          setIsSettingsOpen(true);
+                        }}
+                        className="flex items-center justify-center gap-2 py-2.5 px-3.5 rounded-xl border border-border bg-[var(--bg-elevated)] hover:border-primary/40 hover:bg-[var(--surface-muted)] text-foreground text-xs font-semibold transition active:scale-95 cursor-pointer group"
+                      >
+                        <FiFilm className="size-4 text-primary group-hover:scale-110 transition-transform" />
+                        <span>Export Simulation Video</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 1-Click Social Sharing */}
+                  <div className="space-y-2">
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground font-mono">
+                      Share to Networks
+                    </span>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {/* LinkedIn */}
                       <button
                         type="button"
                         onClick={() => {
                           const url = `${typeof window !== "undefined" ? window.location.origin : ""}/share/${diagramId || shareId}`;
-                          navigator.clipboard.writeText(url);
-                          setSuccessToast(
-                            "Public share link copied to clipboard!",
+                          const templateText = `I designed a distributed system architecture on FlowFrame.\n\nSimulate traffic routing, caching, and failure dynamics in real-time:\n${url}`;
+                          navigator.clipboard.writeText(templateText);
+                          setSuccessToast("Caption copied to clipboard! Opening LinkedIn...");
+                          window.open(
+                            `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(url)}&text=${encodeURIComponent(templateText)}`,
+                            "_blank",
+                            "noopener,noreferrer"
                           );
                         }}
-                        className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition shadow-sm cursor-pointer whitespace-nowrap"
+                        className="flex items-center justify-center gap-2 py-2 px-3.5 rounded-xl border border-[#0a66c2]/30 bg-[#0a66c2]/10 hover:bg-[#0a66c2]/20 text-[#0a66c2] dark:text-[#38bdf8] text-xs font-semibold transition active:scale-95 cursor-pointer"
                       >
-                        Copy Link
+                        <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                          <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.779-1.75-1.75s.784-1.75 1.75-1.75 1.75.779 1.75 1.75-.784 1.75-1.75 1.75zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                        </svg>
+                        <span>LinkedIn</span>
+                      </button>
+
+                      {/* X / Twitter */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const url = `${typeof window !== "undefined" ? window.location.origin : ""}/share/${diagramId || shareId}`;
+                          const postText = `Check out this distributed system architecture I designed on FlowFrame.\n\nVisual interactive simulator for caching & load balancing:\n${url}`;
+                          window.open(
+                            `https://twitter.com/intent/tweet?text=${encodeURIComponent(postText)}`,
+                            "_blank",
+                            "noopener,noreferrer"
+                          );
+                        }}
+                        className="flex items-center justify-center gap-2 py-2 px-3.5 rounded-xl border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 text-xs font-semibold transition active:scale-95 cursor-pointer"
+                      >
+                        <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                        </svg>
+                        <span>Post on X</span>
                       </button>
                     </div>
-                    <p className="text-[10px] text-[color:var(--foreground)]/50">
-                      Anyone with this link can view, inspect, and run
-                      simulations on this architecture.
-                    </p>
                   </div>
-                )}
 
-                {/* Save Image / PNG Export Section */}
-                <div className="space-y-2">
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45">
-                    Export Image
-                  </p>
-                  <button
-                    type="button"
-                    onClick={downloadCanvasImage}
-                    className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/15 text-violet-500 dark:text-violet-400 text-xs font-semibold transition active:scale-95 text-center cursor-pointer shadow-sm hover:shadow"
-                  >
-                    <svg
-                      className="w-4 h-4 shrink-0"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"
-                      />
-                    </svg>
-                    <span>Download Diagram as PNG Image</span>
-                  </button>
-                </div>
-
-                {/* Social Sharing Intents */}
-                <div className="space-y-2">
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45">
-                    2. Share on Social Media
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Share on LinkedIn */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const templateText = `I just designed this distributed system architecture flow on FlowFrame.\n\nFlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues.`;
-                        navigator.clipboard.writeText(templateText);
-                        setSuccessToast(
-                          "Caption copied to clipboard! Opening LinkedIn...",
-                        );
-                        window.open(
-                          `https://www.linkedin.com/shareArticle?mini=true&&text=${templateText}`,
-                          "_blank",
-                          "noopener,noreferrer",
-                        );
-                      }}
-                      className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-[#0a66c2]/20 bg-[#0a66c2]/5 hover:bg-[#0a66c2]/15 text-[#0a66c2] dark:text-[#378fe9] text-xs font-semibold transition active:scale-95 text-center cursor-pointer shadow-sm hover:shadow"
-                      title="Copies caption text and opens LinkedIn post editor"
-                    >
-                      <svg
-                        className="w-4 h-4 fill-current shrink-0"
-                        viewBox="0 0 24 24"
+                  {/* Pre-crafted Caption Template Box */}
+                  <div className="rounded-2xl border border-border bg-muted/20 p-3.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground font-mono">
+                        Copy Post Caption
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const url = `${typeof window !== "undefined" ? window.location.origin : ""}/share/${diagramId || shareId}`;
+                          const templateText = `🚀 Check out this distributed system architecture I designed on FlowFrame!\n\nSimulate traffic routing, caching, and failover dynamics interactively:\n${url}`;
+                          navigator.clipboard.writeText(templateText);
+                          setCopiedTemplate(true);
+                          setSuccessToast("Caption copied to clipboard!");
+                          setTimeout(() => setCopiedTemplate(false), 2000);
+                        }}
+                        className="text-[11px] font-semibold text-primary hover:underline cursor-pointer flex items-center gap-1"
                       >
-                        <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.779-1.75-1.75s.784-1.75 1.75-1.75 1.75.779 1.75 1.75-.784 1.75-1.75 1.75zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
-                      </svg>
-                      <span>Share on LinkedIn</span>
-                    </button>
-
-                    {/* Share on X */}
-                    <a
-                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                        "I just designed this distributed system architecture flow on FlowFrame.\n\nFlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues.",
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/15 text-sky-500 dark:text-sky-400 text-xs font-semibold transition active:scale-95 text-center shadow-sm hover:shadow"
-                      title="Opens Twitter/X post composer with pre-filled caption text"
-                    >
-                      <svg
-                        className="w-4 h-4 fill-current shrink-0"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                      </svg>
-                      <span>Post on X (Twitter)</span>
-                    </a>
-                  </div>
-                </div>
-
-                {/* LinkedIn Post Copy Paste Template */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/45">
-                      3. Copy Post Template
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const templateText = `I just designed this distributed system architecture flow on FlowFrame.\n\nFlowFrame is an interactive visual simulator for testing load balancing, caching, and message queues.`;
-                        navigator.clipboard.writeText(templateText);
-                        setCopiedTemplate(true);
-                        setTimeout(() => setCopiedTemplate(false), 2000);
-                      }}
-                      className="text-[10px] text-violet-400 hover:text-violet-300 font-bold tracking-tight bg-transparent border-0 cursor-pointer"
-                    >
-                      {copiedTemplate ? "Copied ✓" : "Copy Template"}
-                    </button>
-                  </div>
-                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-[10px] text-[color:var(--foreground)]/60 leading-relaxed font-sans max-h-24 overflow-y-auto scrollbar-thin select-all">
-                    <p className="font-semibold text-[color:var(--foreground)]/80">
-                      I just designed this distributed system architecture flow
-                      on FlowFrame.
-                    </p>
-                    <p className="mt-1">
-                      FlowFrame is an interactive visual simulator for testing
-                      load balancing, caching, and message queues.
+                        {copiedTemplate ? (
+                          <>
+                            <FiCheck className="size-3 text-emerald-400" />
+                            <span className="text-emerald-400">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <FiCopy className="size-3" />
+                            <span>Copy Caption</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed font-mono bg-background/50 p-2.5 rounded-xl border border-border/50 select-all">
+                      🚀 Check out this distributed system architecture I designed on FlowFrame! Simulate traffic routing, caching, and failover dynamics interactively.
                     </p>
                   </div>
-                </div>
                 </div>
               </div>
             </div>

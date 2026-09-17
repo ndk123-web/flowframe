@@ -18,6 +18,7 @@ import {
   FiCode,
 } from "react-icons/fi";
 import { Sparkles } from "lucide-react";
+import FlowFrameCodeEditor from "./FlowFrameCodeEditor";
 
 export interface AIAssistantDrawerProps {
   isOpen: boolean;
@@ -674,6 +675,109 @@ connect api_server -> postgres_db
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // Helper to render markdown text and embed FlowFrameCodeEditor for any code blocks
+  const renderMessageBody = (text: string, msgId: string) => {
+    if (!text.includes("```")) {
+      return <div className="whitespace-pre-wrap font-sans">{text}</div>;
+    }
+
+    const segments: React.ReactNode[] = [];
+    const codeRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
+    let lastPos = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = codeRegex.exec(text)) !== null) {
+      const precedingText = text.slice(lastPos, match.index);
+      if (precedingText.trim()) {
+        segments.push(
+          <div key={`txt-${lastPos}`} className="whitespace-pre-wrap font-sans">
+            {precedingText}
+          </div>
+        );
+      }
+
+      const lang = match[1]?.trim() || "dsl";
+      const codeSnippet = match[2]?.trim() || "";
+      const snippetId = `${msgId}-snippet-${match.index}`;
+      const isDsl =
+        lang === "dsl" ||
+        lang === "flow" ||
+        codeSnippet.includes("define ") ||
+        codeSnippet.includes("connect ");
+
+      segments.push(
+        <div
+          key={`code-${match.index}`}
+          className="rounded-xl border border-[var(--border)] bg-[#121215] overflow-hidden my-2.5 shadow-md text-left"
+        >
+          <div className="px-3 py-1.5 border-b border-[var(--border)] bg-[#18181b] flex items-center justify-between text-[10.5px] font-mono text-muted-foreground">
+            <span className="font-semibold text-foreground flex items-center gap-1.5">
+              <FiCode className="size-3.5 text-primary" />
+              <span>{isDsl ? "FlowFrame DSL" : lang.toUpperCase()}</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono font-semibold uppercase">
+                {lang || "dsl"}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleCopyDsl(snippetId, codeSnippet)}
+                className="text-xs hover:text-foreground text-muted-foreground transition cursor-pointer flex items-center gap-1"
+                title="Copy snippet"
+              >
+                <FiCopy className="size-3" />
+                <span>{copiedId === snippetId ? "Copied" : "Copy"}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-hidden">
+            <FlowFrameCodeEditor
+              value={codeSnippet}
+              readOnly={true}
+              fontSize={12}
+              minHeight="auto"
+              maxHeight="220px"
+              theme="dark"
+            />
+          </div>
+
+          {isDsl && (
+            <div className="p-1.5 border-t border-[var(--border)] bg-[#18181b] flex justify-end">
+              <button
+                type="button"
+                onClick={() =>
+                  handleApplyArchitecture(
+                    snippetId,
+                    codeSnippet,
+                    "Code snippet applied to canvas"
+                  )
+                }
+                className="px-2.5 py-0.5 rounded text-[11px] font-semibold bg-primary hover:bg-primary/90 text-primary-foreground flex items-center gap-1 cursor-pointer transition shadow-2xs"
+              >
+                <FiCheck className="size-3" />
+                <span>Apply to Canvas</span>
+              </button>
+            </div>
+          )}
+        </div>
+      );
+
+      lastPos = match.index + match[0].length;
+    }
+
+    const trailingText = text.slice(lastPos);
+    if (trailingText.trim()) {
+      segments.push(
+        <div key={`txt-${lastPos}`} className="whitespace-pre-wrap font-sans">
+          {trailingText}
+        </div>
+      );
+    }
+
+    return <div className="space-y-2">{segments}</div>;
+  };
+
   return (
     <aside
       className={`fixed inset-y-0 right-0 z-40 w-full transition-all duration-200 ${
@@ -832,32 +936,42 @@ connect api_server -> postgres_db
 
                 {/* Response Text */}
                 <div className="text-xs text-foreground leading-relaxed pl-2.5 border-l-2 border-primary/40 space-y-2">
-                  <div className="whitespace-pre-wrap font-sans">{m.text}</div>
+                  {renderMessageBody(m.text, m.id)}
 
-                  {/* FlowFrame DSL Code Block */}
+                  {/* FlowFrame DSL Code Block using FlowFrameCodeEditor with DSL Syntax Highlighting */}
                   {m.dsl && (
-                    <div className="rounded-md border border-[var(--border)] bg-[#121215] overflow-hidden my-2">
-                      <div className="px-2.5 py-1 border-b border-[var(--border)] bg-[#18181b] flex items-center justify-between text-[10px] font-mono text-muted-foreground">
+                    <div className="rounded-xl border border-[var(--border)] bg-[#121215] overflow-hidden my-2.5 shadow-md">
+                      <div className="px-3 py-1.5 border-b border-[var(--border)] bg-[#18181b] flex items-center justify-between text-[10.5px] font-mono text-muted-foreground">
                         <span className="font-semibold text-foreground flex items-center gap-1.5">
-                          <FiCode className="size-3 text-primary" />
-                          <span>{m.architectureTitle || "FlowFrame DSL"}</span>
+                          <FiCode className="size-3.5 text-primary" />
+                          <span>{m.architectureTitle || "FlowFrame Architecture DSL"}</span>
                         </span>
-                        <span>dsl</span>
+                        <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono font-semibold uppercase">
+                          DSL
+                        </span>
                       </div>
 
-                      <pre className="p-2.5 text-[10.5px] font-mono leading-relaxed text-[#d4d4d8] overflow-x-auto max-h-52 scrollbar-thin">
-                        <code>{m.dsl}</code>
-                      </pre>
+                      {/* CodeMirror 6 with FlowFrame DSL Syntax Highlighting */}
+                      <div className="overflow-hidden">
+                        <FlowFrameCodeEditor
+                          value={m.dsl}
+                          readOnly={true}
+                          fontSize={12}
+                          minHeight="auto"
+                          maxHeight="250px"
+                          theme="dark"
+                        />
+                      </div>
 
-                      <div className="p-1.5 border-t border-[var(--border)] bg-[#18181b] flex items-center gap-1.5 justify-end">
+                      <div className="p-2 border-t border-[var(--border)] bg-[#18181b] flex items-center gap-2 justify-end">
                         <button
                           type="button"
                           onClick={() => handleCopyDsl(m.id, m.dsl!)}
-                          className="px-2 py-1 rounded text-[11px] font-mono font-medium border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-foreground flex items-center gap-1 cursor-pointer transition"
+                          className="px-2.5 py-1 rounded text-[11px] font-mono font-medium border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-foreground flex items-center gap-1.5 cursor-pointer transition"
                           title="Copy DSL Code"
                         >
                           <FiCopy className="size-3" />
-                          <span>{copiedId === m.id ? "Copied" : "Copy"}</span>
+                          <span>{copiedId === m.id ? "Copied" : "Copy DSL"}</span>
                         </button>
 
                         <button
@@ -869,13 +983,13 @@ connect api_server -> postgres_db
                               `${m.architectureTitle || "Architecture"} applied to canvas`
                             )
                           }
-                          className={`px-2.5 py-1 rounded text-[11px] font-medium flex items-center gap-1 cursor-pointer transition ${
+                          className={`px-3 py-1 rounded text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer transition shadow-2xs ${
                             m.applied
-                              ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                              ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-medium"
                               : "bg-primary text-primary-foreground hover:bg-primary/90"
                           }`}
                         >
-                          <FiCheck className="size-3" />
+                          <FiCheck className="size-3.5" />
                           <span>{m.applied ? "Applied" : "Apply to Canvas"}</span>
                         </button>
 
@@ -892,8 +1006,8 @@ connect api_server -> postgres_db
                               }
                               setTimeout(() => onRunSimulation(), 250);
                             }}
-                            className="px-2 py-1 rounded text-[11px] font-medium border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-foreground flex items-center gap-1 cursor-pointer transition"
-                            title="Run Simulation"
+                            className="px-2.5 py-1 rounded text-[11px] font-medium border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-foreground flex items-center gap-1.5 cursor-pointer transition"
+                            title="Run Simulation on Canvas"
                           >
                             <FiPlay className="size-3 text-primary fill-current" />
                             <span>Run</span>

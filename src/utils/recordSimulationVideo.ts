@@ -396,7 +396,7 @@ export async function recordSimulationVideo({
   connectionStyle = "default",
   selectedNodeId,
   includeSelection = true,
-  watermark = "none",
+  watermark = "branded",
   showPorts = true,
   onProgress,
   onComplete,
