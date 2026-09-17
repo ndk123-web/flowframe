@@ -486,7 +486,7 @@ export default function SiteHeader({
                 <GitHubStarButton variant="drawer" />
 
                 <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono pt-1">
-                  <span>FlowFrame Studio</span>
+                  <span>FlowFrame</span>
                   <span className="px-1.5 py-0.5 rounded bg-muted border border-border text-foreground font-semibold text-[10px]">
                     {APP_VERSION}
                   </span>

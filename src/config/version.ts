@@ -9,8 +9,8 @@
 
 export const APP_VERSION_RAW = "2.1.0";
 export const APP_VERSION = `v${APP_VERSION_RAW}`;
-export const APP_RELEASE_NAME = "The Relay Copilot & Studio Release";
-export const APP_RELEASE_BADGE = `${APP_VERSION} Relay Copilot & Studio`;
+export const APP_RELEASE_NAME = "Relay Copilot";
+export const APP_RELEASE_BADGE = `${APP_VERSION} Relay Copilot`;
 export const APP_ENGINE_SPEC = `FlowFrame Engine ${APP_VERSION}`;
 export const APP_DSL_SPEC = `FlowFrame DSL Specifications ${APP_VERSION}`;
 export const APP_DSL_VERSION = APP_VERSION;
