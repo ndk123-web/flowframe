@@ -56,6 +56,7 @@ import {
   FiFolder,
   FiTerminal,
   FiMaximize2,
+  FiMinimize2,
   FiZoomIn,
   FiZoomOut,
   FiDownload,
@@ -2468,6 +2469,7 @@ function WorkspaceInner({
 
   // Simulation Video Recording (WebM / MP4)
   const [isRecording, setIsRecording] = useState(false);
+  const [isRecordingMinimized, setIsRecordingMinimized] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [videoFormat, setVideoFormat] = useState<"webm" | "mp4">("webm");
   const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(null);
@@ -2765,6 +2767,7 @@ function WorkspaceInner({
 
       recorder.start(250);
       setIsRecording(true);
+      setIsRecordingMinimized(false);
       setRecordingDuration(0);
 
       recordingTimerRef.current = setInterval(() => {
@@ -2791,6 +2794,7 @@ function WorkspaceInner({
       mediaRecorderRef.current.stop();
     }
     setIsRecording(false);
+    setIsRecordingMinimized(false);
     setIsExportingVideo(false);
     if (recordingTimerRef.current) {
       clearInterval(recordingTimerRef.current);
@@ -5674,26 +5678,80 @@ connect s1 -> db1
                   </div>
                 )}
 
-                {/* Floating Active Recording HUD Pill */}
+                {/* Floating Active Live Screen Recording Widget (Collapsible to Corner Circle) */}
                 {isRecording && (
-                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-3.5 py-1.5 rounded-full border border-red-500/40 bg-background/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-xl text-xs font-mono">
-                    <span className="relative flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
-                    </span>
-                    <span className="font-bold text-foreground">
-                      REC <span className="text-red-500 font-mono">{formatDuration(recordingDuration)}</span>
-                      <span className="ml-1 text-[10px] text-muted-foreground uppercase">({videoFormat})</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleStopRecording}
-                      className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-600 hover:bg-red-500 text-white text-[11px] font-semibold transition cursor-pointer shadow-xs"
-                    >
-                      <FiSquare className="w-3 h-3 fill-current" />
-                      <span>Stop & Save</span>
-                    </button>
-                  </div>
+                  <>
+                    {isRecordingMinimized ? (
+                      /* ── 1. Minimized State: Sleek Floating Corner Circle Box ── */
+                      <div className="absolute top-4 right-4 z-40 select-none animate-in fade-in zoom-in-75 duration-200">
+                        <button
+                          type="button"
+                          onClick={() => setIsRecordingMinimized(false)}
+                          className="group relative size-11 rounded-full border border-red-500/50 bg-[var(--surface)]/95 hover:bg-[var(--bg-elevated)] backdrop-blur-xl shadow-xl shadow-red-950/20 flex items-center justify-center text-foreground hover:border-red-500 transition-all duration-300 hover:scale-105 cursor-pointer"
+                          title={`Recording active (${formatDuration(recordingDuration)}) · Click to expand`}
+                          aria-label="Expand live recording controls"
+                        >
+                          {/* Outer breathing aura */}
+                          <span className="absolute -inset-0.5 rounded-full bg-red-500/25 animate-pulse" />
+
+                          {/* Pulsing red REC beacon */}
+                          <span className="relative flex h-3 w-3 items-center justify-center">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 shadow-xs shadow-red-500" />
+                          </span>
+
+                          {/* Hover fly-out badge showing elapsed time & expand prompt */}
+                          <div className="pointer-events-none absolute right-full mr-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-red-500/30 bg-zinc-950/95 text-white text-[11px] font-mono shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap translate-x-1 group-hover:translate-x-0">
+                            <span className="font-bold text-red-400">REC</span>
+                            <span>{formatDuration(recordingDuration)}</span>
+                            <span className="text-[10px] text-zinc-400 font-sans">· Click to Stop</span>
+                          </div>
+                        </button>
+                      </div>
+                    ) : (
+                      /* ── 2. Expanded State: Full Controls HUD Pill in Corner ── */
+                      <div className="absolute top-4 right-4 z-40 select-none flex items-center gap-3 pl-3.5 pr-2 py-1.5 rounded-full border border-red-500/40 bg-[var(--surface)]/95 dark:bg-zinc-900/95 backdrop-blur-xl shadow-2xl text-xs font-mono animate-in fade-in zoom-in-95 duration-200">
+                        {/* Live Beacon */}
+                        <span className="relative flex h-2.5 w-2.5 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                        </span>
+
+                        {/* Status, Time & Format */}
+                        <div className="flex items-center gap-1.5 select-none font-bold text-foreground">
+                          <span className="tracking-wider text-red-500">REC</span>
+                          <span className="font-mono text-foreground">{formatDuration(recordingDuration)}</span>
+                          <span className="ml-0.5 text-[9px] px-1.5 py-0.2 rounded bg-muted/60 text-muted-foreground uppercase border border-border/50">
+                            {videoFormat}
+                          </span>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="h-3.5 w-px bg-border/60" />
+
+                        {/* Stop & Save Action */}
+                        <button
+                          type="button"
+                          onClick={handleStopRecording}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600 hover:bg-red-500 active:scale-95 text-white text-[11px] font-semibold transition cursor-pointer shadow-xs shadow-red-950/20"
+                        >
+                          <FiSquare className="w-2.5 h-2.5 fill-current" />
+                          <span>Stop & Save</span>
+                        </button>
+
+                        {/* Minimize to Corner Circle */}
+                        <button
+                          type="button"
+                          onClick={() => setIsRecordingMinimized(true)}
+                          className="size-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition cursor-pointer"
+                          title="Hide to corner circle"
+                          aria-label="Minimize recording indicator"
+                        >
+                          <FiMinimize2 className="size-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {/* Professional Clean Empty State */}
