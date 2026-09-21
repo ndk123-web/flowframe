@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef, Fragment } from "react";
 import FlowFrameCodeEditor from "@/components/FlowFrameCodeEditor";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,10 @@ import ShortUniqueId from "short-unique-id";
 import { toPng } from "html-to-image";
 import {
   FiRotateCcw,
+  FiLink,
+  FiDatabase,
+  FiRefreshCw,
+  FiChevronDown,
   FiPlay,
   FiPause,
   FiMenu,
@@ -99,6 +103,7 @@ import PubSubModel from "@/engine/models/PubSub/PubSubModel";
 import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
 import Ipv4Generator from "@/utils/generateRandomIp";
 import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
+import { validateEndpointPipelines } from "@/utils/routeValidator";
 
 // Auth & API
 import { useAuthStore } from "@/store/useAuthStore";
@@ -242,7 +247,8 @@ define SERVER s1 {
   acceptedEndpoints: [
     {
       endpoint: "/api/v1/posts",
-      allowedMethod: ["GET", "POST"]
+      allowedMethod: ["GET", "POST"],
+      pipeline: ["r1", "db1"]
     }
   ]
 }
@@ -2260,6 +2266,133 @@ function ShapeNode({ data, selected }: any) {
   );
 }
 
+const PIPELINE_PRESETS = [
+  {
+    id: "auto",
+    label: "Auto (Topology Discovery)",
+    description: "Automatic routing via connected canvas topology",
+    icon: FiShare2,
+  },
+  {
+    id: "cache-aside",
+    label: "Cache-Aside Pattern",
+    description: "Redis cache hop with early return, PostgreSQL fallback",
+    icon: FiLink,
+  },
+  {
+    id: "strict-sequence",
+    label: "Strict Sequence",
+    description: "Unconditional Redis hop followed by PostgreSQL",
+    icon: FiDatabase,
+  },
+  {
+    id: "direct-db",
+    label: "Direct Database",
+    description: "Bypass cache and query PostgreSQL directly",
+    icon: FiDatabase,
+  },
+  {
+    id: "write-through",
+    label: "Write-Through Invalidation",
+    description: "PostgreSQL write followed by Redis invalidation",
+    icon: FiRefreshCw,
+  },
+  {
+    id: "custom",
+    label: "Custom Hop Sequence",
+    description: "Manually configured and ordered service hops",
+    icon: FiSliders,
+  },
+];
+
+function PipelinePresetDropdown({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as unknown as globalThis.Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const activePreset =
+    PIPELINE_PRESETS.find((p) => p.id === value) || PIPELINE_PRESETS[0];
+  const ActiveIcon = activePreset.icon;
+
+  return (
+    <div ref={dropdownRef} className={`relative w-full ${isOpen ? "z-30" : "z-10"}`}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] transition cursor-pointer text-xs text-[color:var(--foreground)] outline-none focus:border-[var(--accent)]"
+      >
+        <div className="flex items-center gap-2 min-w-0 truncate">
+          <ActiveIcon className="size-3.5 text-[color:var(--accent)] shrink-0" />
+          <span className="truncate font-medium">{activePreset.label}</span>
+        </div>
+        <FiChevronDown
+          className={`size-3 text-[color:var(--foreground)]/50 transition-transform duration-150 shrink-0 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 left-0 right-0 mt-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-2xl p-1 max-h-56 overflow-y-auto scrollbar-thin">
+          {PIPELINE_PRESETS.map((preset) => {
+            const Icon = preset.icon;
+            const isSelected = preset.id === value;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => {
+                  onChange(preset.id);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-start gap-2 p-2 rounded-md text-left transition cursor-pointer ${
+                  isSelected
+                    ? "bg-[var(--accent)]/10 text-[color:var(--accent)]"
+                    : "hover:bg-[var(--surface-muted)] text-[color:var(--foreground)]"
+                }`}
+              >
+                <Icon
+                  className={`size-3.5 mt-0.5 shrink-0 ${
+                    isSelected ? "text-[color:var(--accent)]" : "text-[color:var(--foreground)]/60"
+                  }`}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold truncate">
+                      {preset.label}
+                    </span>
+                    {isSelected && <FiCheck className="size-3 shrink-0" />}
+                  </div>
+                  <p className="text-[10px] text-[color:var(--foreground)]/50 leading-tight mt-0.5">
+                    {preset.description}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const nodeTypes = {
   customNode: CustomNode,
   default: CustomNode,
@@ -2410,6 +2543,37 @@ function WorkspaceInner({
   // Node Configurations State
   const [nodeConfigs, setNodeConfigs] = useState<Record<string, any>>({});
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [inspectorWidth, setInspectorWidth] = useState<number>(380);
+  const [isResizingInspector, setIsResizingInspector] = useState<boolean>(false);
+
+  const handleStartResizeInspector = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsResizingInspector(true);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      const startX = e.clientX;
+      const startWidth = inspectorWidth;
+
+      const onMouseMove = (moveEvent: MouseEvent) => {
+        const delta = startX - moveEvent.clientX;
+        const newWidth = Math.max(300, Math.min(850, startWidth + delta));
+        setInspectorWidth(newWidth);
+      };
+
+      const onMouseUp = () => {
+        setIsResizingInspector(false);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+      };
+
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    },
+    [inspectorWidth],
+  );
 
   const handleSaveDiagramToBackend = async () => {
     if (!workspaceId || !diagramId || !token) return;
@@ -2453,6 +2617,7 @@ function WorkspaceInner({
   const [isCompilingSimulation, setIsCompilingSimulation] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [frameIndex, setFrameIndex] = useState(0);
+  const [executionMode, setExecutionMode] = useState<"animation" | "instant">("animation");
 
   // Dynamic top-bar configs
   const [hideResponse, setHideResponse] = useState(false);
@@ -2491,6 +2656,7 @@ function WorkspaceInner({
   );
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [expandedEndpoint, setExpandedEndpoint] = useState<string | null>(null);
 
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedTemplate, setCopiedTemplate] = useState(false);
@@ -3053,6 +3219,8 @@ connect s1 -> db1
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizingSidebar(true);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
   };
 
   useEffect(() => {
@@ -3060,11 +3228,13 @@ connect s1 -> db1
 
     const handleMouseMove = (e: MouseEvent) => {
       const newWidth = e.clientX;
-      setSidebarWidth(Math.max(240, Math.min(newWidth, 480)));
+      setSidebarWidth(Math.max(240, Math.min(newWidth, 600)));
     };
 
     const handleMouseUp = () => {
       setIsResizingSidebar(false);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -3072,6 +3242,8 @@ connect s1 -> db1
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     };
   }, [isResizingSidebar]);
 
@@ -3198,6 +3370,12 @@ connect s1 -> db1
             }
             if (config.endpoints) {
               modelInstance.endpoints = { ...config.endpoints };
+            }
+            if (config.endpointPipelines && typeof config.endpointPipelines === "object") {
+              modelInstance.endpointPipelines = { ...config.endpointPipelines };
+            }
+            if (config.endpointPipelinePolicies && typeof config.endpointPipelinePolicies === "object") {
+              modelInstance.endpointPipelinePolicies = { ...config.endpointPipelinePolicies };
             }
             break;
           case "redis":
@@ -3549,6 +3727,13 @@ connect s1 -> db1
         );
       }
 
+      // Pre-flight route and pipeline validation
+      const pipelineValidation = validateEndpointPipelines(activeNodes, activeEdges, activeConfigs);
+      if (!pipelineValidation.isValid) {
+        const warningMsg = pipelineValidation.errors.map((e) => e.message).join(" ");
+        setValidationWarning(warningMsg);
+      }
+
       // 6. Run sequential request queries
       const clientLabelStr = (clientToRun.data.label as string) || "";
       const clientConfig =
@@ -3639,16 +3824,28 @@ connect s1 -> db1
           }
 
           setRawSimulationFrames(allFrames);
-          setFrameIndex(0);
-          setIsPlaying(true);
-          setIsCompilingSimulation(false);
+          if (executionMode === "instant") {
+            const totalHops = allFrames.reduce(
+              (acc, run) => acc + (run.frames?.length || 0),
+              0,
+            );
+            setFrameIndex(Math.max(0, totalHops - 1));
+            setIsPlaying(false);
+            setIsCompilingSimulation(false);
+            setDebugEnabled(true);
+            setSuccessToast(`Instant Trace: ${totalHops} hops analyzed.`);
+          } else {
+            setFrameIndex(0);
+            setIsPlaying(true);
+            setIsCompilingSimulation(false);
+          }
         } catch (err: any) {
           setValidationWarning(`Simulation Error: ${err.message || err}`);
           setIsCompilingSimulation(false);
         }
       }, 10);
     },
-    [nodes, nodeConfigs, edges],
+    [nodes, nodeConfigs, edges, executionMode],
   );
 
   // Compile & Execute DSL script from Monaco Editor
@@ -3740,6 +3937,7 @@ connect s1 -> db1
           "MESSAGEQUEUE",
           "true",
           "false",
+          "pipeline",
         ],
         tokenizer: {
           root: [
@@ -3755,6 +3953,51 @@ connect s1 -> db1
             [/'([^'\\]|\\.)*'/, "string"],
             [/\/\/.*$/, "comment"],
           ],
+        },
+      });
+
+      monaco.languages.registerCompletionItemProvider("flow", {
+        provideCompletionItems: (model: any, position: any) => {
+          const word = model.getWordUntilPosition(position);
+          const range = {
+            startLineNumber: position.lineNumber,
+            endLineNumber: position.lineNumber,
+            startColumn: word.startColumn,
+            endColumn: word.endColumn,
+          };
+          const suggestions = [
+            {
+              label: "pipeline:",
+              kind: monaco.languages.CompletionItemKind.Property,
+              insertText: 'pipeline: ["${1:cache1}", "${2:db1}"],',
+              insertTextRules:
+                monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation:
+                'Execution pipeline sequence hops (e.g. pipeline: ["r1", "db1"])',
+              range,
+            },
+            {
+              label: "pipeline",
+              kind: monaco.languages.CompletionItemKind.Property,
+              insertText: 'pipeline: ["${1:cache1}", "${2:db1}"]',
+              insertTextRules:
+                monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation:
+                'Define ordered execution pipeline hops for this endpoint',
+              range,
+            },
+            {
+              label: "acceptedEndpoints:",
+              kind: monaco.languages.CompletionItemKind.Property,
+              insertText: 'acceptedEndpoints: [\n  {\n    endpoint: "${1:/api/v1/posts}",\n    allowedMethod: ["${2:GET}"],\n    pipeline: ["${3:cache1}", "${4:db1}"]\n  }\n],',
+              insertTextRules:
+                monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation:
+                'Accepted endpoints with pipeline configuration',
+              range,
+            },
+          ];
+          return { suggestions };
         },
       });
 
@@ -4823,11 +5066,11 @@ connect s1 -> db1
         >
           {/* Draw.io / Miro-Style Left Shapes Sidebar */}
           <aside
-            className={`flex flex-col z-10 shrink-0 h-full overflow-hidden transition-all duration-300 relative border-r border-[var(--border)] bg-[var(--surface)] ${
+            className={`flex flex-col z-10 shrink-0 h-full overflow-hidden transition-none relative border-r border-[var(--border)] bg-[var(--surface)] ${
               isSidebarFloating
                 ? "absolute rounded-2xl shadow-2xl border"
                 : "relative"
-            } ${"max-md:fixed max-md:top-0 max-md:left-0 max-md:z-30 max-md:w-72 max-md:h-full max-md:shadow-2xl max-md:transition-transform max-md:duration-300"} ${
+            } ${"max-md:fixed max-md:top-0 max-md:left-0 max-md:z-30 max-md:w-72 max-md:h-full max-md:shadow-2xl"} ${
               isSidebarOpenMobile
                 ? "max-md:translate-x-0"
                 : "max-md:-translate-x-full"
@@ -5509,6 +5752,8 @@ connect s1 -> db1
                 frameIndex={frameIndex}
                 completedFrames={accumulatedFrames.length}
                 totalFrames={simulationFrames.length}
+                executionMode={executionMode}
+                onExecutionModeChange={setExecutionMode}
                 speed={speed}
                 onSpeedChange={setSpeed}
                 requestEndpoints={clientEndpoints}
@@ -6102,47 +6347,91 @@ connect s1 -> db1
             {/* Docked Right Inspector Panel — bottom sheet on mobile, right-docked on desktop (Section 15) */}
             {selectedNode && (
               <aside
+                style={{ width: `${inspectorWidth}px` }}
                 className="
             fixed inset-x-0 bottom-0 max-h-[60vh] rounded-t-2xl border-t border-[var(--border)] z-50
-            md:static md:w-80 md:h-full md:max-h-full md:rounded-none md:border-t-0 md:border-l md:border-[var(--border)] md:z-20
-            bg-[var(--surface)] shadow-2xl md:shadow-none flex flex-col overflow-y-auto scrollbar-thin shrink-0 transition-all duration-200
+            md:static md:h-full md:max-h-full md:rounded-none md:border-t-0 md:border-l md:border-[var(--border)] md:z-20
+            bg-[var(--surface)] shadow-2xl md:shadow-none flex flex-col overflow-y-auto scrollbar-thin shrink-0 relative
           "
               >
+                {/* Desktop Left Resize Drag Handle */}
+                <div
+                  onMouseDown={handleStartResizeInspector}
+                  className={`hidden md:flex absolute -left-1.5 top-0 bottom-0 w-3 cursor-col-resize items-center justify-center z-40 group hover:bg-[var(--accent)]/15 select-none transition-none ${
+                    isResizingInspector ? "bg-[var(--accent)]/25" : ""
+                  }`}
+                  title="Drag to resize Inspector width"
+                >
+                  <div className="w-0.5 h-12 rounded-full bg-[var(--border)] group-hover:bg-[var(--accent)] transition-none" />
+                </div>
                 <div className="p-3.5 px-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface-muted)]/50">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-[var(--surface)] text-[color:var(--accent)] border border-[var(--border)] shrink-0">
-                      {String(
-                        selectedNode.data?.type ||
-                          (selectedNode.type !== "default" && selectedNode.type ? selectedNode.type : "") ||
-                          inferWorkspaceNodeType(selectedNode) ||
-                          "node",
-                      )}
-                    </span>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="size-8 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center text-[color:var(--accent)] shadow-xs shrink-0">
+                      <ComponentIcon
+                        type={String(
+                          selectedNode.data?.type ||
+                            (selectedNode.type !== "default" && selectedNode.type ? selectedNode.type : "") ||
+                            inferWorkspaceNodeType(selectedNode) ||
+                            "node",
+                        )}
+                        className="size-4"
+                      />
+                    </div>
                     <div className="min-w-0">
-                      <h2 className="text-xs font-bold tracking-tight text-[color:var(--foreground)]">
-                        Node Inspector
-                      </h2>
-                      <p className="text-[10px] font-mono text-[color:var(--foreground)]/50 truncate max-w-[140px]">
-                        {String(selectedNode.data?.label || selectedNode.id)}
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <h2 className="text-xs font-bold tracking-tight text-[color:var(--foreground)] truncate">
+                          {String(selectedNode.data?.label || selectedNode.id)}
+                        </h2>
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold uppercase bg-[var(--surface)] text-[color:var(--accent)] border border-[var(--border)] shrink-0">
+                          {String(
+                            selectedNode.data?.type ||
+                              (selectedNode.type !== "default" && selectedNode.type ? selectedNode.type : "") ||
+                              inferWorkspaceNodeType(selectedNode) ||
+                              "node",
+                          )}
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-mono text-[color:var(--foreground)]/50 truncate">
+                        ID: {selectedNode.id}
                       </p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedNodeId(null);
-                      setNodes((nds) =>
-                        nds.map((n) => ({ ...n, selected: false })),
-                      );
-                    }}
-                    className="text-xs text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] h-6 w-6 rounded-md hover:bg-[var(--surface)] flex items-center justify-center font-bold transition cursor-pointer shrink-0"
-                    title="Close Inspector"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInspectorWidth((prev) => (prev > 450 ? 380 : 620));
+                      }}
+                      className="text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] h-6 w-6 rounded-md hover:bg-[var(--surface)] flex items-center justify-center transition-none cursor-pointer"
+                      title={
+                        inspectorWidth > 450
+                          ? "Collapse Inspector Width (380px)"
+                          : "Expand Inspector Width (620px)"
+                      }
+                    >
+                      {inspectorWidth > 450 ? (
+                        <FiMinimize2 className="w-3.5 h-3.5" />
+                      ) : (
+                        <FiMaximize2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedNodeId(null);
+                        setNodes((nds) =>
+                          nds.map((n) => ({ ...n, selected: false })),
+                        );
+                      }}
+                      className="text-xs text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] h-6 w-6 rounded-md hover:bg-[var(--surface)] flex items-center justify-center font-bold transition-none cursor-pointer"
+                      title="Close Inspector"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
 
-                <div className="p-4 flex-1 space-y-4">
+                <div className="p-4 pb-24 flex-1 space-y-4">
                   <button
                     type="button"
                     onClick={() => {
@@ -8193,132 +8482,541 @@ connect s1 -> db1
                       <div className="h-px bg-[var(--border)]/70 my-2" />
 
                       <div>
-                        <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block mb-2">
-                          Exposed Endpoints
-                        </label>
-                        <div className="space-y-3 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
-                          {Object.entries(
-                            nodeConfigs[selectedNode.id]?.endpoints || {},
-                          ).map(([path, methods]: [string, any], idx) => {
-                            const allHttpMethods = [
-                              "GET",
-                              "POST",
-                              "PUT",
-                              "DELETE",
-                              "PATCH",
-                            ];
-                            return (
-                              <div
-                                key={idx}
-                                className="border border-[var(--border)] rounded-lg p-2.5 bg-[var(--surface)]/50 space-y-2 relative group/ep"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const nextEndpoints = {
-                                      ...(nodeConfigs[selectedNode.id]
-                                        ?.endpoints || {}),
-                                    };
-                                    delete nextEndpoints[path];
-                                    updateNodeConfig(selectedNode.id, {
-                                      endpoints: nextEndpoints,
-                                    });
-                                  }}
-                                  className="absolute top-1.5 right-1.5 text-rose-500 hover:text-rose-600 text-xs font-bold px-1 cursor-pointer opacity-40 group-hover/ep:opacity-100 transition"
-                                  title="Delete Endpoint"
-                                >
-                                  ×
-                                </button>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-[9px] uppercase font-bold tracking-widest text-[color:var(--foreground)]/55 block">
+                            Exposed Endpoints & Pipelines
+                          </label>
+                        </div>
+                        {(() => {
+                          const downstreamNodes = edges
+                            .filter((e) => e.source === selectedNode.id)
+                            .map((e) => {
+                              const targetNode = nodes.find((n) => n.id === e.target);
+                              return {
+                                id: e.target,
+                                label: (targetNode?.data?.label as string) || e.target,
+                                type: (targetNode?.data?.type as string) || "node",
+                              };
+                            });
 
-                                <div>
-                                  <label className="text-[8px] text-[color:var(--foreground)]/50 block mb-0.5">
-                                    Route Path
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={path}
-                                    placeholder="api/v1/resource"
-                                    onChange={(e) => {
-                                      const endpoints = (nodeConfigs[
-                                        selectedNode.id
-                                      ]?.endpoints || {}) as Record<
-                                        string,
-                                        any
-                                      >;
-                                      const nextEndpoints: Record<string, any> =
-                                        {};
-                                      for (const [k, v] of Object.entries(
-                                        endpoints,
-                                      )) {
-                                        if (k === path) {
-                                          nextEndpoints[e.target.value] = v;
-                                        } else {
-                                          nextEndpoints[k] = v;
-                                        }
+                          const endpointsObj =
+                            nodeConfigs[selectedNode.id]?.endpoints || {};
+                          const endpointEntries = Object.entries(endpointsObj);
+
+                          return (
+                            <div className="space-y-2.5">
+                              {endpointEntries.map(([path, methods]: [string, any], idx) => {
+                                const allHttpMethods = [
+                                  "GET",
+                                  "POST",
+                                  "PUT",
+                                  "DELETE",
+                                  "PATCH",
+                                ];
+                                const isExpanded =
+                                  expandedEndpoint === path ||
+                                  (expandedEndpoint === null && idx === 0);
+
+                                const currentPipelines =
+                                  nodeConfigs[selectedNode.id]?.endpointPipelines || {};
+                                const currentPipeline: string[] =
+                                  currentPipelines[path] || [];
+
+                                const currentPolicies =
+                                  nodeConfigs[selectedNode.id]?.endpointPipelinePolicies || {};
+                                const currentPolicy =
+                                  currentPolicies[path] || {};
+
+                                const firstMethod = (methods || [])[0] || "GET";
+
+                                // Detect preset pattern
+                                const redisNode = downstreamNodes.find((n) => n.type === "redis");
+                                const pgNode = downstreamNodes.find((n) => n.type === "postgres");
+
+                                const isCacheAside =
+                                  currentPipeline.length === 2 &&
+                                  redisNode &&
+                                  pgNode &&
+                                  currentPipeline[0] === redisNode.id &&
+                                  currentPipeline[1] === pgNode.id &&
+                                  Boolean(currentPolicy.stopOnCacheHit);
+
+                                const isStrictSequence =
+                                  currentPipeline.length === 2 &&
+                                  redisNode &&
+                                  pgNode &&
+                                  currentPipeline[0] === redisNode.id &&
+                                  currentPipeline[1] === pgNode.id &&
+                                  !currentPolicy.stopOnCacheHit;
+
+                                const isDirectDb =
+                                  currentPipeline.length === 1 &&
+                                  pgNode &&
+                                  currentPipeline[0] === pgNode.id;
+
+                                const isWriteThrough =
+                                  currentPipeline.length === 2 &&
+                                  redisNode &&
+                                  pgNode &&
+                                  currentPipeline[0] === pgNode.id &&
+                                  currentPipeline[1] === redisNode.id;
+
+                                let currentPreset = "custom";
+                                if (currentPipeline.length === 0) currentPreset = "auto";
+                                else if (isCacheAside) currentPreset = "cache-aside";
+                                else if (isStrictSequence) currentPreset = "strict-sequence";
+                                else if (isDirectDb) currentPreset = "direct-db";
+                                else if (isWriteThrough) currentPreset = "write-through";
+
+                                return (
+                                  <div
+                                    key={idx}
+                                    className={`border rounded-xl transition-all duration-150 ${
+                                      isExpanded
+                                        ? "border-[var(--accent)]/50 bg-[var(--surface)] shadow-xs overflow-visible relative z-20"
+                                        : "border-[var(--border)] bg-[var(--surface)]/70 hover:border-[var(--border)] overflow-hidden relative z-0"
+                                    }`}
+                                  >
+                                    {/* ── Collapsed Header Summary ── */}
+                                    <div
+                                      onClick={() =>
+                                        setExpandedEndpoint(isExpanded ? "" : path)
                                       }
-                                      updateNodeConfig(selectedNode.id, {
-                                        endpoints: nextEndpoints,
-                                      });
-                                    }}
-                                    className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-mono outline-none focus:border-violet-500"
-                                  />
-                                </div>
+                                      className="p-2.5 flex items-center justify-between gap-2 cursor-pointer select-none group/hdr hover:bg-[var(--surface-muted)]/50 transition"
+                                    >
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--surface-muted)] text-[color:var(--foreground)] shrink-0">
+                                          {firstMethod}
+                                        </span>
+                                        <span className="text-xs font-mono font-medium text-[color:var(--foreground)] truncate">
+                                          {path}
+                                        </span>
+                                      </div>
 
-                                <div>
-                                  <label className="text-[8px] text-[color:var(--foreground)]/50 block mb-1">
-                                    Allowed Methods
-                                  </label>
-                                  <div className="flex flex-wrap gap-1">
-                                    {allHttpMethods.map((m) => {
-                                      const isSelected = (
-                                        methods || []
-                                      ).includes(m);
-                                      return (
+                                      <div className="flex items-center gap-1.5 shrink-0">
+                                        {/* Mini Pipeline Preview Badge */}
+                                        {currentPipeline.length > 0 ? (
+                                          <div className="flex items-center gap-1 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded text-[9px] font-mono text-[color:var(--foreground)]/70 border border-[var(--border)]">
+                                            {currentPipeline.map((nid, pIdx) => {
+                                              const nObj = nodes.find((n) => n.id === nid);
+                                              const displayLabel = String(nObj?.data?.label || nid);
+                                              return (
+                                                <Fragment key={pIdx}>
+                                                  {pIdx > 0 && <FiChevronRight className="size-2.5 opacity-40 shrink-0" />}
+                                                  <span className="font-semibold">{displayLabel}</span>
+                                                </Fragment>
+                                              );
+                                            })}
+                                            {currentPolicy.stopOnCacheHit && (
+                                              <span className="opacity-70 ml-0.5" title="Stops on Cache Hit"><FiZap className="size-2.5 text-amber-500 shrink-0 inline" /></span>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <span className="text-[9px] font-mono text-[color:var(--foreground)]/40 px-1">
+                                            Auto
+                                          </span>
+                                        )}
+
+                                        <span className="text-[10px] text-[color:var(--foreground)]/40 group-hover/hdr:text-[color:var(--foreground)] px-1">
+                                          {isExpanded ? "▲" : "▼"}
+                                        </span>
+
                                         <button
-                                          key={m}
                                           type="button"
-                                          onClick={() => {
-                                            const nextEndpoints = {
-                                              ...(nodeConfigs[selectedNode.id]
-                                                ?.endpoints || {}),
-                                            };
-                                            const currentMethods =
-                                              nextEndpoints[path] || [];
-                                            let updatedMethods: any[];
-                                            if (isSelected) {
-                                              updatedMethods =
-                                                currentMethods.filter(
-                                                  (item: string) => item !== m,
-                                                );
-                                            } else {
-                                              updatedMethods = [
-                                                ...currentMethods,
-                                                m,
-                                              ];
-                                            }
-                                            nextEndpoints[path] =
-                                              updatedMethods;
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const nextEndpoints = { ...endpointsObj };
+                                            delete nextEndpoints[path];
+                                            const nextPipes = { ...currentPipelines };
+                                            delete nextPipes[path];
+                                            const nextPols = { ...currentPolicies };
+                                            delete nextPols[path];
                                             updateNodeConfig(selectedNode.id, {
                                               endpoints: nextEndpoints,
+                                              endpointPipelines: nextPipes,
+                                              endpointPipelinePolicies: nextPols,
                                             });
                                           }}
-                                          className={`text-[8px] px-1.5 py-0.5 rounded font-mono font-bold transition cursor-pointer border ${
-                                            isSelected
-                                              ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
-                                              : "bg-[var(--surface-muted)] border-[var(--border)] text-[color:var(--foreground)]/55 hover:border-[var(--border)]/80 hover:text-[color:var(--foreground)]"
-                                          }`}
+                                          className="text-[color:var(--foreground)]/40 hover:text-rose-500 hover:bg-rose-500/10 text-xs font-bold px-1 rounded transition cursor-pointer"
+                                          title="Delete Endpoint"
                                         >
-                                          {m}
+                                          ×
                                         </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                                      </div>
+                                    </div>
 
+                                    {/* ── Expanded Configuration Body ── */}
+                                    {isExpanded && (
+                                      <div className="p-3 border-t border-[var(--border)] space-y-3 bg-[var(--surface-muted)]/20">
+                                        {/* Route Path Input */}
+                                        <div>
+                                          <label className="text-[9px] uppercase tracking-wider font-bold text-[color:var(--foreground)]/60 block mb-1">
+                                            Route Path
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={path}
+                                            placeholder="/api/v1/resource"
+                                            onChange={(e) => {
+                                              const newPath = e.target.value;
+                                              const nextEndpoints: Record<string, any> = {};
+                                              const nextPipes: Record<string, string[]> = {};
+                                              const nextPols: Record<string, any> = {};
+
+                                              for (const [k, v] of Object.entries(endpointsObj)) {
+                                                if (k === path) {
+                                                  nextEndpoints[newPath] = v;
+                                                  if (currentPipelines[k]) nextPipes[newPath] = currentPipelines[k];
+                                                  if (currentPolicies[k]) nextPols[newPath] = currentPolicies[k];
+                                                } else {
+                                                  nextEndpoints[k] = v;
+                                                  if (currentPipelines[k]) nextPipes[k] = currentPipelines[k];
+                                                  if (currentPolicies[k]) nextPols[k] = currentPolicies[k];
+                                                }
+                                              }
+
+                                              updateNodeConfig(selectedNode.id, {
+                                                endpoints: nextEndpoints,
+                                                endpointPipelines: nextPipes,
+                                                endpointPipelinePolicies: nextPols,
+                                              });
+                                              setExpandedEndpoint(newPath);
+                                            }}
+                                            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-mono outline-none focus:border-[var(--accent)] text-[color:var(--foreground)]"
+                                          />
+                                        </div>
+
+                                        {/* Allowed HTTP Methods */}
+                                        <div>
+                                          <label className="text-[9px] uppercase tracking-wider font-bold text-[color:var(--foreground)]/60 block mb-1.5">
+                                            Allowed Methods
+                                          </label>
+                                          <div className="flex flex-wrap gap-1">
+                                            {allHttpMethods.map((m) => {
+                                              const curM = methods || [];
+                                              const isSelected = curM.includes(m);
+                                              return (
+                                                <button
+                                                  key={m}
+                                                  type="button"
+                                                  onClick={() => {
+                                                    const nextEndpoints = { ...endpointsObj };
+                                                    const updated = isSelected
+                                                      ? curM.filter((x: string) => x !== m)
+                                                      : [...curM, m];
+                                                    nextEndpoints[path] = updated;
+                                                    updateNodeConfig(selectedNode.id, {
+                                                      endpoints: nextEndpoints,
+                                                    });
+                                                  }}
+                                                  className={`text-[9px] px-2 py-0.5 rounded font-mono font-medium transition cursor-pointer border ${
+                                                    isSelected
+                                                      ? "bg-[var(--accent)] border-[var(--accent)] text-white shadow-2xs"
+                                                      : "bg-[var(--surface)] border-[var(--border)] text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)]"
+                                                  }`}
+                                                >
+                                                  {m}
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+
+                                        {/* ── Architecture Presets Option Box ── */}
+                                        <div className="pt-2 border-t border-[var(--border)]/60">
+                                          <label className="text-[9px] uppercase tracking-wider font-bold text-[color:var(--foreground)]/60 block mb-1.5">
+                                            Pipeline Preset
+                                          </label>
+                                          <PipelinePresetDropdown
+                                            value={currentPreset}
+                                            onChange={(val) => {
+                                              if (val === "cache-aside" && redisNode && pgNode) {
+                                                const pipes = { ...currentPipelines, [path]: [redisNode.id, pgNode.id] };
+                                                const pols = { ...currentPolicies, [path]: { stopOnCacheHit: true } };
+                                                updateNodeConfig(selectedNode.id, {
+                                                  endpointPipelines: pipes,
+                                                  endpointPipelinePolicies: pols,
+                                                });
+                                              } else if (val === "strict-sequence" && redisNode && pgNode) {
+                                                const pipes = { ...currentPipelines, [path]: [redisNode.id, pgNode.id] };
+                                                const pols = { ...currentPolicies, [path]: { stopOnCacheHit: false } };
+                                                updateNodeConfig(selectedNode.id, {
+                                                  endpointPipelines: pipes,
+                                                  endpointPipelinePolicies: pols,
+                                                });
+                                              } else if (val === "direct-db" && pgNode) {
+                                                const pipes = { ...currentPipelines, [path]: [pgNode.id] };
+                                                const pols = { ...currentPolicies, [path]: { stopOnCacheHit: false } };
+                                                updateNodeConfig(selectedNode.id, {
+                                                  endpointPipelines: pipes,
+                                                  endpointPipelinePolicies: pols,
+                                                });
+                                              } else if (val === "write-through" && redisNode && pgNode) {
+                                                const pipes = { ...currentPipelines, [path]: [pgNode.id, redisNode.id] };
+                                                const pols = { ...currentPolicies, [path]: { stopOnCacheHit: false } };
+                                                updateNodeConfig(selectedNode.id, {
+                                                  endpointPipelines: pipes,
+                                                  endpointPipelinePolicies: pols,
+                                                });
+                                              } else if (val === "auto") {
+                                                const pipes = { ...currentPipelines };
+                                                delete pipes[path];
+                                                const pols = { ...currentPolicies };
+                                                delete pols[path];
+                                                updateNodeConfig(selectedNode.id, {
+                                                  endpointPipelines: pipes,
+                                                  endpointPipelinePolicies: pols,
+                                                });
+                                              }
+                                            }}
+                                          />
+                                        </div>
+
+                                        {/* ── Vertical Pipeline Stepper (Only rendered when custom hops exist) ── */}
+                                        {currentPipeline.length > 0 && (
+                                          <div className="pt-2 border-t border-[var(--border)]/60">
+                                            <div className="flex items-center justify-between mb-2">
+                                              <span className="text-[9px] uppercase tracking-wider font-bold text-[color:var(--foreground)]/60">
+                                                Configured Pipeline Steps
+                                              </span>
+                                              <span className="text-[9px] font-mono text-[color:var(--foreground)]/50">
+                                                {`${currentPipeline.length} Hop${currentPipeline.length > 1 ? "s" : ""}`}
+                                              </span>
+                                            </div>
+
+                                          {/* Step 0: Origin Server */}
+                                          <div className="space-y-1.5">
+                                            <div className="flex items-center gap-2 p-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[10px] font-mono text-[color:var(--foreground)] shadow-2xs">
+                                              <div className="size-6 rounded-md bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 flex items-center justify-center shrink-0 border border-[var(--border)]">
+                                                <ComponentIcon type="server" className="size-3.5" />
+                                              </div>
+                                              <div className="min-w-0 flex-1">
+                                                <span className="font-semibold text-[color:var(--foreground)]">
+                                                  {(selectedNode.data?.label as string) || "Server"}
+                                                </span>
+                                              </div>
+                                              <span className="text-[9px] font-mono text-[color:var(--foreground)]/50 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded border border-[var(--border)] shrink-0">
+                                                Origin
+                                              </span>
+                                            </div>
+
+                                            {/* Sequence Steps */}
+                                            {currentPipeline.map((stepNodeId, stepIdx) => {
+                                              const stepNode = nodes.find((n) => n.id === stepNodeId);
+                                              const stepLabel = String((stepNode?.data?.label as string) || stepNodeId);
+                                              const stepType = (stepNode?.data?.type as string) || "node";
+
+                                              return (
+                                                <Fragment key={stepIdx}>
+                                                  {/* Flow connector line */}
+                                                  <div className="flex items-center justify-center h-2.5">
+                                                    <div className="w-px h-full bg-[var(--border)]" />
+                                                  </div>
+
+                                                  <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 shadow-2xs space-y-1.5">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                      <span className="size-4 rounded bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 font-mono text-[8px] font-bold flex items-center justify-center shrink-0 border border-[var(--border)]">
+                                                        {stepIdx + 1}
+                                                      </span>
+                                                      <div className="size-6 rounded-md bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 flex items-center justify-center shrink-0 border border-[var(--border)]">
+                                                        <ComponentIcon type={stepType} className="size-3.5" />
+                                                      </div>
+                                                      <div className="min-w-0 flex-1">
+                                                        <div className="flex items-center gap-1.5 truncate">
+                                                          <span className="text-xs font-medium text-[color:var(--foreground)] truncate">
+                                                            {stepLabel}
+                                                          </span>
+                                                          <span className="text-[8px] font-mono text-[color:var(--foreground)]/40 uppercase">
+                                                            ({stepNodeId})
+                                                          </span>
+                                                        </div>
+                                                      </div>
+
+                                                      {/* Reorder and Delete controls */}
+                                                      <div className="flex items-center gap-0.5 shrink-0">
+                                                        <button
+                                                          type="button"
+                                                          disabled={stepIdx === 0}
+                                                          onClick={() => {
+                                                            const nextPipe = [...currentPipeline];
+                                                            const temp = nextPipe[stepIdx - 1];
+                                                            nextPipe[stepIdx - 1] = nextPipe[stepIdx];
+                                                            nextPipe[stepIdx] = temp;
+                                                            const pipes = { ...currentPipelines, [path]: nextPipe };
+                                                            updateNodeConfig(selectedNode.id, { endpointPipelines: pipes });
+                                                          }}
+                                                          className="size-5 rounded hover:bg-[var(--surface-muted)] text-[10px] text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] disabled:opacity-20 flex items-center justify-center cursor-pointer"
+                                                          title="Move Up"
+                                                        >
+                                                          ↑
+                                                        </button>
+                                                        <button
+                                                          type="button"
+                                                          disabled={stepIdx === currentPipeline.length - 1}
+                                                          onClick={() => {
+                                                            const nextPipe = [...currentPipeline];
+                                                            const temp = nextPipe[stepIdx + 1];
+                                                            nextPipe[stepIdx + 1] = nextPipe[stepIdx];
+                                                            nextPipe[stepIdx] = temp;
+                                                            const pipes = { ...currentPipelines, [path]: nextPipe };
+                                                            updateNodeConfig(selectedNode.id, { endpointPipelines: pipes });
+                                                          }}
+                                                          className="size-5 rounded hover:bg-[var(--surface-muted)] text-[10px] text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] disabled:opacity-20 flex items-center justify-center cursor-pointer"
+                                                          title="Move Down"
+                                                        >
+                                                          ↓
+                                                        </button>
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => {
+                                                            const nextPipe = currentPipeline.filter((_, i) => i !== stepIdx);
+                                                            const pipes = { ...currentPipelines };
+                                                            if (nextPipe.length === 0) {
+                                                              delete pipes[path];
+                                                            } else {
+                                                              pipes[path] = nextPipe;
+                                                            }
+                                                            updateNodeConfig(selectedNode.id, { endpointPipelines: pipes });
+                                                          }}
+                                                          className="size-5 rounded hover:bg-[var(--surface-muted)] text-[color:var(--foreground)]/40 hover:text-rose-500 text-xs font-bold flex items-center justify-center cursor-pointer ml-0.5 transition-colors"
+                                                          title="Remove Hop"
+                                                        >
+                                                          ✕
+                                                        </button>
+                                                      </div>
+                                                    </div>
+
+                                                    {/* Redis Stop-on-Hit Toggle */}
+                                                    {stepType === "redis" && (
+                                                      <div className="pt-1.5 border-t border-[var(--border)]/40 flex items-center justify-between text-[8px]">
+                                                        <span className="text-[color:var(--foreground)]/60 font-mono">
+                                                          Cache Hit Rule:
+                                                        </span>
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => {
+                                                            const cur = Boolean(currentPolicy.stopOnCacheHit);
+                                                            const pols = {
+                                                              ...currentPolicies,
+                                                              [path]: { stopOnCacheHit: !cur },
+                                                            };
+                                                            updateNodeConfig(selectedNode.id, {
+                                                              endpointPipelinePolicies: pols,
+                                                            });
+                                                          }}
+                                                          className={`px-1.5 py-0.5 rounded font-mono font-medium border transition cursor-pointer flex items-center gap-1 ${
+                                                            currentPolicy.stopOnCacheHit
+                                                              ? "bg-[var(--surface-muted)] border-[var(--border)] text-[color:var(--foreground)]"
+                                                              : "bg-[var(--surface)] border-[var(--border)] text-[color:var(--foreground)]/60"
+                                                          }`}
+                                                        >
+                                                          {currentPolicy.stopOnCacheHit ? (
+                                                            <>
+                                                              <FiZap className="size-3 text-amber-500 shrink-0" />
+                                                              <span>Stop on Hit (Cache-Aside)</span>
+                                                            </>
+                                                          ) : (
+                                                            <>
+                                                              <FiChevronRight className="size-3 text-emerald-500 shrink-0" />
+                                                              <span>Always Continue</span>
+                                                            </>
+                                                          )}
+                                                        </button>
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                </Fragment>
+                                              );
+                                            })}
+
+                                            {/* Terminal Step: Client Response */}
+                                            <div className="flex items-center justify-center h-2.5">
+                                              <div className="w-px h-full bg-[var(--border)]" />
+                                            </div>
+                                            <div className="flex items-center gap-2 p-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[10px] font-mono text-[color:var(--foreground)] shadow-2xs">
+                                              <div className="size-6 rounded-md bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 flex items-center justify-center shrink-0 border border-[var(--border)]">
+                                                ✓
+                                              </div>
+                                              <div className="min-w-0 flex-1">
+                                                <span className="font-semibold text-[color:var(--foreground)]">
+                                                  Client Response
+                                                </span>
+                                              </div>
+                                              <span className="text-[8px] font-mono text-[color:var(--foreground)]/60 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded border border-[var(--border)] shrink-0">
+                                                200 OK
+                                              </span>
+                                            </div>
+                                          </div>
+                                          </div>
+                                        )}
+
+                                          {/* Add Hop Option Box (Select Dropdown) */}
+                                          <div className="pt-2 mt-2 border-t border-[var(--border)]/60 space-y-1.5">
+                                            <label className="text-[9px] uppercase tracking-wider font-bold text-[color:var(--foreground)]/60 block">
+                                              Append Service Hop
+                                            </label>
+                                            <div className="flex items-center gap-1.5">
+                                              <select
+                                                value=""
+                                                onChange={(e) => {
+                                                  const nextId = e.target.value;
+                                                  if (!nextId) return;
+                                                  const nextPipe = [...currentPipeline, nextId];
+                                                  const pipes = { ...currentPipelines, [path]: nextPipe };
+                                                  updateNodeConfig(selectedNode.id, { endpointPipelines: pipes });
+                                                }}
+                                                disabled={downstreamNodes.length === 0}
+                                                className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)] text-[color:var(--foreground)] cursor-pointer disabled:opacity-50"
+                                              >
+                                                <option value="">
+                                                  {downstreamNodes.length === 0
+                                                    ? "No connected downstream nodes"
+                                                    : "+ Select service to append..."}
+                                                </option>
+                                                {downstreamNodes.map((n) => {
+                                                  const count = currentPipeline.filter((id) => id === n.id).length;
+                                                  return (
+                                                    <option key={n.id} value={n.id}>
+                                                      {n.label} ({n.id}) - {n.type.toUpperCase()} {count > 0 ? `[Hop ${count + 1}]` : ""}
+                                                    </option>
+                                                  );
+                                                })}
+                                              </select>
+
+                                              {currentPipeline.length > 0 && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    const pipes = { ...currentPipelines };
+                                                    delete pipes[path];
+                                                    const pols = { ...currentPolicies };
+                                                    delete pols[path];
+                                                    updateNodeConfig(selectedNode.id, {
+                                                      endpointPipelines: pipes,
+                                                      endpointPipelinePolicies: pols,
+                                                    });
+                                                  }}
+                                                  className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[color:var(--foreground)]/60 hover:text-[color:var(--foreground)] transition cursor-pointer shrink-0 font-medium"
+                                                  title="Reset to default auto-discovery"
+                                                >
+                                                  Reset
+                                                </button>
+                                              )}
+                                            </div>
+                                            {downstreamNodes.length === 0 && (
+                                              <p className="text-[8px] text-[color:var(--foreground)]/40 italic">
+                                                Connect this server to other services (Redis, Postgres, Queue) on the canvas to add pipeline hops.
+                                              </p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
                         <button
                           type="button"
                           onClick={() => {
@@ -8326,14 +9024,14 @@ connect s1 -> db1
                               nodeConfigs[selectedNode.id]?.endpoints || {};
                             const nextEndpoints = {
                               ...endpoints,
-                              [`api/v1/endpoint-${Object.keys(endpoints).length + 1}`]:
+                              [`/api/v1/endpoint-${Object.keys(endpoints).length + 1}`]:
                                 ["GET"],
                             };
                             updateNodeConfig(selectedNode.id, {
                               endpoints: nextEndpoints,
                             });
                           }}
-                          className="w-full mt-2 rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface)] transition font-semibold cursor-pointer"
+                          className="w-full mt-2 rounded-lg border border-[var(--border)] py-1.5 text-center text-xs hover:bg-[var(--surface-muted)] transition font-medium cursor-pointer"
                         >
                           + Add Endpoint Rule
                         </button>
@@ -8341,7 +9039,6 @@ connect s1 -> db1
                     </div>
                   )}
 
-                  {/* Message Queue Configuration */}
                   {selectedNode.data.type === "message-queue" && (
                     <div className="space-y-4">
                       <p className="text-xs font-semibold text-pink-400 font-mono">

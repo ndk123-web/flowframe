@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
@@ -88,7 +88,8 @@ define SERVER s1 {
   acceptedEndpoints: [
     {
       endpoint: "/api/v1/orders",
-      allowedMethod: ["POST"]
+      allowedMethod: ["POST"],
+      pipeline: ["r1", "db1"]
     }
   ]
 }
@@ -398,9 +399,66 @@ function FlowCodeBlock({ code }: { code: string }) {
   );
 }
 
+const NAV_SECTIONS = [
+  { id: "overview", label: "Overview" },
+  { id: "system-rules", label: "System Simulation Rules" },
+  { id: "syntax-rules", label: "Syntax & Token Rules" },
+  { id: "endpoint-pipelines", label: "Endpoint Pipelines" },
+  { id: "node-schemas", label: "Node Schemas (8 Types)" },
+  { id: "flagship-blueprint", label: "Enterprise Blueprint" },
+  { id: "video-deepdive", label: "Video Deep Dive" },
+  { id: "error-diagnostics", label: "Diagnostics & License" },
+];
+
 export default function DocsPage() {
   const { theme, toggleTheme } = useThemeStore();
   const [copied, setCopied] = useState(false);
+  const [activeSection, setActiveSection] = useState("overview");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash) {
+      const hash = window.location.hash.replace("#", "");
+      if (NAV_SECTIONS.some((s) => s.id === hash)) {
+        setActiveSection(hash);
+      }
+    }
+
+    const sectionIds = NAV_SECTIONS.map((s) => s.id);
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 140;
+      let currentSection = sectionIds[0];
+
+      for (const id of sectionIds) {
+        const el = document.getElementById(id);
+        if (el) {
+          const top = el.offsetTop;
+          if (scrollPosition >= top) {
+            currentSection = id;
+          }
+        }
+      }
+      setActiveSection(currentSection);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const handleNavClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    id: string
+  ) => {
+    e.preventDefault();
+    setActiveSection(id);
+    const el = document.getElementById(id);
+    if (el) {
+      const yOffset = -90;
+      const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: "smooth" });
+      window.history.pushState(null, "", `#${id}`);
+    }
+  };
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(FLAGSHIP_BLUEPRINT_CODE);
@@ -432,48 +490,23 @@ export default function DocsPage() {
               </div>
 
               <nav className="space-y-1 text-xs">
-                <a
-                  href="#overview"
-                  className="block rounded-lg px-3 py-2 text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition font-medium"
-                >
-                  Overview
-                </a>
-                <a
-                  href="#system-rules"
-                  className="block rounded-lg px-3 py-2 text-[color:var(--accent)] bg-[var(--accent)]/10 font-semibold"
-                >
-                  System Simulation Rules
-                </a>
-                <a
-                  href="#syntax-rules"
-                  className="block rounded-lg px-3 py-2 text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition font-medium"
-                >
-                  Syntax & Token Rules
-                </a>
-                <a
-                  href="#node-schemas"
-                  className="block rounded-lg px-3 py-2 text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition font-medium"
-                >
-                  Node Schemas (8 Types)
-                </a>
-                <a
-                  href="#flagship-blueprint"
-                  className="block rounded-lg px-3 py-2 text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition font-medium"
-                >
-                  Enterprise Blueprint
-                </a>
-                <a
-                  href="#video-deepdive"
-                  className="block rounded-lg px-3 py-2 text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition font-medium"
-                >
-                  Video Deep Dive
-                </a>
-                <a
-                  href="#error-diagnostics"
-                  className="block rounded-lg px-3 py-2 text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)] transition font-medium"
-                >
-                  Diagnostics & License
-                </a>
+                {NAV_SECTIONS.map((section) => {
+                  const isActive = activeSection === section.id;
+                  return (
+                    <a
+                      key={section.id}
+                      href={`#${section.id}`}
+                      onClick={(e) => handleNavClick(e, section.id)}
+                      className={`block rounded-lg px-3 py-2 transition font-medium cursor-pointer ${
+                        isActive
+                          ? "text-[color:var(--accent)] bg-[var(--accent)]/10 font-semibold shadow-2xs border-l-2 border-[var(--accent)]"
+                          : "text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                      }`}
+                    >
+                      {section.label}
+                    </a>
+                  );
+                })}
               </nav>
 
               <div className="pt-3 border-t border-[var(--border)] space-y-2">
@@ -644,6 +677,28 @@ export default function DocsPage() {
                     </p>
                   </div>
                 </div>
+
+                {/* Rule 9 & 10 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-2 transition hover:border-[var(--accent)]/40">
+                    <h4 className="text-sm font-bold text-[color:var(--foreground)] flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[var(--accent)]/10 text-[color:var(--accent)] border border-[var(--accent)]/20">09</span>
+                      <span>Dynamic Execution Pipelines</span>
+                    </h4>
+                    <p className="text-xs text-[color:var(--muted)] leading-relaxed">
+                      Endpoints declare an ordered <code className="text-[color:var(--accent)] font-mono">pipeline: [&quot;r1&quot;, &quot;db1&quot;]</code>. In Cache-Aside flows, a Redis cache hit returns immediately (200 OK) without calling downstream databases.
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-2 transition hover:border-[var(--accent)]/40">
+                    <h4 className="text-sm font-bold text-[color:var(--foreground)] flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[var(--accent)]/10 text-[color:var(--accent)] border border-[var(--accent)]/20">10</span>
+                      <span>Pre-Flight Route Topology Validation</span>
+                    </h4>
+                    <p className="text-xs text-[color:var(--muted)] leading-relaxed">
+                      The engine verifies that each target node in an endpoint&apos;s pipeline has a valid directed edge (<code className="font-mono text-[color:var(--accent)]">s1 -&gt; target</code>) before executing the simulation.
+                    </p>
+                  </div>
+                </div>
               </div>
             </section>
 
@@ -737,6 +792,72 @@ define SERVER s1 {
                     </div>
                   </div>
                 </div>
+
+                {/* Dynamic Endpoint Pipelines (pipeline: [...]) */}
+                <div id="endpoint-pipelines" className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4.5 space-y-3 md:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-[color:var(--accent)] flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[var(--accent)]/10 text-[color:var(--accent)] border border-[var(--accent)]/20">NEW</span>
+                      <span>Dynamic Endpoint Pipelines (pipeline: [...])</span>
+                    </h3>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--bg-elevated)] text-[color:var(--muted)] font-bold">
+                      Multi-Hop Execution
+                    </span>
+                  </div>
+                  <FlowCodeBlock
+                    code={`// Server with Custom Execution Pipeline for specific endpoints
+define SERVER apiServer {
+  x: 380,
+  y: 220,
+  label: "API Server",
+  capacity: 100,
+  acceptedEndpoints: [
+    {
+      endpoint: "/api/v1/posts",
+      allowedMethod: ["GET", "POST"],
+      pipeline: ["r1", "db1"] // 1st checks Redis 'r1', misses fall through to Postgres 'db1'
+    },
+    {
+      endpoint: "/api/v1/orders",
+      allowedMethod: ["POST"],
+      pipeline: ["orderQueue", "pubsubBroker"] // Custom multi-hop async pipeline
+    }
+  ]
+}
+
+connect client1 -> apiServer
+connect apiServer -> r1
+connect apiServer -> db1
+connect apiServer -> orderQueue
+connect apiServer -> pubsubBroker`}
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs text-[color:var(--muted)]">
+                    <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] space-y-1.5">
+                      <p className="font-bold text-[color:var(--foreground)] flex items-center gap-1.5">
+                        <span>⚡ Cache-Aside Pattern</span>
+                      </p>
+                      <p className="leading-relaxed text-[11.5px]">
+                        Agar pipeline ka pehla hop Redis (<code className="font-mono text-[color:var(--accent)]">r1</code>) hai aur key match hoti hai (<span className="text-emerald-500 dark:text-emerald-400 font-semibold">Cache HIT</span>), toh request wahin se sub-millisecond me 200 OK return karti hai. Downstream database call skip ho jaata hai.
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] space-y-1.5">
+                      <p className="font-bold text-[color:var(--foreground)] flex items-center gap-1.5">
+                        <span>🔄 Strict Multi-Hop Sequence</span>
+                      </p>
+                      <p className="leading-relaxed text-[11.5px]">
+                        Non-cache hops (jaise Queues, PubSub brokers, Microservices) ke liye server har target node ko array ke order me ek ke baad ek execute karta hai.
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] space-y-1.5">
+                      <p className="font-bold text-[color:var(--foreground)] flex items-center gap-1.5">
+                        <span>💡 Code Editor Autocomplete</span>
+                      </p>
+                      <p className="leading-relaxed text-[11.5px]">
+                        Code editor me <code className="font-mono text-[color:var(--accent)]">pipeline</code> ya <code className="font-mono text-[color:var(--accent)]">pipeline:</code> type karne par instant autocompletion popup aur defined node IDs ka live suggestion milta hai.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
 
@@ -769,13 +890,17 @@ define CLIENT c1 {
   ]
 }
 
-// Server definition with capacity and endpoint configuration
+// Server definition with capacity, endpoints, and execution pipeline
 define SERVER s1 {
   label: "Order Server Instance 1",
   capacity: 50,
   prefetchLimit: 10,
   acceptedEndpoints: [
-    { endpoint: "/api/v1/orders", allowedMethod: ["POST"] }
+    {
+      endpoint: "/api/v1/orders",
+      allowedMethod: ["POST"],
+      pipeline: ["r1", "db1"] // Optional execution hops (Cache-Aside / Multi-hop)
+    }
   ],
   registeredTopics: ["post.created"]
 }`}

@@ -133,6 +133,12 @@ export function compileSimulationPipeline(
             "/api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"],
           };
         }
+        if (config.endpointPipelines && typeof config.endpointPipelines === "object") {
+          modelInstance.endpointPipelines = { ...config.endpointPipelines };
+        }
+        if (config.endpointPipelinePolicies && typeof config.endpointPipelinePolicies === "object") {
+          modelInstance.endpointPipelinePolicies = { ...config.endpointPipelinePolicies };
+        }
         break;
       }
 

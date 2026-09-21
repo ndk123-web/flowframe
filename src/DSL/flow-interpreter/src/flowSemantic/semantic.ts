@@ -46,6 +46,8 @@ const ALLOWED_ENDPOINT_KEYS = [
   'endpoint',
   'allowedMethods',
   'allowedMethod',
+  'pipeline',
+  'steps',
 ];
 
 function semanticAnalyzer(ast: Ast[]): Ast[] {
@@ -220,6 +222,16 @@ function semanticAnalyzer(ast: Ast[]): Ast[] {
               );
             }
           });
+          if (epObj.pipeline !== undefined && !Array.isArray(epObj.pipeline)) {
+            throw new Error(
+              `Semantic Error: Property 'pipeline' in acceptedEndpoint #${idx + 1} of Server node '${id}' must be an array of target node IDs.`
+            );
+          }
+          if (epObj.steps !== undefined && !Array.isArray(epObj.steps)) {
+            throw new Error(
+              `Semantic Error: Property 'steps' in acceptedEndpoint #${idx + 1} of Server node '${id}' must be an array of target node IDs.`
+            );
+          }
         });
       }
     } else if (
