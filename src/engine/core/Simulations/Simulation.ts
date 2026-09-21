@@ -845,6 +845,8 @@ class SimulationManager {
             if (request.context.pipelineStepIndex === undefined) {
               request.context.pipeline = endpointPipeline;
               request.context.pipelineStepIndex = 0;
+              const policy = serverInstance.getEndpointPipelinePolicy?.(request.endpoint);
+              request.context.stopOnCacheHit = Boolean(policy?.stopOnCacheHit);
             }
 
             const stepIndex = request.context.pipelineStepIndex;
@@ -969,7 +971,8 @@ class SimulationManager {
            * trigger point for cache miss and call the database as awaitingDBLookup to true
            */
           if (Array.isArray(request.context.pipeline)) {
-            if (lookUpData !== null && request.method === "GET") {
+            const shouldStop = Boolean(request.context.stopOnCacheHit) && lookUpData !== null && request.method === "GET";
+            if (shouldStop) {
               request.direction = "backward";
             } else {
               request.context.pipelineStepIndex = (request.context.pipelineStepIndex ?? 0) + 1;

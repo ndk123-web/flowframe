@@ -136,6 +136,9 @@ export function compileSimulationPipeline(
         if (config.endpointPipelines && typeof config.endpointPipelines === "object") {
           modelInstance.endpointPipelines = { ...config.endpointPipelines };
         }
+        if (config.endpointPipelinePolicies && typeof config.endpointPipelinePolicies === "object") {
+          modelInstance.endpointPipelinePolicies = { ...config.endpointPipelinePolicies };
+        }
         break;
       }
 

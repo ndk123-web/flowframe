@@ -366,5 +366,90 @@ describe("Dynamic Endpoint Pipelines", () => {
     expect(missingResult.errors[0].type).toBe("MISSING_NODE");
     expect(missingResult.errors[0].targetId).toBe("ghost_db");
   });
+
+  it("Scenario 7: Strict Sequence (Always Run) vs Cache-Aside (Stop on Hit)", () => {
+    const dsl = `
+      define CLIENT c1 {
+        requests: [
+          {
+            endpoint: "/api/v1/posts",
+            allowedMethods: ["GET"],
+            key: "posts"
+          }
+        ]
+      }
+
+      define SERVER s1 {
+        acceptedEndpoints: [
+          {
+            endpoint: "/api/v1/posts",
+            allowedMethod: ["GET"],
+            pipeline: ["r1", "db1"]
+          }
+        ]
+      }
+
+      define REDIS r1 {
+        data: [{ key: "posts", value: "cached posts data" }]
+      }
+
+      define POSTGRES db1 {
+        table: "posts",
+        data: [{ key: "posts", value: "db posts data" }]
+      }
+
+      connect c1 -> s1
+      connect s1 -> r1
+      connect s1 -> db1
+    `;
+
+    const astResult = compileDSL(dsl);
+
+    // Case 1: Default Strict Pipeline (Always Run) -> Visits r1, then visits db1 even on cache hit
+    const strictSim = compileSimulationPipeline({
+      activeNodes: astResult.nodes,
+      activeEdges: astResult.edges,
+      activeConfigs: astResult.nodeConfigs,
+    });
+
+    const strictActions = strictSim.simulationFrames.map((f) => ({
+      from: f.from,
+      to: f.to,
+      action: f.action,
+    }));
+
+    const r1HopStrict = strictActions.find((a) => a.from === "s1" && a.to === "r1");
+    const db1HopStrict = strictActions.find((a) => a.from === "s1" && a.to === "db1");
+    expect(r1HopStrict).toBeDefined();
+    expect(db1HopStrict).toBeDefined(); // Still visited!
+
+    // Case 2: Cache-Aside Mode (Stop on Cache Hit) -> Visits r1, gets HIT, skips db1!
+    const configsWithPolicy = {
+      ...astResult.nodeConfigs,
+      s1: {
+        ...astResult.nodeConfigs.s1,
+        endpointPipelinePolicies: {
+          "/api/v1/posts": { stopOnCacheHit: true },
+        },
+      },
+    };
+
+    const cacheAsideSim = compileSimulationPipeline({
+      activeNodes: astResult.nodes,
+      activeEdges: astResult.edges,
+      activeConfigs: configsWithPolicy,
+    });
+
+    const caActions = cacheAsideSim.simulationFrames.map((f) => ({
+      from: f.from,
+      to: f.to,
+      action: f.action,
+    }));
+
+    const r1HopCA = caActions.find((a) => a.from === "s1" && a.to === "r1");
+    const db1HopCA = caActions.find((a) => a.from === "s1" && a.to === "db1");
+    expect(r1HopCA).toBeDefined();
+    expect(db1HopCA).toBeUndefined(); // db1 was skipped because cache hit stopped it!
+  });
 });
 

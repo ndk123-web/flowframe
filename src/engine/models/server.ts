@@ -30,6 +30,7 @@ class ServerModel implements NodeInstance {
 
   // Dynamic execution pipeline: endpoint -> array of target node IDs to visit in order
   endpointPipelines: { [key: string]: string[] } = {};
+  endpointPipelinePolicies: { [key: string]: { stopOnCacheHit?: boolean } } = {};
 
   getEndpointPipeline(endpoint: string): string[] | undefined {
     const normalize = (p: string) => p.replace(/^\/+|\/+$/g, "");
@@ -38,6 +39,15 @@ class ServerModel implements NodeInstance {
       (k) => normalize(k) === target
     );
     return foundKey ? this.endpointPipelines[foundKey] : undefined;
+  }
+
+  getEndpointPipelinePolicy(endpoint: string): { stopOnCacheHit?: boolean } | undefined {
+    const normalize = (p: string) => p.replace(/^\/+|\/+$/g, "");
+    const target = normalize(endpoint);
+    const foundKey = Object.keys(this.endpointPipelinePolicies).find(
+      (k) => normalize(k) === target
+    );
+    return foundKey ? this.endpointPipelinePolicies[foundKey] : undefined;
   }
 
   queueConsumer: { queueId: string; queueName: string } = {
