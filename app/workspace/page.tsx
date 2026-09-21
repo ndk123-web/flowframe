@@ -2331,7 +2331,7 @@ function PipelinePresetDropdown({
   const ActiveIcon = activePreset.icon;
 
   return (
-    <div ref={dropdownRef} className="relative w-full">
+    <div ref={dropdownRef} className={`relative w-full ${isOpen ? "z-30" : "z-10"}`}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -2349,7 +2349,7 @@ function PipelinePresetDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-xl p-1 max-h-56 overflow-y-auto scrollbar-thin">
+        <div className="absolute z-50 left-0 right-0 mt-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-2xl p-1 max-h-56 overflow-y-auto scrollbar-thin">
           {PIPELINE_PRESETS.map((preset) => {
             const Icon = preset.icon;
             const isSelected = preset.id === value;
@@ -6354,7 +6354,7 @@ connect s1 -> db1
                   </button>
                 </div>
 
-                <div className="p-4 flex-1 space-y-4">
+                <div className="p-4 pb-24 flex-1 space-y-4">
                   <button
                     type="button"
                     onClick={() => {
@@ -8494,10 +8494,10 @@ connect s1 -> db1
                                 return (
                                   <div
                                     key={idx}
-                                    className={`border rounded-xl transition-all duration-150 overflow-hidden ${
+                                    className={`border rounded-xl transition-all duration-150 ${
                                       isExpanded
-                                        ? "border-[var(--accent)]/50 bg-[var(--surface)] shadow-xs"
-                                        : "border-[var(--border)] bg-[var(--surface)]/70 hover:border-[var(--border)]"
+                                        ? "border-[var(--accent)]/50 bg-[var(--surface)] shadow-xs overflow-visible relative z-20"
+                                        : "border-[var(--border)] bg-[var(--surface)]/70 hover:border-[var(--border)] overflow-hidden relative z-0"
                                     }`}
                                   >
                                     {/* ── Collapsed Header Summary ── */}
@@ -8531,7 +8531,7 @@ connect s1 -> db1
                                               );
                                             })}
                                             {currentPolicy.stopOnCacheHit && (
-                                              <span className="opacity-70 ml-0.5" title="Stops on Cache Hit">⚡</span>
+                                              <span className="opacity-70 ml-0.5" title="Stops on Cache Hit"><FiZap className="size-2.5 text-amber-500 shrink-0 inline" /></span>
                                             )}
                                           </div>
                                         ) : (
@@ -8695,18 +8695,17 @@ connect s1 -> db1
                                           />
                                         </div>
 
-                                        {/* ── Vertical Pipeline Stepper ── */}
-                                        <div className="pt-2 border-t border-[var(--border)]/60">
-                                          <div className="flex items-center justify-between mb-2">
-                                            <span className="text-[9px] uppercase tracking-wider font-bold text-[color:var(--foreground)]/60">
-                                              Execution Flow
-                                            </span>
-                                            <span className="text-[9px] font-mono text-[color:var(--foreground)]/40">
-                                              {currentPipeline.length > 0
-                                                ? `${currentPipeline.length} Hop${currentPipeline.length > 1 ? "s" : ""}`
-                                                : "Auto"}
-                                            </span>
-                                          </div>
+                                        {/* ── Vertical Pipeline Stepper (Only rendered when custom hops exist) ── */}
+                                        {currentPipeline.length > 0 && (
+                                          <div className="pt-2 border-t border-[var(--border)]/60">
+                                            <div className="flex items-center justify-between mb-2">
+                                              <span className="text-[9px] uppercase tracking-wider font-bold text-[color:var(--foreground)]/60">
+                                                Configured Pipeline Steps
+                                              </span>
+                                              <span className="text-[9px] font-mono text-[color:var(--foreground)]/50">
+                                                {`${currentPipeline.length} Hop${currentPipeline.length > 1 ? "s" : ""}`}
+                                              </span>
+                                            </div>
 
                                           {/* Step 0: Origin Server */}
                                           <div className="space-y-1.5">
@@ -8836,12 +8835,12 @@ connect s1 -> db1
                                                         >
                                                           {currentPolicy.stopOnCacheHit ? (
                                                             <>
-                                                              <span>⚡</span>
+                                                              <FiZap className="size-3 text-amber-500 shrink-0" />
                                                               <span>Stop on Hit (Cache-Aside)</span>
                                                             </>
                                                           ) : (
                                                             <>
-                                                              <span>➜</span>
+                                                              <FiChevronRight className="size-3 text-emerald-500 shrink-0" />
                                                               <span>Always Continue</span>
                                                             </>
                                                           )}
@@ -8871,6 +8870,8 @@ connect s1 -> db1
                                               </span>
                                             </div>
                                           </div>
+                                          </div>
+                                        )}
 
                                           {/* Add Hop Option Box (Select Dropdown) */}
                                           <div className="pt-2 mt-2 border-t border-[var(--border)]/60 space-y-1.5">
@@ -8932,8 +8933,7 @@ connect s1 -> db1
                                             )}
                                           </div>
                                         </div>
-                                      </div>
-                                    )}
+                                      )}
                                   </div>
                                 );
                               })}
