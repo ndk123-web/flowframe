@@ -57,6 +57,7 @@ export const flowLanguage = StreamLanguage.define({
       "MESSAGEQUEUE",
       "true",
       "false",
+      "pipeline",
     ];
 
     if (stream.match(/^[a-zA-Z_]\w*/)) {
@@ -112,6 +113,27 @@ function flowCompletionSource(context: CompletionContext): CompletionResult | nu
         detail: "Defined Node",
         info: `Connect request flows to/from node "${nodeId}"`,
         boost: 30,
+      });
+    });
+  }
+
+  // Contextual: Target node IDs inside pipeline array (e.g. pipeline: [ ... ])
+  if (textBefore.includes("pipeline") || /pipeline\s*:\s*\[[^\]]*$/.test(textBefore)) {
+    definedNodes.forEach((nodeId) => {
+      options.push({
+        label: `"${nodeId}"`,
+        type: "variable",
+        detail: "Pipeline Service Node",
+        info: `Route execution hop through node "${nodeId}"`,
+        boost: 35,
+      });
+      options.push({
+        label: nodeId,
+        type: "variable",
+        detail: "Pipeline Service Node",
+        info: `Route execution hop through node "${nodeId}"`,
+        apply: `"${nodeId}"`,
+        boost: 34,
       });
     });
   }
@@ -274,6 +296,36 @@ function flowCompletionSource(context: CompletionContext): CompletionResult | nu
         boost: 20,
       }
     ),
+    snippetCompletion(
+      'define SERVER ${1:api_server} {\n  x: ${2:380},\n  y: ${3:220},\n  label: "${4:API Server}",\n  capacity: ${5:100},\n  acceptedEndpoints: [\n    {\n      endpoint: "${6:/api/v1/posts}",\n      allowedMethod: ["${7:GET}"],\n      pipeline: ["${8:cache1}", "${9:db1}"]\n    }\n  ]\n}',
+      {
+        label: "define SERVER (with Pipeline)",
+        detail: "Snippet: Server with Pipeline",
+        type: "snippet",
+        info: "Define a backend server with accepted endpoints and dynamic execution pipeline",
+        boost: 23,
+      }
+    ),
+    snippetCompletion(
+      'pipeline: ["${1:cache1}", "${2:db1}"]',
+      {
+        label: "pipeline: [ ... ]",
+        detail: "Snippet: Pipeline Hops Array",
+        type: "snippet",
+        info: 'Define ordered execution pipeline hops for this endpoint (e.g. ["r1", "db1"])',
+        boost: 28,
+      }
+    ),
+    snippetCompletion(
+      '{\n  endpoint: "${1:/api/v1/posts}",\n  allowedMethod: ["${2:GET}"],\n  pipeline: ["${3:cache1}", "${4:db1}"]\n}',
+      {
+        label: "endpoint with pipeline",
+        detail: "Snippet: Endpoint + Pipeline Object",
+        type: "snippet",
+        info: "Accepted endpoint configuration object with execution pipeline hops",
+        boost: 25,
+      }
+    ),
   ];
   snippets.forEach((s) => options.push(s));
 
@@ -295,6 +347,9 @@ function flowCompletionSource(context: CompletionContext): CompletionResult | nu
     { label: "endpoint:", type: "property", detail: "Path string", info: 'HTTP route URL path (e.g. "/api/v1/posts")', boost: 15 },
     { label: "allowedMethods:", type: "property", detail: "String Array", info: 'Allowed HTTP methods (e.g. ["GET", "POST"])', boost: 15 },
     { label: "allowedMethod:", type: "property", detail: "String Array", info: 'Accepted HTTP methods (e.g. ["GET", "POST"])', boost: 15 },
+    { label: "pipeline:", type: "property", detail: "String Array (Pipeline)", info: 'Dynamic execution pipeline sequence (e.g. pipeline: ["r1", "db1"])', boost: 30 },
+    { label: "pipeline", type: "property", detail: "Pipeline Property", info: 'Insert pipeline execution sequence (e.g. pipeline: ["r1", "db1"])', apply: 'pipeline: ["${1:cache1}", "${2:db1}"]', boost: 30 },
+    { label: "steps:", type: "property", detail: "String Array (Pipeline Alias)", info: 'Alternative alias for execution pipeline (e.g. steps: ["r1", "db1"])', boost: 18 },
     { label: "strategy:", type: "property", detail: "Algorithm", info: 'Balancing strategy: "ROUND_ROBIN", "LEAST_CONNECTIONS", "IP_HASH"', boost: 15 },
     { label: "data:", type: "property", detail: "Array", info: "Initial stored key-value records", boost: 15 },
     { label: "queueSize:", type: "property", detail: "Number", info: "Max capacity of the buffer queue", boost: 15 },

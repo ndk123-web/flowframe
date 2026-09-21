@@ -247,7 +247,8 @@ define SERVER s1 {
   acceptedEndpoints: [
     {
       endpoint: "/api/v1/posts",
-      allowedMethod: ["GET", "POST"]
+      allowedMethod: ["GET", "POST"],
+      pipeline: ["r1", "db1"]
     }
   ]
 }
@@ -2549,17 +2550,21 @@ function WorkspaceInner({
     (e: React.MouseEvent) => {
       e.preventDefault();
       setIsResizingInspector(true);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
       const startX = e.clientX;
       const startWidth = inspectorWidth;
 
       const onMouseMove = (moveEvent: MouseEvent) => {
         const delta = startX - moveEvent.clientX;
-        const newWidth = Math.max(300, Math.min(800, startWidth + delta));
+        const newWidth = Math.max(300, Math.min(850, startWidth + delta));
         setInspectorWidth(newWidth);
       };
 
       const onMouseUp = () => {
         setIsResizingInspector(false);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
         window.removeEventListener("mousemove", onMouseMove);
         window.removeEventListener("mouseup", onMouseUp);
       };
@@ -3214,6 +3219,8 @@ connect s1 -> db1
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizingSidebar(true);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
   };
 
   useEffect(() => {
@@ -3221,11 +3228,13 @@ connect s1 -> db1
 
     const handleMouseMove = (e: MouseEvent) => {
       const newWidth = e.clientX;
-      setSidebarWidth(Math.max(240, Math.min(newWidth, 480)));
+      setSidebarWidth(Math.max(240, Math.min(newWidth, 600)));
     };
 
     const handleMouseUp = () => {
       setIsResizingSidebar(false);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -3233,6 +3242,8 @@ connect s1 -> db1
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     };
   }, [isResizingSidebar]);
 
@@ -3926,6 +3937,7 @@ connect s1 -> db1
           "MESSAGEQUEUE",
           "true",
           "false",
+          "pipeline",
         ],
         tokenizer: {
           root: [
@@ -3941,6 +3953,51 @@ connect s1 -> db1
             [/'([^'\\]|\\.)*'/, "string"],
             [/\/\/.*$/, "comment"],
           ],
+        },
+      });
+
+      monaco.languages.registerCompletionItemProvider("flow", {
+        provideCompletionItems: (model: any, position: any) => {
+          const word = model.getWordUntilPosition(position);
+          const range = {
+            startLineNumber: position.lineNumber,
+            endLineNumber: position.lineNumber,
+            startColumn: word.startColumn,
+            endColumn: word.endColumn,
+          };
+          const suggestions = [
+            {
+              label: "pipeline:",
+              kind: monaco.languages.CompletionItemKind.Property,
+              insertText: 'pipeline: ["${1:cache1}", "${2:db1}"],',
+              insertTextRules:
+                monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation:
+                'Execution pipeline sequence hops (e.g. pipeline: ["r1", "db1"])',
+              range,
+            },
+            {
+              label: "pipeline",
+              kind: monaco.languages.CompletionItemKind.Property,
+              insertText: 'pipeline: ["${1:cache1}", "${2:db1}"]',
+              insertTextRules:
+                monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation:
+                'Define ordered execution pipeline hops for this endpoint',
+              range,
+            },
+            {
+              label: "acceptedEndpoints:",
+              kind: monaco.languages.CompletionItemKind.Property,
+              insertText: 'acceptedEndpoints: [\n  {\n    endpoint: "${1:/api/v1/posts}",\n    allowedMethod: ["${2:GET}"],\n    pipeline: ["${3:cache1}", "${4:db1}"]\n  }\n],',
+              insertTextRules:
+                monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation:
+                'Accepted endpoints with pipeline configuration',
+              range,
+            },
+          ];
+          return { suggestions };
         },
       });
 
@@ -5009,11 +5066,11 @@ connect s1 -> db1
         >
           {/* Draw.io / Miro-Style Left Shapes Sidebar */}
           <aside
-            className={`flex flex-col z-10 shrink-0 h-full overflow-hidden transition-all duration-300 relative border-r border-[var(--border)] bg-[var(--surface)] ${
+            className={`flex flex-col z-10 shrink-0 h-full overflow-hidden transition-none relative border-r border-[var(--border)] bg-[var(--surface)] ${
               isSidebarFloating
                 ? "absolute rounded-2xl shadow-2xl border"
                 : "relative"
-            } ${"max-md:fixed max-md:top-0 max-md:left-0 max-md:z-30 max-md:w-72 max-md:h-full max-md:shadow-2xl max-md:transition-transform max-md:duration-300"} ${
+            } ${"max-md:fixed max-md:top-0 max-md:left-0 max-md:z-30 max-md:w-72 max-md:h-full max-md:shadow-2xl"} ${
               isSidebarOpenMobile
                 ? "max-md:translate-x-0"
                 : "max-md:-translate-x-full"
@@ -6300,12 +6357,12 @@ connect s1 -> db1
                 {/* Desktop Left Resize Drag Handle */}
                 <div
                   onMouseDown={handleStartResizeInspector}
-                  className={`hidden md:flex absolute -left-1 top-0 bottom-0 w-2.5 cursor-col-resize items-center justify-center z-40 group hover:bg-[var(--accent)]/15 select-none transition-colors ${
+                  className={`hidden md:flex absolute -left-1.5 top-0 bottom-0 w-3 cursor-col-resize items-center justify-center z-40 group hover:bg-[var(--accent)]/15 select-none transition-none ${
                     isResizingInspector ? "bg-[var(--accent)]/25" : ""
                   }`}
                   title="Drag to resize Inspector width"
                 >
-                  <div className="w-0.5 h-10 rounded-full bg-[var(--border)] group-hover:bg-[var(--accent)] transition-colors" />
+                  <div className="w-0.5 h-12 rounded-full bg-[var(--border)] group-hover:bg-[var(--accent)] transition-none" />
                 </div>
                 <div className="p-3.5 px-4 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--surface-muted)]/50">
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -6339,19 +6396,39 @@ connect s1 -> db1
                       </p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedNodeId(null);
-                      setNodes((nds) =>
-                        nds.map((n) => ({ ...n, selected: false })),
-                      );
-                    }}
-                    className="text-xs text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] h-6 w-6 rounded-md hover:bg-[var(--surface)] flex items-center justify-center font-bold transition cursor-pointer shrink-0"
-                    title="Close Inspector"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInspectorWidth((prev) => (prev > 450 ? 380 : 620));
+                      }}
+                      className="text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] h-6 w-6 rounded-md hover:bg-[var(--surface)] flex items-center justify-center transition-none cursor-pointer"
+                      title={
+                        inspectorWidth > 450
+                          ? "Collapse Inspector Width (380px)"
+                          : "Expand Inspector Width (620px)"
+                      }
+                    >
+                      {inspectorWidth > 450 ? (
+                        <FiMinimize2 className="w-3.5 h-3.5" />
+                      ) : (
+                        <FiMaximize2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedNodeId(null);
+                        setNodes((nds) =>
+                          nds.map((n) => ({ ...n, selected: false })),
+                        );
+                      }}
+                      className="text-xs text-[color:var(--foreground)]/50 hover:text-[color:var(--foreground)] h-6 w-6 rounded-md hover:bg-[var(--surface)] flex items-center justify-center font-bold transition-none cursor-pointer"
+                      title="Close Inspector"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
 
                 <div className="p-4 pb-24 flex-1 space-y-4">
