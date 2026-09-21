@@ -99,6 +99,7 @@ import PubSubModel from "@/engine/models/PubSub/PubSubModel";
 import RoundRobinStrategy from "@/engine/core/Strategy/RoundRobinStrategy";
 import Ipv4Generator from "@/utils/generateRandomIp";
 import PriorityQueue from "@/engine/core/Simulations/ParallelSimulation";
+import { validateEndpointPipelines } from "@/utils/routeValidator";
 
 // Auth & API
 import { useAuthStore } from "@/store/useAuthStore";
@@ -2453,6 +2454,7 @@ function WorkspaceInner({
   const [isCompilingSimulation, setIsCompilingSimulation] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [frameIndex, setFrameIndex] = useState(0);
+  const [executionMode, setExecutionMode] = useState<"animation" | "instant">("animation");
 
   // Dynamic top-bar configs
   const [hideResponse, setHideResponse] = useState(false);
@@ -3199,6 +3201,9 @@ connect s1 -> db1
             if (config.endpoints) {
               modelInstance.endpoints = { ...config.endpoints };
             }
+            if (config.endpointPipelines && typeof config.endpointPipelines === "object") {
+              modelInstance.endpointPipelines = { ...config.endpointPipelines };
+            }
             break;
           case "redis":
             modelInstance = new RedisModel(n.id, labelStr);
@@ -3549,6 +3554,13 @@ connect s1 -> db1
         );
       }
 
+      // Pre-flight route and pipeline validation
+      const pipelineValidation = validateEndpointPipelines(activeNodes, activeEdges, activeConfigs);
+      if (!pipelineValidation.isValid) {
+        const warningMsg = pipelineValidation.errors.map((e) => e.message).join(" ");
+        setValidationWarning(warningMsg);
+      }
+
       // 6. Run sequential request queries
       const clientLabelStr = (clientToRun.data.label as string) || "";
       const clientConfig =
@@ -3639,16 +3651,28 @@ connect s1 -> db1
           }
 
           setRawSimulationFrames(allFrames);
-          setFrameIndex(0);
-          setIsPlaying(true);
-          setIsCompilingSimulation(false);
+          if (executionMode === "instant") {
+            const totalHops = allFrames.reduce(
+              (acc, run) => acc + (run.frames?.length || 0),
+              0,
+            );
+            setFrameIndex(Math.max(0, totalHops - 1));
+            setIsPlaying(false);
+            setIsCompilingSimulation(false);
+            setDebugEnabled(true);
+            setSuccessToast(`Instant Trace: ${totalHops} hops analyzed.`);
+          } else {
+            setFrameIndex(0);
+            setIsPlaying(true);
+            setIsCompilingSimulation(false);
+          }
         } catch (err: any) {
           setValidationWarning(`Simulation Error: ${err.message || err}`);
           setIsCompilingSimulation(false);
         }
       }, 10);
     },
-    [nodes, nodeConfigs, edges],
+    [nodes, nodeConfigs, edges, executionMode],
   );
 
   // Compile & Execute DSL script from Monaco Editor
@@ -5509,6 +5533,8 @@ connect s1 -> db1
                 frameIndex={frameIndex}
                 completedFrames={accumulatedFrames.length}
                 totalFrames={simulationFrames.length}
+                executionMode={executionMode}
+                onExecutionModeChange={setExecutionMode}
                 speed={speed}
                 onSpeedChange={setSpeed}
                 requestEndpoints={clientEndpoints}

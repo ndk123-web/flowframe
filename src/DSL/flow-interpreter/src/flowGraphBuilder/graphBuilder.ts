@@ -254,14 +254,19 @@ function graphBuilder(ast: Ast[]): FlowFrameGraphOutput {
         rawConfig.tcpConnectionsToPostgres || rawConfig.tcpConnections || 10;
       processedConfig.prefetchLimit = rawConfig.prefetchLimit || 1;
 
-      // Transform acceptedEndpoints array into endpoints map
+      // Transform acceptedEndpoints array into endpoints map and endpointPipelines map
       const endpointsMap: Record<string, string[]> = {};
+      const endpointPipelinesMap: Record<string, string[]> = {};
       if (Array.isArray(rawConfig.acceptedEndpoints)) {
         rawConfig.acceptedEndpoints.forEach((item: any) => {
           if (item.endpoint) {
             const methods = item.allowedMethod ||
               item.allowedMethods || ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
             endpointsMap[item.endpoint] = methods;
+            const pipe = item.pipeline || item.steps;
+            if (Array.isArray(pipe) && pipe.length > 0) {
+              endpointPipelinesMap[item.endpoint] = pipe.map(String);
+            }
           }
         });
       }
@@ -271,6 +276,7 @@ function graphBuilder(ast: Ast[]): FlowFrameGraphOutput {
           : {
               '/posts': ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
             };
+      processedConfig.endpointPipelines = endpointPipelinesMap;
       processedConfig.registeredTopics =
         rawConfig.registeredTopics ||
         rawConfig.subscriptionTopics ||

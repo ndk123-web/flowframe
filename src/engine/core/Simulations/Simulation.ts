@@ -839,6 +839,44 @@ class SimulationManager {
             }
           }
 
+          // 0. Check for dynamic endpoint pipeline configuration
+          const endpointPipeline = serverInstance.getEndpointPipeline(request.endpoint);
+          if (endpointPipeline && endpointPipeline.length > 0) {
+            if (request.context.pipelineStepIndex === undefined) {
+              request.context.pipeline = endpointPipeline;
+              request.context.pipelineStepIndex = 0;
+            }
+
+            const stepIndex = request.context.pipelineStepIndex;
+            if (stepIndex < endpointPipeline.length) {
+              const targetNodeId = endpointPipeline[stepIndex];
+              const targetKind = this.getNodeKind(targetNodeId);
+
+              let action = "SERVER_FORWARD_REQUEST";
+              if (targetKind === "REDIS") {
+                action = "SERVER_FORWARD_REQUEST_TO_REDIS";
+                request.context.redisLookupDone = true;
+              } else if (targetKind === "POSTGRES") {
+                action = "SERVER_FORWARD_REQUEST_TO_POSTGRES";
+              }
+
+              this.pushFrame(
+                request,
+                currentNodeId,
+                targetNodeId,
+                action,
+              );
+
+              request.currentNodeId = targetNodeId;
+              traversalPath.push(targetNodeId);
+              currentNodeId = targetNodeId;
+              break;
+            } else {
+              request.direction = "backward";
+              break;
+            }
+          }
+
           // check whether redis is there ? 
           const redisNodeId = nextNodes.find(
             (nodeId) => this.getNodeKind(nodeId) === "REDIS",
@@ -930,11 +968,24 @@ class SimulationManager {
           /**
            * trigger point for cache miss and call the database as awaitingDBLookup to true
            */
-          if (lookUpData === null) {
-            request.context.awaitingDbLookup = true;
-            request.direction = "forward";
+          if (Array.isArray(request.context.pipeline)) {
+            if (lookUpData !== null && request.method === "GET") {
+              request.direction = "backward";
+            } else {
+              request.context.pipelineStepIndex = (request.context.pipelineStepIndex ?? 0) + 1;
+              if (request.context.pipelineStepIndex < request.context.pipeline.length) {
+                request.direction = "forward";
+              } else {
+                request.direction = "backward";
+              }
+            }
           } else {
-            request.direction = "backward";
+            if (lookUpData === null) {
+              request.context.awaitingDbLookup = true;
+              request.direction = "forward";
+            } else {
+              request.direction = "backward";
+            }
           }
           break;
         }
@@ -1088,7 +1139,17 @@ class SimulationManager {
           traversalPath.pop();
           request.currentNodeId = previousNodeId;
           currentNodeId = previousNodeId;
-          request.direction = "backward";
+
+          if (Array.isArray(request.context.pipeline)) {
+            request.context.pipelineStepIndex = (request.context.pipelineStepIndex ?? 0) + 1;
+            if (request.context.pipelineStepIndex < request.context.pipeline.length) {
+              request.direction = "forward";
+            } else {
+              request.direction = "backward";
+            }
+          } else {
+            request.direction = "backward";
+          }
           break;
         }
 

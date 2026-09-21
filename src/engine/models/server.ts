@@ -28,6 +28,18 @@ class ServerModel implements NodeInstance {
     "api/v1/users": ["GET", "POST", "PUT", "DELETE", "PATCH"],
   };
 
+  // Dynamic execution pipeline: endpoint -> array of target node IDs to visit in order
+  endpointPipelines: { [key: string]: string[] } = {};
+
+  getEndpointPipeline(endpoint: string): string[] | undefined {
+    const normalize = (p: string) => p.replace(/^\/+|\/+$/g, "");
+    const target = normalize(endpoint);
+    const foundKey = Object.keys(this.endpointPipelines).find(
+      (k) => normalize(k) === target
+    );
+    return foundKey ? this.endpointPipelines[foundKey] : undefined;
+  }
+
   queueConsumer: { queueId: string; queueName: string } = {
     queueId: "",
     queueName: "",

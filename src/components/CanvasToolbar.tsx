@@ -22,6 +22,7 @@ import {
   ChevronDown,
   Code,
   Box,
+  Zap,
 } from "lucide-react";
 
 interface CanvasToolbarProps {
@@ -33,6 +34,9 @@ interface CanvasToolbarProps {
   // Workspace Mode (Canvas vs Full IDE Editor)
   viewMode?: "canvas" | "editor";
   onViewModeChange?: (mode: "canvas" | "editor") => void;
+  // Execution Mode (Visual Animation vs Instant Trace)
+  executionMode?: "animation" | "instant";
+  onExecutionModeChange?: (mode: "animation" | "instant") => void;
   // Playback
   isPlaying: boolean;
   isCompiling: boolean;
@@ -67,6 +71,8 @@ export default function CanvasToolbar({
   edgesCount,
   viewMode = "canvas",
   onViewModeChange,
+  executionMode = "animation",
+  onExecutionModeChange,
   isPlaying,
   isCompiling,
   onPlayToggle,
@@ -270,6 +276,41 @@ export default function CanvasToolbar({
             </Button>
           ))}
         </div>
+
+        {/* Execution Mode Toggle: Visual vs Instant Trace */}
+        {onExecutionModeChange && (
+          <>
+            <div className="h-3.5 w-px bg-[var(--border)] mx-0.5 hidden sm:block" />
+            <div className="flex items-center bg-[var(--surface)] p-0.5 rounded-lg border border-[var(--border)] shrink-0 gap-0.5">
+              <button
+                type="button"
+                onClick={() => onExecutionModeChange("animation")}
+                className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer ${
+                  executionMode === "animation"
+                    ? "bg-[var(--surface-muted)] text-[color:var(--accent)] border border-[var(--border)] shadow-xs"
+                    : "text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
+                }`}
+                title="Visual Packet Animation (Slow-motion step-by-step)"
+              >
+                <Play className="size-2.5 fill-current" />
+                <span className="hidden sm:inline">Visual</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onExecutionModeChange("instant")}
+                className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer ${
+                  executionMode === "instant"
+                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-xs"
+                    : "text-[color:var(--muted)] hover:text-[color:var(--foreground)]"
+                }`}
+                title="Instant Trace / Benchmark (Real-time speed & latency metrics)"
+              >
+                <Zap className="size-2.5 text-emerald-400 fill-current" />
+                <span className="hidden sm:inline">Instant</span>
+              </button>
+            </div>
+          </>
+        )}
 
         {/* Request / API Selection Dropdown (if provided) */}
         {requestEndpoints && requestEndpoints.length > 0 && onSelectRequest && (
