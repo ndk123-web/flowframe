@@ -111,6 +111,8 @@ interface CanvasSettingsSheetProps {
   setExportConnectionStyle?: (style: "default" | "smooth" | "straight") => void;
   exportIncludeSelection?: boolean;
   setExportIncludeSelection?: (include: boolean) => void;
+  exportIncludeTimeline?: boolean;
+  setExportIncludeTimeline?: (include: boolean) => void;
   exportWatermark?: "none" | "branded";
   setExportWatermark?: (wm: "none" | "branded") => void;
   onProLockedNotice?: (message: string) => void;
@@ -179,6 +181,8 @@ export default function CanvasSettingsSheet({
   setExportConnectionStyle,
   exportIncludeSelection = true,
   setExportIncludeSelection,
+  exportIncludeTimeline = true,
+  setExportIncludeTimeline,
   exportWatermark = "branded",
   setExportWatermark,
   onProLockedNotice,
@@ -1039,6 +1043,43 @@ export default function CanvasSettingsSheet({
                           }`}
                         >
                           Clean (No Aura)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Timeline & Step Scrubber HUD */}
+                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <Terminal className="size-3" />
+                          <span>Timeline HUD</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          {exportIncludeTimeline ? "Visible" : "Hidden"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1 p-0.5 rounded-md bg-muted/40 border border-border/50">
+                        <button
+                          type="button"
+                          onClick={() => setExportIncludeTimeline?.(true)}
+                          className={`py-1 rounded text-xs transition cursor-pointer ${
+                            exportIncludeTimeline
+                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
+                              : "text-muted-foreground hover:text-foreground border border-transparent"
+                          }`}
+                        >
+                          Visible
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExportIncludeTimeline?.(false)}
+                          className={`py-1 rounded text-xs transition cursor-pointer ${
+                            !exportIncludeTimeline
+                              ? "bg-primary/10 text-primary border border-primary/30 shadow-2xs font-medium"
+                              : "text-muted-foreground hover:text-foreground border border-transparent"
+                          }`}
+                        >
+                          Hidden
                         </button>
                       </div>
                     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
@@ -27,6 +27,16 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [sessionExpiredNotice, setSessionExpiredNotice] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("expired") === "true") {
+        setSessionExpiredNotice(true);
+      }
+    }
+  }, []);
 
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
@@ -149,6 +159,16 @@ export default function SignInPage() {
               Access your architecture workspaces, topology graphs, and distributed system simulations.
             </p>
           </div>
+
+          {/* Session Expired Notice Banner */}
+          {sessionExpiredNotice && !formError && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs animate-in fade-in duration-150">
+              <FiLock className="w-4 h-4 shrink-0 mt-0.5" />
+              <span className="flex-1 leading-tight">
+                Your session has expired or your access token was invalid. Please sign in again to continue.
+              </span>
+            </div>
+          )}
 
           {/* Form Error Banner */}
           {formError && (

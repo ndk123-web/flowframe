@@ -29,6 +29,7 @@ export interface RecordSimulationOptions {
   connectionStyle?: "default" | "smooth" | "straight";
   selectedNodeId?: string | null;
   includeSelection?: boolean;
+  includeTimeline?: boolean;
   watermark?: "none" | "branded";
   showPorts?: boolean;
   onProgress?: (percent: number, status: string) => void;
@@ -396,6 +397,7 @@ export async function recordSimulationVideo({
   connectionStyle = "default",
   selectedNodeId,
   includeSelection = true,
+  includeTimeline = true,
   watermark = "branded",
   showPorts = true,
   onProgress,
@@ -633,8 +635,35 @@ export async function recordSimulationVideo({
       const tgt = nodeMap.get(edge.target);
       if (!src || !tgt) return;
 
-      const p0 = src.rightHandle;
-      const p3 = tgt.leftHandle;
+      // Dynamically resolve handle positions matching ReactFlow handle conventions
+      const srcHandleId = String(edge.sourceHandle || "").toLowerCase();
+      const tgtHandleId = String(edge.targetHandle || "").toLowerCase();
+
+      let p0 = src.rightHandle;
+      let srcPos = Position.Right;
+      if (srcHandleId === "bottom" || (!srcHandleId && src.y + src.h < tgt.y && Math.abs(src.x - tgt.x) < 80)) {
+        p0 = src.bottomHandle;
+        srcPos = Position.Bottom;
+      } else if (srcHandleId === "left" || (!srcHandleId && src.x > tgt.x + tgt.w)) {
+        p0 = src.leftHandle;
+        srcPos = Position.Left;
+      } else if (srcHandleId === "top") {
+        p0 = src.topHandle;
+        srcPos = Position.Top;
+      }
+
+      let p3 = tgt.leftHandle;
+      let tgtPos = Position.Left;
+      if (tgtHandleId === "top" || (!tgtHandleId && tgt.y > src.y + src.h && Math.abs(src.x - tgt.x) < 80)) {
+        p3 = tgt.topHandle;
+        tgtPos = Position.Top;
+      } else if (tgtHandleId === "right" || (!tgtHandleId && tgt.x + tgt.w < src.x)) {
+        p3 = tgt.rightHandle;
+        tgtPos = Position.Right;
+      } else if (tgtHandleId === "bottom") {
+        p3 = tgt.bottomHandle;
+        tgtPos = Position.Bottom;
+      }
 
       const [svgPath] =
         connectionStyle === "straight"
@@ -648,18 +677,18 @@ export async function recordSimulationVideo({
             ? getBezierPath({
                 sourceX: p0.x,
                 sourceY: p0.y,
-                sourcePosition: Position.Right,
+                sourcePosition: srcPos,
                 targetX: p3.x,
                 targetY: p3.y,
-                targetPosition: Position.Left,
+                targetPosition: tgtPos,
               })
             : getSmoothStepPath({
                 sourceX: p0.x,
                 sourceY: p0.y,
-                sourcePosition: Position.Right,
+                sourcePosition: srcPos,
                 targetX: p3.x,
                 targetY: p3.y,
-                targetPosition: Position.Left,
+                targetPosition: tgtPos,
                 borderRadius: 12 * scale,
                 offset: 20 * scale,
               });
@@ -676,18 +705,18 @@ export async function recordSimulationVideo({
             ? getBezierPath({
                 sourceX: p3.x,
                 sourceY: p3.y,
-                sourcePosition: Position.Left,
+                sourcePosition: tgtPos,
                 targetX: p0.x,
                 targetY: p0.y,
-                targetPosition: Position.Right,
+                targetPosition: srcPos,
               })
             : getSmoothStepPath({
                 sourceX: p3.x,
                 sourceY: p3.y,
-                sourcePosition: Position.Left,
+                sourcePosition: tgtPos,
                 targetX: p0.x,
                 targetY: p0.y,
-                targetPosition: Position.Right,
+                targetPosition: srcPos,
                 borderRadius: 12 * scale,
                 offset: 20 * scale,
               });
@@ -717,6 +746,11 @@ export async function recordSimulationVideo({
       activeNodeIds: Set<string>,
       activeEdgeIds: Map<string, { reverseMotion: boolean }>,
       pingPhase = 0,
+      timelineInfo?: {
+        activeGroupIdx: number;
+        hopT: number;
+        status?: "ready" | "running" | "complete";
+      },
     ) => {
       ctx.fillStyle = canvasBg;
       ctx.fillRect(0, 0, width, height);
@@ -1032,12 +1066,12 @@ export async function recordSimulationVideo({
         ctx.restore();
       });
 
-      // Optional FlowFrame Watermark Badge
+      // Optional FlowFrame Watermark Badge (positioned top-right to preserve bottom for Timeline)
       if (watermark === "branded") {
         const badgeW = 168 * resScale;
         const badgeH = 34 * resScale;
         const bx = width - badgeW - 24 * resScale;
-        const by = height - badgeH - 20 * resScale;
+        const by = 24 * resScale;
 
         ctx.save();
         ctx.fillStyle = isDark ? "rgba(15, 23, 42, 0.85)" : "rgba(255, 255, 255, 0.9)";
@@ -1064,6 +1098,216 @@ export async function recordSimulationVideo({
         ctx.fillText(`· ${resolution}`, bx + 98 * resScale, by + badgeH / 2);
         ctx.restore();
       }
+
+      // Optional Simulation Timeline & Scrubber HUD
+      if (includeTimeline && frameGroups.length > 0) {
+        const hudH = 56 * resScale;
+        const totalPills = frameGroups.length;
+        const minW = Math.min(
+          width - 48 * resScale,
+          Math.max(500 * resScale, totalPills * 56 * resScale + 240 * resScale),
+        );
+        const hudW = Math.min(width - 48 * resScale, minW);
+        const hudX = (width - hudW) / 2;
+        const hudY = height - hudH - 24 * resScale;
+
+        ctx.save();
+
+        // 1. Frosted Glass Backdrop
+        ctx.fillStyle = isDark
+          ? "rgba(15, 23, 42, 0.88)"
+          : "rgba(255, 255, 255, 0.92)";
+        ctx.strokeStyle = isDark
+          ? "rgba(255, 255, 255, 0.14)"
+          : "rgba(15, 23, 42, 0.12)";
+        ctx.lineWidth = 1.2 * resScale;
+        roundRect(ctx, hudX, hudY, hudW, hudH, 12 * resScale);
+        ctx.fill();
+        ctx.stroke();
+
+        // Top edge highlight line
+        ctx.strokeStyle = isDark
+          ? "rgba(255, 255, 255, 0.08)"
+          : "rgba(255, 255, 255, 0.6)";
+        ctx.lineWidth = 1 * resScale;
+        ctx.beginPath();
+        ctx.moveTo(hudX + 12 * resScale, hudY + 1 * resScale);
+        ctx.lineTo(hudX + hudW - 12 * resScale, hudY + 1 * resScale);
+        ctx.stroke();
+
+        const activeGroup = timelineInfo
+          ? frameGroups[timelineInfo.activeGroupIdx]
+          : null;
+        const frames = activeGroup?.frames || [];
+        const firstFrame = frames[0];
+
+        // 2. Left Indicator & Step Counter
+        const leftX = hudX + 18 * resScale;
+        const topRowY = hudY + 18 * resScale;
+
+        // Status dot
+        ctx.fillStyle =
+          timelineInfo?.status === "complete" ? "#10b981" : "#3b82f6";
+        ctx.beginPath();
+        ctx.arc(leftX, topRowY, 4 * resScale, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Title
+        ctx.fillStyle = isDark ? "#ffffff" : "#0f172a";
+        ctx.font = `bold ${(11 * resScale).toFixed(1)}px Inter, sans-serif`;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText("TIMELINE", leftX + 10 * resScale, topRowY);
+
+        // Frame badge
+        const currentIdx = timelineInfo ? timelineInfo.activeGroupIdx : 0;
+        const stepText =
+          timelineInfo?.status === "complete"
+            ? "COMPLETE"
+            : timelineInfo?.status === "ready"
+              ? "READY"
+              : `STEP ${currentIdx + 1}/${totalPills}`;
+        ctx.fillStyle = isDark
+          ? "rgba(255, 255, 255, 0.55)"
+          : "rgba(15, 23, 42, 0.55)";
+        ctx.font = `600 ${(10 * resScale).toFixed(1)}px Inter, sans-serif`;
+        ctx.fillText(`·  ${stepText}`, leftX + 68 * resScale, topRowY);
+
+        // 3. Right side: Action details
+        if (firstFrame) {
+          const rightX = hudX + hudW - 18 * resScale;
+          const actionText = `${firstFrame.from || ""} ➔ ${firstFrame.to || ""} ${firstFrame.action ? `(${firstFrame.action})` : ""}`;
+          ctx.fillStyle = isDark ? "#93c5fd" : "#2563eb";
+          ctx.font = `bold ${(10 * resScale).toFixed(1)}px monospace, sans-serif`;
+          ctx.textAlign = "right";
+          ctx.textBaseline = "middle";
+          ctx.fillText(actionText, rightX, topRowY);
+        }
+
+        // 4. Middle Row: Step Pills
+        const pillsY = hudY + 31 * resScale;
+        const pillH = 16 * resScale;
+        const pillW = 42 * resScale;
+        const pillGap = 5 * resScale;
+        const maxVisiblePills = Math.min(totalPills, 12);
+        const pillStartX = hudX + 18 * resScale;
+
+        for (let pIdx = 0; pIdx < maxVisiblePills; pIdx++) {
+          const grp = frameGroups[pIdx];
+          const px = pillStartX + pIdx * (pillW + pillGap);
+          const isActive =
+            timelineInfo &&
+            timelineInfo.status === "running" &&
+            pIdx === currentIdx;
+          const isPassed =
+            timelineInfo &&
+            (timelineInfo.status === "complete" || pIdx < currentIdx);
+
+          ctx.save();
+          if (isActive) {
+            ctx.fillStyle = isDark
+              ? "rgba(59, 130, 246, 0.35)"
+              : "rgba(59, 130, 246, 0.2)";
+            ctx.strokeStyle = "#3b82f6";
+            ctx.lineWidth = 1.2 * resScale;
+          } else if (isPassed) {
+            ctx.fillStyle = isDark
+              ? "rgba(16, 185, 129, 0.2)"
+              : "rgba(16, 185, 129, 0.15)";
+            ctx.strokeStyle = isDark
+              ? "rgba(16, 185, 129, 0.4)"
+              : "rgba(16, 185, 129, 0.3)";
+            ctx.lineWidth = 1 * resScale;
+          } else {
+            ctx.fillStyle = isDark
+              ? "rgba(255, 255, 255, 0.05)"
+              : "rgba(15, 23, 42, 0.05)";
+            ctx.strokeStyle = isDark
+              ? "rgba(255, 255, 255, 0.1)"
+              : "rgba(15, 23, 42, 0.1)";
+            ctx.lineWidth = 1 * resScale;
+          }
+
+          roundRect(ctx, px, pillsY, pillW, pillH, 4 * resScale);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.font = `bold ${(8.5 * resScale).toFixed(1)}px monospace, sans-serif`;
+          if (isActive) {
+            ctx.fillStyle = isDark ? "#ffffff" : "#1d4ed8";
+          } else if (isPassed) {
+            ctx.fillStyle = isDark ? "#34d399" : "#059669";
+          } else {
+            ctx.fillStyle = isDark
+              ? "rgba(255, 255, 255, 0.4)"
+              : "rgba(15, 23, 42, 0.4)";
+          }
+          ctx.fillText(`t=${grp.timestamp}`, px + pillW / 2, pillsY + pillH / 2);
+          ctx.restore();
+        }
+
+        if (totalPills > maxVisiblePills) {
+          const overflowX = pillStartX + maxVisiblePills * (pillW + pillGap);
+          ctx.fillStyle = isDark
+            ? "rgba(255, 255, 255, 0.4)"
+            : "rgba(15, 23, 42, 0.4)";
+          ctx.font = `600 ${(8.5 * resScale).toFixed(1)}px Inter, sans-serif`;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText(
+            `+${totalPills - maxVisiblePills} more`,
+            overflowX + 4 * resScale,
+            pillsY + pillH / 2,
+          );
+        }
+
+        // 5. Bottom Scrubber Progress Bar
+        const barH = 3 * resScale;
+        const barY = hudY + hudH - barH;
+        ctx.fillStyle = isDark
+          ? "rgba(255, 255, 255, 0.08)"
+          : "rgba(15, 23, 42, 0.08)";
+        ctx.fillRect(hudX + 10 * resScale, barY, hudW - 20 * resScale, barH);
+
+        let progressFraction = 0;
+        if (timelineInfo) {
+          if (timelineInfo.status === "complete") {
+            progressFraction = 1;
+          } else if (timelineInfo.status === "ready") {
+            progressFraction = 0;
+          } else {
+            progressFraction = Math.min(
+              1,
+              Math.max(
+                0,
+                (timelineInfo.activeGroupIdx + timelineInfo.hopT) / totalPills,
+              ),
+            );
+          }
+        }
+
+        if (progressFraction > 0) {
+          const barGrad = ctx.createLinearGradient(
+            hudX,
+            barY,
+            hudX + hudW,
+            barY,
+          );
+          barGrad.addColorStop(0, "#3b82f6");
+          barGrad.addColorStop(1, "#8b5cf6");
+          ctx.fillStyle = barGrad;
+          ctx.fillRect(
+            hudX + 10 * resScale,
+            barY,
+            (hudW - 20 * resScale) * progressFraction,
+            barH,
+          );
+        }
+
+        ctx.restore();
+      }
     };
 
     // 3. Execution Animation Engine: 100% exact match to ReactFlow PacketEdge & duration
@@ -1076,7 +1320,11 @@ export async function recordSimulationVideo({
     const introFrames = Math.round(0.6 * fps);
     for (let f = 0; f < introFrames; f++) {
       if (isCancelled) break;
-      drawCanvas(new Set(), new Map(), 0);
+      drawCanvas(new Set(), new Map(), 0, {
+        activeGroupIdx: 0,
+        hopT: 0,
+        status: "ready",
+      });
       await new Promise((r) => setTimeout(r, 1000 / fps));
     }
 
@@ -1121,7 +1369,11 @@ export async function recordSimulationVideo({
         const t = f / hopFrames;
         const pingPhase = (f % 30) / 30;
 
-        drawCanvas(activeNodeIds, activeEdgeMap, pingPhase);
+        drawCanvas(activeNodeIds, activeEdgeMap, pingPhase, {
+          activeGroupIdx: groupIdx,
+          hopT: t,
+          status: "running",
+        });
 
         // Render traveling Packet Train along exact ReactFlow SVG edge paths
         activeEdgeMap.forEach((info, edgeId) => {
@@ -1187,7 +1439,11 @@ export async function recordSimulationVideo({
     const outroFrames = Math.round(1.0 * fps);
     for (let f = 0; f < outroFrames; f++) {
       if (isCancelled) break;
-      drawCanvas(new Set(), new Map(), 0);
+      drawCanvas(new Set(), new Map(), 0, {
+        activeGroupIdx: Math.max(0, totalHops - 1),
+        hopT: 1,
+        status: "complete",
+      });
       await new Promise((r) => setTimeout(r, 1000 / fps));
     }
 

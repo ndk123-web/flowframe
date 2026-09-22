@@ -60,6 +60,150 @@ export interface CompileSimulationResult {
   frameGroups: Array<{ timestamp: number; frames: any[] }>;
 }
 
+export function inferSimulationNodeType(node: any): ComponentType {
+  if (node?.data?.type && node.data.type !== "default" && node.data.type !== "customNode") {
+    return node.data.type as ComponentType;
+  }
+  const id = String(node?.id || "").toLowerCase();
+  const label = String(node?.data?.label || "").toLowerCase();
+
+  if (id.includes("client") || label.includes("client") || label.includes("browser") || label.includes("user")) {
+    return "client";
+  }
+  if (id.includes("api") || id.includes("gateway") || label.includes("gateway") || id.includes("gw")) {
+    return "api-gateway";
+  }
+  if (id.includes("lb") || label.includes("load balancer") || label.includes("balancer")) {
+    return "load-balancer";
+  }
+  if (id.includes("redis") || id.includes("cache") || label.includes("redis") || label.includes("cache")) {
+    return "redis";
+  }
+  if (
+    id.includes("postgres") ||
+    id.includes("sql") ||
+    id.includes("db") ||
+    id.includes("database") ||
+    label.includes("postgres") ||
+    label.includes("db") ||
+    label.includes("database")
+  ) {
+    return "postgres";
+  }
+  if (id.includes("storage") || id.includes("s3") || id.includes("blob") || label.includes("storage")) {
+    return "storage";
+  }
+  if (id.includes("pubsub") || id.includes("broker") || label.includes("pub/sub") || label.includes("broker")) {
+    return "pubsub";
+  }
+  if (id.includes("queue") || label.includes("queue") || id.includes("mq")) {
+    return "message-queue";
+  }
+  if (id.includes("dns") || label.includes("dns")) {
+    return "dns";
+  }
+  if (id.includes("cdn") || label.includes("cdn")) {
+    return "cdn";
+  }
+  return "server";
+}
+
+export function createDefaultSimulationConfig(type: ComponentType, id: string, label: string): Record<string, any> {
+  switch (type) {
+    case "client":
+      return {
+        endpoint: "/api/v1/posts",
+        method: "GET",
+        lookupKey: "rohan",
+        valetKeyFlow: false,
+        fileName: "file.png",
+        isThereFileToUpload: false,
+        targetBucket: "media-uploads",
+        body: "",
+        requests: [
+          {
+            endpoint: "/api/v1/posts",
+            method: "GET",
+            lookupKey: "rohan",
+            fileName: "file.png",
+            isThereFileToUpload: false,
+            targetBucket: "media-uploads",
+            body: "",
+          },
+        ],
+      };
+    case "api-gateway":
+      return {
+        strategy: "ROUND_ROBIN",
+        routes: {
+          "/api/v1/posts": "POST_SERVICE",
+          "/api/v1/users": "USER_SERVICE",
+        },
+      };
+    case "load-balancer":
+      return {
+        strategy: "ROUND_ROBIN",
+      };
+    case "server":
+      return {
+        capacity: 100,
+        tcpConnections: 10,
+        prefetchLimit: 1,
+        endpoints: {
+          "/api/v1/posts": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          "/api/v1/users": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          "/api/v1/getData": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+        },
+      };
+    case "redis":
+      return {
+        data: [
+          { key: "rohan", val: "cached data for rohan" },
+          { key: "john", val: "cached data for john" },
+        ],
+      };
+    case "postgres":
+      return {
+        table: "users",
+        data: [
+          { key: "doe", val: "db data for doe" },
+          { key: "john", val: "db data for john" },
+          { key: "rohan", val: "db data for rohan" },
+        ],
+      };
+    case "storage":
+      return {
+        buckets: ["media-uploads"],
+      };
+    case "dns":
+      return {
+        domains: {
+          "ndkdev.me": {
+            www: { to: "", ip: "192.168.1.1", typeOfRecord: "A" },
+          },
+        },
+      };
+    case "cdn":
+      return {
+        originId: "",
+        cache: [],
+      };
+    case "message-queue":
+      return {
+        processingType: "FIFO",
+        queueSize: 10,
+        overflowBehavior: "REJECT",
+        connections: {},
+      };
+    case "pubsub":
+      return {
+        channels: {},
+      };
+    default:
+      return {};
+  }
+}
+
 export function compileSimulationPipeline(
   options: CompileSimulationOptions,
 ): CompileSimulationResult {
@@ -72,8 +216,15 @@ export function compileSimulationPipeline(
     hideResponse = false,
   } = options;
 
-  // 1. Identify Client node
-  const clientNodes = activeNodes.filter((n) => n.data?.type === "client");
+  // 1. Identify Client node with full fallback inference
+  const clientNodes = activeNodes.filter((n) => {
+    const t = (n.data?.type || inferSimulationNodeType(n)) as ComponentType;
+    if (t === "client") return true;
+    const lbl = String(n.data?.label || "").toLowerCase();
+    const nid = String(n.id || "").toLowerCase();
+    return lbl.includes("client") || nid.startsWith("client");
+  });
+
   if (clientNodes.length === 0) {
     throw new Error("Canvas has no Client node. Add a Client node to simulate traffic.");
   }
@@ -84,7 +235,7 @@ export function compileSimulationPipeline(
 
   const clientId = clientToRun.id;
   const clientLabelStr = (clientToRun.data?.label as string) || "";
-  const clientConfig = activeConfigs[clientId] || {};
+  const clientConfig = activeConfigs[clientId] || createDefaultSimulationConfig("client", clientId, clientLabelStr);
 
   // 2. Initialize simulation engine graph and registry
   const graph = new GraphManager("dynamic-graph");
@@ -94,9 +245,9 @@ export function compileSimulationPipeline(
 
   // 3. Register all nodes into graph & registry
   activeNodes.forEach((n) => {
-    const type = n.data?.type as ComponentType;
+    const type = (n.data?.type || inferSimulationNodeType(n)) as ComponentType;
     const labelStr = (n.data?.label as string) || n.id;
-    const config = activeConfigs[n.id] || {};
+    const config = activeConfigs[n.id] || createDefaultSimulationConfig(type, n.id, labelStr);
 
     let modelInstance: any = null;
 
@@ -296,15 +447,22 @@ export function compileSimulationPipeline(
 
   // 4. Wire Server TCP Connection Pools, Message Queues & PubSub
   activeNodes.forEach((n) => {
-    if (n.data?.type === "server") {
+    const nType = (n.data?.type || inferSimulationNodeType(n)) as ComponentType;
+    if (nType === "server") {
       const serverInstance = registry.getInstance(n.id) as ServerModel;
-      const config = activeConfigs[n.id] || {};
+      const labelStr = (n.data?.label as string) || n.id;
+      const config = activeConfigs[n.id] || createDefaultSimulationConfig("server", n.id, labelStr);
       const tcpConns = typeof config.tcpConnections === "number" ? config.tcpConnections : 10;
 
       // Postgres connection pools
       activeEdges
-        .filter((e) => (e.source === n.id && activeNodes.find((node) => node.id === e.target)?.data?.type === "postgres") ||
-                       (e.target === n.id && activeNodes.find((node) => node.id === e.source)?.data?.type === "postgres"))
+        .filter((e) => {
+          const otherId = e.source === n.id ? e.target : e.target === n.id ? e.source : null;
+          if (!otherId) return false;
+          const otherNode = activeNodes.find((node) => node.id === otherId);
+          const otherType = otherNode?.data?.type || inferSimulationNodeType(otherNode);
+          return otherType === "postgres";
+        })
         .forEach((edge) => {
           const pgId = edge.source === n.id ? edge.target : edge.source;
           const pgInst = registry.getInstance(pgId) as PostgresModel;
@@ -315,8 +473,13 @@ export function compileSimulationPipeline(
 
       // Message Queue producers / consumers
       activeEdges
-        .filter((e) => (e.source === n.id && activeNodes.find((node) => node.id === e.target)?.data?.type === "message-queue") ||
-                       (e.target === n.id && activeNodes.find((node) => node.id === e.source)?.data?.type === "message-queue"))
+        .filter((e) => {
+          const otherId = e.source === n.id ? e.target : e.target === n.id ? e.source : null;
+          if (!otherId) return false;
+          const otherNode = activeNodes.find((node) => node.id === otherId);
+          const otherType = otherNode?.data?.type || inferSimulationNodeType(otherNode);
+          return otherType === "message-queue";
+        })
         .forEach((edge) => {
           const isProducer = edge.source === n.id;
           const qId = isProducer ? edge.target : edge.source;
@@ -328,8 +491,13 @@ export function compileSimulationPipeline(
 
       // PubSub subscriptions
       activeEdges
-        .filter((e) => (e.source === n.id && activeNodes.find((node) => node.id === e.target)?.data?.type === "pubsub") ||
-                       (e.target === n.id && activeNodes.find((node) => node.id === e.source)?.data?.type === "pubsub"))
+        .filter((e) => {
+          const otherId = e.source === n.id ? e.target : e.target === n.id ? e.source : null;
+          if (!otherId) return false;
+          const otherNode = activeNodes.find((node) => node.id === otherId);
+          const otherType = otherNode?.data?.type || inferSimulationNodeType(otherNode);
+          return otherType === "pubsub";
+        })
         .forEach((edge) => {
           const isProducer = edge.source === n.id;
           const pubSubId = isProducer ? edge.target : edge.source;
@@ -357,7 +525,9 @@ export function compileSimulationPipeline(
     const tgtNode = activeNodes.find((n) => n.id === edge.target);
     if (srcNode && tgtNode) {
       graph.addEdge(edge.source, edge.target);
-      if (srcNode.data?.type === "server" && tgtNode.data?.type === "api-gateway") {
+      const srcType = srcNode.data?.type || inferSimulationNodeType(srcNode);
+      const tgtType = tgtNode.data?.type || inferSimulationNodeType(tgtNode);
+      if (srcType === "server" && tgtType === "api-gateway") {
         graph.addEdge(edge.target, edge.source);
       }
     }

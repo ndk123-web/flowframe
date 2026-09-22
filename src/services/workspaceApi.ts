@@ -1,3 +1,5 @@
+import { handleApiResponse } from "@/services/authApi";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 export interface WorkspaceDTO {
@@ -38,12 +40,7 @@ export async function getUserWorkspaces(token: string): Promise<WorkspaceDTO[]> 
     },
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to fetch workspaces");
-  }
-
-  return res.json();
+  return handleApiResponse<WorkspaceDTO[]>(res, "Failed to fetch workspaces");
 }
 
 export async function getWorkspaceById(workspaceId: string, token: string): Promise<WorkspaceDTO> {
@@ -55,12 +52,7 @@ export async function getWorkspaceById(workspaceId: string, token: string): Prom
     },
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to fetch workspace details");
-  }
-
-  return res.json();
+  return handleApiResponse<WorkspaceDTO>(res, "Failed to fetch workspace details");
 }
 
 export async function createWorkspace(
@@ -76,12 +68,7 @@ export async function createWorkspace(
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to create workspace");
-  }
-
-  return res.json();
+  return handleApiResponse<WorkspaceDTO>(res, "Failed to create workspace");
 }
 
 export async function updateWorkspace(
@@ -98,12 +85,7 @@ export async function updateWorkspace(
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to update workspace");
-  }
-
-  return res.json();
+  return handleApiResponse<WorkspaceDTO>(res, "Failed to update workspace");
 }
 
 export async function deleteWorkspace(workspaceId: string, token: string): Promise<void> {
@@ -114,8 +96,5 @@ export async function deleteWorkspace(workspaceId: string, token: string): Promi
     },
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to delete workspace");
-  }
+  await handleApiResponse<any>(res, "Failed to delete workspace");
 }

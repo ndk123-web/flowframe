@@ -5,6 +5,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import { Analytics } from "@vercel/analytics/next";
 import ToastContainer from "@/components/Toast";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+import SessionExpiredModal from "@/components/SessionExpiredModal";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const inter = Inter({
@@ -94,6 +95,7 @@ export default function RootLayout({
           {children}
           <ToastContainer />
           <PWAInstallPrompt />
+          <SessionExpiredModal />
         </TooltipProvider>
         <Analytics />
       </body>
