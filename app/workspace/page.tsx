@@ -1718,11 +1718,87 @@ function Timeline({
 function getFormattedLogText(frame: any) {
   const normAction = frame.action.toUpperCase();
   const flow = `${frame.from} ➔ ${frame.to}`;
+  const payloadStr =
+    frame.payloadSummary && frame.payloadSummary !== "{}"
+      ? ` — ${frame.payloadSummary}`
+      : "";
 
+  // 1. API Gateway Specific Ingress & Egress Hops
+  if (normAction.includes("API_GATEWAY_SEND_RESPONSE")) {
+    const isCacheFast =
+      frame.payloadSummary?.toLowerCase().includes("cache") ||
+      normAction.includes("HIT");
+    return {
+      text: `${flow} | API Gateway Ingress Response - Status: 200 OK${payloadStr}`,
+      type: "default",
+      latencyMs: isCacheFast ? 30 : 82,
+    };
+  }
+
+  if (
+    normAction.includes("API_GATEWAY_ROUTE_NOT_FOUND") ||
+    normAction.includes("API_GATEWAY_EMPTY_ROUTE_REJECT") ||
+    normAction.includes("API_GATEWAY_ROUTE_ERROR")
+  ) {
+    return {
+      text: `${flow} | API Gateway 404 Not Found — Unmatched Route${payloadStr}`,
+      type: "error",
+      latencyMs: 8,
+    };
+  }
+
+  if (normAction.includes("API_GATEWAY_SERVICE_UNAVAILABLE")) {
+    return {
+      text: `${flow} | API Gateway 503 Service Unavailable${payloadStr}`,
+      type: "error",
+      latencyMs: 8,
+    };
+  }
+
+  if (normAction.includes("API_GATEWAY_FORWARD_REQUEST")) {
+    return {
+      text: `${flow} | API Gateway Match Route & Proxy${payloadStr}`,
+      type: "default",
+      latencyMs: 3,
+    };
+  }
+
+  // 2. Load Balancer Specific Routing & Ingress/Egress Hops
+  if (normAction.includes("LOAD_BALANCER_SEND_RESPONSE")) {
+    const isCacheFast =
+      frame.payloadSummary?.toLowerCase().includes("cache") ||
+      normAction.includes("HIT");
+    return {
+      text: `${flow} | Load Balancer Proxy Response - Status: 200 OK${payloadStr}`,
+      type: "default",
+      latencyMs: isCacheFast ? 26 : 78,
+    };
+  }
+
+  if (
+    normAction.includes("LOAD_BALANCER_REJECT_REQUEST") ||
+    normAction.includes("LOAD_BALANCER_RESPONSE_ERROR")
+  ) {
+    return {
+      text: `${flow} | Load Balancer 503 Service Unavailable (Capacity Exhausted)${payloadStr}`,
+      type: "error",
+      latencyMs: 6,
+    };
+  }
+
+  if (normAction.includes("LOAD_BALANCER_FORWARD_REQUEST")) {
+    return {
+      text: `${flow} | Load Balancer Balance & Forward${payloadStr}`,
+      type: "default",
+      latencyMs: 2,
+    };
+  }
+
+  // 3. Cache Operations
   if (normAction.includes("CACHE_HIT")) {
     return {
       text: `${flow} | Cache HIT - Key: "${frame.lookupKey || "N/A"}"`,
-      type: "success",
+      type: "default",
       latencyMs: 2,
     };
   }
@@ -1730,15 +1806,16 @@ function getFormattedLogText(frame: any) {
   if (normAction.includes("CACHE_MISS")) {
     return {
       text: `${flow} | Cache MISS - Key: "${frame.lookupKey || "N/A"}"`,
-      type: "warn",
+      type: "default",
       latencyMs: 2,
     };
   }
 
+  // 4. Database Operations
   if (normAction.includes("DB_READ") || normAction.includes("READ_RECORD")) {
     return {
       text: `${flow} | DB Read - Key: "${frame.lookupKey || "N/A"}"`,
-      type: "warn",
+      type: "default",
       latencyMs: 42,
     };
   }
@@ -1749,22 +1826,24 @@ function getFormattedLogText(frame: any) {
     normAction.includes("WRITE_RECORD") ||
     normAction.includes("UPLOAD_SUCCESS")
   ) {
-    const payloadStr =
-      frame.payloadSummary && frame.payloadSummary !== "{}"
-        ? ` - Data: ${frame.payloadSummary}`
-        : "";
     return {
       text: `${flow} | DB Write - Key: "${frame.lookupKey || "N/A"}"${payloadStr}`,
-      type: "info",
+      type: "default",
       latencyMs: 55,
     };
   }
 
+  // 5. Client Direct Ingress / Dispatch Hops
+  if (normAction.includes("CLIENT_SEND_REQUEST")) {
+    return {
+      text: `${flow} | Client Ingress Request${payloadStr}`,
+      type: "default",
+      latencyMs: 5,
+    };
+  }
+
+  // 6. Generic Response / Error Handling
   if (normAction.includes("RESPONSE_ERROR")) {
-    const payloadStr =
-      frame.payloadSummary && frame.payloadSummary !== "{}"
-        ? ` - Payload: ${frame.payloadSummary}`
-        : "";
     let statusText = "404 Not Found";
     if (normAction.includes("_405")) {
       statusText = "405 Method Not Allowed";
@@ -1773,7 +1852,7 @@ function getFormattedLogText(frame: any) {
     }
     return {
       text: `${flow} | Respond - Status: ${statusText}${payloadStr}`,
-      type: "warn",
+      type: "error",
       latencyMs: 18,
     };
   }
@@ -1781,7 +1860,7 @@ function getFormattedLogText(frame: any) {
   if (normAction.includes("ENDPOINT_NOT_FOUND")) {
     return {
       text: `${flow} | 404 Not Found - ${frame.payloadSummary || "Endpoint Not Found"}`,
-      type: "warn",
+      type: "error",
       latencyMs: 12,
     };
   }
@@ -1789,7 +1868,7 @@ function getFormattedLogText(frame: any) {
   if (normAction.includes("METHOD_NOT_ALLOWED")) {
     return {
       text: `${flow} | 405 Method Not Allowed - ${frame.payloadSummary || "Method Not Allowed"}`,
-      type: "warn",
+      type: "error",
       latencyMs: 12,
     };
   }
@@ -1798,17 +1877,13 @@ function getFormattedLogText(frame: any) {
     normAction.includes("SEND_RESPONSE") ||
     normAction.includes("RETURN_DATA")
   ) {
-    const payloadStr =
-      frame.payloadSummary && frame.payloadSummary !== "{}"
-        ? ` - Payload: ${frame.payloadSummary}`
-        : "";
     const isCacheFast =
       frame.payloadSummary?.toLowerCase().includes("cache") ||
       normAction.includes("HIT");
     const resLatency = isCacheFast ? 22 : 74;
     return {
       text: `${flow} | Respond - Status: 200 OK${payloadStr}`,
-      type: "success",
+      type: "default",
       latencyMs: resLatency,
     };
   }
@@ -1817,10 +1892,6 @@ function getFormattedLogText(frame: any) {
     normAction.includes("SEND_REQUEST") ||
     normAction.includes("ROUTE_REQUEST")
   ) {
-    const payloadStr =
-      frame.payloadSummary && frame.payloadSummary !== "{}"
-        ? ` - Payload: ${frame.payloadSummary}`
-        : "";
     return {
       text: `${flow} | Dispatch Request - Action: ${frame.action}${payloadStr}`,
       type: "default",
@@ -1829,7 +1900,6 @@ function getFormattedLogText(frame: any) {
   }
 
   if (normAction.includes("POSTGRES_POOL_WAIT")) {
-    const payloadStr = frame.payloadSummary ? ` — ${frame.payloadSummary}` : "";
     return {
       text: `${flow} | [WAIT] POSTGRES POOL WAIT${payloadStr}`,
       type: "error",
@@ -1838,7 +1908,6 @@ function getFormattedLogText(frame: any) {
   }
 
   if (normAction.includes("POSTGRES_CONNECTION_ERROR")) {
-    const payloadStr = frame.payloadSummary ? ` — ${frame.payloadSummary}` : "";
     return {
       text: `${flow} | [ERROR] POSTGRES CONNECTION ERROR${payloadStr}`,
       type: "error",
@@ -1851,7 +1920,7 @@ function getFormattedLogText(frame: any) {
     const keyStr = frame.lookupKey ? ` (Key: "${frame.lookupKey}")` : "";
     return {
       text: `${flow} | POSTGRES QUERY HIT${reqStr}${keyStr}`,
-      type: "success",
+      type: "default",
       latencyMs: 42,
     };
   }
@@ -1861,8 +1930,24 @@ function getFormattedLogText(frame: any) {
     const keyStr = frame.lookupKey ? ` (Key: "${frame.lookupKey}")` : "";
     return {
       text: `${flow} | POSTGRES QUERY MISS${reqStr}${keyStr}`,
-      type: "warn",
+      type: "error",
       latencyMs: 42,
+    };
+  }
+
+  if (normAction.includes("QUEUE_ACK_PUBLISH")) {
+    return {
+      text: `${flow} | Message Queue 202 Accepted${payloadStr}`,
+      type: "default",
+      latencyMs: 8,
+    };
+  }
+
+  if (normAction.includes("PUBSUB_ACK_PUBLISH")) {
+    return {
+      text: `${flow} | PubSub Event Broadcasted${payloadStr}`,
+      type: "default",
+      latencyMs: 6,
     };
   }
 
@@ -1891,7 +1976,7 @@ function DebugPanel({
   frameIndex: number;
   theme: Theme;
 }) {
-  const textColor = theme === "dark" ? "text-slate-500" : "text-slate-400";
+  const textColor = theme === "dark" ? "text-slate-400" : "text-slate-500";
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1903,11 +1988,11 @@ function DebugPanel({
   if (currentFrames.length === 0) {
     return (
       <div className="font-mono text-xs p-2 text-center sm:text-left flex items-center gap-2">
-        <span className="inline-block w-2 h-2 rounded-full bg-violet-400/60 animate-ping shrink-0" />
+        <span className="inline-block w-2 h-2 rounded-full bg-[var(--primary)]/60 animate-ping shrink-0" />
         <span className={textColor}>
           Simulation logs ready — click{" "}
-          <strong className="text-violet-400">Play</strong> or{" "}
-          <strong className="text-violet-400">Reframe</strong> to stream live
+          <strong className="text-[color:var(--foreground)] font-semibold">Play</strong> or{" "}
+          <strong className="text-[color:var(--foreground)] font-semibold">Reframe</strong> to stream live
           execution logs.
         </span>
       </div>
@@ -1921,35 +2006,28 @@ function DebugPanel({
     >
       {currentFrames.map((frame, idx) => {
         const formatted = getFormattedLogText(frame);
-        const colors: Record<string, string> = {
-          success: "text-emerald-400",
-          info: "text-blue-400",
-          warn: "text-amber-400",
-          default: "text-[color:var(--foreground)]/80",
-        };
+        const isError = formatted.type === "error";
 
         return (
           <div
             key={`${frame.requestId}-${idx}`}
-            className="flex gap-2 items-center text-[11px] leading-relaxed group hover:bg-[var(--surface)]/60 px-1 py-0.5 rounded transition-colors"
+            className="flex gap-2 items-center text-[11px] leading-relaxed group hover:bg-[var(--surface-muted)]/50 px-1.5 py-0.5 rounded transition-colors"
           >
-            <span className="text-[color:var(--foreground)]/35 select-none shrink-0 font-mono">
+            <span className="text-[color:var(--muted)]/60 select-none shrink-0 font-mono text-[10px]">
               [t={frame.timestamp}]
             </span>
-            <span className="text-violet-400 font-bold select-none shrink-0">&gt;</span>
-            <span className={`min-w-0 break-words ${colors[formatted.type] || colors.default}`}>
+            <span className="text-[color:var(--muted)] font-semibold select-none shrink-0">&gt;</span>
+            <span className={`min-w-0 break-words ${isError ? "text-rose-400 font-medium" : "text-[color:var(--foreground)]/85"}`}>
               {formatted.text}
             </span>
             {formatted.latencyMs && (
               <span
                 className={`ml-auto text-[9px] font-mono px-1.5 py-0.2 rounded border shrink-0 font-medium ${
-                  formatted.latencyMs <= 10
-                    ? "bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20"
-                    : formatted.latencyMs <= 30
-                    ? "bg-blue-500/10 text-blue-500 dark:text-blue-400 border-blue-500/20"
-                    : "bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-500/20"
+                  isError
+                    ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                    : "bg-[var(--surface-muted)] text-[color:var(--foreground)]/70 border-[var(--border)]/70"
                 }`}
-                title={`Estimated operation latency: ${formatted.latencyMs}ms`}
+                title={`Estimated hop latency: ${formatted.latencyMs}ms`}
               >
                 +{formatted.latencyMs}ms
               </span>
