@@ -82,6 +82,7 @@ import CanvasControlsBar from "@/components/CanvasControlsBar";
 import TemplateBrowserDialog, { WORKSPACE_TEMPLATES } from "@/components/TemplateBrowserDialog";
 import { getTemplateArchitecture } from "@/templates/starterTemplates";
 import { recordSimulationVideo } from "@/utils/recordSimulationVideo";
+import { compileSimulationPipeline } from "@/utils/simulationCompiler";
 import { Sparkles } from "lucide-react";
 
 // DSL Interpreter & Graph Engine
@@ -1722,6 +1723,7 @@ function getFormattedLogText(frame: any) {
     return {
       text: `${flow} | Cache HIT - Key: "${frame.lookupKey || "N/A"}"`,
       type: "success",
+      latencyMs: 2,
     };
   }
 
@@ -1729,6 +1731,7 @@ function getFormattedLogText(frame: any) {
     return {
       text: `${flow} | Cache MISS - Key: "${frame.lookupKey || "N/A"}"`,
       type: "warn",
+      latencyMs: 2,
     };
   }
 
@@ -1736,6 +1739,7 @@ function getFormattedLogText(frame: any) {
     return {
       text: `${flow} | DB Read - Key: "${frame.lookupKey || "N/A"}"`,
       type: "warn",
+      latencyMs: 42,
     };
   }
 
@@ -1752,6 +1756,7 @@ function getFormattedLogText(frame: any) {
     return {
       text: `${flow} | DB Write - Key: "${frame.lookupKey || "N/A"}"${payloadStr}`,
       type: "info",
+      latencyMs: 55,
     };
   }
 
@@ -1769,6 +1774,7 @@ function getFormattedLogText(frame: any) {
     return {
       text: `${flow} | Respond - Status: ${statusText}${payloadStr}`,
       type: "warn",
+      latencyMs: 18,
     };
   }
 
@@ -1776,6 +1782,7 @@ function getFormattedLogText(frame: any) {
     return {
       text: `${flow} | 404 Not Found - ${frame.payloadSummary || "Endpoint Not Found"}`,
       type: "warn",
+      latencyMs: 12,
     };
   }
 
@@ -1783,6 +1790,7 @@ function getFormattedLogText(frame: any) {
     return {
       text: `${flow} | 405 Method Not Allowed - ${frame.payloadSummary || "Method Not Allowed"}`,
       type: "warn",
+      latencyMs: 12,
     };
   }
 
@@ -1794,9 +1802,14 @@ function getFormattedLogText(frame: any) {
       frame.payloadSummary && frame.payloadSummary !== "{}"
         ? ` - Payload: ${frame.payloadSummary}`
         : "";
+    const isCacheFast =
+      frame.payloadSummary?.toLowerCase().includes("cache") ||
+      normAction.includes("HIT");
+    const resLatency = isCacheFast ? 22 : 74;
     return {
       text: `${flow} | Respond - Status: 200 OK${payloadStr}`,
       type: "success",
+      latencyMs: resLatency,
     };
   }
 
@@ -1811,6 +1824,7 @@ function getFormattedLogText(frame: any) {
     return {
       text: `${flow} | Dispatch Request - Action: ${frame.action}${payloadStr}`,
       type: "default",
+      latencyMs: 15,
     };
   }
 
@@ -1819,6 +1833,7 @@ function getFormattedLogText(frame: any) {
     return {
       text: `${flow} | [WAIT] POSTGRES POOL WAIT${payloadStr}`,
       type: "error",
+      latencyMs: 30,
     };
   }
 
@@ -1827,6 +1842,7 @@ function getFormattedLogText(frame: any) {
     return {
       text: `${flow} | [ERROR] POSTGRES CONNECTION ERROR${payloadStr}`,
       type: "error",
+      latencyMs: 50,
     };
   }
 
@@ -1836,6 +1852,7 @@ function getFormattedLogText(frame: any) {
     return {
       text: `${flow} | POSTGRES QUERY HIT${reqStr}${keyStr}`,
       type: "success",
+      latencyMs: 42,
     };
   }
 
@@ -1845,6 +1862,7 @@ function getFormattedLogText(frame: any) {
     return {
       text: `${flow} | POSTGRES QUERY MISS${reqStr}${keyStr}`,
       type: "warn",
+      latencyMs: 42,
     };
   }
 
@@ -1860,6 +1878,7 @@ function getFormattedLogText(frame: any) {
   return {
     text: `${flow} | ${frame.action}${details ? ` (${details})` : ""}`,
     type: "default",
+    latencyMs: 10,
   };
 }
 
@@ -1912,15 +1931,29 @@ function DebugPanel({
         return (
           <div
             key={`${frame.requestId}-${idx}`}
-            className="flex gap-2 items-start text-[11px] leading-relaxed"
+            className="flex gap-2 items-center text-[11px] leading-relaxed group hover:bg-[var(--surface)]/60 px-1 py-0.5 rounded transition-colors"
           >
-            <span className="text-[color:var(--foreground)]/35 select-none">
+            <span className="text-[color:var(--foreground)]/35 select-none shrink-0 font-mono">
               [t={frame.timestamp}]
             </span>
-            <span className="text-violet-400 font-bold select-none">&gt;</span>
-            <span className={colors[formatted.type] || colors.default}>
+            <span className="text-violet-400 font-bold select-none shrink-0">&gt;</span>
+            <span className={`min-w-0 break-words ${colors[formatted.type] || colors.default}`}>
               {formatted.text}
             </span>
+            {formatted.latencyMs && (
+              <span
+                className={`ml-auto text-[9px] font-mono px-1.5 py-0.2 rounded border shrink-0 font-medium ${
+                  formatted.latencyMs <= 10
+                    ? "bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20"
+                    : formatted.latencyMs <= 30
+                    ? "bg-blue-500/10 text-blue-500 dark:text-blue-400 border-blue-500/20"
+                    : "bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-500/20"
+                }`}
+                title={`Estimated operation latency: ${formatted.latencyMs}ms`}
+              >
+                +{formatted.latencyMs}ms
+              </span>
+            )}
           </div>
         );
       })}
@@ -2683,6 +2716,8 @@ function WorkspaceInner({
   >((connectionStyle as any) || "default");
   const [exportIncludeSelection, setExportIncludeSelection] =
     useState<boolean>(true);
+  const [exportIncludeTimeline, setExportIncludeTimeline] =
+    useState<boolean>(true);
   const [exportWatermark, setExportWatermark] = useState<"none" | "branded">(
     "branded",
   );
@@ -2712,87 +2747,40 @@ function WorkspaceInner({
         `Rendering architecture simulation video (${videoFormat.toUpperCase()})...`,
       );
 
-      // Determine active frame groups to record based on export options
-      let activeGroups = frameGroups;
+      // Execute genuine simulation compiler with latest canvas nodes, edges & configurations
+      let activeGroups: Array<{ timestamp: number; frames: any[] }> = [];
 
-      if (rawSimulationFrames.length > 0) {
-        const isParallel = exportExecutionMode === "parallel";
-        const hideResp = exportPacketFilter === "forwardOnly";
-        let globalTimestampOffset = 0;
-        const flatFrames: any[] = [];
-
-        rawSimulationFrames.forEach((run) => {
-          const runFrames = run.frames.map((frame: any) => ({
-            ...frame,
-            timestamp: isParallel
-              ? frame.timestamp
-              : frame.timestamp + globalTimestampOffset,
-          }));
-
-          flatFrames.push(...runFrames);
-
-          if (!isParallel) {
-            const maxTime =
-              run.frames.length > 0
-                ? Math.max(...run.frames.map((f: any) => f.timestamp))
-                : -1;
-            globalTimestampOffset += maxTime + 1;
-          }
+      try {
+        const simResult = compileSimulationPipeline({
+          activeNodes: nodes,
+          activeEdges: edges,
+          activeConfigs: nodeConfigs,
+          targetClientId:
+            selectedNode &&
+            (selectedNode.data?.type === "client" ||
+              inferWorkspaceNodeType(selectedNode) === "client")
+              ? selectedNode.id
+              : undefined,
+          isParallel: exportExecutionMode === "parallel",
+          hideResponse: exportPacketFilter === "forwardOnly",
         });
 
-        const framesToRender = isParallel
-          ? (() => {
-              const pq = new PriorityQueue();
-              pq.pushMultipleIntoQueue(flatFrames);
-              const merged: any[] = [];
-              while (!pq.isEmpty()) {
-                const item = pq.popMinTimeStampItem();
-                if (item) merged.push(item);
-              }
-              return merged;
-            })()
-          : flatFrames.sort((a, b) => a.timestamp - b.timestamp);
-
-        const filtered = framesToRender.filter((frame) =>
-          shouldKeepFrame(hideResp, frame),
+        activeGroups = simResult.frameGroups;
+      } catch (compileErr: any) {
+        setValidationWarning(
+          compileErr.message ||
+            "Failed to compile simulation for export. Please ensure canvas has a Client node.",
         );
+        setIsExportingVideo(false);
+        return;
+      }
 
-        const grouped = new Map<number, any[]>();
-        for (const frame of filtered) {
-          const list = grouped.get(frame.timestamp) ?? [];
-          list.push(frame);
-          grouped.set(frame.timestamp, list);
-        }
-
-        activeGroups = Array.from(grouped.entries())
-          .sort((a, b) => a[0] - b[0])
-          .map(([timestamp, frames]) => ({ timestamp, frames }));
-      } else if (activeGroups.length === 0) {
-        if (edges.length > 0) {
-          activeGroups = edges.map((e, idx) => ({
-            timestamp: idx,
-            frames: [
-              {
-                from: e.source,
-                to: e.target,
-                action: "PACKET_DISPATCH",
-              },
-            ],
-          }));
-        } else {
-          setValidationWarning(
-            "Please connect at least two nodes to simulate packet hops.",
-          );
-          setIsExportingVideo(false);
-          return;
-        }
-      } else if (exportPacketFilter === "forwardOnly") {
-        activeGroups = activeGroups
-          .map((g) => ({
-            timestamp: g.timestamp,
-            frames: g.frames.filter((f) => shouldKeepFrame(true, f)),
-          }))
-          .filter((g) => g.frames.length > 0);
+      if (activeGroups.length === 0) {
+        setValidationWarning(
+          "Simulation produced 0 hops. Please verify connections between client and target services.",
+        );
+        setIsExportingVideo(false);
+        return;
       }
 
       const isAuthorUser =
@@ -2811,6 +2799,7 @@ function WorkspaceInner({
         connectionStyle: exportConnectionStyle,
         selectedNodeId: selectedNode?.id ?? null,
         includeSelection: exportIncludeSelection,
+        includeTimeline: exportIncludeTimeline,
         watermark: effectiveWatermark,
         showPorts: true,
         onProgress: (_percent, _status) => {
@@ -8829,6 +8818,20 @@ connect s1 -> db1
                                                           <span className="text-[8px] font-mono text-[color:var(--foreground)]/40 uppercase">
                                                             ({stepNodeId})
                                                           </span>
+                                                          <span
+                                                            className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[var(--surface-muted)] text-[color:var(--foreground)]/60 border border-[var(--border)] shrink-0"
+                                                            title="Estimated processing/lookup latency"
+                                                          >
+                                                            {stepType === "redis"
+                                                              ? "~2ms"
+                                                              : stepType === "postgres"
+                                                              ? "~45ms"
+                                                              : stepType === "messagequeue"
+                                                              ? "~8ms"
+                                                              : stepType === "pubsub"
+                                                              ? "~5ms"
+                                                              : "~15ms"}
+                                                          </span>
                                                         </div>
                                                       </div>
 
@@ -8945,6 +8948,25 @@ connect s1 -> db1
                                               <span className="text-[8px] font-mono text-[color:var(--foreground)]/60 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded border border-[var(--border)] shrink-0">
                                                 200 OK
                                               </span>
+                                            </div>
+
+                                            {/* Estimated Latency Profiling Pill */}
+                                            <div className="mt-2 p-2 rounded-lg bg-[var(--surface-muted)]/50 border border-[var(--border)]/60 flex items-center justify-between text-[9px] font-mono">
+                                              <span className="text-[color:var(--foreground)]/60 flex items-center gap-1">
+                                                <FiClock className="size-3 text-violet-400 shrink-0" />
+                                                <span>Est. Latency:</span>
+                                              </span>
+                                              <div className="flex items-center gap-1.5">
+                                                {currentPipeline.some((id) => String((nodes.find((n) => n.id === id)?.data as any)?.type || "").toLowerCase() === "redis") ? (
+                                                  <>
+                                                    <span className="text-emerald-500 font-semibold" title="Cache hit memory retrieval (~22ms roundtrip)">~22ms (HIT)</span>
+                                                    <span className="text-[color:var(--foreground)]/30">/</span>
+                                                    <span className="text-amber-500 font-semibold" title="Cache miss DB query fallback (~74ms roundtrip)">~74ms (MISS)</span>
+                                                  </>
+                                                ) : (
+                                                  <span className="text-blue-500 font-semibold" title="Sequential execution roundtrip">~68ms (Direct)</span>
+                                                )}
+                                              </div>
                                             </div>
                                           </div>
                                           </div>
@@ -9550,6 +9572,8 @@ connect s1 -> db1
               setExportConnectionStyle={setExportConnectionStyle}
               exportIncludeSelection={exportIncludeSelection}
               setExportIncludeSelection={setExportIncludeSelection}
+              exportIncludeTimeline={exportIncludeTimeline}
+              setExportIncludeTimeline={setExportIncludeTimeline}
               exportWatermark={exportWatermark}
               setExportWatermark={setExportWatermark}
               onProLockedNotice={(msg) => setValidationWarning(msg)}

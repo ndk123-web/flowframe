@@ -1,3 +1,5 @@
+import { handleApiResponse } from "@/services/authApi";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 export interface AiDiagramContext {
@@ -64,14 +66,10 @@ export async function sendAiChat(
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(
-      errorData.error || `AI request failed with status: ${res.status}`
-    );
-  }
-
-  return res.json();
+  return handleApiResponse<AiChatResponseDTO>(
+    res,
+    `AI request failed with status: ${res.status}`
+  );
 }
 
 /**
@@ -86,14 +84,10 @@ export async function getAiUsage(token: string): Promise<AiUsageDTO> {
     },
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(
-      errorData.error || `Failed to fetch AI usage: ${res.status}`
-    );
-  }
-
-  return res.json();
+  return handleApiResponse<AiUsageDTO>(
+    res,
+    `Failed to fetch AI usage: ${res.status}`
+  );
 }
 
 /**
@@ -117,12 +111,8 @@ export async function getAiHistory(
     },
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(
-      errorData.error || `Failed to fetch AI history: ${res.status}`
-    );
-  }
-
-  return res.json();
+  return handleApiResponse<AiHistoryResponseDTO>(
+    res,
+    `Failed to fetch AI history: ${res.status}`
+  );
 }

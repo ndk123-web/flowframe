@@ -62,6 +62,26 @@ export const useAuthStore = create<AuthState>()(
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
+        if (state?.token) {
+          try {
+            const parts = state.token.split(".");
+            if (parts.length === 3) {
+              const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+              const jsonStr = decodeURIComponent(
+                atob(base64)
+                  .split("")
+                  .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+                  .join("")
+              );
+              const payload = JSON.parse(jsonStr);
+              if (typeof payload.exp === "number" && Date.now() >= payload.exp * 1000) {
+                state.logout();
+              }
+            }
+          } catch {
+            // Keep token if non-JWT or decoding error
+          }
+        }
       },
     }
   )

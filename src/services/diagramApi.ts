@@ -1,3 +1,5 @@
+import { handleApiResponse } from "@/services/authApi";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 export interface DiagramDTO {
@@ -56,12 +58,7 @@ export async function getRecentDiagrams(token: string): Promise<RecentDiagramDTO
     },
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to fetch recent diagrams");
-  }
-
-  return res.json();
+  return handleApiResponse<RecentDiagramDTO[]>(res, "Failed to fetch recent diagrams");
 }
 
 export async function getWorkspaceDiagrams(
@@ -76,12 +73,7 @@ export async function getWorkspaceDiagrams(
     },
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to fetch diagrams");
-  }
-
-  return res.json();
+  return handleApiResponse<DiagramDTO[]>(res, "Failed to fetch diagrams");
 }
 
 export async function getDiagramById(
@@ -100,12 +92,7 @@ export async function getDiagramById(
     }
   );
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to fetch diagram details");
-  }
-
-  return res.json();
+  return handleApiResponse<DiagramDTO>(res, "Failed to fetch diagram details");
 }
 
 export async function createDiagram(
@@ -122,12 +109,7 @@ export async function createDiagram(
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to create diagram");
-  }
-
-  return res.json();
+  return handleApiResponse<DiagramDTO>(res, "Failed to create diagram");
 }
 
 export async function updateDiagram(
@@ -148,12 +130,7 @@ export async function updateDiagram(
     }
   );
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to save diagram");
-  }
-
-  return res.json();
+  return handleApiResponse<DiagramDTO>(res, "Failed to save diagram");
 }
 
 export async function deleteDiagram(
@@ -171,10 +148,7 @@ export async function deleteDiagram(
     }
   );
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to delete diagram");
-  }
+  await handleApiResponse<any>(res, "Failed to delete diagram");
 }
 
 export async function getSharedDiagram(diagramId: string): Promise<DiagramDTO> {
@@ -185,10 +159,5 @@ export async function getSharedDiagram(diagramId: string): Promise<DiagramDTO> {
     },
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to fetch shared diagram");
-  }
-
-  return res.json();
+  return handleApiResponse<DiagramDTO>(res, "Failed to fetch shared diagram");
 }
