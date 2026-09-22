@@ -448,14 +448,55 @@ export async function recordSimulationVideo({
     let maxX = -Infinity;
     let maxY = -Infinity;
 
-    nodes.forEach((n) => {
+    const getNodeDimensions = (n: any) => {
       const isShape = n.type === "shapeNode";
+      const shapeId = n.data?.shapeId;
+      const isText = shapeId === "text";
+      const isCompact =
+        shapeId === "circle" || shapeId === "diamond" || shapeId === "sticky";
+      const isClient = (n.data?.type || n.id || "").toLowerCase().includes("client");
+
+      const defaultW = isShape ? (isText ? 130 : isCompact ? 140 : 320) : 190;
+      const defaultH = isShape
+        ? isText
+          ? 36
+          : isCompact
+            ? 140
+            : 220
+        : isClient
+          ? 74
+          : 64;
+
+      const parseDim = (val: any) => {
+        if (typeof val === "number" && !isNaN(val) && val > 0) return val;
+        if (typeof val === "string") {
+          const parsed = parseFloat(val);
+          if (!isNaN(parsed) && parsed > 0) return parsed;
+        }
+        return undefined;
+      };
+
+      const w =
+        parseDim(n.width) ??
+        parseDim(n.measured?.width) ??
+        parseDim(n.style?.width) ??
+        parseDim(n.data?.width) ??
+        defaultW;
+
+      const h =
+        parseDim(n.height) ??
+        parseDim(n.measured?.height) ??
+        parseDim(n.style?.height) ??
+        parseDim(n.data?.height) ??
+        defaultH;
+
+      return { w, h };
+    };
+
+    nodes.forEach((n) => {
       const x = n.position?.x ?? 0;
       const y = n.position?.y ?? 0;
-      const defaultW = isShape ? 320 : 190;
-      const defaultH = isShape ? 220 : 64;
-      const w = Number(n.measured?.width ?? (n.style?.width as number) ?? defaultW);
-      const h = Number(n.measured?.height ?? (n.style?.height as number) ?? defaultH);
+      const { w, h } = getNodeDimensions(n);
 
       minX = Math.min(minX, x);
       minY = Math.min(minY, y);
@@ -491,7 +532,10 @@ export async function recordSimulationVideo({
       hasSource: boolean;
       isCylinder: boolean;
       isShapeNode: boolean;
+      shapeId?: string;
       shapeColor?: string;
+      textAlign?: string;
+      fontSize?: number;
       colors: { ring: string; glow: string; accent: string; dot: string };
       leftHandle: { x: number; y: number };
       rightHandle: { x: number; y: number };
@@ -505,8 +549,7 @@ export async function recordSimulationVideo({
       const isShape = n.type === "shapeNode";
       const rawX = n.position?.x ?? 0;
       const rawY = n.position?.y ?? 0;
-      const rawW = Number(n.measured?.width ?? (n.style?.width as number) ?? (isShape ? 320 : 190));
-      const rawH = Number(n.measured?.height ?? (n.style?.height as number) ?? (isShape ? 220 : 64));
+      const { w: rawW, h: rawH } = getNodeDimensions(n);
 
       const x = rawX * scale + offsetX;
       const y = rawY * scale + offsetY;
@@ -535,12 +578,13 @@ export async function recordSimulationVideo({
       const hasTarget = nType !== "client";
       const hasSource = nType !== "redis" && nType !== "postgres" && nType !== "storage";
 
-      const flavorId = (n.data?.flavor as string) || undefined;
-      let flavorShortLabel = "";
-      if (flavorId && NODE_FLAVORS[nType]) {
-        const match = NODE_FLAVORS[nType].find((f) => f.id === flavorId);
-        flavorShortLabel = match ? match.shortLabel : flavorId;
-      }
+      // Resolve technology flavor accurately matching CustomNode
+      const flavors = NODE_FLAVORS[nType];
+      const activeFlavor = flavors
+        ? (flavors.find((f) => f.id === n.data?.flavor) ?? flavors[0])
+        : null;
+      const flavorId = activeFlavor?.id || (n.data?.flavor as string) || undefined;
+      const flavorShortLabel = activeFlavor?.shortLabel || flavorId || "";
 
       nodeMap.set(n.id, {
         id: n.id,
@@ -556,7 +600,10 @@ export async function recordSimulationVideo({
         hasSource,
         isCylinder,
         isShapeNode: isShape,
+        shapeId: (n.data?.shapeId as string) || "rect",
         shapeColor: (n.data?.color as string) || "#3b82f6",
+        textAlign: (n.data?.textAlign as string) || "center",
+        fontSize: typeof n.data?.fontSize === "number" ? n.data.fontSize : undefined,
         colors,
         leftHandle: { x, y: y + h / 2 },
         rightHandle: { x: x + w, y: y + h / 2 },
@@ -798,25 +845,174 @@ export async function recordSimulationVideo({
         ctx.stroke();
       }
 
-      // Draw Shape Nodes in the background
+      // Draw Shape Nodes in the background (Boxes, Circles, Sticky Notes, Text, etc.)
       nodeMap.forEach((n) => {
         if (!n.isShapeNode) return;
         const color = n.shapeColor || "#3b82f6";
+        const shapeId = n.shapeId || "rect";
+        const label = n.label || "";
+        const isText = shapeId === "text";
+        const isSticky = shapeId === "sticky";
+
+        if (isText) {
+          // Pure text annotation, no bounding border or fill box
+          ctx.save();
+          ctx.fillStyle = isDark ? "#f8fafc" : "#0f172a";
+          const fontSizePx = Math.max(10, (n.fontSize || 15) * scale);
+          ctx.font = `600 ${fontSizePx.toFixed(1)}px Inter, system-ui, sans-serif`;
+          ctx.textAlign = (n.textAlign as CanvasTextAlign) || "left";
+          const textX =
+            n.textAlign === "center"
+              ? n.x + n.w / 2
+              : n.textAlign === "right"
+                ? n.x + n.w - 8 * scale
+                : n.x + 8 * scale;
+          ctx.fillText(label || "Text", textX, n.y + n.h / 2 + fontSizePx * 0.35);
+          ctx.restore();
+          return;
+        }
+
+        if (isSticky) {
+          // Realistic sticky note with warm/accent background, top tape highlight, and centered text
+          ctx.save();
+          roundRect(ctx, n.x, n.y, n.w, n.h, 6 * scale);
+          ctx.fillStyle = isDark ? "rgba(30, 41, 59, 0.92)" : "#fef08a";
+          ctx.fill();
+
+          // Sticky accent border
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1.5 * scale;
+          ctx.stroke();
+
+          // Top highlight tape/fold
+          ctx.fillStyle = `color-mix(in srgb, ${color} 35%, transparent)`;
+          roundRect(ctx, n.x + 8 * scale, n.y, n.w - 16 * scale, 4 * scale, 2 * scale);
+          ctx.fill();
+
+          // Sticky note content text
+          if (label) {
+            ctx.fillStyle = isDark ? "#f1f5f9" : "#1e293b";
+            const fontPx = Math.max(9, (n.fontSize || 12) * scale);
+            ctx.font = `500 ${fontPx.toFixed(1)}px Inter, system-ui, sans-serif`;
+            ctx.textAlign = (n.textAlign as CanvasTextAlign) || "center";
+
+            // Multiline wrapping
+            const maxW = n.w - 16 * scale;
+            const words = label.split(" ");
+            let line = "";
+            const lines: string[] = [];
+            for (let i = 0; i < words.length; i++) {
+              const testLine = line + (line ? " " : "") + words[i];
+              if (ctx.measureText(testLine).width > maxW && i > 0) {
+                lines.push(line);
+                line = words[i];
+              } else {
+                line = testLine;
+              }
+            }
+            if (line) lines.push(line);
+
+            const lineHeight = fontPx * 1.35;
+            const totalTextH = lines.length * lineHeight;
+            const startY = Math.max(
+              n.y + 14 * scale,
+              n.y + (n.h - totalTextH) / 2 + fontPx * 0.85,
+            );
+            const textX =
+              n.textAlign === "left"
+                ? n.x + 10 * scale
+                : n.textAlign === "right"
+                  ? n.x + n.w - 10 * scale
+                  : n.x + n.w / 2;
+
+            lines.forEach((l, idx) => {
+              if (startY + idx * lineHeight < n.y + n.h - 6 * scale) {
+                ctx.fillText(l, textX, startY + idx * lineHeight);
+              }
+            });
+          }
+          ctx.restore();
+          return;
+        }
+
+        // Geometric frames (Circle, Pill, Diamond, Hexagon, Triangle, Rect)
+        ctx.save();
+        ctx.beginPath();
+        if (shapeId === "circle") {
+          ctx.ellipse(
+            n.x + n.w / 2,
+            n.y + n.h / 2,
+            n.w / 2,
+            n.h / 2,
+            0,
+            0,
+            Math.PI * 2,
+          );
+        } else if (shapeId === "pill") {
+          roundRect(ctx, n.x, n.y, n.w, n.h, Math.min(n.w, n.h) / 2);
+        } else if (shapeId === "diamond") {
+          ctx.moveTo(n.x + n.w / 2, n.y);
+          ctx.lineTo(n.x + n.w, n.y + n.h / 2);
+          ctx.lineTo(n.x + n.w / 2, n.y + n.h);
+          ctx.lineTo(n.x, n.y + n.h / 2);
+          ctx.closePath();
+        } else if (shapeId === "triangle") {
+          ctx.moveTo(n.x + n.w / 2, n.y);
+          ctx.lineTo(n.x + n.w, n.y + n.h);
+          ctx.lineTo(n.x, n.y + n.h);
+          ctx.closePath();
+        } else if (shapeId === "hexagon") {
+          const w = n.w;
+          const h = n.h;
+          ctx.moveTo(n.x + w * 0.25, n.y);
+          ctx.lineTo(n.x + w * 0.75, n.y);
+          ctx.lineTo(n.x + w, n.y + h * 0.5);
+          ctx.lineTo(n.x + w * 0.75, n.y + h);
+          ctx.lineTo(n.x + w * 0.25, n.y + h);
+          ctx.lineTo(n.x, n.y + h * 0.5);
+          ctx.closePath();
+        } else {
+          // Default rect frame
+          roundRect(ctx, n.x, n.y, n.w, n.h, 12 * scale);
+        }
+
         ctx.fillStyle = `color-mix(in srgb, ${color} 8%, transparent)`;
-        roundRect(ctx, n.x, n.y, n.w, n.h, 12 * scale);
         ctx.fill();
 
         ctx.strokeStyle = `color-mix(in srgb, ${color} 45%, transparent)`;
-        ctx.lineWidth = 2.0;
-        ctx.setLineDash([6, 6]);
+        ctx.lineWidth = 1.8 * scale;
+        ctx.setLineDash([6 * scale, 6 * scale]);
         ctx.stroke();
         ctx.setLineDash([]);
 
-        if (n.label) {
+        // Label pill badge
+        if (label) {
+          const fontPx = Math.max(9.5, 11 * scale);
+          ctx.font = `600 ${fontPx.toFixed(1)}px Inter, sans-serif`;
+          const textMetrics = ctx.measureText(label);
+          const badgePadX = 8 * scale;
+          const badgePadY = 4 * scale;
+          const badgeW = textMetrics.width + badgePadX * 2;
+          const badgeH = fontPx + badgePadY * 2;
+          const badgeX = n.x + 10 * scale;
+          const badgeY = n.y + n.h - badgeH - 8 * scale;
+
+          ctx.fillStyle = `color-mix(in srgb, ${color} 20%, ${isDark ? "#0f172a" : "#ffffff"})`;
+          roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 4 * scale);
+          ctx.fill();
+          ctx.strokeStyle = `color-mix(in srgb, ${color} 40%, transparent)`;
+          ctx.lineWidth = 1 * scale;
+          ctx.stroke();
+
           ctx.fillStyle = isDark ? "#ffffff" : "#0f172a";
-          ctx.font = `bold ${(11 * scale).toFixed(1)}px Inter, sans-serif`;
-          ctx.fillText(n.label, n.x + 12 * scale, n.y + n.h - 10 * scale);
+          ctx.textAlign = "left";
+          ctx.fillText(
+            label,
+            badgeX + badgePadX,
+            badgeY + badgeH - badgePadY - 1 * scale,
+          );
         }
+        ctx.restore();
       });
 
       // Draw Edges using exact Path2D from ReactFlow getSmoothStepPath
@@ -956,35 +1152,20 @@ export async function recordSimulationVideo({
         ctx.fillStyle = textColor;
         ctx.font = `600 ${(12.5 * scale).toFixed(1)}px Inter, system-ui, sans-serif`;
         const labelText = n.label.length > 18 ? n.label.slice(0, 17) + "…" : n.label;
-        ctx.fillText(labelText, textStartX, n.y + 23 * scale);
 
-        // Sublabel: Display flavor label or exact readable component type name
+        // Sublabel: Display authentic technology flavor (e.g. Next.js, Node.js, PostgreSQL)
         const sublabel = n.flavorShortLabel || TYPE_DISPLAY_NAMES[n.type] || "Component Node";
-        ctx.fillStyle = subtextColor;
-        ctx.font = `500 ${(9.5 * scale).toFixed(1)}px Inter, system-ui, sans-serif`;
-        ctx.fillText(sublabel, textStartX, n.y + (n.type === "client" ? 36 * scale : 39 * scale));
 
-        // Client Run Flow Pill Badge matching Cobalt Blue theme
-        if (n.type === "client") {
-          const badgeX = textStartX;
-          const badgeY = n.y + 40 * scale;
-          const badgeW = 70 * scale;
-          const badgeH = 14 * scale;
-          ctx.fillStyle = "rgba(37, 99, 235, 0.12)";
-          roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 4 * scale);
-          ctx.fill();
-          ctx.strokeStyle = "rgba(37, 99, 235, 0.3)";
-          ctx.lineWidth = 1 * scale;
-          ctx.stroke();
+        // Text layout for node title and flavor sublabel
+        ctx.fillText(labelText, textStartX, n.y + 25 * scale);
 
-          ctx.fillStyle = "#3b82f6";
-          ctx.font = `700 ${(7.5 * scale).toFixed(1)}px monospace`;
-          ctx.fillText("▶ Run Flow", badgeX + 5 * scale, badgeY + 10 * scale);
-        }
+        ctx.fillStyle = n.type === "client" ? (isDark ? "#93c5fd" : "#2563eb") : subtextColor;
+        ctx.font = `500 ${(10 * scale).toFixed(1)}px Inter, system-ui, sans-serif`;
+        ctx.fillText(sublabel, textStartX, n.y + 42 * scale);
 
         // Right Brand Flavor Badge
         if (n.flavor && !n.isCylinder) {
-          const brandSize = 20 * scale;
+          const brandSize = 22 * scale;
           const brandX = n.x + n.w - brandSize - 10 * scale;
           const brandY = n.y + (n.h - brandSize) / 2;
 
@@ -992,13 +1173,14 @@ export async function recordSimulationVideo({
           roundRect(ctx, brandX, brandY, brandSize, brandSize, 5 * scale);
           ctx.fill();
           ctx.strokeStyle = `color-mix(in srgb, ${cardBorder} 70%, ${accent})`;
-          ctx.lineWidth = 1;
+          ctx.lineWidth = 1 * scale;
           ctx.stroke();
 
+          const tagText = (n.flavorShortLabel || n.flavor).slice(0, 5).toUpperCase();
           ctx.fillStyle = accent;
-          ctx.font = `bold ${(8 * scale).toFixed(1)}px Inter, sans-serif`;
+          ctx.font = `bold ${(7.5 * scale).toFixed(1)}px Inter, sans-serif`;
           ctx.textAlign = "center";
-          ctx.fillText(n.flavor.slice(0, 4).toUpperCase(), brandX + brandSize / 2, brandY + brandSize * 0.68);
+          ctx.fillText(tagText, brandX + brandSize / 2, brandY + brandSize * 0.65);
           ctx.textAlign = "start";
         }
 

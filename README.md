@@ -64,7 +64,7 @@ What you can express in `.flow` scripts:
 
 - Infrastructure node definitions using `define <TYPE> <id> { ... }`
 - Directed topology using `connect a -> b -> c` or direct arrow chains
-- Runtime-related configs such as routes, endpoints, capacities, cache data, topics, and queue behavior
+- Runtime-related configs such as routes, endpoints, multi-hop pipelines, capacities, cache data, topics, and queue behavior
 
 Supported high-level node types include:
 
@@ -99,7 +99,7 @@ Reference documentation:
 
 - `src/DSL/README.md`
 
-Minimal example:
+Example with Dynamic Multi-Hop Pipeline:
 
 ```flow
 define CLIENT c1 {
@@ -108,7 +108,7 @@ define CLIENT c1 {
     {
       endpoint: "/api/v1/posts",
       allowedMethods: ["GET"],
-      key: "rohan"
+      key: "posts"
     }
   ]
 }
@@ -118,23 +118,42 @@ define SERVER s1 {
   acceptedEndpoints: [
     {
       endpoint: "/api/v1/posts",
-      allowedMethod: ["GET"]
+      allowedMethod: ["GET"],
+      pipeline: ["r1", "db1"]
     }
   ]
 }
 
+define REDIS r1 {
+  label: "Posts Cache",
+  data: [{ key: "posts", value: "cached posts data" }]
+}
+
+define POSTGRES db1 {
+  label: "Primary DB",
+  table: "posts",
+  data: [{ key: "posts", value: "db posts data" }]
+}
+
 connect c1 -> s1
+connect s1 -> r1
+connect s1 -> db1
 ```
 
 ## Core Features
 
-- Interactive system-design canvas with reusable components
-- Frame-based simulation engine with deterministic playback
-- Animated request path visualization over graph edges
-- Separate domain-specific language (DSL) for architecture definitions
-- Scenario library for common distributed architecture patterns
-- Authenticated workspaces and diagram persistence
-- Recent diagrams feed and full CRUD operations
+- **Interactive System Design Canvas**: Drag-and-drop distributed topology design with real-time connection routing.
+- **Dynamic Endpoint Execution Pipelines**: Configure discrete service execution chains (e.g. `Client -> Server -> Redis -> Postgres -> Server -> Client`) per endpoint route with custom traversal ordering.
+- **Architecture Presets**: One-click configuration for standard patterns:
+  - Cache-Aside Pattern (`[Redis, Postgres]` with Stop-on-Hit enabled)
+  - Strict Sequence / Write-Through (`[Redis, Postgres]` or `[Postgres, Redis]`)
+  - Direct Database Queries (`[Postgres]`)
+  - Auto-Discovery fallback
+- **Cache Hit / Miss Policy Modeling**: Stop-on-Hit toggle to simulate instant memory retrieval on cache hits vs. database query fallthrough on misses.
+- **Hop-by-Hop Latency Profiling**: Real-time estimated latency breakdowns (+2ms Redis, +45ms Postgres, +8ms Queue, +6ms PubSub) and aggregated roundtrip response timing (`~22ms (HIT)` / `~74ms (MISS)`).
+- **Frame-Based Simulation Engine**: Step-by-step deterministic packet animation over network edges with real-time log traces.
+- **Domain-Specific Language (DSL)**: Code-first architecture modeling with instant compilation to interactive visual graphs.
+- **Authenticated Workspaces & Persistence**: Cloud diagram persistence, versioning, and CRUD operations via high-performance Rust Axum backend.
 
 ## Backend Integration (Rust Axum)
 
